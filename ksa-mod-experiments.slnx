@@ -61,4 +61,5 @@
     <Project Path="godzilla.lib/godzilla.lib.csproj" />
     <Project Path="godzilla.tests/godzilla.tests.csproj" />
     <Project Path="byo-music.tests/byo-music.tests.csproj" />
+    <Project Path="pyro.tests/pyro.tests.csproj" />
 </Solution>

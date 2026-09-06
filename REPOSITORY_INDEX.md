@@ -232,6 +232,7 @@ Standalone volumetric engine plumes — the game's exhaust effect with no engine
 - **Template Editor**: the game's hidden exhaust debug editor controls (absorption, emission colours/brightness, Mach diamonds, noise, length weights, quality) for the shared templates — affects all users of the template
 - Auto-removes plumes whose vehicle or anchor part disappears
 - Reflection: `VolumetricExhaustTemplate.References` (template list; stock-id fallback) and `VolumetricExhaustInstance._shaderData`
+- **Runtime cycles**: independent On/Off durations and restart; simulation-clock phase gating preserves exhaust transients, pauses with the game, and cancels on manual/bulk On/Off. Cycle state is excluded from presets.
 - **Public API**: `PyroSubmod.Instance`, `CreatePlume`, `SetTemplate`, `FindPlume`, `RemovePlume`, `SetAllEnabled`, preset methods (`GetPresetNames`/`GetPreset`/`PresetExists`/`SavePreset`/`DeletePreset`/`ApplyPreset`, `PlumePreset`), `PlumeTemplates`, `PlumePhysics`
 
 ## UI & Customization Mods
@@ -415,3 +416,8 @@ fixtures. Covers transforms, animation preservation, mode changes, restore, topo
 
 Managed executable checks production repeat/gap scheduling and `SharedFileLibrary` copied catalogs
 with isolated filesystem data, including duplicate handling, PNG compatibility and path validation.
+
+### [pyro.tests](pyro.tests)
+
+Managed executable linking production on/off cycle logic; validates boundaries, pause, warp,
+backward clocks, stop/restart and non-finite input without loading native KSA.

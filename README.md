@@ -77,3 +77,6 @@ See [Godzilla](godzilla/README.md).
 
 BYO Music imports OGG/WAV/MP3 files into the common sounds library and attaches independently
 controllable 3D playback to vessels, with continuous repeat or gaps. See [BYO Music](byo-music/README.md).
+
+Pyro supports independent runtime On/Off cycles with simulation-second durations and manual/bulk
+cancellation. See [Pyro](pyro/README.md#runtime-onoff-cycles).

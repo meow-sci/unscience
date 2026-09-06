@@ -153,3 +153,15 @@ data stride for thumbnail rendering" is logged), so the source diff is the only 
   signature fix; (b) atmospheric plumes fold/bend with wind (the new `airVelocity`/`airDensity` path);
   (c) whether any plume shows refraction/heat-haze (expected: none — see regression above); (d) the
   Look sliders (`absorptionDensity`) still visibly change a single plume.
+
+## Runtime on/off cycling
+
+`PlumeEntry.Cycle` / `PlumeCycle` add session-only simulation-second gating. Both submod Update
+and `PlumeEmitter.Submit` sample existing `Universe.GetElapsedSeconds()` / supplied simulation time;
+absolute phase prevents double advancement on repeated render submissions. `EffectiveEnabled`
+combines manual Enabled and cycle phase before the existing
+`VolumetricExhaustInstance.UpdateState(simulationTime,isActive,simulationDeltaTime,plumeData)` call
+(`KSA/VolumetricExhaustInstance.cs:91`). Startup/shutdown pulse tracking and AddInstance stay stock.
+No new patch, reflection or shader dependency. Manual/bulk toggles cancel cycles; presets do not
+serialize them. Long frames/warp sample current phase; backward time restarts On. Managed phase tests
+and full solution build pass; live transient appearance remains unverified.

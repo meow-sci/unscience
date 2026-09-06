@@ -1142,3 +1142,7 @@ attributes/min-max distance/spread/Doppler setters, `SpatialAudio.PositionView/V
 `ChannelGroupReference.ChannelGroup` and stock **Sfx** asset id. Existing vessel identity/disposal
 APIs handle source loss. No new Harmony patch or reflection. The old SabotageMusic placeholder is
 no longer referenced by the host UI; the legacy MusicPlayer library helper remains.
+
+**Pyro runtime cycles:** existing `Universe.GetElapsedSeconds` and `VolumetricExhaustInstance.UpdateState`
+now drive independent absolute-time On/Off phases via `PlumeEntry.EffectiveEnabled`. No new game
+member or patch. See [exhaust scope](exhaust-plumes.md#runtime-onoff-cycling).

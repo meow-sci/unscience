@@ -1,0 +1,25 @@
+using System;
+using MeowSci.PyroLib;
+static void Check(bool condition, string text) { if(!condition) throw new Exception(text); }
+var cycle = new PlumeCycle { OnSeconds=2, OffSeconds=3 };
+cycle.Restart(100);
+Check(cycle.Running && cycle.IsOn && cycle.RemainingSeconds==2,"Start On");
+cycle.Update(102);
+Check(!cycle.IsOn && cycle.RemainingSeconds==3,"Exact On/Off boundary");
+cycle.Update(102);
+Check(!cycle.IsOn && cycle.RemainingSeconds==3,"Pause/repeated viewport sample does not advance");
+cycle.Update(105);
+Check(cycle.IsOn && cycle.RemainingSeconds==2,"Repeat at period boundary");
+cycle.Update(100000103);
+Check(!cycle.IsOn && cycle.RemainingSeconds==2,"Large warp jumps retain phase without stepping loops");
+cycle.Update(10);
+Check(cycle.IsOn && cycle.RemainingSeconds==2,"Backward clock resets safely");
+cycle.Stop();
+cycle.Update(999);
+Check(!cycle.Running && cycle.IsOn,"Stopping removes the cycle gate");
+cycle.OnSeconds=0; cycle.OffSeconds=float.NaN;
+cycle.Restart(1);
+Check(cycle.OnSeconds==.05f && cycle.OffSeconds==1,"Invalid/zero typed values are sanitized");
+cycle.Update(double.NaN);
+Check(cycle.IsOn && double.IsFinite(cycle.RemainingSeconds),"Invalid timestamps cannot poison state");
+Console.WriteLine("PASS: cycle boundaries, pause, repeat, time warp, restart, stop and invalid inputs");

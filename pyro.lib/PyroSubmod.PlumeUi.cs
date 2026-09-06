@@ -20,7 +20,8 @@ public sealed partial class PyroSubmod
 
     private void RenderPlumeSection(PlumeEntry plume, int index, ref PlumeEntry? toRemove)
     {
-        string state = plume.Enabled ? "ON" : "off";
+        string state = plume.EffectiveEnabled ? "ON" : "off";
+        if (plume.Cycle.Running) state += " / cycling";
         string header = $"Plume #{plume.Id} [{state}]: {plume.Vehicle.Id} / {plume.Part.Id}  ({plume.TemplateId})##pyro_plume_{plume.Id}";
         if (!ImGui.CollapsingHeader(header, ImGuiTreeNodeFlags.DefaultOpen))
             return;
@@ -37,15 +38,17 @@ public sealed partial class PyroSubmod
         string id = $"##pyro_p{plume.Id}";
 
         // Quick toggle row
-        ImGui.Checkbox($"Enabled{id}_enabled", ref plume.Enabled);
+        bool enabled = plume.Enabled;
+        if (ImGui.Checkbox($"Enabled{id}_enabled", ref enabled)) SetEnabled(plume, enabled);
         ImGui.SameLine(0, 12);
         if (ImGui.Button(plume.Enabled ? $" Off {id}_toggle" : $" On {id}_toggle"))
-            plume.Enabled = !plume.Enabled;
+            SetEnabled(plume, !plume.Enabled);
         ImGui.SameLine(0, 12);
         ImGui.AlignTextToFramePadding();
         ImGui.TextDisabled($"{plume.Vehicle.Id} / {PyroUi.PartLabel(plume.Part)}");
 
         ImGui.Spacing();
+        RenderCycle(plume, id);
         RenderTemplateAndThrottle(plume, id);
 
         ImGui.Spacing();
@@ -80,6 +83,31 @@ public sealed partial class PyroSubmod
 
         ImGui.Spacing();
         ImGui.EndChild();
+    }
+
+    private static void RenderCycle(PlumeEntry plume, string id)
+    {
+        bool running = plume.Cycle.Running;
+        if (ImGui.Checkbox($"Repeat On / Off{id}_cycle", ref running))
+        {
+            if (running) { plume.Enabled = true; plume.Cycle.Restart(Universe.GetElapsedSeconds()); }
+            else plume.Cycle.Stop();
+        }
+        if (PyroUi.BeginParamGrid($"{id}_cycle_times"))
+        {
+            bool changed = PyroUi.GridDrag("On (s)", $"{id}_cycle_on", ref plume.Cycle.OnSeconds, .05f, .05f, 3600, "%.2f");
+            changed |= PyroUi.GridDrag("Off (s)", $"{id}_cycle_off", ref plume.Cycle.OffSeconds, .05f, .05f, 3600, "%.2f");
+            PyroUi.EndParamGrid();
+            if (changed && plume.Cycle.Running) plume.Cycle.Restart(Universe.GetElapsedSeconds());
+        }
+        if (plume.Cycle.Running)
+        {
+            if (ImGui.SmallButton($"Restart cycle{id}_restart")) plume.Cycle.Restart(Universe.GetElapsedSeconds());
+            ImGui.SameLine();
+            ImGui.TextDisabled($"{(plume.Cycle.IsOn ? "On" : "Off")} — {plume.Cycle.RemainingSeconds:0.00}s remaining");
+        }
+        ImGui.TextWrapped("Cycle starts On and uses simulation seconds (pauses with the game). Editing durations restarts it. Disabling the cycle returns to Enabled; manual On/Off cancels cycling. Runtime only, not saved in presets.");
+        ImGui.Spacing();
     }
 
     private void RenderTemplateAndThrottle(PlumeEntry plume, string id)

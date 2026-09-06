@@ -44,7 +44,9 @@ public static class PlumeEmitter
             return false;
         }
 
-        bool active = plume.Enabled && plume.Throttle > 0f;
+        // Sample absolute simulation time so multiple render submissions cannot advance a cycle twice.
+        plume.Cycle.Update(simulationTime);
+        bool active = plume.EffectiveEnabled && plume.Throttle > 0f;
         if (!PlumePhysics.TryCompute(plume.Nozzle, template, ambientPressurePa, out var plumeData))
         {
             plume.LastError = "Nozzle settings produce a non-finite plume; adjust radius/pressure.";

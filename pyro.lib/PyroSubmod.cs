@@ -32,6 +32,8 @@ public sealed partial class PyroSubmod : ISubmod
     public void Update(double dt)
     {
         PruneDeadPlumes();
+        double now = Universe.GetElapsedSeconds();
+        foreach (var plume in _plumes) plume.Cycle.Update(now);
     }
 
     public void RenderContent()
@@ -139,7 +141,14 @@ public sealed partial class PyroSubmod : ISubmod
 
     public void SetAllEnabled(bool enabled)
     {
-        foreach (var p in _plumes) p.Enabled = enabled;
+        foreach (var p in _plumes) SetEnabled(p, enabled);
+    }
+
+    /// <summary>Manual on/off takes control back from any running cycle.</summary>
+    public void SetEnabled(PlumeEntry plume, bool enabled)
+    {
+        plume.Cycle.Stop();
+        plume.Enabled = enabled;
     }
 
     // ---- Preset API ----

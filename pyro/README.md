@@ -47,7 +47,7 @@ Two projects, following the repo's submod pattern:
   validation. **Remove** deletes the plume.
 
 **Presets** — the same pattern as garrys-torch's weld presets. A preset captures every per-plume
-setting *except* the vehicle/part anchor: template id, position/rotation offsets, throttle, all six
+appearance setting (runtime cycle and enabled state are excluded), without the vehicle/part anchor: template id, position/rotation offsets, throttle, all six
 nozzle-physics values and both look overrides. Presets persist across game sessions as TOML at
 `My Games/Kitten Space Agency/.unscience/pyro-presets.toml` (active plumes themselves are **not**
 persisted).
@@ -97,3 +97,22 @@ automatically.
 ## Game integration scope
 
 See [`scope/exhaust-plumes.md`](../scope/exhaust-plumes.md).
+
+## Runtime on/off cycles
+
+Each active plume now has **Repeat On / Off**, **On (s)** and **Off (s)** DragFloat controls
+(0.05–3600 seconds), a phase/countdown display and **Restart cycle**. Enabling a cycle turns the
+plume on immediately; editing either duration restarts at On. Durations use **simulation seconds**,
+so game pause freezes the phase and warp advances it. Disabling the cycle returns to the plume's
+Enabled setting. Manual Enabled/On/Off and All On/All Off cancel cycles, so All Off stays off.
+
+Cycles are runtime only and are deliberately excluded from presets. The existing game
+`VolumetricExhaustInstance.UpdateState` still receives the effective active flag, preserving stock
+startup/shutdown tails; an Off interval is not a hard cut of a still-fading transient. Absolute-time
+sampling avoids advancing twice for repeated renderer submissions and skips straight to the current
+phase after a long frame/warp. A backward time jump restarts at On. Invalid typed durations are
+sanitized before use.
+
+Managed checks: `dotnet run --project pyro.tests` covers boundaries, repeated samples/pause,
+large warp, backwards time, stop and invalid inputs. Full solution compilation validates current
+KSA integration; native plume transitions retain the standing live-game validation requirement.

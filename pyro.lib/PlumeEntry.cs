@@ -40,6 +40,9 @@ public sealed class PlumeEntry
 
     /// <summary>Quick on/off. Off plays the template's shutdown transient then stops rendering.</summary>
     public bool Enabled = true;
+    /// <summary>Runtime-only cycle; presets deliberately do not capture it.</summary>
+    public PlumeCycle Cycle { get; } = new();
+    public bool EffectiveEnabled => Enabled && (!Cycle.Running || Cycle.IsOn);
     /// <summary>0..1 throttle fed to the template's throttle modifier curves.</summary>
     public float Throttle = 1f;
 
