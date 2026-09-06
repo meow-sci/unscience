@@ -1,5 +1,8 @@
 # thug-life
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 Apply the classic "thug life" sunglasses meme as a 2D textured quad anchored to any
 part or subpart of any vehicle in 3D space. Multiple sunglasses can be placed at once,
 each with its own offset, rotation, and size.

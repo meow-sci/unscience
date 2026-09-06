@@ -1,5 +1,8 @@
 # Eternal Flame - Infinite Fuel and Power Hack
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 Keeps selected vehicles topped up by periodically refilling fuel tanks and battery charge at a configurable interval. Toggle the mod window with **F11**.
 
 ## Features

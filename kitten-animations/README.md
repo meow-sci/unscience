@@ -1,5 +1,8 @@
 # Kitten Animations — Avatar Animation Controller
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 Plays any animation the game has loaded for a selected EVA kitten, triggers facial expressions, and
 exposes the blend weights and locomotion tuning that decide how hard each animation lands. The target
 can follow the controlled kitten automatically or be pinned to any live EVA kitten in the system.

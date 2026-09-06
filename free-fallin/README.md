@@ -1,5 +1,8 @@
 # free-fallin — parachute appearance customizer
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 `free-fallin` applies one appearance to every deployed KSA parachute canopy. It works both as a
 standalone F11 mod and as the **Free Fallin - Parachute Customizer** section in `unscience`.
 

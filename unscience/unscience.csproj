@@ -96,7 +96,9 @@
     </ItemGroup>
     <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(DistDir)" />
     <ItemGroup>
-      <MeowSciAssemblies Include="$(TargetDir)MeowSci.*.dll;$(TargetDir)MeowSci.*.pdb" />
+      <!-- Copy only resolved project dependencies, never stale DLLs left in bin by old builds. -->
+      <MeowSciAssemblies Include="@(ReferenceCopyLocalPaths)"
+          Condition="$([System.String]::Copy('%(Filename)').StartsWith('MeowSci.'))" />
     </ItemGroup>
     <Copy SourceFiles="@(MeowSciAssemblies)" DestinationFolder="$(DistDir)" Condition="'@(MeowSciAssemblies)' != ''" />
     <Copy SourceFiles="$(TargetDir)Tomlyn.dll" DestinationFolder="$(DistDir)" Condition="Exists('$(TargetDir)Tomlyn.dll')" />

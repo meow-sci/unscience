@@ -1,5 +1,8 @@
 # bloomin-onion — define new planetary rings at runtime
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 KSA only knows about rings that the celestial XML data declares (`<Rings>` on Saturn). Bloomin'
 Onion lets you author a **complete ring definition in-game** — every value the XML can set — and
 put it on **any celestial body** (a moon, Earth, Jupiter, a ringless planet) from an ImGui panel.

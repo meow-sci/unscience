@@ -1,5 +1,8 @@
 # Zippo - Vehicle Light Control & Animation System
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 A lighting system that lets you select vehicles and their light components, control intensity and color in real time, queue smooth transitions, and run repeating Disco party-light recipes across one light or an entire vehicle.
 
 ## Overview

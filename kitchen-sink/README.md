@@ -1,5 +1,8 @@
 # Kitchen Sink
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 A collection of one-off hacks and fixes for KSA that don't warrant their own dedicated mod.
 
 ## Overview

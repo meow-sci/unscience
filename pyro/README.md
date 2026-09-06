@@ -1,5 +1,8 @@
 # pyro — standalone engine plumes
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 Place the game's volumetric engine plume effect anywhere on a vehicle — **no engine part required**.
 Each plume is "welded" to a vehicle → part → sub-part anchor with a position and rotation offset, and is
 rendered through KSA's own `VolumetricExhaustRenderer`, so it looks, ignites, shuts down and reacts to

@@ -1,5 +1,8 @@
 # graffiti — click-to-place PNG decals
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 Paint your own PNG images onto **vehicle hulls, deployed parachutes, and terrain** with a single click. Pick a decal,
 press **Place at Click...**, click anywhere in the 3D world — a projected decal is painted onto
 whatever surface is under the cursor and stays welded to it (part-local on vehicles, geodetic

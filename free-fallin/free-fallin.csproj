@@ -2,7 +2,6 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <AssemblyName>MeowSci.FreeFallin</AssemblyName>
-    <DistDir>$(SelectedDistModDir)free-fallin\</DistDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,20 +23,4 @@
   <ItemGroup>
     <None Update="mod.toml"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
   </ItemGroup>
-  <Target Name="CopyCustomContent" AfterTargets="AfterBuild">
-    <MakeDir Directories="$(DistDir)" />
-    <ItemGroup>
-      <FilesToCopy Include="$(OutputPath)mod.toml" />
-      <FilesToCopy Include="$(OutputPath)$(AssemblyName).dll" />
-      <FilesToCopy Include="$(OutputPath)$(AssemblyName).pdb" />
-      <FilesToCopy Include="$(OutputPath)$(AssemblyName).deps.json" />
-      <FilesToCopy Include="$(MSBuildThisFileDirectory)..\LICENSE" />
-      <MeowSciAssemblies Include="$(TargetDir)MeowSci.*.dll;$(TargetDir)MeowSci.*.pdb" />
-    </ItemGroup>
-    <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(DistDir)" />
-    <Copy SourceFiles="@(MeowSciAssemblies)" DestinationFolder="$(DistDir)" Condition="'@(MeowSciAssemblies)' != ''" />
-    <MakeDir Directories="$(DistDir)third-party-licenses" />
-    <ItemGroup><ThirdPartyLicenses Include="$(MSBuildThisFileDirectory)..\third-party-licenses\*" /></ItemGroup>
-    <Copy SourceFiles="@(ThirdPartyLicenses)" DestinationFolder="$(DistDir)third-party-licenses" Condition="'@(ThirdPartyLicenses)' != ''" />
-  </Target>
 </Project>

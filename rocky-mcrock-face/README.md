@@ -1,5 +1,8 @@
 # rocky-mcrock-face — swap the meshes and textures of KSA's planetary rings
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 KSA renders Saturn's rings with a bespoke two-part system: a flat analytic/volumetric **band**
 (pure compute, textured by `Rings.png`) plus an instanced **rock field** near the camera — a few
 small `.glb` rock meshes (one per LOD, max 5) that GPU culling replicates across a 40×40×40 chunk

@@ -1,5 +1,8 @@
 # dont-stifle-me
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 Removes restrictions from the KSA vehicle editor:
 
 1. **Scale clamp** — top-level parts can no longer be scaled outside **0.5x–2.0x**.

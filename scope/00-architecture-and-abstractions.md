@@ -1,5 +1,9 @@
 # 00 — Unscience supermod shell + `ksa-abstractions.lib` game-integration scope
 
+Distribution is Unscience-only: feature and legacy-host projects still compile, but only
+`unscience.csproj` has a deployment target and is publishable. No game hook changed for this
+packaging refactor. Legacy standalone lifecycle references below describe development hosts.
+
 Permanent reference for the **unscience supermod shell** (`unscience/`) and the **shared
 seam library** (`ksa-abstractions.lib/`). Use it to detect when a KSA game update breaks these
 two foundational projects. Individual feature submods (blinky, glass, i-feel-seen, …) are

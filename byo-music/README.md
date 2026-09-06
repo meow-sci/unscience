@@ -1,5 +1,8 @@
 # Bring Your Own Music (BYO-Music) - Custom Music Player
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 A simple music playback system that loads and plays audio playlists from KSA's asset system. Provides ImGui controls for triggering music playback on-demand.
 
 ## Overview

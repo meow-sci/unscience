@@ -1,5 +1,8 @@
 # Skittles — Global ImGui Theme Manager
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 Global theming for the entire KSA game UI. Skittles modifies the shared `ImGuiStyle` via `ImGui.GetStyle()`, which updates every window and control across the whole application in real time.
 
 ## Features

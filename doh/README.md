@@ -1,5 +1,8 @@
 # DOH — Dynamically Originating Hominids
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 Programmatic kitten spawning mod for KSA with per-kitten material customization.
 
 ## Features

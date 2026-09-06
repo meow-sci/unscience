@@ -1,7 +1,6 @@
 # ksa-mod-experiments
 
-Silly Kitten Space Agency mods, available as standalone projects and through the `unscience`
-umbrella mod. Start with [`REPOSITORY_INDEX.md`](REPOSITORY_INDEX.md) for the complete catalog and
+Silly Kitten Space Agency features, distributed together as the single `unscience` mod. Start with [`REPOSITORY_INDEX.md`](REPOSITORY_INDEX.md) for the complete catalog and
 [`scope/FULL_SCOPE.md`](scope/FULL_SCOPE.md) for the game-integration map.
 
 The current camera experiments include `hot-pursuit`: click a vehicle part to mount a live feed in
@@ -45,8 +44,20 @@ wall of missing-type errors.
 dotnet build ksa-mod-experiments.slnx
 ```
 
-Each mod deploys its folder to the KSA user mods dir; set `UNSCIENCE_DIST_DIR`
-to redirect all of them (CI does this and zips `<dir>/unscience`).
+## distribution
+
+Only `unscience` deploys to the KSA user mods directory or participates in `dotnet publish`.
+Feature `.lib` projects retain their own code and explicit project references. Former standalone
+hosts remain compile-checked development projects; they do not copy content to the mods directory.
+The feature template follows the same rule. Add new feature libraries to Unscience's project and
+submod/patch registration to ship them.
+
+Set `UNSCIENCE_DIST_DIR` to redirect the single `<dir>/unscience` package. CI validates this output
+before packaging it. Referenced feature assemblies are copied from MSBuild's resolved references,
+so obsolete DLLs left in a build's `bin` folder cannot sneak into the package.
+
+When migrating an existing game installation, remove the old standalone feature mod folders and
+replace the old `unscience` folder. Builds deliberately do not delete existing user mod folders.
 
 ## releases (GitHub Actions)
 

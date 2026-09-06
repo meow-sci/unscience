@@ -1,6 +1,6 @@
 # work items to do
 
-- [ ] refactor: only publish a single unscience mod, not all the individual mods.  keep the csproj for clean code demarcation to ensure each mod has its own vertical code that wont break others and only shares code via deliberate csproj sharing like ksa-abstractions.lib
+- [x] refactor: only publish a single unscience mod, not all the individual mods.  keep the csproj for clean code demarcation to ensure each mod has its own vertical code that wont break others and only shares code via deliberate csproj sharing like ksa-abstractions.lib
 - [x] completely remove defunct/unused mods: unladen-swallow, steely-eyed-missile-kitten, stampy, space-tape, red-alert, geeforce, mesh-deform, con-man, average-twr
 - [x] copy pngs to <UNSCIENCE_DATA>/pngs during import for both graffiti and free-fallin, read from there automatically
 - [x] kitten-animations: per-kitten targeting (not just currently controlled)

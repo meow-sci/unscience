@@ -110,11 +110,12 @@ jobs:
           sed -i -E "s/^version = \".*\"/version = \"$MODVERSION\"/" unscience/mod.toml
           grep '^version' unscience/mod.toml
 
-      # Builds every project in the solution (each mod's CopyCustomContent
-      # target deploys its folder under $UNSCIENCE_DIST_DIR); only the
-      # unscience umbrella folder is packaged below.
+      # Compile every project; only Unscience deploys under $UNSCIENCE_DIST_DIR.
       - name: Build solution
         run: dotnet build ksa-mod-experiments.slnx -c Release --nologo -v quiet
+
+      - name: Validate single-mod distribution
+        run: python3 scripts/check-dist.py "$UNSCIENCE_DIST_DIR"
 
       - name: Package
         if: steps.meta.outputs.publish == 'true'

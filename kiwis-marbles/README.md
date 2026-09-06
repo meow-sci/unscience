@@ -1,5 +1,8 @@
 # Kiwi's Marbles
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 A KSA mod for repositioning celestial bodies (planets, moons) by "welding" them to follow other celestial bodies or vehicles at user-defined offsets.
 
 ## Overview

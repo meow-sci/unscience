@@ -5,6 +5,12 @@ This document serves as a comprehensive index of all mods and libraries in this 
 
 > **Game integration scope:** for how each feature plugs into KSA (Harmony patches, reflection, game types, shaders, assets) and how to check what a game update breaks, start at [`scope/FULL_SCOPE.md`](scope/FULL_SCOPE.md) and its master index [`scope/game-integration-surface.md`](scope/game-integration-surface.md). Keeping `scope/` current is mandatory — see [`AGENTS.md`](AGENTS.md).
 
+## Distribution policy
+
+`unscience` is the only shipped/publishable mod. Individual `.csproj` files remain code boundaries;
+legacy standalone hosts compile into `bin/` but have no deployment target. Feature libraries are
+bundled only through explicit project references. See the root README for installation migration.
+
 ## Core Libraries
 
 ### [ksa-abstractions.lib](ksa-abstractions.lib)

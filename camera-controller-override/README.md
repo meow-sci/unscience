@@ -1,5 +1,8 @@
 # Camera Controller Override - Advanced Camera Animation System
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 A powerful camera animation system with 8+ animation types, easing functions, and keyframe sequencing. Enables cinematic camera movements, zoom animations, orbits, spirals, and shakes—all with fine-grained control over timing and easing curves.
 
 ## Overview

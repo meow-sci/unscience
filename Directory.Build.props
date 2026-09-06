@@ -11,6 +11,8 @@
         <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+        <!-- Feature/test/legacy-host projects compile but never produce separate publish folders. -->
+        <IsPublishable Condition="'$(MSBuildProjectName)' != 'unscience'">false</IsPublishable>
 
     </PropertyGroup>
 

@@ -1,5 +1,9 @@
 # Unscience — Unified Supermod
 
+Unscience is the only distributed mod. `dotnet build` deploys one `unscience/` folder;
+feature libraries remain separate projects with explicit references. Former standalone hosts are
+retained for development and are not deployed or published. See [distribution](../README.md#distribution).
+
 A unified supermod that consolidates 24 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
 
 ## Included Submods

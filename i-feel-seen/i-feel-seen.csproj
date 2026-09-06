@@ -10,7 +10,6 @@
     <!-- <ImplicitUsings>disable</ImplicitUsings> -->
     <!-- <GenerateDocumentationFile>false</GenerateDocumentationFile> -->
     <!-- <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies> -->
-    <DistDir>$(SelectedDistModDir)i-feel-seen\</DistDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -55,32 +54,5 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
-  <Target Name="CopyCustomContent" AfterTargets="AfterBuild">
-    <MakeDir Directories="$(DistDir)" />
-    <ItemGroup>
-      <FilesToCopy Include="$(OutputPath)mod.toml" />
-      <FilesToCopy Include="$(OutputPath)$(AssemblyName).dll" />
-      <FilesToCopy Include="$(OutputPath)$(AssemblyName).pdb" />
-      <FilesToCopy Include="$(OutputPath)$(AssemblyName).deps.json" />
-      <FilesToCopy Include="$(MSBuildThisFileDirectory)..\LICENSE" />
-    </ItemGroup>
-    <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(DistDir)" />
-    <Message Text="Copied mod files to $(DistDir)" Importance="high" />
-
-    <ItemGroup>
-      <MeowSciAssemblies Include="$(TargetDir)MeowSci.*.dll;$(TargetDir)MeowSci.*.pdb" />
-    </ItemGroup>
-    <Copy SourceFiles="@(MeowSciAssemblies)"
-          DestinationFolder="$(DistDir)"
-          Condition="'@(MeowSciAssemblies)' != ''" />
-    
-    <!-- Copy third-party licenses -->
-    <MakeDir Directories="$(DistDir)third-party-licenses" />
-    <ItemGroup>
-      <ThirdPartyLicenses Include="$(MSBuildThisFileDirectory)..\third-party-licenses\*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(ThirdPartyLicenses)" DestinationFolder="$(DistDir)third-party-licenses" Condition="'@(ThirdPartyLicenses)' != ''" />
-  </Target>
 
 </Project>

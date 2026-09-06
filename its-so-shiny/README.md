@@ -1,5 +1,8 @@
 # Its So Shiny - Light-Part Pixel Grids
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 Its So Shiny builds Blinky-style pixel grids from KSA's built-in `LightPart` instead of engine parts. Each pixel is a real light part attached to a selected vehicle and controlled through the light switch/power consumer path used by the stock lights.
 
 ## Features

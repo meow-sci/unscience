@@ -3,7 +3,6 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <AssemblyName>MeowSci.HotPursuit</AssemblyName>
-    <DistDir>$(SelectedDistModDir)hot-pursuit\</DistDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -48,23 +47,5 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
-  <Target Name="CopyCustomContent" AfterTargets="AfterBuild">
-    <MakeDir Directories="$(DistDir)" />
-    <ItemGroup>
-      <FilesToCopy Include="$(OutputPath)mod.toml" />
-      <FilesToCopy Include="$(OutputPath)$(AssemblyName).dll" />
-      <FilesToCopy Include="$(OutputPath)$(AssemblyName).pdb" />
-      <FilesToCopy Include="$(OutputPath)$(AssemblyName).deps.json" />
-      <FilesToCopy Include="$(MSBuildThisFileDirectory)..\LICENSE" />
-    </ItemGroup>
-    <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(DistDir)" />
-    <ItemGroup>
-      <MeowSciAssemblies Include="$(TargetDir)MeowSci.*.dll;$(TargetDir)MeowSci.*.pdb" />
-    </ItemGroup>
-    <Copy SourceFiles="@(MeowSciAssemblies)" DestinationFolder="$(DistDir)"
-          Condition="'@(MeowSciAssemblies)' != ''" />
-    <Message Text="Copied Hot Pursuit mod files to $(DistDir)" Importance="high" />
-  </Target>
 
 </Project>

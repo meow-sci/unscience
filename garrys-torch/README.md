@@ -1,5 +1,8 @@
 # Garry's Torch - Vehicle Welding System
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 A vehicle docking/attached system that welds one vehicle to another with full support for position offsets, rotation alignment, and independent X/Y/Z scaling. Welds are persistent per-frame—children move relative to their parent vehicle.
 
 ## Overview

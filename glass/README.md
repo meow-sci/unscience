@@ -1,5 +1,8 @@
 # Glass - Camera Field of View Control
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 A camera lens system that provides 8 photographic lens presets plus manual FOV control. Allows you to quickly switch between telephoto, wide-angle, fisheye, and other lens configurations for different viewing scenarios.
 
 ## Overview

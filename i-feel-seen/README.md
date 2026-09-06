@@ -1,5 +1,8 @@
 # I-Feel-Seen - Vehicle Render Distance Override
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 Allows vehicles to bypass the camera rendering distance limit (LOD culling). Selectively track vehicles and toggle their visibility independent of distance from camera, enabling viewing of far-away vehicles that would normally disappear.
 
 ## Overview

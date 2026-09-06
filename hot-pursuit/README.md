@@ -1,5 +1,8 @@
 # Hot Pursuit
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 Hot Pursuit places live, part-mounted cameras in KSA's stock secondary viewport
 windows. Arm placement in the F11 window, click a visible vehicle part in the 3D
 world, and the new camera starts 0.15 m outside the clicked surface looking along

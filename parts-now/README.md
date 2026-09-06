@@ -1,5 +1,8 @@
 # parts-now
 
+> Distribution: only the `unscience` mod is shipped. This project is retained as a development
+> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+
 Standalone StarMap wrapper for the **parts-now** runtime Part / SubPart loader.
 
 All logic lives in [`parts-now.lib`](../parts-now.lib/README.md) — this project only owns the

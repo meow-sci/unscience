@@ -67,6 +67,12 @@ When a new game version arrives, bump this baseline and re-run the workflow belo
 
 ---
 
+## Distribution
+
+Only Unscience is shipped. Legacy standalone hosts remain compile-checked projects but no longer
+deploy/publish; their lifecycle maps below are development references. Feature-library project
+boundaries and the Unscience lifecycle are unchanged by this packaging refactor.
+
 ## The integration model (how unscience attaches to KSA)
 
 - **StarMap is the loader seam, not the game.** `unscience/Mod.cs` is the single `[StarMapMod]` entry.
