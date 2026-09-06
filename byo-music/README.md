@@ -20,7 +20,7 @@ Playback state is session only; imported files persist.
 
 `VesselSound` owns each FMOD stream/channel, polls nonblocking decode without spinning the game
 thread, positions/configures the paused channel before starting, and reports decoder/backend errors.
-A file extension alone cannot guarantee a supported codec; a malformed file or Opus-in-OGG reports
+A file extension alone cannot guarantee a supported codec; a malformed file or unsupported codec reports
 an error rather than leaving a stuck playback. [FMOD's format reference](https://www.fmod.com/docs/2.03/api/loading-and-playing-sounds-in-the-core-api.html)
 confirms built-in WAV, MP3 and Ogg Vorbis support. KSA uses these same Core APIs through `Brutal.Fmod`.
 
