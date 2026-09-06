@@ -57,4 +57,7 @@
     <Project Path="bloomin-onion.lib/bloomin-onion.lib.csproj" />
     <Project Path="pebbles.lib/pebbles.lib.csproj" />
     <Project Path="pebbles.tests/pebbles.tests.csproj" />
+    <Project Path="godzilla/godzilla.csproj" />
+    <Project Path="godzilla.lib/godzilla.lib.csproj" />
+    <Project Path="godzilla.tests/godzilla.tests.csproj" />
 </Solution>

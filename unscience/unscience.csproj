@@ -19,6 +19,7 @@
     <ProjectReference Include="..\doh.lib\doh.lib.csproj" />
     <ProjectReference Include="..\eternal-flame.lib\eternal-flame.lib.csproj" />
     <ProjectReference Include="..\garrys-torch.lib\garrys-torch.lib.csproj" />
+    <ProjectReference Include="../godzilla.lib/godzilla.lib.csproj" />
     <ProjectReference Include="..\graffiti.lib\graffiti.lib.csproj" />
     <ProjectReference Include="..\free-fallin.lib\free-fallin.lib.csproj" />
     <ProjectReference Include="..\hot-pursuit.lib\hot-pursuit.lib.csproj" />

@@ -4,7 +4,7 @@ Unscience is the only distributed mod. `dotnet build` deploys one `unscience/` f
 feature libraries remain separate projects with explicit references. Former standalone hosts are
 retained for development and are not deployed or published. See [distribution](../README.md#distribution).
 
-A unified supermod that consolidates 24 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
+A unified supermod that consolidates 25 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
 
 ## Included Submods
 
@@ -17,6 +17,7 @@ A unified supermod that consolidates 24 KSA feature libraries into a single ImGu
 | Don't Stifle Me | Extends vehicle-editor scale and configurable-value limits |
 | Eternal Flame — Infinite Fuel | Monitors vehicles and periodically refills all fuel tanks |
 | Garry's Torch | Welds vehicles together with position/rotation offsets and independent X/Y/Z scale |
+| Godzilla | Smart vessel sizing, Basic XYZ scales and restoration |
 | Glass — Camera Lens | Overrides camera FOV with presets or manual control |
 | Graffiti — PNG Decals | Click-to-place projected PNG decals on vehicle hulls, deployed parachute cloth, and terrain |
 | Free Fallin — Parachute Customizer | Applies a global stock tint, panel-tiled or cohesive full-canopy PNG, centered decal, and canopy PBR controls |
@@ -67,3 +68,6 @@ The floating collider editor/browser continue rendering when the main panel is c
 Pebbles methods. The host's existing HotkeyGuard and hidden-HUD update hook cover Pebbles.
 No newux shell, workspace persistence or Live State framework is included.
 See [Pebbles README](../pebbles.lib/README.md) for usage and limitations.
+
+Godzilla adds session-based Smart vessel resizing, raw XYZ Basic scaling, and restore controls.
+See [Godzilla](../godzilla/README.md).

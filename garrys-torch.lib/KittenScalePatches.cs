@@ -48,7 +48,8 @@ public static class KittenScalePatches
         Console.WriteLine("garrys-torch.lib: KittenEva XYZ scale patch removed");
     }
 
-    internal static void SetScale(KittenRenderable renderable, float3 scale)
+    /// <summary>Set the character axis correction; the caller owns the scalar avatar scale.</summary>
+    public static void SetScale(KittenRenderable renderable, float3 scale)
     {
         _corrections.Remove(renderable);
 

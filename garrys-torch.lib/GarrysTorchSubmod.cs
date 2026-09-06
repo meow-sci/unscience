@@ -128,8 +128,11 @@ public sealed class GarrysTorchSubmod : ISubmod
     {
         _animationManager.Clear();
         foreach (var weld in _welds)
+        {
             if (!weld.Source.IsDisposed)
                 WeldEngine.ApplyVehicleScale(weld.Source, WeldScale.Identity);
+            VehicleScaleOwnership.Release(weld.Source, "Garry's Torch");
+        }
         _welds.Clear();
         Instance = null;
     }
@@ -531,6 +534,9 @@ public sealed class GarrysTorchSubmod : ISubmod
                 return (null, $"Vehicle {source.Id} is already welded as a source.");
         }
 
+        if (!VehicleScaleOwnership.TryAcquire(source, "Garry's Torch"))
+            return (null, $"Restore {VehicleScaleOwnership.GetOwner(source)} scaling on {source.Id} before welding it.");
+
         var entry = new WeldEntry
         {
             Source = source,
@@ -677,6 +683,7 @@ public sealed class GarrysTorchSubmod : ISubmod
             WeldEngine.ApplyVehicleScale(entry.Source, WeldScale.Identity);
         Console.WriteLine($"garrys-torch: Unwelded {entry.Source.Id} from {entry.Target.Id}");
         _welds.Remove(entry);
+        VehicleScaleOwnership.Release(entry.Source, "Garry's Torch");
     }
 
     private void SortWelds()

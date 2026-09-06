@@ -5,6 +5,7 @@ using System.Reflection.Emit;
 using HarmonyLib;
 using KSA;
 using MeowSci.GarrysTorchLib;
+using MeowSci.KsaAbstractions;
 
 internal static class Checks
 {
@@ -42,6 +43,20 @@ internal static class Checks
                     "weld after all results, before any physics snapshot");
             }
 
+            // Queued scale changes must run before welding; newly queued work waits a frame.
+            Universe.Events.Clear();
+            PhysicsFrameHook.Enqueue(() =>
+            {
+                Universe.Events.Add("scale");
+                PhysicsFrameHook.Enqueue(() => Universe.Events.Add("deferred"));
+            });
+            PhysicsFrameHook.Enqueue(() => throw new InvalidOperationException("fixture mutation failure"));
+            game.RunFrame(0.25);
+            Require(Universe.Events.IndexOf("scale") < Universe.Events.IndexOf("weld"), "scale before anchors/weld");
+            Require(!Universe.Events.Contains("deferred"), "defer reentrant mutations");
+            game.RunFrame(0.25);
+            Require(Universe.Events.Contains("deferred"), "run deferred mutation next frame");
+
             // Weld interpolation retains player-time pacing during pause and warp.
             foreach (double speed in new[] { 0.0, 10.0 })
             {
@@ -53,13 +68,17 @@ internal static class Checks
             }
 
             int updates = submod.Updates;
+            bool staleActionRan = false;
+            PhysicsFrameHook.Enqueue(() => staleActionRan = true);
             Universe.CurrentSystem = null;
             game.RunFrame(0.25);
             Require(submod.Updates == updates, "skip welding without a loaded system");
             Universe.CurrentSystem = new();
+            Require(!staleActionRan, "discard unloaded-system actions");
             submod.ThrowOnUpdate = true;
             Universe.Events.Clear();
             game.RunFrame(0.25);
+            Require(!staleActionRan, "do not replay old mutations in a new system");
             Require(Universe.Events.Last() == "queue orbit", "weld error must not interrupt game scheduling");
 
             GarrysTorchSubmod.Instance = null;
@@ -107,14 +126,14 @@ internal static class Checks
         var label = new DynamicMethod("labels", typeof(void), Type.EmptyTypes).GetILGenerator().DefineLabel();
         valid[3].labels.Add(label);
         valid[3].blocks.Add(new ExceptionBlock(ExceptionBlockType.BeginExceptionBlock));
-        var patched = GarrysTorchPatches.Transpile(valid).ToList();
+        var patched = PhysicsFrameHook.Transpile(valid).ToList();
         Require(patched[3].labels.Contains(label) && patched[3].blocks.Count == 1,
             "replacement must preserve branch and exception metadata");
     }
 
     private static void ExpectRejected(List<CodeInstruction> codes)
     {
-        try { _ = GarrysTorchPatches.Transpile(codes).ToList(); }
+        try { _ = PhysicsFrameHook.Transpile(codes).ToList(); }
         catch (InvalidOperationException) { return; }
         throw new Exception("unexpected game-loop layout must reject patch installation");
     }

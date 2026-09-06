@@ -231,3 +231,8 @@ the in-game checks still required.
 - **Unwelds**: Welds break automatically on parent body mismatch; implement manual unweld via UI button
 - **Animation**: Consider smooth transitions when applying presets vs. sharp position changes
 - **Save/Load**: Persistent welds would require save/load system integration
+
+The caller transpiler now lives in `ksa-abstractions.lib/PhysicsFrameHook`; Garry's Torch registers
+its weld callback. Queued Godzilla edits run before this callback. Source scale ownership is exclusive:
+restore Godzilla before welding, or unweld before applying Godzilla. Managed checks also cover queued
+mutation ordering, reentrant deferral, exception isolation and stale-system queue disposal.

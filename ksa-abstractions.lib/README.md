@@ -154,3 +154,16 @@ This is used by:
 - Follow the null-guard pattern: field access should return default/null rather than throwing
 - Keep methods generic and reusable—avoid mod-specific logic in this library
 - Document the exact KSA class/field names being accessed for debugging purposes
+
+## Shared physics handoff and scale ownership
+
+`PhysicsFrameHook.Apply/Remove(Harmony)` owns the validated `Program.PrepareFrame(double,double)`
+transpiler formerly in Garry's Torch. `Enqueue(Action)` schedules main-thread mutations after all
+solver results and before `BeforePhysics(double playerDelta, UniverseTime committedTime)` listeners
+and next cloth/vehicle/orbit snapshots. Actions queued while dispatching wait until the next frame;
+actions are discarded when the system is absent or the hook is removed. Callers must ignore their
+queued actions after disposal. Exceptions are isolated per action/listener. Garry's Torch installs
+this hook for Unscience and subscribes its weld callback; Godzilla queues edits and restores.
+
+`VehicleScaleOwnership` keeps weak vehicle keys with tool names. `TryAcquire`, `GetOwner` and
+owner-checked `Release` prevent Godzilla/Garry's Torch from replacing one another's scale state.

@@ -101,7 +101,7 @@ are fully verified below: the inlined `EternalFlamePatches` and `MenuBarPatch`.
 | `KiwisMarblesPatches` | kiwis-marbles.lib | 65 | 107 | `Universe.ExecuteNextVehicleSolvers` | prefix `Priority.First` | sim-step timing — see celestial-and-lights scope |
 | `GlassPatches` | glass.lib | 70 | 108 | `Camera.ChangeFieldOfView` / `Camera.UpdateProjection` (**string**) + field `Camera._fovRadians` (**string**) | prefix | string-named — see glass scope |
 | `IFeelSeenPatches` | i-feel-seen.lib | 71 | 109 | `Vehicle.GetWorldMatrix` / `Vehicle.UpdateRenderData` (**string**) | prefix | string-named — see i-feel-seen scope |
-| `GarrysTorchPatches` | garrys-torch.lib | 70 | 114 | private `Program.PrepareFrame(double,double)` → `Universe.GetJobSimStep` call | transpiler | after result commits, before next snapshots; see vehicle-physics timing invariant |
+| `PhysicsFrameHook` (via `GarrysTorchPatches`) | ksa-abstractions.lib | 70 | 114 | private `Program.PrepareFrame(double,double)` → `Universe.GetJobSimStep` call | transpiler | after result commits, before next snapshots; see vehicle-physics timing invariant |
 | `VehiclePaintPatches` | humble-arteest.lib | 72 | 112 | `PartModel.AddInstance` | prefix | render — see humble-arteest scope (`IViewport` param + new `RenderPartModels` gate @5402) |
 | `EngineEmissivePatches` | humble-arteest.lib | 73 | 110 | `PartModelDynamic.AddInstance` | prefix | render — see humble-arteest scope |
 | `IvaForceRender` | **ksa-abstractions.lib** | 74 | 114 | `PartModel..ctor` + `PartModel.AddInstance` (see IvaForceRender ↓) | postfix ×2 | wired 2026-08-23; `IViewport` retype @5402 |
@@ -548,3 +548,14 @@ the `Universe.ExecuteNextClothSolvers` prefix commits pending native transaction
 browser and collider editor. Unload retires its resources before patch removal.
 The host's HotkeyGuard and hidden-HUD updates remain unchanged. Exact targets and private
 member dependencies: [ground clutter](ground-clutter.md), [GLB conversion](ground-clutter-glb-materials.md).
+
+### Shared pre-physics mutations
+
+`PhysicsFrameHook` owns the unchanged validated PrepareFrame transpiler formerly in Garry's Torch.
+Godzilla enqueues vessel scaling/restoration; actions drain before `BeforePhysics` listeners (welds
+and session cleanup), after prior results and before next snapshots. Reentrant enqueues wait one
+frame; absent systems and removal clear pending work. Exceptions are isolated. Hosts install once:
+Unscience uses `GarrysTorchPatches.Apply/Remove`, which delegates and subscribes the weld listener;
+the Godzilla development host installs the shared hook directly. Godzilla uses the existing kitten
+axis postfix as well. `VehicleScaleOwnership` prevents two tools from owning source scale; keys are
+weak and release checks the owner name. See vehicle-physics for typed integration and live checks.

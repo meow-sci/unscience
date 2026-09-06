@@ -411,7 +411,7 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 ### KSA.JobSystems
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `VehicleSolver` / `OrbitSolvers` / `ClothSolvers` → `Wait()` | behavioral prerequisite | `KSA/Program.cs:2103-2105` | garrys-torch | `GarrysTorchPatches.cs` | OK @5402 | Game waits before applying results and reaching the weld handoff; no direct scheduler wait remains in garrys-torch. |
+| `VehicleSolver` / `OrbitSolvers` / `ClothSolvers` → `Wait()` | behavioral prerequisite | `KSA/Program.cs:2103-2105` | garrys-torch | `PhysicsFrameHook.cs` | OK @5402 | Game waits before applying results and reaching the weld handoff; no direct scheduler wait remains in garrys-torch. |
 
 ### KSA.KSAColor
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -700,7 +700,7 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 | `GetRenderer() : Renderer` (→ `.Device`/`.Allocator`/`.Graphics`) | direct (render) | `KSA/Program.cs:486` (cited `:450` at the 4750 baseline) | thug-life, parts-now | `ThugLifeRenderManager.cs:81`; `parts-now.lib/Runtime/RuntimeModLoaderGpuStates.cs:85`, `PartThumbnailGenerator.cs:129`, `RuntimeModUnloader.cs:123` | OK | Vulkan device. humble-arteest no longer needs it — the patched `FromFile` receives the device as an argument |
 | `OffscreenTarget : RenderTarget` (→ `.SetupGraphicsPipeline(ref VkGraphicsPipelineCreateInfo)`) | direct (render-pass) | `KSA/Program.cs:457` | thug-life | `ThugLifeQuadRenderer.cs:152` | OK | replaced `OffScreenPass`/`RenderPassState` @5261 (dynamic rendering). ⚠ **null until `BuildRenderTargets()` (`Program.cs:970` @5402), which runs after `ModLibrary.LoadAll()` (`:942`) — i.e. after `[StarMapAllModsLoaded]`; the mod's pipeline build is lazy for exactly this reason** |
 | `SetViewport(CommandBuffer)` | direct (render) | `KSA/Program.cs:4293` | thug-life | `ThugLifeQuadRenderer.cs:264` | OK | sizes to `RenderedViewport` |
-| `PrepareFrame(double currentPlayerTime, double dtPlayer)` (private instance method) | **Harmony transpiler** | `KSA/Program.cs:2094` | garrys-torch | `GarrysTorchPatches.cs` | OK @5402 | Wraps one GetJobSimStep call after ApplyOrbit/Vehicle/ClothSolvers and before ExecuteNextCloth/Vehicle/OrbitSolvers; unique ordered calls required. Preserves labels/exception blocks and returned step. |
+| `PrepareFrame(double currentPlayerTime, double dtPlayer)` (private instance method) | **Harmony transpiler** | `KSA/Program.cs:2094` | garrys-torch | `PhysicsFrameHook.cs` | OK @5402 | Wraps one GetJobSimStep call after ApplyOrbit/Vehicle/ClothSolvers and before ExecuteNextCloth/Vehicle/OrbitSolvers; unique ordered calls required. Preserves labels/exception blocks and returned step. |
 | `Instance : static (singleton)` | reflection (private) | `KSA/Program.cs:371` | doh, humble-arteest (KittenColor) | `MaterialSystemAccessor.cs:53,56`; `KittenColor.cs:55-73` | OK | render-systems root |
 | `MaterialSystem : GpuMaterialSystem` (field) | reflection-field | `KSA/Program.cs:94` | doh, humble-arteest | `MaterialSystemAccessor.cs:63`; `KittenColor.cs:55-73` | OK | |
 | `SuperMeshRenderSystem` (field) → `.TextureSystem : GpuTextureSystem` | reflection-field | `KSA/Program.cs:96`; `KSA/SuperMeshRenderSystem.cs:39` | doh | `MaterialSystemAccessor.cs:84,87,90` | OK | |
@@ -731,7 +731,7 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 ### KSA.SimStep
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `Universe.GetJobSimStep(double) : SimStep` → `SimStep.PreviousTime : UniverseTime` | direct API + call-site replacement | `KSA/Universe.cs:2322`; `KSA/SimStep.cs:5` | garrys-torch | `GarrysTorchPatches.cs` → `WeldEngine.cs` | OK @5402 | Step start is the committed state time; do not stamp NextTime at the pre-solver handoff. |
+| `Universe.GetJobSimStep(double) : SimStep` → `SimStep.PreviousTime : UniverseTime` | direct API + call-site replacement | `KSA/Universe.cs:2322`; `KSA/SimStep.cs:5` | garrys-torch | `PhysicsFrameHook.cs` → `WeldEngine.cs` | OK @5402 | Step start is the committed state time; do not stamp NextTime at the pre-solver handoff. |
 | `SimStep` (param of `ExecuteNextVehicleSolvers`) | Harmony arg type | `KSA/Universe.cs:1775` | eternal-flame, kitchen-sink, kiwis-marbles | (solver prefixes) | OK | prefixes ignore it (parameterless / by-name `dtPlayer` only) |
 
 
@@ -771,7 +771,7 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 |---|---|---|---|---|---|---|
 | `ExecuteNextVehicleSolvers(double dtPlayer, SimStep simStep) : static void` | Harmony pre (Priority.First) | `KSA/Universe.cs:1775` | eternal-flame, kitchen-sink, kiwis-marbles | `unscience/Patcher.cs` (`EternalFlamePatches`, `KiwisMarblesPatches`); `kitchen-sink/Patcher.cs:56`; `kiwis-marbles.lib/KiwisMarblesPatches.cs` | OK | single overload → by-name `nameof`/`dtPlayer` resolution safe; kiwis-marbles depends on `PrepareFrame` ordering (Apply*Solvers before, ExecuteNextOrbitSolvers after) |
 | `CurrentSystem : static CelestialSystem? { get; private set; }` | direct API | `KSA/Universe.cs:92` | VehicleProvider/CelestialProvider (→ ~all feature mods) | `VehicleProvider.cs:15`; `CelestialProvider.cs:11` | OK | enumeration root |
-| `GetJobSimStep(double) : SimStep` | direct API / transpiler seam | `KSA/Universe.cs:2322` | garrys-torch | `GarrysTorchPatches.cs` | OK @5402 | Original call is wrapped once in PrepareFrame; returns unchanged step after welding. |
+| `GetJobSimStep(double) : SimStep` | direct API / transpiler seam | `KSA/Universe.cs:2322` | garrys-torch | `PhysicsFrameHook.cs` | OK @5402 | Original call is wrapped once in PrepareFrame; returns unchanged step after welding. |
 
 ### KSA.Vehicle
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -1121,3 +1121,15 @@ consolidation** (`Part.IsLightSwitchedOff()`). Full review:
 **Known-broken reconciliation:** `___Transform` and zippo `"Color"` are closed (stale rows corrected);
 humble-arteest Vehicle Paint remains dead by design (4693); the "supermod never wires
 `IvaForceRender.Patch`" note was stale (wired at `unscience/Patcher.cs:74`).
+
+## Godzilla and shared physics handoff
+
+See [vehicle physics — Godzilla](vehicle-physics.md#godzilla-godzilla--godzillalib) for the integration
+map. New consumers: `Vehicle.Parts`, `CenterOfMassAsmb`, `IsDisposed`, `UpdateAfterPartTreeModification`;
+`Part.SubParts`, `Scale`, `PositionParentAsmb`, `ResetCachedPosMatrixValues`, `RefreshScale`, `UpdateBounds`;
+`PartTree.RecomputeAllDerivedData`; `JobSystems` solver waits; `KittenEva.Renderable` and
+`CharacterAvatar.Core.Scale`. String reflection: existing `KittenRenderable._characterAvatar` is now
+also used by Godzilla. No additional string lookup or new Harmony target. The `Program.PrepareFrame`
+transpiler moved from Garry's Torch to `ksa-abstractions.lib/PhysicsFrameHook`; Garry's Torch registers
+its weld callback, and Godzilla queues edits before it. `ScaleFactors` max-axis behavior limits Basic
+XYZ collision fidelity. New StarMap/ISubmod consumers: `godzilla` development host and Unscience.

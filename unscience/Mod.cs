@@ -9,6 +9,7 @@ using MeowSci.BlinkyLib;
 using MeowSci.EternalFlameLib;
 using MeowSci.GarrysTorchLib;
 using MeowSci.GlassLib;
+using MeowSci.GodzillaLib;
 using MeowSci.IFeelSeenLib;
 using MeowSci.ItsSoShinyLib;
 using MeowSci.CameraControllerOverrideLib;
@@ -72,6 +73,7 @@ public class Mod
             _submods.Add(new FreeFallinSubmod());
             _submods.Add(new GarrysTorchSubmod());
             _submods.Add(new GlassSubmod());
+            _submods.Add(new GodzillaSubmod());
             _submods.Add(new GraffitiSubmod());
             _submods.Add(new HotPursuitSubmod());
             _submods.Add(new HumbleArteestSubmod());

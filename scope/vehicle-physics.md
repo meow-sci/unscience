@@ -171,7 +171,7 @@ the legacy scalar `scale` key uniformly for backwards compatibility.
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|------|----------------------|----------------------------------------|-------------------|---------|----------|------------|
-| 1 | **Harmony transpiler / private method** | `garrys-torch.lib/GarrysTorchPatches.cs` | `Program.PrepareFrame(double currentPlayerTime, double dtPlayer)`; wraps the single `Universe.GetJobSimStep(double)` call | `KSA/Program.cs:2094,2143` | Yes | New mod hook against unchanged 5402 surface | Requires unique ordered ApplyOrbit/Vehicle/Cloth, GetJobSimStep, ExecuteNextCloth/Vehicle/Orbit calls. Re-read game wait/snapshot semantics on updates. No UI fallback. |
+| 1 | **Harmony transpiler / private method** | `ksa-abstractions.lib/PhysicsFrameHook.cs` | `Program.PrepareFrame(double currentPlayerTime, double dtPlayer)`; wraps the single `Universe.GetJobSimStep(double)` call | `KSA/Program.cs:2094,2143` | Yes | New mod hook against unchanged 5402 surface | Requires unique ordered ApplyOrbit/Vehicle/Cloth, GetJobSimStep, ExecuteNextCloth/Vehicle/Orbit calls. Re-read game wait/snapshot semantics on updates. No UI fallback. |
 | 2 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:19,75` | `Vehicle.Parent` — `public IParentBody Parent => Orbit.Parent` | `KSA/Vehicle.cs:372` | Yes | Same (OLD `Vehicle.cs:370`) | Reference-compared for parent-body match; `.GetCci2Cce()` called on it (#10). |
 | 3 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:28` | `Vehicle.GetPositionCci()` — `public double3` | `KSA/Vehicle.cs:2590` | Yes | Same (OLD `Vehicle.cs:2433`) | Target world position. |
 | 4 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:29` | `Vehicle.GetVelocityCci()` — `public double3` | `KSA/Vehicle.cs:2538` | Yes | Same (OLD `Vehicle.cs:2381`) | Source velocity = target velocity. |
@@ -187,8 +187,8 @@ the legacy scalar `scale` key uniformly for backwards compatibility.
 | 14 | Direct typed API (write) | `garrys-torch.lib/WeldEngine.cs` | `Part.Scale` — `public double3 Scale { get; set; }` (setter calls `ResetCachedPosMatrixValues`) | `KSA/Part.cs:815` | Yes | Same (OLD `Part.cs:807`) | Recursive XYZ scale write. KSA's separate `ScaleFactors(double3)` collapses module rescaling to the largest axis; Garry's Torch does not claim anisotropic mass/module physics. |
 | 15 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:157,201` | `Part.SubParts` — `public ReadOnlySpan<Part> SubParts`; `PartTree.Parts` — `public ReadOnlySpan<Part> Parts` | `KSA/Part.cs:1079`; `KSA/PartTree.cs:95` | Yes | Same (OLD `Part.cs:1052`; `PartTree.cs:95`) | Part-tree walk for scaling + target-part list. |
 | 16 | Direct typed API | `garrys-torch.lib/GarrysTorchSubmod.cs:190,198` | `Part.Template` (`public PartTemplate Template`) -> `PartTemplate.Id` (`public string Id`, inherited `SerializedId.Id`); `Part.Id` (`public string Id { get; init; }`) | `KSA/Part.cs:576`,`698`; `KSA/SerializedId.cs:13` | Yes | Same (OLD `Part.cs:568`,`690`) | Target-part combo labels. |
-| 17 | Direct typed API | `garrys-torch.lib/GarrysTorchPatches.cs` | `Universe.GetJobSimStep(double)`; `SimStep.PreviousTime : UniverseTime` | `KSA/Universe.cs:2322`; `KSA/SimStep.cs:5` | Yes | Same | The wrapper computes the original step once and returns it unchanged. PreviousTime stamps the source orbit before workers start. |
-| 18 | Behavioral / callback argument | `garrys-torch.lib/GarrysTorchPatches.cs` | `Program.PrepareFrame` supplies `dtPlayer` to `GetJobSimStep` | `KSA/Program.cs:2143` | Yes | Same | Player delta also advances weld interpolation. No direct `Program.GetPlayerDeltaTime()` dependency remains in Garry's Torch. |
+| 17 | Direct typed API | `ksa-abstractions.lib/PhysicsFrameHook.cs` | `Universe.GetJobSimStep(double)`; `SimStep.PreviousTime : UniverseTime` | `KSA/Universe.cs:2322`; `KSA/SimStep.cs:5` | Yes | Same | The wrapper computes the original step once and returns it unchanged. PreviousTime stamps the source orbit before workers start. |
+| 18 | Behavioral / callback argument | `ksa-abstractions.lib/PhysicsFrameHook.cs` | `Program.PrepareFrame` supplies `dtPlayer` to `GetJobSimStep` | `KSA/Program.cs:2143` | Yes | Same | Player delta also advances weld interpolation. No direct `Program.GetPlayerDeltaTime()` dependency remains in Garry's Torch. |
 | 19 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:121` | `Orbit.CreateFromStateCci(IParentBody parent, UniverseTime stateTime, double3 positionCci, double3 velocityCci, byte4 orbitLineColor)` — `public static Orbit` | `KSA/Orbit.cs:1563` | Yes | Same (OLD `Orbit.cs:1563`) | 5-arg factory; arg order/types unchanged since the 5261 `SimTime`→`UniverseTime` rename. |
 | 20 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:126` | `Orbit.OrbitLineColor` — `public byte4 OrbitLineColor` (field) | `KSA/Orbit.cs:1138` | Yes | Same (OLD `Orbit.cs:1138`) | — |
 | 21 | Direct typed API | `garrys-torch.lib/WeldEngine.cs` | `vehicle is KittenEva`; `KittenEva.Renderable : KittenRenderable` | `KSA/KittenEva.cs:13,59` | Yes | Same | Compile-checked replacement for the former type-name + `_renderable` reflection. |
@@ -475,3 +475,31 @@ the decomp diff. Solution builds clean against 5402.
   `Part.Connection.IConnector` gained `Asmb2VehicleAsmb`. None are called by these mods.
 - **Needs a live pass:** the weld + part-failure interaction above (highest priority), welding a vehicle
   with deployed chutes, and the standing [`../ISSUES.md`](../ISSUES.md) garrys-torch error-spam check.
+
+## godzilla (`godzilla` / `godzilla.lib`)
+
+New Unscience `ISubmod` panel for Smart uniform and Basic raw XYZ vessel scaling. No new game patch:
+`GarrysTorchPatches` now delegates the validated caller transpiler to shared `PhysicsFrameHook` and
+registers welding as a listener. Godzilla queues Apply/Restore before those listeners. The original
+weld timing invariant and managed Harmony tests remain in force.
+
+| Integration | Game source / invariant | Owner |
+|---|---|---|
+| `Vehicle.Parts.Parts`, `Part.SubParts`, `Part.Scale`, `PositionParentAsmb`, `Vehicle.CenterOfMassAsmb` | `Part.cs:704,738,787,815`; full parts have assembly-space positions; subparts inherit parent matrices. Smart scales full-part offsets about captured COM and multiplies full-part authored scales only. | `godzilla.lib/VesselScaleSnapshot.cs` |
+| `Part.ResetCachedPosMatrixValues`, `RefreshScale`, `UpdateBounds` | `Part.cs:1182,1192,1571`; a parent setter does **not** invalidate descendant caches. RefreshScale walks IRescale modules, connectors and subparts. `ScaleFactors(double3)` chooses the **largest axis**, so Basic XYZ physics is a uniform approximation. | snapshot refresh |
+| `PartTree.RecomputeAllDerivedData`, `Vehicle.UpdateAfterPartTreeModification` | `PartTree.cs:358`; `Vehicle.cs:1881`; rebuild scale-sensitive mass, stores, attachments, seat alignment, collider compound, aero and flight-computer data without replacing keyframe module state arrays. | snapshot refresh |
+| `KittenEva.Renderable`, private `KittenRenderable._characterAvatar`, typed `CharacterAvatar.Core.Scale` | `KittenRenderable.cs:12,108`; `CharacterAvatar.cs:34,211`; preserve captured avatar scalar and call shared `KittenScalePatches.SetScale` for XYZ correction. Same private matrix postfix as Garry's Torch. | snapshot character scaling |
+| `JobSystems.OrbitSolvers/VehicleSolver/ClothSolvers.Wait()` | `Program.cs:2103-2105`; queued edits already run after waits; unload explicitly waits before restoring native modules/shapes. | `GodzillaSubmod.Dispose` |
+| `Vehicle.IsDisposed`, live system vehicle identity, part reference topology | Skip destroyed/unloaded objects. Staging/docking restores surviving captured parts and releases ownership; do not mutate departed pieces' modules. | `GodzillaSubmod.CheckSessions` |
+| StarMap / ISubmod | Thin development host + Unscience registration; only Unscience deploys. `HotkeyGuard`, shared physics hook and kitten correction installed by hosts. | `godzilla/Mod.cs`, `Patcher.cs`, `unscience/Mod.cs` |
+
+`VehicleScaleOwnership` in abstractions uses weak vehicle keys and owner-checked acquire/release.
+Godzilla sessions and Garry's Torch weld sources cannot simultaneously own scale. Godzilla may scale
+a weld target; the queue runs before welding so anchors use refreshed geometry.
+
+Validation: production snapshot/ownership linked into managed `godzilla.tests` checks Smart spacing,
+non-cumulative authored scales, animation state preservation, mode changes, restore, detached parts,
+kitten baseline and owner exclusion. Production shared Harmony patch also passes the Garry fixture,
+including queued edits before welds, deferred reentrant work, exceptions and unloaded-system discard.
+Full solution compiles against 5402. Native collisions, scale-sensitive module behavior, kitten fur,
+actuation at scale, docking/staging and unload still need a live game pass.

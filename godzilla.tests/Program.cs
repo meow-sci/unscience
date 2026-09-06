@@ -1,0 +1,51 @@
+using System;
+using Brutal.Numerics;
+using KSA;
+using MeowSci.GodzillaLib;
+using MeowSci.KsaAbstractions;
+
+static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
+var child = new Part { Scale = new(0.3, 0.4, 0.5), PositionParentAsmb = new(3,2,1) };
+var first = new Part { Scale = new(2,3,4), PositionParentAsmb = new(-5,2,4) };
+first.SubParts.Add(child);
+var second = new Part { Scale = new(0.5), PositionParentAsmb = new(5,2,4) };
+var vessel = new Vehicle { CenterOfMassAsmb = new(1,2,3) };
+vessel.Parts.Parts.AddRange(new[] { first, second });
+var snapshot = new VesselScaleSnapshot(vessel);
+snapshot.Apply(true, new(2));
+Check(first.PositionParentAsmb == new double3(-11,2,5) && second.PositionParentAsmb == new double3(9,2,5), "Smart must double spacing around the captured pivot");
+Check(first.Scale == new double3(4,6,8) && second.Scale == new double3(1), "Preserve authored scale ratios");
+Check(child.Scale == new double3(.3,.4,.5) && child.PositionParentAsmb == new double3(3,2,1), "Children inherit scale without double application");
+Check(child.Invalidations == 1 && child.Bounds == 1 && child.Refreshes == 1 && vessel.Refreshes == 1, "Refresh child caches, modules, bounds and vehicle physics");
+child.Scale = new(.7); // A running keyframe animation owns the child's scale.
+snapshot.Apply(true, new(3));
+Check(first.Scale == new double3(6,9,12), "Repeated edits use original, not cumulative values");
+Check(child.Scale == new double3(.7), "Smart edits preserve current animated child scale");
+snapshot.Restore();
+Check(child.Scale == new double3(.7) && first.Scale == new double3(2,3,4), "Smart restore does not rewind animations");
+snapshot.Apply(false, new(2,3,4));
+Check(child.Scale == new double3(2,3,4) && first.PositionParentAsmb == new double3(-5,2,4), "Basic raw axes leave full-part positions fixed");
+snapshot.Apply(true, new(2));
+Check(child.Scale == new double3(.3,.4,.5), "Basic-to-Smart must remove raw child overrides");
+snapshot.Restore();
+Check(first.Scale == new double3(2,3,4) && first.PositionParentAsmb == new double3(-5,2,4), "Exact original restoration");
+try { snapshot.Apply(true, new(float.NaN)); throw new Exception("Accepted NaN"); } catch (ArgumentOutOfRangeException) { }
+snapshot.Apply(true, new(2));
+vessel.Parts.Parts.Remove(second);
+Check(!snapshot.TopologyMatches(), "Detect staging/part loss");
+snapshot.Restore();
+Check(second.Scale == new double3(1) && first.Scale == new double3(2,3,4), "Restore surviving parts without touching detached pieces");
+var kitten = new KittenEva();
+kitten.Renderable.Avatar.Core.Scale = .025f;
+var kittenSnapshot = new VesselScaleSnapshot(kitten);
+kittenSnapshot.Apply(false, new(2,3,4));
+Check(kitten.Renderable.Avatar.Core.Scale == .05f && kitten.Renderable.Correction == new float3(2,3,4), "Preserve custom kitten base scale and axis correction");
+kittenSnapshot.Restore();
+Check(kitten.Renderable.Avatar.Core.Scale == .025f && kitten.Renderable.Correction == new float3(1), "Restore kitten scalar and axis correction");
+Check(VehicleScaleOwnership.TryAcquire(vessel,"Godzilla"), "Acquire free vessel");
+Check(!VehicleScaleOwnership.TryAcquire(vessel,"Garry's Torch"), "Reject competing scale writer");
+VehicleScaleOwnership.Release(vessel,"Garry's Torch");
+Check(VehicleScaleOwnership.GetOwner(vessel)=="Godzilla", "Wrong owner cannot release");
+VehicleScaleOwnership.Release(vessel,"Godzilla");
+Check(VehicleScaleOwnership.TryAcquire(vessel,"Garry's Torch"), "Release allows next tool");
+Console.WriteLine("PASS: Smart layout, authored scales, animation preservation, mode switches, restoration, topology, kitten scale and ownership");

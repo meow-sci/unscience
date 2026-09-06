@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../godzilla.lib/VesselScaleSnapshot.cs" Link="VesselScaleSnapshot.cs" />
+    <Compile Include="../ksa-abstractions.lib/VehicleScaleOwnership.cs" Link="VehicleScaleOwnership.cs" />
+  </ItemGroup>
+</Project>

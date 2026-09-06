@@ -47,7 +47,7 @@ Vehicle welding system. Attaches one vehicle to another with support for positio
 - Per-weld rotation offset (pitch/yaw/roll)
 - Independent per-axis vehicle scaling with a KittenEva model-transform correction
 - Rotation lock toggle and auto-unweld on parent mismatch
-- Weld updates run through `GarrysTorchPatches` at the `Program.PrepareFrame` simulation handoff, after completed results are applied and before cloth/vehicle/orbit workers start. Source light actuation retains committed progress; teleports use `SimStep.PreviousTime`. The patch validates the call order and is independent of HUD visibility.
+- Weld updates run through `GarrysTorchPatches` via shared `PhysicsFrameHook` at the `Program.PrepareFrame` simulation handoff, after completed results are applied and before cloth/vehicle/orbit workers start. Source light actuation retains committed progress; teleports use `SimStep.PreviousTime`. The patch validates the call order and is independent of HUD visibility.
 - Multiple simultaneous welds with topological sort for correct ordering
 - User-defined presets persisted to TOML (`~/.unscience/garrys-torch-presets.toml`)
 - Save weld settings as named presets, load presets into create form
@@ -324,7 +324,7 @@ Define **brand-new planetary rings at runtime** and apply them to **any celestia
 ### [unscience](unscience)
 Unified supermod that consolidates the standalone feature mods into a single ImGui window with collapsible headers and a gear icon (⚙) context menu for per-submod visibility toggles. All submod logic lives directly in the respective `.lib` projects — unscience instantiates these lib submods and orchestrates them via the `ISubmod` interface from `ksa-abstractions.lib`. A single Harmony instance consolidates their patches. Standalone mods continue to work independently.
 - F11 window toggle with unified panel for all core submods
-- Submods: Blinky, Bloomin' Onion, Camera Controller Override, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Parts Now, Pebbles, Pyro, Rocky McRock Face, Skittles, Thug Life, Zippo (24 total)
+- Submods: Blinky, Bloomin' Onion, Camera Controller Override, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Parts Now, Pebbles, Pyro, Rocky McRock Face, Skittles, Thug Life, Zippo (25 total)
 - Uses `ISubmod` interface (from `ksa-abstractions.lib`): `Name`, `Initialize()`, `Update(dt)`, `RenderContent()`, `Dispose()`
 - Each submod class lives in its `.lib` project (for example `BlinkySubmod` in `blinky.lib`)
 - `unscience/Submods/` directory removed — no thin UI wrapper layer; submod classes own their own ImGui rendering
@@ -396,3 +396,15 @@ See [README](pebbles.lib/README.md) and [integration scope](scope/ground-clutter
 Game-independent executable checks for Pebbles recipes, collider scaling, Workshop camera/gizmo
 math and undo history, GLB geometry/material parsing, texture mapping and pixel conversion.
 Run `dotnet run --project pebbles.tests/pebbles.tests.csproj`; see its [README](pebbles.tests/README.md).
+
+### [godzilla](godzilla) / [godzilla.lib](godzilla.lib)
+
+Vessel/EVA scaling panel in Unscience: Smart uniform layout-preserving size, Basic raw XYZ size,
+filterable targeting, per-vessel original snapshots and restore-all. Mutations use the shared physics
+handoff; `VehicleScaleOwnership` excludes simultaneous Garry's Torch source scaling. Modules,
+collision/mass data and descendant transform caches refresh after edits. See the project README.
+
+### [godzilla.tests](godzilla.tests)
+
+Managed executable linking production scale snapshots and ownership against lightweight game
+fixtures. Covers transforms, animation preservation, mode changes, restore, topology and kitten scale.

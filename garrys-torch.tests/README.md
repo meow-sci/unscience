@@ -21,3 +21,8 @@ one `fixture weld failure` log before the final PASS line. Any failed assertion 
 This validates the hook and timing contract, not the actual game's native physics, light rendering,
 part-anchor math or scale behavior. See the [library README](../garrys-torch.lib/README.md) for
 the required in-game checks and [scope](../scope/vehicle-physics.md) for the 5402 source trace.
+
+The caller transpiler now lives in `ksa-abstractions.lib/PhysicsFrameHook`; Garry's Torch registers
+its weld callback. Queued Godzilla edits run before this callback. Source scale ownership is exclusive:
+restore Godzilla before welding, or unweld before applying Godzilla. Managed checks also cover queued
+mutation ordering, reentrant deferral, exception isolation and stale-system queue disposal.

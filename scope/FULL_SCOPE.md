@@ -105,7 +105,7 @@ boundaries and the Unscience lifecycle are unchanged by this packaging refactor.
 |---|---|---|
 | [`game-integration-surface.md`](game-integration-surface.md) | **Master cross-reference index** — every game type/member touched, merged across mods | Start here for "does the game still have X?"; includes the string-reflection watchlist + shader/asset table |
 | [`00-architecture-and-abstractions.md`](00-architecture-and-abstractions.md) | unscience supermod shell (`Mod.cs`/`Patcher.cs`/`MenuBarPatch`/`UnscienceState`) + `ksa-abstractions.lib` | StarMap lifecycle map, consolidated-Harmony cross-ref, `HotkeyGuard`, `IvaForceRender`, providers |
-| [`vehicle-physics.md`](vehicle-physics.md) | eternal-flame, garrys-torch, i-feel-seen | `Universe.ExecuteNextVehicleSolvers`, `Battery.Refill`, `Vehicle.Teleport`, KittenEva reflection; **garrys-torch PrepareFrame handoff preserves actuator results before teleport** |
+| [`vehicle-physics.md`](vehicle-physics.md) | eternal-flame, garrys-torch, godzilla, i-feel-seen | `Universe.ExecuteNextVehicleSolvers`, `Battery.Refill`, `Vehicle.Teleport`, KittenEva reflection; **garrys-torch PrepareFrame handoff preserves actuator results before teleport** |
 | [`celestial-and-lights.md`](celestial-and-lights.md) | kiwis-marbles, zippo | `Celestial.SetOrbit`, `IParentBody.Children`/`UpdatePerFrameDataTree`, `Universe.ExecuteNextVehicleSolvers` prefix (kiwis-marbles sim-step timing, fixed 2026-08-23), `IOrbiter`, `LightModule`/`LightSwitch`; Zippo Disco's per-instance templates, cone angles and `KeyframeAnimationModule.TimeGoal` ownership |
 | [`camera.md`](camera.md) | camera-controller-override, glass, hot-pursuit | `OrbitController/FlyController/FixedController.OnFrame`, `Camera._fovRadians`; four public secondary-viewport leases under the sealed 8-slot registry; part-raycast camera mounts; Hot Pursuit nearby-celestial sync and stock secondary-render omissions |
 | [`pixel-grids-and-render.md`](pixel-grids-and-render.md) | blinky, its-so-shiny, thug-life | three `*Module.UpdateRenderData` patches, `PartTree.CreateFromNewPartTree`, `RocketCore.FeedConnectors` (blinky ignition), `SuperMeshRenderSystem.RenderMainPass`, UnlitMesh shaders |
@@ -214,3 +214,8 @@ uniform PBR / restore-unload; dont-stifle-me scale-then-attach plus 2 m / 1000 m
 parachute edits with symmetry; kiwis-marbles weld near
 a deployed chute; hot-pursuit placement/motion/lease contention + Glass independent FOV; the standing thug-life / humble-arteest / blinky /
 its-so-shiny render checks. A green `dotnet build` and the managed Pebbles/Garry's Torch checks do not cover these native behaviors.
+
+**Godzilla added:** Smart uniform layout-preserving vessel scaling and Basic raw XYZ scales, with
+snapshot restoration and Garry's Torch scale ownership exclusion. The shared PrepareFrame hook
+queues edits before welds. Managed snapshot and Harmony checks pass; native scale/collision/animation
+and unload smoke tests remain. See [vehicle physics](vehicle-physics.md#godzilla-godzilla--godzillalib).

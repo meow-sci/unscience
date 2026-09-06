@@ -6,7 +6,7 @@
 - [x] kitten-animations: per-kitten targeting (not just currently controlled)
 - [x] garrys-torch: scaling on independent axis
 - [x] garrys-torch: when a weldee (source) is welded, animations on that thing (like light part actuation) are not working
-- [ ] godzilla (new mod): vessel scaling.  "smart" scaling where we dont break part offsets and not smart (what garrys-torch does now)
+- [x] godzilla (new mod): vessel scaling.  "smart" scaling where we dont break part offsets and not smart (what garrys-torch does now)
 - [x] zippo: disco light show
 - [ ] byo-music: can this be tied to in-game location / 3d sound? repeat? "remember me" giant bender.  we should be able to import sound files in supported formats like ogg (not sure if brutal supports wav, mp3 as well) using our existing file/dir picker, and place them into a <UNSCIENCE_DATA>/sounds dir (copy them there like we do for pngs and glbs) and use this folder of files to drive filterable dropdowns to pick sounds.  can we target a particular vessel and have the sound be tied to it in 3d space?  if so can we set it on a loop like a continuous repeat with an option for how long between each repeat?
 - [ ] pyro: animation cycle options.  an on/off infinite loop with a time for how long off and how long on in seconds, use dragfloat sliders.  this should be a runtime state thing.

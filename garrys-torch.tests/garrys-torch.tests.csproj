@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <Compile Include="../ksa-abstractions.lib/PhysicsFrameHook.cs" Link="PhysicsFrameHook.cs" />
     <Compile Include="../garrys-torch.lib/GarrysTorchPatches.cs" Link="GarrysTorchPatches.cs" />
   </ItemGroup>
 </Project>

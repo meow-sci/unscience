@@ -12,7 +12,7 @@ The `CreateWeld`, `ModifyWeld`, `RemoveWeld`, `AnimateWeld` and preset APIs edit
 `Update(dt)` does not advance physics. The old public `UpdateWelds(dt)` and single-argument
 `UpdateBeforeVehicleSolvers(dt)` methods were removed; hosts must install the shared frame hook.
 
-`GarrysTorchPatches` replaces the one `Universe.GetJobSimStep(double)` call inside private
+`GarrysTorchPatches` registers a callback with `ksa-abstractions.lib/PhysicsFrameHook`, which replaces the one `Universe.GetJobSimStep(double)` call inside private
 `Program.PrepareFrame(double,double)` with a wrapper. It computes the same step, invokes the
 internal weld update using player delta and `step.PreviousTime`, and returns that step unchanged.
 The patch requires unique ordered ApplyOrbit/Vehicle/ClothSolvers, GetJobSimStep and
@@ -45,3 +45,8 @@ Native KSA physics/rendering still needs an in-game smoke pass:
 
 These timing changes preserve completed simulation results; they do not disable collisions or
 structural destruction between overlapping welded vehicles.
+
+The caller transpiler now lives in `ksa-abstractions.lib/PhysicsFrameHook`; Garry's Torch registers
+its weld callback. Queued Godzilla edits run before this callback. Source scale ownership is exclusive:
+restore Godzilla before welding, or unweld before applying Godzilla. Managed checks also cover queued
+mutation ordering, reentrant deferral, exception isolation and stale-system queue disposal.

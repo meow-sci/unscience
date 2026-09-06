@@ -1,0 +1,7 @@
+name = "godzilla"
+description = "godzilla"
+version = "0.1.0"
+author = "meow sci"
+
+[StarMap]
+EntryAssembly = "MeowSci.Godzilla"

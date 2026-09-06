@@ -71,3 +71,6 @@ replace the old `unscience` folder. Builds deliberately do not delete existing u
 The private assemblies come from `meow-sci/ksa-game-assemblies` via the
 `KSA_GAME_ASSEMBLIES_PAT` repo secret (fine-grained PAT, read-only Contents on
 that repo).
+
+Godzilla adds session-based Smart vessel resizing, raw XYZ Basic scaling, and restore controls.
+See [Godzilla](godzilla/README.md).
