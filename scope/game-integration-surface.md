@@ -1146,3 +1146,8 @@ no longer referenced by the host UI; the legacy MusicPlayer library helper remai
 **Pyro runtime cycles:** existing `Universe.GetElapsedSeconds` and `VolumetricExhaustInstance.UpdateState`
 now drive independent absolute-time On/Off phases via `PlumeEntry.EffectiveEnabled`. No new game
 member or patch. See [exhaust scope](exhaust-plumes.md#runtime-onoff-cycling).
+
+**Pebbles shared GLBs:** the existing game importer now receives managed `.unscience/glbs` paths.
+Lazy file choices from shared `GlbLibrary` are frozen by `ClutterAssets.ResolveSelection` before
+main/Workshop recipe assignment. Discovery changes no live GPU assets; no new game member or patch.
+See [ground clutter](ground-clutter.md#shared-glb-importdiscovery) for copy/version/retirement invariants.

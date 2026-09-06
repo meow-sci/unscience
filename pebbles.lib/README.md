@@ -13,12 +13,12 @@ The form does not expose placement, LOD, resource-budget or material-channel tun
 
 The collider editor retains orbit/pan/zoom, framing, grounding, fitted primitives, numeric and handle editing, duplicate/mirror/delete, snapping and undo/redo. It no longer exposes separate LOD meshes or texture channels. **Done** keeps the detached recipe; **Cancel** discards the edit. Finish the editor before changing the main mesh or applying. Neither editing nor Done changes a planet.
 
-Planet and clutter-type identities are exact. Refresh discovers targets without applying anything; missing types stay unresolved and changed target signatures block Apply until refreshed. Authoring selections, collider edits, applied overrides and imports are session-only. Main's existing window/header visibility persistence still applies; no workspace or Live State abstraction is required.
+Planet and clutter-type identities are exact. Refresh discovers targets without applying anything; missing types stay unresolved and changed target signatures block Apply until refreshed. Authoring selections, collider edits, applied overrides and loaded GPU/CPU import caches are session-only; copied GLB files persist in the shared library. Main's existing window/header visibility persistence still applies; no workspace or Live State abstraction is required.
 
 
 ## Loading your own GLB
 
-Use **Import GLB…** to browse for a self-contained GLB, or expand **GLB file path** to paste an absolute path and press **Load file**. Import selects the complete scene and automatically assigns embedded base-color/diffuse, normal, PBR and opacity maps where supported. Choosing a different imported scene/mesh also refreshes its materials automatically; there is no separate texture-assignment step.
+Use **Import GLB…** to browse for a self-contained GLB, or expand **GLB file path** to paste an absolute path and press **Load file**. The file is copied into `My Games/Kitten Space Agency/.unscience/glbs` before loading. Import selects the complete scene and automatically assigns embedded base-color/diffuse, normal, PBR and opacity maps where supported. Choosing a different imported scene/mesh also refreshes its materials automatically; there is no separate texture-assignment step.
 
 Import supports self-contained **GLB 2.0**, static triangle primitives, indexed or non-indexed geometry, float positions/normals and float or normalized unsigned byte/short UV streams. Missing normals are generated. The main texture selects its UV set (including secondary sets); its KHR_texture_transform offset, rotation and scale are baked into the imported UVs. Missing required UV data remains an error. Scene hierarchy transforms and mirrored instances are baked; animation is not played, and individual meshes use raw local geometry. Imported meshes share the scale and collider controls.
 
@@ -56,3 +56,29 @@ See [ground-clutter integration](../scope/ground-clutter.md) for native dependen
 Run `dotnet run --project pebbles.tests/pebbles.tests.csproj` from the repository root. Managed checks cover detached copying/serialization, placement and collider constraints, camera/gizmo math, undo history, GLB geometry/container validation, transform baking, exact file identities, material-slot isolation and pure pixel conversion. Compilation verifies typed APIs against KSA 2026.9.7.5402. Native acceptance must cover private material descriptors, shadows, GPU retirement, stationary-cell collision refresh, exclusions, same-body replacement/restoration, scene changes, and Luna/Mars isolation. The preview uses conservative synchronization and may hitch while changing a large mesh or resizing; native rendering and gameplay are not established by managed checks. GLB acceptance additionally needs actual PNG/JPEG decode/upload, transformed atlases and secondary UVs, skipped detail maps, masks/blend cutouts, wrap approximations, alternate-image fallbacks, multi-material scenes, file changes, preview/live sharing and cache release.
 
 Bound source textures must remain loaded while their recipes are applied or previewed. Native construction failure can leave allocations hidden in game-local variables; reachable resources are retired once and failures are reported, but a renderer/game restart may be required. See the [runtime failure limits](../scope/ground-clutter.md#failure-handling-and-verification-limits).
+
+## Shared GLB library
+
+Imports from the browser, pasted path and `ClutterAssets.ImportGlb` all use the shared
+`GlbLibrary.Files` copied catalog. The PNG/sound `LibraryFileBrowser` now supplies folder navigation,
+filtering, quick links and refresh; Pebbles no longer owns a separate browser implementation.
+Duplicate names get a numbered suffix and originals may be moved/deleted after import. The 128 MiB
+limit is checked before copying.
+
+Every mesh picker, including Workshop's hull-source picker, lists **filename · GLB library** choices
+from this directory. The catalog refreshes every two seconds or via **Refresh GLB library**. Scanning
+lists names only: it does not decode files, consume the 16-source cache, or upload GPU resources.
+Selecting a file loads its complete scene and freezes the exact path/hash identity before assigning
+it to a recipe. Imported scene/individual-mesh choices then become available as before, with supported
+embedded materials assigned automatically. Changing a shared file does not replace already-loaded
+content or live planet overrides; select its library entry explicitly to load the new version.
+
+`ClutterAssets.ResolveSelection(id)` is the public freeze step for lazy library choices. Consumers
+must call it before storing recipes; `ResolveMesh` rejects unfrozen library ids. `GlbLibrary` and
+`LibraryFileBrowser` are reusable by Sphinx or any future GLB tool, while Pebbles' geometry/material
+loader remains a deliberate library dependency. `ReleaseAll` frees runtime import caches after
+borrower retirement; it never deletes the shared files.
+
+`pebbles.tests` now also checks copied GLB parsing after source deletion, managed recipe paths,
+changed-file hashes, lazy selection identities and pre-copy limits. Full solution builds; native
+preview, texture uploads, clutter retirement and actual file-picker UX retain their live-game checks.

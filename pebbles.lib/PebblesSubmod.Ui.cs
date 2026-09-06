@@ -107,11 +107,18 @@ public sealed partial class PebblesSubmod
 
     private void SelectMesh(string mesh)
     {
+        mesh = _assets.ResolveSelection(mesh);
         var materials = mesh.StartsWith(GlbIdentity.Prefix, StringComparison.Ordinal)
             ? _assets.GlbMaterials(mesh) : new List<MaterialRecipe> { new() { SourceColors = true } };
         ClutterAuthoring.AssignMesh(_replacement, mesh, materials);
         _glbStatus = mesh.StartsWith(GlbIdentity.Prefix, StringComparison.Ordinal)
             ? "Textures assigned automatically. " + string.Join(" ", _assets.GlbWarnings(mesh)) : "";
+        if (mesh.StartsWith(GlbIdentity.Prefix, StringComparison.Ordinal))
+        {
+            _glbOptions = _assets.GlbOptions(mesh);
+            _glbSelected = mesh;
+            _glbPath.Value16 = GlbIdentity.Parse(mesh).Path;
+        }
         _releaseImports = false;
     }
 }

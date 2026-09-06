@@ -11,3 +11,7 @@ and pixel conversion. Failure throws and returns a nonzero exit code.
 
 These checks cannot exercise Harmony, native image decoding, Vulkan rendering/resource
 retirement or game physics. In-game smoke checks are listed in `../pebbles.lib/README.md`.
+
+Shared catalog checks additionally link `SharedFileLibrary`/`GlbLibrary` against an isolated temporary
+filesystem: actual GLB fixture bytes survive source deletion, recipe identities use the managed copy,
+content changes alter the hash, lazy picker ids differ from frozen ids, and oversized copies fail early.

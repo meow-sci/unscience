@@ -177,3 +177,9 @@ explicit Import, and visible filesystem errors. `PngLibrary`/`PngFileBrowser` re
 APIs as facades; `SoundLibrary.Files` adds `.unscience/sounds` for OGG/WAV/MP3. Consumers poll scans
 or use Refresh to discover externally added files; decoding remains the consumer's responsibility.
 Managed filesystem and loop checks: `dotnet run --project byo-music.tests`.
+
+`GlbLibrary.Files` adds `.unscience/glbs` (case-insensitive .glb, 128 MiB copy limit). Its
+`SelectionId/FileName/IsSelection/Label` helpers represent lazy picker choices only. A GLB consumer
+must resolve these into content-version identities before retaining a live recipe. `SharedFileLibrary`
+now accepts an optional pre-copy byte limit; PNG/sound defaults remain unrestricted. Shared GLB
+content tests live in `pebbles.tests`.

@@ -80,3 +80,6 @@ controllable 3D playback to vessels, with continuous repeat or gaps. See [BYO Mu
 
 Pyro supports independent runtime On/Off cycles with simulation-second durations and manual/bulk
 cancellation. See [Pyro](pyro/README.md#runtime-onoff-cycles).
+
+Pebbles copies imported GLBs into a shared persistent library and discovers them automatically in
+mesh pickers. See [shared GLBs](pebbles.lib/README.md#shared-glb-library).

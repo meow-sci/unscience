@@ -9,12 +9,14 @@ namespace MeowSci.KsaAbstractions;
 public sealed class SharedFileLibrary
 {
     private readonly HashSet<string> _extensions;
+    private readonly long _maxFileBytes;
     public string DirectoryPath { get; }
     public string Label { get; }
     public string FormatDescription => string.Join(", ", _extensions);
 
-    public SharedFileLibrary(string directory, string label, string[] extensions, string? dataRoot = null)
+    public SharedFileLibrary(string directory, string label, string[] extensions, string? dataRoot = null, long maxFileBytes = long.MaxValue)
     {
+        _maxFileBytes = maxFileBytes;
         DirectoryPath = Path.Combine(dataRoot ?? KsaPaths.ModDataDir, directory);
         Label = label;
         _extensions = new(extensions, StringComparer.OrdinalIgnoreCase);
@@ -53,6 +55,8 @@ public sealed class SharedFileLibrary
         {
             if (!File.Exists(sourcePath)) { error = "File not found."; return null; }
             if (!Supports(sourcePath)) { error = $"Supported files: {FormatDescription}."; return null; }
+            if (new FileInfo(sourcePath).Length > _maxFileBytes)
+            { error = $"File exceeds the {_maxFileBytes / (1024 * 1024)} MiB import limit."; return null; }
             EnsureDir();
             string source = Path.GetFullPath(sourcePath);
             string name = Path.GetFileName(source);

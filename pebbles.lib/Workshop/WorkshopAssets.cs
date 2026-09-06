@@ -13,7 +13,7 @@ public sealed partial class WorkshopEditor
     private void AssetCombo(string label, string current, string[] options, Action<string> assign, bool allowDefault = false)
     {
         ImGui.Text(label); ImGui.SetNextItemWidth(-1);
-        if (!ImGui.BeginCombo($"##workshop-{label}", current.Length == 0 ? "Choose / game default" : GlbIdentity.Label(current))) return;
+        if (!ImGui.BeginCombo($"##workshop-{label}", current.Length == 0 ? "Choose / game default" : ClutterAssets.MeshLabel(current))) return;
         try
         {
             if (ImGui.IsWindowAppearing()) _assetFilter.Value16 = _state.AssetFilter;
@@ -22,8 +22,8 @@ public sealed partial class WorkshopEditor
             if (allowDefault && ImGui.Selectable("Game default"u8, current.Length == 0)) assign("");
             foreach (string option in options)
             {
-                if (!option.Contains(_state.AssetFilter, StringComparison.OrdinalIgnoreCase) && !GlbIdentity.Label(option).Contains(_state.AssetFilter, StringComparison.OrdinalIgnoreCase)) continue;
-                if (ImGui.Selectable(GlbIdentity.Label(option) + "##" + option, option == current)) assign(option);
+                if (!option.Contains(_state.AssetFilter, StringComparison.OrdinalIgnoreCase) && !ClutterAssets.MeshLabel(option).Contains(_state.AssetFilter, StringComparison.OrdinalIgnoreCase)) continue;
+                if (ImGui.Selectable(ClutterAssets.MeshLabel(option) + "##" + option, option == current)) assign(option);
             }
         }
         finally { ImGui.EndCombo(); }

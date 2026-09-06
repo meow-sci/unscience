@@ -4,6 +4,8 @@
     <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../ksa-abstractions.lib/SharedFileLibrary.cs" Link="SharedFileLibrary.cs" />
+    <Compile Include="../ksa-abstractions.lib/GlbLibrary.cs" Link="GlbLibrary.cs" />
     <Compile Include="../pebbles.lib/Models/*.cs" Link="Models/%(Filename)%(Extension)" />
     <Compile Include="../pebbles.lib/Workshop/WorkshopMath.cs" Link="Workshop/WorkshopMath.cs" />
     <Compile Include="../pebbles.lib/Workshop/WorkshopState.cs" Link="Workshop/WorkshopState.cs" />

@@ -14,7 +14,7 @@ public sealed partial class PebblesSubmod : ISubmod
     private readonly WorkshopEditor _workshop = new();
     private PebblesRecipe _recipe = new();
     private string _bodyId = "", _message = "";
-    private double _refreshTime;
+    private double _refreshTime, _libraryRefreshTime;
     public PebblesSubmod() { _controller = new ClutterController(_assets); }
     public void Initialize() => Console.WriteLine("pebbles: initialized");
     public void Update(double dt)
@@ -27,16 +27,18 @@ public sealed partial class PebblesSubmod : ISubmod
             _workshop.Release(); _workshop.Update();
             _assets.ReleaseGlbImports(); _glbOptions = [];
         }
+        _libraryRefreshTime -= dt;
+        if (_libraryRefreshTime <= 0) { _libraryRefreshTime = 2; _assets.RefreshSharedLibrary(); }
         _refreshTime -= dt;
         if (_refreshTime > 0) return;
         _refreshTime = 5;
-        Try(() => { _controller.Refresh(); if (_assets.MeshIds.Length == 0) _assets.Refresh(); });
+        Try(() => { _controller.Refresh(); if (!_assets.RegistryDiscovered) _assets.Refresh(); });
     }
     public void RenderFloatingWindows()
     {
         _workshop.SetCompletion(CompleteWorkshop);
         _workshop.Draw(_assets);
-        _glbBrowser.Draw(ImportGlb);
+        _glbBrowser.Render(name => ImportAttempt(() => ImportGlb(GlbLibrary.Files.FullPath(name))));
     }
     private void CompleteWorkshop(ObjectRecipe value)
     {

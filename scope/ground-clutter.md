@@ -84,3 +84,21 @@ Acceptance must include stock capture/apply visual parity; multiple bodies shari
 ## Source evidence
 
 The investigation and detailed native line map are retained in [the source map](../plans/PEBBLES_SOURCE_MAP.md). These explain the native system; the current implementation and limitations above govern shipped behavior.
+
+## Shared GLB import/discovery
+
+`ClutterAssets.ImportGlb` now copies through `ksa-abstractions.lib/GlbLibrary.Files` before the existing
+`GlbImportLibrary.Import` path. All new `GlbIdentity` paths target `.unscience/glbs`. The browser and
+pasted-path flows converge here. Main and Workshop hull mesh pickers include lazy catalog choices;
+`ResolveSelection` imports/freezes their exact hash before recipe assignment. `ResolveMesh` rejects
+unfrozen file choices. Catalog scans (every two seconds) list files without native allocation or JSON
+load; explicit selection uses the unchanged game-facing geometry/material importer and borrower's
+retirement rules. Imported versions remain stable if a shared file changes. Existing legacy content
+ids still resolve through their recorded path/hash; no live overrides are rewritten by discovery.
+
+Removed local UI surface `Import/GlbFileBrowser`; replaced with shared `LibraryFileBrowser` used by
+PNG and sounds. `SharedFileLibrary` enforces GLB's existing 128 MiB maximum before copying. No new
+Harmony patch, reflection lookup, game member, shader or GPU layout. Public library surface now
+includes `RefreshSharedLibrary`, `ResolveSelection`, `RegistryDiscovered` and `MeshLabel`.
+Managed parser/texture/Workshop tests plus copied-catalog/identity checks pass, and the full solution
+builds. Native rendering/resource retirement retain existing live verification requirements.

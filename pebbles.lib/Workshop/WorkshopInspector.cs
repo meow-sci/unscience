@@ -114,7 +114,7 @@ public sealed partial class WorkshopEditor
         else
         {
             if (_assets != null) AssetCombo("Hull source mesh", collider.HullMeshId, _assets.MeshIds,
-                value => Edit(() => collider.HullMeshId = value, true));
+                value => Edit(() => collider.HullMeshId = _assets.ResolveSelection(value), true));
             changed |= VectorInput("Hull scale", collider.HullScale, value => collider.HullScale = value, .01f, .001f, 10000);
             ImGui.TextWrapped("Hull source wireframe is shown; physics uses its convex envelope. Resize handles edit hull scale."u8);
         }

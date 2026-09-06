@@ -421,3 +421,9 @@ with isolated filesystem data, including duplicate handling, PNG compatibility a
 
 Managed executable linking production on/off cycle logic; validates boundaries, pause, warp,
 backward clocks, stop/restart and non-finite input without loading native KSA.
+
+**Shared GLB discovery:** `ksa-abstractions.lib/GlbLibrary` supplies the copied `.unscience/glbs`
+catalog and lazy file choices. Pebbles' `ClutterAssets.ResolveSelection` freezes selected files to
+path/hash mesh ids before recipes retain them; main and Workshop mesh pickers auto-discover files
+without decoding the folder. `LibraryFileBrowser` is shared with PNG/sound imports. `pebbles.tests`
+adds copied-source and version-identity checks; see the Pebbles library README for behavior.

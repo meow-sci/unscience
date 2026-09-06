@@ -8,7 +8,7 @@ namespace MeowSci.PebblesLib;
 
 public sealed partial class PebblesSubmod
 {
-    private readonly GlbFileBrowser _glbBrowser = new();
+    private readonly LibraryFileBrowser _glbBrowser = new(GlbLibrary.Files, "pebbles", "Import GLB");
     private readonly ImInputString _glbPath = new(4096);
     private string _glbSelected = "", _glbStatus = "";
     private IReadOnlyList<GlbMeshOption> _glbOptions = [];
@@ -19,12 +19,16 @@ public sealed partial class PebblesSubmod
         var options = _assets.ImportGlb(path);
         SelectMesh(options[0].Id);
         _glbOptions = options;
-        _glbPath.Value16 = System.IO.Path.GetFullPath(path);
+        _glbPath.Value16 = GlbIdentity.Parse(options[0].Id).Path;
         _glbSelected = options[0].Id;
     }
     private void ImportControls()
     {
         if (ImGui.Button(" Import GLB… ")) _glbBrowser.Open();
+        ImGui.SameLine();
+        if (ImGui.Button(" Refresh GLB library ")) _assets.RefreshSharedLibrary();
+        ImGui.TextDisabled(GlbLibrary.Files.DirectoryPath);
+        ImGui.TextWrapped("Imports are copied here for reuse. Library files appear in every mesh picker and load only when selected.");
         if (ImGui.CollapsingHeader("GLB file path"))
         {
             ImGui.InputText("GLB file", _glbPath);
