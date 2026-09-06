@@ -51,8 +51,8 @@ Attributes come from `StarMap.API` (`StarMap.API/BaseAttributes.cs`, `OnGuiAttri
 | `OnImmediateLoad` (56) | `[StarMapImmediateLoad]` | early load (renderer NOT live) | n/a | — |
 | `OnFullyLoaded` (59) | `[StarMapAllModsLoaded]` | after all mods loaded → build submods + `Patcher.Patch()` | n/a | — |
 | `OnBeforeUi(double dt)` (137) → `UpdateSubmods` (143) | `[StarMapBeforeGui]` | **PREFIX** of `Program.OnDrawUiFrame(double)` | `KSA/Program.cs:3021` @5402 (`:2892` @5348) | none (same sig; body only gained `PartContactLoadDebug.Draw()`) |
-| `OnAfterUi(double dt)` (171) → `UpdateWelds` (162) | `[StarMapAfterGui]` | **POSTFIX** of `Program.OnDrawUiViewports(double)` | `KSA/Program.cs:3051` @5402 (`:2921` @5348) | same sig; body now iterates `ViewportRegistry.GameViews` and draws only `HasUi` secondary viewports (5402) |
-| `UpdateSubmods` / `UpdateWelds` (registered at 122-123) | `HiddenUiFrameHook.BeforeGui` / `.AfterGui` (**not** StarMap) | **PREFIX** of `Program.OnDrawUiConsole(double)`, active only while `Program.DrawUI == false` | `KSA/Program.cs:3009` @5402 (`:2880` @5348) | same sig; body uses `HoveredViewport.IsMain()` instead of index compare (5402) |
+| `OnAfterUi(double dt)` (UI only) | `[StarMapAfterGui]` | **POSTFIX** of `Program.OnDrawUiViewports(double)` | `KSA/Program.cs:3051` @5402 (`:2921` @5348) | same sig; body now iterates `ViewportRegistry.GameViews` and draws only `HasUi` secondary viewports (5402) |
+| `UpdateSubmods` (registered in OnFullyLoaded) | `HiddenUiFrameHook.BeforeGui` (**not** StarMap) | **PREFIX** of `Program.OnDrawUiConsole(double)`, active only while `Program.DrawUI == false` | `KSA/Program.cs:3009` @5402 (`:2880` @5348) | same sig; body uses `HoveredViewport.IsMain()` instead of index compare (5402) |
 | `Unload` (212) | `[StarMapUnload]` | mod unload → `Patcher.Unload()` | n/a | — |
 
 **Hidden-HUD (F2) fallback.** `Program.OnFrame` (`KSA/Program.cs:2191-2201` @5402) calls `OnDrawUiFrame` /
@@ -62,7 +62,7 @@ hidden **neither StarMap GUI hook fires** and every `Update(dt)`-driven feature 
 and refills stop). `ksa-abstractions.lib/HiddenUiFrameHook.cs` prefixes
 `Program.OnDrawUiConsole(double)` — called unconditionally at `:2201`, in the same frame phase
 (after `PrepareFrame`, inside ImGui `NewFrame`…`Render`, before `OnPreRender`) — and replays the
-shell's registered `UpdateSubmods` then `UpdateWelds` only when `DrawUI` is false. ImGui rendering
+shell's registered `UpdateSubmods` only when `DrawUI` is false. Welds use the independent PrepareFrame handoff. ImGui rendering
 (`RenderWindow`, `RenderFloatingWindows`, F11) is intentionally **not** replayed so mod windows honour
 the hidden HUD. `DrawUI` only flips during `Glfw.PollEvents()` in `PrepareFrame` (or from the menu bar,
 drawn later), so a frame never runs both StarMap's hooks and the fallback.
@@ -97,6 +97,7 @@ are fully verified below: the inlined `EternalFlamePatches` and `MenuBarPatch`.
 | `KiwisMarblesPatches` | kiwis-marbles.lib | 65 | 107 | `Universe.ExecuteNextVehicleSolvers` | prefix `Priority.First` | sim-step timing — see celestial-and-lights scope |
 | `GlassPatches` | glass.lib | 70 | 108 | `Camera.ChangeFieldOfView` / `Camera.UpdateProjection` (**string**) + field `Camera._fovRadians` (**string**) | prefix | string-named — see glass scope |
 | `IFeelSeenPatches` | i-feel-seen.lib | 71 | 109 | `Vehicle.GetWorldMatrix` / `Vehicle.UpdateRenderData` (**string**) | prefix | string-named — see i-feel-seen scope |
+| `GarrysTorchPatches` | garrys-torch.lib | 70 | 114 | private `Program.PrepareFrame(double,double)` → `Universe.GetJobSimStep` call | transpiler | after result commits, before next snapshots; see vehicle-physics timing invariant |
 | `VehiclePaintPatches` | humble-arteest.lib | 72 | 112 | `PartModel.AddInstance` | prefix | render — see humble-arteest scope (`IViewport` param + new `RenderPartModels` gate @5402) |
 | `EngineEmissivePatches` | humble-arteest.lib | 73 | 110 | `PartModelDynamic.AddInstance` | prefix | render — see humble-arteest scope |
 | `IvaForceRender` | **ksa-abstractions.lib** | 74 | 114 | `PartModel..ctor` + `PartModel.AddInstance` (see IvaForceRender ↓) | postfix ×2 | wired 2026-08-23; `IViewport` retype @5402 |
@@ -110,9 +111,10 @@ Non-Harmony cleanup also driven by `Patcher.Unload()`: `VehiclePaint.Cleanup()` 
 `EngineEmissive.Cleanup()` (line 120), both humble-arteest.lib.
 
 Notes:
-- **garrys-torch is intentionally NOT a Harmony patch.** Its weld physics runs from
-  `Mod.cs:203` (`OnAfterUi`) → `UpdateWelds` (`:162-168`) via `GarrysTorchSubmod.UpdateWelds(dt)`, which internally calls
-  `JobSystems.VehicleSolvers.Wait()` before touching vehicle state (avoids the worker-iteration race).
+- **garrys-torch uses a shared frame transpiler.** Both hosts apply/remove `GarrysTorchPatches`,
+  which wraps `Program.PrepareFrame`'s `Universe.GetJobSimStep` call after completed result
+  application and before the next cloth/vehicle/orbit snapshots. `SimStep.PreviousTime` stamps
+  teleports. No `OnAfterUi` or hidden-HUD weld callback remains. See vehicle-physics scope.
 - `IFeelSeenPatches.Apply` takes a second argument (`IFeelSeenTracker`, wired at `Mod.cs:114`).
 - `CameraControllerOverridePatches.SequencePlayer` and `MenuBarPatch.ToggleWindow` are wired before
   Apply (Patcher.cs:61, 54).

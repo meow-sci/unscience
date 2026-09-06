@@ -67,50 +67,27 @@ public sealed class GarrysTorchSubmod : ISubmod
     }
 
     /// <summary>
-    /// Runs animation + weld teleports for the current frame. Safe to call from a
-    /// StarMap UI hook because we explicitly synchronise with the vehicle solver
-    /// workers first: <see cref="KSA.JobSystems.VehicleSolvers"/>.Wait() blocks until
-    /// any in-flight vehicle worker jobs finish, eliminating the two races we get
-    /// when calling Vehicle.Teleport from an arbitrary main-thread callback:
-    ///   1. `Collection was modified` inside VehicleUpdateTask.DoWorkAndStageResults
-    ///      (we mutate the task's _vehicleStates via RemoveFromTask while a worker
-    ///      iterates it).
-    ///   2. `SnapToLeader body/origin time mismatch` (we advance the vehicle's
-    ///      Origin.Time past the worker's snapshotted body.Time).
-    /// After Vehicle.Teleport runs, the source is removed from its task. The next
-    /// frame's ApplyVehicleSolvers therefore won't overwrite the teleport, and
-    /// ExecuteNextVehicleSolvers' AddVehiclesToTasks re-attaches the source using
-    /// our teleported _kinematicStates as the starting point.
+    /// Called only by GarrysTorchPatches in PrepareFrame, after completed results are applied
+    /// and before cloth/vehicle/orbit workers start. Retains player-time weld animation pacing.
     /// </summary>
-    public void UpdateWelds(double dt)
+    internal void UpdateBeforeVehicleSolvers(double dt, UniverseTime stateTime)
     {
+        // Applying results may have destroyed a source or target. Cancel its animations before
+        // they can write scale through disposed parts; surviving sources still restore scale.
+        for (int i = _welds.Count - 1; i >= 0; i--)
+            if (_welds[i].Source.IsDisposed || _welds[i].Target.IsDisposed)
+                RemoveWeld(_welds[i]);
+
         _animationManager.Update(dt);
 
         if (_welds.Count == 0) return;
 
-        // Drain in-flight vehicle solver workers before touching vehicle state.
-        // Cheap when nothing is running (just polls runner state).
-        //
-        // KSA 2026.8.19.5261 (revs 5208-5216) split the old multi-runner
-        // JobSystems.VehicleSolvers scheduler into a single-runner orchestrator
-        // (VehicleSolver) plus a DynamicWorkerPool (VehicleWorkerPool) of parallel
-        // physics-bubble islands. Waiting on the orchestrator is still the correct
-        // and complete drain: the pool is only ever driven through scoped
-        // ParallelBatch() fork/join blocks inside VehicleUpdateTask/PhysicsBubble/
-        // ApplyVehicleSolvers, so all pool work is joined before the queued
-        // _vehicleUpdateTask completes. The game itself drains the same way in
-        // Universe.DeserializeSave.
-        KSA.JobSystems.VehicleSolver.Wait();
-
         var toRemove = new List<WeldEntry>();
         foreach (var weld in _welds)
-            if (!WeldEngine.UpdateWeld(weld)) toRemove.Add(weld);
+            if (!WeldEngine.UpdateWeld(weld, stateTime)) toRemove.Add(weld);
         foreach (var weld in toRemove)
             RemoveWeld(weld);
     }
-
-    /// <summary>Back-compat shim. Old name; new code should call <see cref="UpdateWelds"/>.</summary>
-    public void UpdateBeforeVehicleSolvers(double dt) => UpdateWelds(dt);
 
     public void RenderContent()
     {
@@ -151,7 +128,8 @@ public sealed class GarrysTorchSubmod : ISubmod
     {
         _animationManager.Clear();
         foreach (var weld in _welds)
-            WeldEngine.ApplyVehicleScale(weld.Source, WeldScale.Identity);
+            if (!weld.Source.IsDisposed)
+                WeldEngine.ApplyVehicleScale(weld.Source, WeldScale.Identity);
         _welds.Clear();
         Instance = null;
     }
@@ -695,7 +673,8 @@ public sealed class GarrysTorchSubmod : ISubmod
     private void RemoveWeld(WeldEntry entry)
     {
         _animationManager.CancelAll(entry);
-        WeldEngine.ApplyVehicleScale(entry.Source, WeldScale.Identity);
+        if (!entry.Source.IsDisposed)
+            WeldEngine.ApplyVehicleScale(entry.Source, WeldScale.Identity);
         Console.WriteLine($"garrys-torch: Unwelded {entry.Source.Id} from {entry.Target.Id}");
         _welds.Remove(entry);
     }

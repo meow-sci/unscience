@@ -72,7 +72,8 @@ When a new game version arrives, bump this baseline and re-run the workflow belo
 - **StarMap is the loader seam, not the game.** `unscience/Mod.cs` is the single `[StarMapMod]` entry.
   StarMap.API Harmony-patches the game's render loop (`Program.OnDrawUiFrame` / `OnDrawUiViewports` /
   `OnFrame`) and dispatches to attributed methods (`[StarMapBeforeGui]`, `[StarMapAfterGui]`, …). The
-  suite rides those hooks rather than touching the frame loop itself. **One exception:** the two GUI
+  suite primarily rides those hooks. Garry's Torch also transpiles `Program.PrepareFrame` at the
+  result-application/next-snapshot handoff (see vehicle physics). The two GUI
   hooks' targets are skipped by the game while the HUD is hidden (F2 → `Program.DrawUI == false`), so
   `ksa-abstractions.lib/HiddenUiFrameHook` prefixes the always-called `Program.OnDrawUiConsole` and
   replays the shell's non-UI per-frame work only in that state (see
@@ -98,7 +99,7 @@ When a new game version arrives, bump this baseline and re-run the workflow belo
 |---|---|---|
 | [`game-integration-surface.md`](game-integration-surface.md) | **Master cross-reference index** — every game type/member touched, merged across mods | Start here for "does the game still have X?"; includes the string-reflection watchlist + shader/asset table |
 | [`00-architecture-and-abstractions.md`](00-architecture-and-abstractions.md) | unscience supermod shell (`Mod.cs`/`Patcher.cs`/`MenuBarPatch`/`UnscienceState`) + `ksa-abstractions.lib` | StarMap lifecycle map, consolidated-Harmony cross-ref, `HotkeyGuard`, `IvaForceRender`, providers |
-| [`vehicle-physics.md`](vehicle-physics.md) | eternal-flame, garrys-torch, i-feel-seen | `Universe.ExecuteNextVehicleSolvers`, `Battery.Refill`, `Vehicle.Teleport`, KittenEva reflection; **garrys-torch solver-drain rewrite (`JobSystems.VehicleSolver`)** |
+| [`vehicle-physics.md`](vehicle-physics.md) | eternal-flame, garrys-torch, i-feel-seen | `Universe.ExecuteNextVehicleSolvers`, `Battery.Refill`, `Vehicle.Teleport`, KittenEva reflection; **garrys-torch PrepareFrame handoff preserves actuator results before teleport** |
 | [`celestial-and-lights.md`](celestial-and-lights.md) | kiwis-marbles, zippo | `Celestial.SetOrbit`, `IParentBody.Children`/`UpdatePerFrameDataTree`, `Universe.ExecuteNextVehicleSolvers` prefix (kiwis-marbles sim-step timing, fixed 2026-08-23), `IOrbiter`, `LightModule`/`LightSwitch`; Zippo Disco's per-instance templates, cone angles and `KeyframeAnimationModule.TimeGoal` ownership |
 | [`camera.md`](camera.md) | camera-controller-override, glass, hot-pursuit | `OrbitController/FlyController/FixedController.OnFrame`, `Camera._fovRadians`; four public secondary-viewport leases under the sealed 8-slot registry; part-raycast camera mounts; Hot Pursuit nearby-celestial sync and stock secondary-render omissions |
 | [`pixel-grids-and-render.md`](pixel-grids-and-render.md) | blinky, its-so-shiny, thug-life | three `*Module.UpdateRenderData` patches, `PartTree.CreateFromNewPartTree`, `RocketCore.FeedConnectors` (blinky ignition), `SuperMeshRenderSystem.RenderMainPass`, UnlitMesh shaders |
@@ -146,6 +147,11 @@ color, moving-assembly actuation and spotlight-spread cycles with independent ti
 controls, exact runtime ownership, conflict handling and stop/disappearance/unload restoration. No
 Harmony target, shader or asset dependency was added. Native color isolation, actuation, cone spread,
 craft destruction and unload restoration still need an in-game smoke pass. See [celestial and lights](celestial-and-lights.md).
+
+**Garry's Torch actuator fix:** a guarded `Program.PrepareFrame` transpiler now welds after completed
+module states commit and before the next cloth/vehicle/orbit snapshots, using `SimStep.PreviousTime`.
+Managed Harmony timing checks cover the old discarded-result regression, pause/warp and unload;
+native actuation, weld chains and HUD-hidden behavior still need a live pass. See [vehicle physics](vehicle-physics.md).
 
 **Behavioral — compile-clean, needs a live pass before any code change:**
 - **hot-pursuit** — nearby-celestial synchronization now prevents the 5402 secondary distant-sphere
@@ -201,4 +207,4 @@ center decal /
 uniform PBR / restore-unload; dont-stifle-me scale-then-attach plus 2 m / 1000 m
 parachute edits with symmetry; kiwis-marbles weld near
 a deployed chute; hot-pursuit placement/motion/lease contention + Glass independent FOV; the standing thug-life / humble-arteest / blinky /
-its-so-shiny render checks. A green `dotnet build` does not cover these, and there is no test suite.
+its-so-shiny render checks. A green `dotnet build` and the managed Pebbles/Garry's Torch checks do not cover these native behaviors.

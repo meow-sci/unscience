@@ -117,20 +117,41 @@ pose relative to a *target* vehicle (optionally anchored to a specific target `P
 position/rotation offset, independent local-axis X/Y/Z part scaling (including `KittenEva` avatars), and
 optional rotation lock. Also supports eased animation of weld params.
 
-**Unscience integration** — `GarrysTorchSubmod : ISubmod`
-(`garrys-torch.lib/GarrysTorchSubmod.cs:12`); stateless math in `WeldEngine`
-(`garrys-torch.lib/WeldEngine.cs:11`); per-weld state `WeldEntry`
-(`garrys-torch.lib/WeldEntry.cs:7`). Weld physics runs from **`OnAfterUi`** (not a Harmony
-patch): `GarrysTorchSubmod.UpdateWelds(dt)` (`GarrysTorchSubmod.cs:85`) first calls
-`KSA.JobSystems.VehicleSolver.Wait()` (`:103`) to drain in-flight vehicle workers, then
-`WeldEngine.UpdateWeld` per weld. Standalone host `garrys-torch/Mod.cs:27,59`; embedded host
-`unscience/Mod.cs:71` (submod) + `unscience/Mod.cs:173` (`GarrysTorchSubmod.Instance?.UpdateWelds(dt)`).
-`garrys-torch/Patcher.cs` applies `HotkeyGuard` plus one render-only postfix on the private
-`KittenRenderable.ModelToBodyMatrix()`. The latter supplies the Y/X and Z/X correction that the
-game's scalar-only `CharacterCore.Scale` cannot represent; it does not alter weld timing. Earlier
-prefix/postfix approaches on `ExecuteNextVehicleSolvers`/`ApplyVehicleSolvers` remain abandoned
-(see `garrys-torch/README.md:32-43`). The public API (`CreateWeld`/`ModifyWeld`/
-`RemoveWeld`/`AnimateWeld`/preset methods) is available to reusable callers.
+**Unscience integration** — `GarrysTorchSubmod : ISubmod` holds weld state and animation;
+`WeldEngine.UpdateWeld(entry, stateTime)` computes and teleports each source.
+`GarrysTorchPatches` is installed/removed by both `garrys-torch/Patcher.cs` and
+`unscience/Patcher.cs`. It wraps the single `Universe.GetJobSimStep(dtPlayer)` call in the private
+`Program.PrepareFrame(double, double)` caller: obtain the original step, advance welds with player
+delta and `step.PreviousTime`, return the unchanged step. Ordinary submod/UI callbacks do no welding.
+The hidden-HUD hook no longer dispatches weld updates. `KittenScalePatches` remains a separate
+render-only postfix on `KittenRenderable.ModelToBodyMatrix()`.
+
+**Result-retention fix (2026-09-06)** — The old after-UI teleport removed the source from its bubble
+before `PhysicsBubble.ApplyResultsToVehicles` (`KSA/PhysicsBubble.cs:664`) could call
+`Vehicle.UpdateFromTaskResultsUnsynchronized` (`KSA/Vehicle.cs:2403`). That skipped
+`Parts.UpdateFromTaskResults` (`:2499`; `KSA/PartTree.cs:949`) and its bulk module-state commit.
+`KeyframeAnimationModule.UpdateModules` (`KSA/KeyframeAnimationModule.cs:156`) had advanced worker
+`TimeCurrent`, but `ModuleStateful.StateUpdater.Prepare` (`KSA/ModuleStateful.cs:777`) discarded it
+on the next tick. The handoff now lets those results commit first; it does not manually tick actuators.
+Disposed source/target welds are removed before animation updates, because applying results can
+destroy vehicles; scale restoration skips disposed sources. Per-kitten animation targeting and the
+skeletal render pipeline are unchanged.
+
+**Standing timing invariant** — In 5402, `Program.PrepareFrame:2103-2109` waits on orbit/vehicle/cloth
+workers and applies all three result sets. The `GetJobSimStep` call at `:2143` follows, before cloth,
+vehicle and orbit scheduling at `:2144-2146`. The transpiler requires exactly one of each of these
+seven Universe calls, in that order, and rejects unexpected layouts. It patches the caller to avoid
+relying on a previously inlined solver callee. On game updates, also re-read the wait/result/snapshot
+semantics: lexical call order alone cannot prove they remain equivalent. `SimStep.PreviousTime`
+is the just-applied state time; the former `NextTime` stamp is wrong at this earlier handoff.
+
+**Validation** — `garrys-torch.tests` runs the production Harmony patch on a warmed-up managed
+fixture and tests retained actuator progress, one update per frame, start-time stamps, pause/warp,
+missing system/submod, exception isolation, unload and malformed call sequences. This does not run
+native KSA physics. In-game: weld a separate light craft at a non-overlapping offset, actuate forward
+and back (stock and Zippo Disco), toggle Weld Enabled, hide HUD with F2, exercise pause/warp and a
+weld chain anchored to a moving target part, and unload. Watch for body/origin time mismatches,
+collection/shape-lock errors and part destruction; compare with the same unwelded light craft.
 
 **UI/hotkeys** — Standalone window "Garry's Torch", 450x500, toggled by **F11**
 (`garrys-torch/Mod.cs:51,85`). Content (`GarrysTorchSubmod.RenderContent:105`): Create-Weld
@@ -150,7 +171,7 @@ the legacy scalar `scale` key uniformly for backwards compatibility.
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|------|----------------------|----------------------------------------|-------------------|---------|----------|------------|
-| 1 | Direct typed API | `garrys-torch.lib/GarrysTorchSubmod.cs:103` | `KSA.JobSystems.VehicleSolver` (`public static JobScheduler VehicleSolver`, single-runner orchestrator; renamed from `VehicleSolvers` @5261) -> `JobScheduler.Wait()` | `KSA/JobSystems.cs:16` | Yes | Same (OLD `JobSystems.cs:16`). 5402 added a sibling `ClothSolvers` scheduler (`:18`) — see 5348→5402 summary | Game itself calls `JobSystems.VehicleSolver.Wait()` (`KSA/Program.cs:2104`, `Universe.cs:2153`). Core race-avoidance for the whole mod. |
+| 1 | **Harmony transpiler / private method** | `garrys-torch.lib/GarrysTorchPatches.cs` | `Program.PrepareFrame(double currentPlayerTime, double dtPlayer)`; wraps the single `Universe.GetJobSimStep(double)` call | `KSA/Program.cs:2094,2143` | Yes | New mod hook against unchanged 5402 surface | Requires unique ordered ApplyOrbit/Vehicle/Cloth, GetJobSimStep, ExecuteNextCloth/Vehicle/Orbit calls. Re-read game wait/snapshot semantics on updates. No UI fallback. |
 | 2 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:19,75` | `Vehicle.Parent` — `public IParentBody Parent => Orbit.Parent` | `KSA/Vehicle.cs:372` | Yes | Same (OLD `Vehicle.cs:370`) | Reference-compared for parent-body match; `.GetCci2Cce()` called on it (#10). |
 | 3 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:28` | `Vehicle.GetPositionCci()` — `public double3` | `KSA/Vehicle.cs:2590` | Yes | Same (OLD `Vehicle.cs:2433`) | Target world position. |
 | 4 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:29` | `Vehicle.GetVelocityCci()` — `public double3` | `KSA/Vehicle.cs:2538` | Yes | Same (OLD `Vehicle.cs:2381`) | Source velocity = target velocity. |
@@ -166,8 +187,8 @@ the legacy scalar `scale` key uniformly for backwards compatibility.
 | 14 | Direct typed API (write) | `garrys-torch.lib/WeldEngine.cs` | `Part.Scale` — `public double3 Scale { get; set; }` (setter calls `ResetCachedPosMatrixValues`) | `KSA/Part.cs:815` | Yes | Same (OLD `Part.cs:807`) | Recursive XYZ scale write. KSA's separate `ScaleFactors(double3)` collapses module rescaling to the largest axis; Garry's Torch does not claim anisotropic mass/module physics. |
 | 15 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:157,201` | `Part.SubParts` — `public ReadOnlySpan<Part> SubParts`; `PartTree.Parts` — `public ReadOnlySpan<Part> Parts` | `KSA/Part.cs:1079`; `KSA/PartTree.cs:95` | Yes | Same (OLD `Part.cs:1052`; `PartTree.cs:95`) | Part-tree walk for scaling + target-part list. |
 | 16 | Direct typed API | `garrys-torch.lib/GarrysTorchSubmod.cs:190,198` | `Part.Template` (`public PartTemplate Template`) -> `PartTemplate.Id` (`public string Id`, inherited `SerializedId.Id`); `Part.Id` (`public string Id { get; init; }`) | `KSA/Part.cs:576`,`698`; `KSA/SerializedId.cs:13` | Yes | Same (OLD `Part.cs:568`,`690`) | Target-part combo labels. |
-| 17 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:119` | `Universe.GetJobSimStep(double dtPlayer)` -> `SimStep.NextTime` (`UniverseTime`, renamed from `SimTime` @5261) | `KSA/Universe.cs:2322`; `KSA/SimStep.cs:7` | Yes | Same (OLD `Universe.cs:2264`) | Tick-end time for the new orbit's state time (avoids SnapToLeader mismatch). |
-| 18 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:119` | `Program.GetPlayerDeltaTime()` — `public static double` | `KSA/Program.cs:5077` | Yes | Same (OLD `Program.cs:4899`) | Fed into `GetJobSimStep`. |
+| 17 | Direct typed API | `garrys-torch.lib/GarrysTorchPatches.cs` | `Universe.GetJobSimStep(double)`; `SimStep.PreviousTime : UniverseTime` | `KSA/Universe.cs:2322`; `KSA/SimStep.cs:5` | Yes | Same | The wrapper computes the original step once and returns it unchanged. PreviousTime stamps the source orbit before workers start. |
+| 18 | Behavioral / callback argument | `garrys-torch.lib/GarrysTorchPatches.cs` | `Program.PrepareFrame` supplies `dtPlayer` to `GetJobSimStep` | `KSA/Program.cs:2143` | Yes | Same | Player delta also advances weld interpolation. No direct `Program.GetPlayerDeltaTime()` dependency remains in Garry's Torch. |
 | 19 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:121` | `Orbit.CreateFromStateCci(IParentBody parent, UniverseTime stateTime, double3 positionCci, double3 velocityCci, byte4 orbitLineColor)` — `public static Orbit` | `KSA/Orbit.cs:1563` | Yes | Same (OLD `Orbit.cs:1563`) | 5-arg factory; arg order/types unchanged since the 5261 `SimTime`→`UniverseTime` rename. |
 | 20 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:126` | `Orbit.OrbitLineColor` — `public byte4 OrbitLineColor` (field) | `KSA/Orbit.cs:1138` | Yes | Same (OLD `Orbit.cs:1138`) | — |
 | 21 | Direct typed API | `garrys-torch.lib/WeldEngine.cs` | `vehicle is KittenEva`; `KittenEva.Renderable : KittenRenderable` | `KSA/KittenEva.cs:13,59` | Yes | Same | Compile-checked replacement for the former type-name + `_renderable` reflection. |
@@ -178,7 +199,7 @@ the legacy scalar `scale` key uniformly for backwards compatibility.
 | 26 | Direct typed API (UI color) | `garrys-torch.lib/GarrysTorchSubmod.cs` | `KSAColor.Xkcd.Scarlet`, `KSAColor.Xkcd.PaleGrey` — `static Color.Preset` | `KSA/KSAColor.cs:1561`,`837` | Yes | Same (file byte-identical) | Unweld-button styling only; failure is visual, not functional. |
 | 27 | Direct typed API | `ksa-abstractions.lib/VehicleProvider.cs:14` | `Universe.CurrentSystem` / `CelestialSystem.All` / `LookupCollection.UnsafeAsList` / `Vehicle.Id` | `KSA/Universe.cs:94` etc. | Yes | Same | Shared enumerator (see eternal-flame #12). |
 | 28 | Harmony + Reflection | `garrys-torch/Patcher.cs` -> `HotkeyGuard.cs:21` | `GameSettings.OnKeyAll(GlfwKeyEvent)` — `public static bool`, `nameof`-resolved | `KSA/GameSettings.cs:3301` | Yes | Same (file byte-identical) | Shared guard. |
-| 29 | Lifecycle | `garrys-torch/Mod.cs:19-80` | StarMap attrs (full set); weld physics in `OnAfterUi` after `JobSystems.VehicleSolver.Wait()` | (StarMap.API package) | Yes | **Renamed @5261** (was `VehicleSolvers`) | See *Update-risk findings (5117 → 5261)* |
+| 29 | Lifecycle | `garrys-torch/Mod.cs`; `unscience/Mod.cs`; both `Patcher.cs` hosts | StarMap initializes/disposes the submod and installs/removes `GarrysTorchPatches` | (StarMap.API package) | Yes | Weld execution moved out of UI callbacks | Welds keep running with the HUD hidden without the after-GUI fallback. |
 
 **Game assets referenced** — None (TOML preset file is mod-authored under `.unscience/`, not a game asset).
 
@@ -192,7 +213,9 @@ the legacy scalar `scale` key uniformly for backwards compatibility.
   new row #25 because its separate character render path exposes only one scalar. Live-test both a
   normal multi-part vehicle and a kitten with visibly unequal axes, then unweld and confirm identity.
 
-**Update-risk findings (5117 → 5261)**
+**Historical update-risk findings (5117 → 5261)**
+
+The following records describe the former UI/drain implementation. The 2026-09-06 handoff above supersedes its drain call and tick-end timestamp.
 
 - **CONFIRMED COMPILE BREAK (revs 5208–5216, vehicle-threading rewrite):**
   `garrys-torch.lib/GarrysTorchSubmod.cs:93` — `KSA.JobSystems.VehicleSolvers.Wait()` → **CS0117**.
@@ -419,16 +442,10 @@ the decomp diff. Solution builds clean against 5402.
   field-shaped, and private `KittenRenderable.ModelToBodyMatrix()` remains a unique no-arg method
   (`KittenRenderable.cs:106-109`). `CharacterCore` only gained a `HeadMeshIndices` list and
   `KittenRenderable` a `HideHead` flag.
-- ⚠️ **New parachute cloth scheduler runs concurrently with the frame.** `JobSystems.ClothSolvers`
-  (`JobSystems.cs:18`) is kicked by `Universe.ExecuteNextClothSolvers` **before**
-  `ExecuteNextVehicleSolvers` (`Program.cs:2144-2145`) and joined only at the next `PrepareFrame`
-  (`ClothSolvers.Wait()`, `Program.cs:2105`). `ChuteClothSystem.SnapshotAndKick` snapshots vehicle
-  physics on the main thread (`ChuteClothSystem.cs:609`) and `ChuteClothJob` holds no `Vehicle` reference,
-  so garrys-torch's `VehicleSolver.Wait()` drain (`GarrysTorchSubmod.cs:103`) is still sufficient — the
-  weld teleport cannot race the cloth job on `Vehicle` state. Only cosmetic cost: a welded source's canopy
-  is simulated from the pre-teleport snapshot (one frame of lag). Nothing to change; the eternal-flame /
-  kiwis-marbles / kitchen-sink solver prefixes now fire with cloth jobs already in flight, which is harmless
-  for the same reason (kiwis-marbles' "no worker in flight" comment is now slightly overstated).
+- **Parachute cloth scheduling** — `Universe.ExecuteNextClothSolvers` is called before vehicle
+  scheduling (`Program.cs:2144-2145`). The 2026-09-06 Garry's Torch handoff runs before both, so the
+  cloth snapshot sees the welded pose. The former after-UI teleport occurred after the cloth
+  snapshot. Other mods' `ExecuteNextVehicleSolvers` prefixes still run after cloth starts.
 - ⚠️ **Part structural failure + debris are new and reach welded vehicles.** `PartFailure.Detect`
   (`KSA/PartFailure.cs:47`, called from `PhysicsBubble.cs:1459`) runs for every non-kitten, non-on-rails
   vehicle and compares Bepu contact-pressure accumulators against `Part.CrashTolerancePascals`
@@ -440,7 +457,7 @@ the decomp diff. Solution builds clean against 5402.
   ✅ **Guard applied** (`garrys-torch.lib/WeldEngine.cs:19-28`): `UpdateWeld` now returns `false`
   — unwelding cleanly — when either `entry.Source.IsDisposed` or `entry.Target.IsDisposed`
   (`KSA/Vehicle.cs:617`, set by `Dispose` at `:3741`), before the `entry.Source.Parent` dereference that
-  would otherwise throw into `OnAfterUi`. The caller already treats `false` as "remove this weld"
+  would otherwise throw into the weld callback. The caller already treats `false` as "remove this weld"
   (`GarrysTorchSubmod.cs:107`). ⚠ **Still open:** live-test a two-capsule weld and watch for
   *"exceeded its crash tolerance"* log lines / debris — the guard makes the aftermath survivable but
   does not stop the game from destroying a welded craft.

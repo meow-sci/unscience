@@ -41,14 +41,20 @@ Vehicle welding system. Attaches one vehicle to another with support for positio
 - Per-weld rotation offset (pitch/yaw/roll)
 - Independent per-axis vehicle scaling with a KittenEva model-transform correction
 - Rotation lock toggle and auto-unweld on parent mismatch
-- Weld updates run from `Mod.OnAfterUi` (and unscience's `OnAfterUi`); `GarrysTorchSubmod.UpdateWelds(dt)` calls `KSA.JobSystems.VehicleSolvers.Wait()` before any `Vehicle.Teleport` to drain worker threads — required to avoid `Collection was modified` (from `_vehicleStates.Remove` racing worker iteration) and `SnapToLeader body/origin time mismatch` errors
+- Weld updates run through `GarrysTorchPatches` at the `Program.PrepareFrame` simulation handoff, after completed results are applied and before cloth/vehicle/orbit workers start. Source light actuation retains committed progress; teleports use `SimStep.PreviousTime`. The patch validates the call order and is independent of HUD visibility.
 - Multiple simultaneous welds with topological sort for correct ordering
 - User-defined presets persisted to TOML (`~/.unscience/garrys-torch-presets.toml`)
 - Save weld settings as named presets, load presets into create form
 - ImGui control panel with filterable combos (vehicle → part → preset) and bordered weld sections
 - **Animation system**: Smooth interpolation of weld position/rotation and each XYZ scale axis with configurable easing (Linear, EaseIn, EaseOut, EaseInOut) and per-power control. Queued animations per weld.
 - **Public API**: `GarrysTorchSubmod.Instance` singleton, `CreateWeld`, `ModifyWeld`, `RemoveWeld`, `AnimateWeld`, `FindWeld`, and preset pass-throughs for reuse by other mods
-- **Safe update API**: `GarrysTorchSubmod.UpdateBeforeVehicleSolvers(dt)` performs animation and weld teleports; ordinary `ISubmod.Update(dt)` is intentionally non-mutating for weld physics
+- **Host integration**: install/remove `GarrysTorchPatches` through the host Harmony instance; UI callbacks do not advance welds. The old public `UpdateWelds(dt)` / `UpdateBeforeVehicleSolvers(dt)` entry points were removed to prevent unsafe scheduling.
+
+### [garrys-torch.tests](garrys-torch.tests)
+Managed executable linking the production weld-timing Harmony patch against a small game-loop
+fixture. Reproduces discarded actuator results and checks result retention, timestamps, pause/warp,
+patch removal, and rejection of missing/duplicate/reordered solver seams. Does not run native KSA.
+See its [README](garrys-torch.tests/README.md) for usage.
 
 ### [kiwis-marbles](kiwis-marbles) / [kiwis-marbles.lib](kiwis-marbles.lib)
 Celestial body welding mod. Repositions planets and moons by welding them to follow other celestial bodies or vehicles at user-defined offsets. Bypasses physics for the source body, rewriting its orbit once per sim step from a Harmony prefix on `Universe.ExecuteNextVehicleSolvers` (after the orbit/vehicle solver results are applied, before the next step is queued).

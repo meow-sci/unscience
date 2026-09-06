@@ -48,7 +48,7 @@ internal static class Patcher
         // stale reflection/field target after a game update) logs and is skipped instead of
         // aborting every feature registered after it in the chain.
         TryApply("hotkey-guard", () => HotkeyGuard.Patch(_harmony!));
-        // Replays Mod.UpdateSubmods/UpdateWelds while the HUD is hidden (F2), since StarMap's
+        // Replays Mod.UpdateSubmods while the HUD is hidden (F2), since StarMap's
         // BeforeGui/AfterGui targets are skipped by the game in that state. Callbacks are
         // registered in Mod.OnFullyLoaded before Patch() runs.
         TryApply("hidden-ui-frame-hook", () => HiddenUiFrameHook.Patch(_harmony!));
@@ -67,8 +67,7 @@ internal static class Patcher
         });
         TryApply("eternal-flame", () => EternalFlamePatches.Apply(_harmony!));
         TryApply("kiwis-marbles", () => KiwisMarblesPatches.Apply(_harmony!));
-        // Weld physics still runs from OnAfterUi; this patch only extends the
-        // scalar KittenEva character render transform to support XYZ weld scale.
+        TryApply("garrys-torch weld timing", () => GarrysTorchPatches.Apply(_harmony!));
         TryApply("garrys-torch kitten scale", () => KittenScalePatches.Apply(_harmony!));
         TryApply("glass", () => GlassPatches.Apply(_harmony!));
         TryApply("i-feel-seen", () => IFeelSeenPatches.Apply(_harmony!, IFeelSeenTracker!));
@@ -112,6 +111,7 @@ internal static class Patcher
                 TryRemove("camera-controller-override", () => CameraControllerOverridePatches.Remove(_harmony!));
                 TryRemove("eternal-flame", () => EternalFlamePatches.Remove(_harmony!));
                 TryRemove("kiwis-marbles", () => KiwisMarblesPatches.Remove(_harmony!));
+                TryRemove("garrys-torch weld timing", () => GarrysTorchPatches.Remove(_harmony!));
                 TryRemove("garrys-torch kitten scale", () => KittenScalePatches.Remove(_harmony!));
                 TryRemove("glass", () => GlassPatches.Remove(_harmony!));
                 TryRemove("i-feel-seen", () => IFeelSeenPatches.Remove(_harmony!));

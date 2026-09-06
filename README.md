@@ -25,6 +25,10 @@ isolated per instance and restored when the effect stops. See [Zippo](zippo/READ
 picker follows the controlled kitten by default or stays pinned to an explicitly selected kitten id.
 See [Kitten Animations](kitten-animations/README.md).
 
+`garrys-torch` updates welded vehicles after simulation results are applied and before the next
+physics snapshots, preserving light-part actuation progress. Its shared frame hook also runs while
+the HUD is hidden. See [Garry's Torch](garrys-torch/README.md) for timing and validation details.
+
 ## building
 
 Every project compiles against the proprietary KSA game assemblies, which are

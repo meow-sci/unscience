@@ -411,7 +411,7 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 ### KSA.JobSystems
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `VehicleSolvers : static JobScheduler` → `JobScheduler.Wait()` | direct API | `KSA/JobSystems.cs:11` | garrys-torch | `garrys-torch.lib/GarrysTorchSubmod.cs:93` | OK | drains in-flight vehicle workers before teleport (race-avoidance) |
+| `VehicleSolver` / `OrbitSolvers` / `ClothSolvers` → `Wait()` | behavioral prerequisite | `KSA/Program.cs:2103-2105` | garrys-torch | `GarrysTorchPatches.cs` | OK @5402 | Game waits before applying results and reaching the weld handoff; no direct scheduler wait remains in garrys-torch. |
 
 ### KSA.KSAColor
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -681,7 +681,7 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 | `OnDrawUiFrame(double)` | Harmony PREFIX (StarMap `[StarMapBeforeGui]`) | `KSA/Program.cs:2639` | shell + all submods (every mod) | `unscience/Mod.cs:122` | OK | StarMap-owned string hook; drives per-frame `Update`/drain |
 | `OnDrawUiViewports(double)` | Harmony POSTFIX (StarMap `[StarMapAfterGui]`) | `KSA/Program.cs:2666` | shell + all submods | `unscience/Mod.cs:135` | OK | StarMap-owned string hook |
 | `OnFrame(double,double)` | Harmony POSTFIX (StarMap `[StarMapAfterOnFrame]`) | `KSA/Program.cs:1986` | (available; **not** used by supermod shell) | — | OK | StarMap dispatch only |
-| `OnDrawUiConsole(double)` (`private void`) | Harmony PREFIX (**string** `"OnDrawUiConsole"`) | `KSA/Program.cs:2880` @5348; called unconditionally `:2103` | unscience shell via `HiddenUiFrameHook` | `ksa-abstractions.lib/HiddenUiFrameHook.cs:28,44,47`; `unscience/Mod.cs:116-117`; `unscience/Patcher.cs:49,99` | OK @5348 | **Hidden-HUD fallback.** The two StarMap GUI targets above live inside `if (DrawUI)` in `OnFrame` (`:2093-2101`), so on F2 they are skipped and no StarMap GUI hook fires. This prefix replays `Mod.UpdateSubmods`/`UpdateWelds` at the same frame phase only while `Program.DrawUI` is false. Phase contract: every frame, after the UI block, before `ImGui.Render()`. Fallback anchor if renamed: `DrawFps()` (`:3008`) |
+| `OnDrawUiConsole(double)` (`private void`) | Harmony PREFIX (**string** `"OnDrawUiConsole"`) | `KSA/Program.cs:2880` @5348; called unconditionally `:2103` | unscience shell via `HiddenUiFrameHook` | `ksa-abstractions.lib/HiddenUiFrameHook.cs:28,44,47`; `unscience/Mod.cs:116-117`; `unscience/Patcher.cs:49,99` | OK @5348 | **Hidden-HUD fallback.** The two StarMap GUI targets above live inside `if (DrawUI)` in `OnFrame` (`:2093-2101`), so on F2 they are skipped and no StarMap GUI hook fires. This prefix replays `Mod.UpdateSubmods` at the same frame phase only while `Program.DrawUI` is false. Welds use the independent PrepareFrame handoff regardless of HUD visibility. Phase contract: every frame, after the UI block, before `ImGui.Render()`. Fallback anchor if renamed: `DrawFps()` (`:3008`) |
 | `DrawUI : static bool` (prop) | direct API | `KSA/Program.cs:504` | HiddenUiFrameHook | `HiddenUiFrameHook.cs:40,64` | OK @5348 | gate for the fallback; flipped by `InputAction.ToggleUi` = F2 (`KSA/Input.cs:297`, handled `Program.cs:1694`) |
 | `DrawProgramMenusHook() : void` (empty modding hook) | Harmony post | `KSA/Program.cs:3736` (cited `:3391` earlier) | unscience (MenuBarPatch), dont-stifle-me standalone (MenuBarPatch) | `unscience/MenuBarPatch.cs:8`; `dont-stifle-me/MenuBarPatch.cs:15` | OK | game ships as deliberate no-op; dont-stifle-me draws a `BeginMenu("Don't Stifle Me")` here |
 | `ControlledVehicle : static Vehicle?` (field) | direct API | `KSA/Program.cs:254` | VehicleProvider (→ many), kitten-animations | `VehicleProvider.cs:11`; `kitten-animations.lib/KittenAvatarAccessor.cs` | OK | kitten-animations uses it only for the default automatic target mode; an explicit kitten id ignores later control changes |
@@ -700,7 +700,7 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 | `GetRenderer() : Renderer` (→ `.Device`/`.Allocator`/`.Graphics`) | direct (render) | `KSA/Program.cs:486` (cited `:450` at the 4750 baseline) | thug-life, parts-now | `ThugLifeRenderManager.cs:81`; `parts-now.lib/Runtime/RuntimeModLoaderGpuStates.cs:85`, `PartThumbnailGenerator.cs:129`, `RuntimeModUnloader.cs:123` | OK | Vulkan device. humble-arteest no longer needs it — the patched `FromFile` receives the device as an argument |
 | `OffscreenTarget : RenderTarget` (→ `.SetupGraphicsPipeline(ref VkGraphicsPipelineCreateInfo)`) | direct (render-pass) | `KSA/Program.cs:457` | thug-life | `ThugLifeQuadRenderer.cs:152` | OK | replaced `OffScreenPass`/`RenderPassState` @5261 (dynamic rendering). ⚠ **null until `BuildRenderTargets()` (`Program.cs:970` @5402), which runs after `ModLibrary.LoadAll()` (`:942`) — i.e. after `[StarMapAllModsLoaded]`; the mod's pipeline build is lazy for exactly this reason** |
 | `SetViewport(CommandBuffer)` | direct (render) | `KSA/Program.cs:4293` | thug-life | `ThugLifeQuadRenderer.cs:264` | OK | sizes to `RenderedViewport` |
-| `GetPlayerDeltaTime() : static double` | direct API | `KSA/Program.cs:4467` | garrys-torch | `WeldEngine.cs:119` | OK | fed into `GetJobSimStep` |
+| `PrepareFrame(double currentPlayerTime, double dtPlayer)` (private instance method) | **Harmony transpiler** | `KSA/Program.cs:2094` | garrys-torch | `GarrysTorchPatches.cs` | OK @5402 | Wraps one GetJobSimStep call after ApplyOrbit/Vehicle/ClothSolvers and before ExecuteNextCloth/Vehicle/OrbitSolvers; unique ordered calls required. Preserves labels/exception blocks and returned step. |
 | `Instance : static (singleton)` | reflection (private) | `KSA/Program.cs:371` | doh, humble-arteest (KittenColor) | `MaterialSystemAccessor.cs:53,56`; `KittenColor.cs:55-73` | OK | render-systems root |
 | `MaterialSystem : GpuMaterialSystem` (field) | reflection-field | `KSA/Program.cs:94` | doh, humble-arteest | `MaterialSystemAccessor.cs:63`; `KittenColor.cs:55-73` | OK | |
 | `SuperMeshRenderSystem` (field) → `.TextureSystem : GpuTextureSystem` | reflection-field | `KSA/Program.cs:96`; `KSA/SuperMeshRenderSystem.cs:39` | doh | `MaterialSystemAccessor.cs:84,87,90` | OK | |
@@ -731,7 +731,7 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 ### KSA.SimStep
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `Universe.GetJobSimStep(double) : SimStep` → `SimStep.NextTime : SimTime` | direct API | `KSA/Universe.cs:2188` | garrys-torch | `WeldEngine.cs:119` | OK | tick-end time for new orbit state time |
+| `Universe.GetJobSimStep(double) : SimStep` → `SimStep.PreviousTime : UniverseTime` | direct API + call-site replacement | `KSA/Universe.cs:2322`; `KSA/SimStep.cs:5` | garrys-torch | `GarrysTorchPatches.cs` → `WeldEngine.cs` | OK @5402 | Step start is the committed state time; do not stamp NextTime at the pre-solver handoff. |
 | `SimStep` (param of `ExecuteNextVehicleSolvers`) | Harmony arg type | `KSA/Universe.cs:1775` | eternal-flame, kitchen-sink, kiwis-marbles | (solver prefixes) | OK | prefixes ignore it (parameterless / by-name `dtPlayer` only) |
 
 
@@ -771,7 +771,7 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 |---|---|---|---|---|---|---|
 | `ExecuteNextVehicleSolvers(double dtPlayer, SimStep simStep) : static void` | Harmony pre (Priority.First) | `KSA/Universe.cs:1775` | eternal-flame, kitchen-sink, kiwis-marbles | `unscience/Patcher.cs` (`EternalFlamePatches`, `KiwisMarblesPatches`); `kitchen-sink/Patcher.cs:56`; `kiwis-marbles.lib/KiwisMarblesPatches.cs` | OK | single overload → by-name `nameof`/`dtPlayer` resolution safe; kiwis-marbles depends on `PrepareFrame` ordering (Apply*Solvers before, ExecuteNextOrbitSolvers after) |
 | `CurrentSystem : static CelestialSystem? { get; private set; }` | direct API | `KSA/Universe.cs:92` | VehicleProvider/CelestialProvider (→ ~all feature mods) | `VehicleProvider.cs:15`; `CelestialProvider.cs:11` | OK | enumeration root |
-| `GetJobSimStep(double) : SimStep` | direct API | `KSA/Universe.cs:2188` | garrys-torch | `WeldEngine.cs:119` | OK | (see KSA.SimStep) |
+| `GetJobSimStep(double) : SimStep` | direct API / transpiler seam | `KSA/Universe.cs:2322` | garrys-torch | `GarrysTorchPatches.cs` | OK @5402 | Original call is wrapped once in PrepareFrame; returns unchanged step after welding. |
 
 ### KSA.Vehicle
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -783,7 +783,7 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 | `AddVolumetricExhaustInstances(Camera, Viewport, VolumetricExhaustRenderer, double frameDeltaTime) : void` | **Harmony postfix** `(Vehicle __instance, Camera camera, VolumetricExhaustRenderer renderer, double frameDeltaTime)` | `KSA/Vehicle.cs:5303` | pyro | `pyro.lib/PyroPatches.cs:16,35` | OK @5348 | per-visible-vehicle exhaust submission (`Program.OnPreRender`); pyro adds its plumes to the same batch. Resolved via `nameof` (typed) |
 | `PosAsmbToBody(double3) : double3` · `Body2Cce : doubleQuat` | direct API | `KSA/Vehicle.cs:1218,374` | pyro | `pyro.lib/PlumeEmitter.cs:73-74` | OK @5348 | same chain as `RocketNozzleState.AddExhaustInstance` |
 | `GetMatrixAsmb2Ego(Camera) : double4x4` · `BoundingSphereRadiusBody : double` · `static ComputeEnu2Cce(double3, doubleQuat) : doubleQuat?` | direct API | `KSA/Vehicle.cs` | graffiti, hot-pursuit | `graffiti.lib/DecalPicker.cs`, `DecalAnchors.cs`; `hot-pursuit.lib/HotPursuitPicker.cs`, `HotPursuitPose.cs` | OK @5402 | raycast broad-phase + sub-part transform root; ENU helper is graffiti-only |
-| `Teleport(Orbit?, doubleQuat?, double3?) : void` | direct API | `KSA/Vehicle.cs:1594` | garrys-torch, doh (KittenEva) | `WeldEngine.cs:129`; `KittenSpawner.cs:171` | OK | core mutation; nullable params |
+| `Teleport(Orbit?, doubleQuat?, double3?) : void` | direct API | `KSA/Vehicle.cs:2209` | garrys-torch, doh (KittenEva) | `WeldEngine.cs`; `KittenSpawner.cs` | OK @5402 | Removes source from physics bubble; garrys-torch must run after completed module-state results commit and before next-step snapshots. |
 | `UpdatePerFrameData() : override void` | direct API | `KSA/Vehicle.cs:1972` | garrys-torch, doh | `WeldEngine.cs:130`; `KittenSpawner.cs:175` | OK | refresh caches post-teleport |
 | `UpdateVehicleConfiguration() : void` | direct API | `KSA/Vehicle.cs:1263` | blinky, its-so-shiny | `LcdGridBuilder.cs:149`; `ShinyGridBuilder.cs:98` | OK | |
 | `UpdateAfterPartTreeModification() : void` | direct API | `KSA/Vehicle.cs:1277` | kitchen-sink | `FlexoPartTest.cs:320` | OK | recompute mass/aero/CoM |
@@ -1028,6 +1028,7 @@ on every game update FIRST.
 | `ResourceManagerBase.NearestToFurtherestNode(SameStage)` | blinky (diagnose-only) | base-type private field by name | OK (field names intact) — but the **owner moved**: `ResourceManager` is no longer on `RocketCore`, it is on the `Combustor` subclass (`SolidMotor` cores have none). Reached via a `core is Combustor` test since 5018 |
 | `GameSettings.OnKeyAll` | all mods (HotkeyGuard) | `AccessTools.Method(…, nameof(OnKeyAll))` | OK |
 | `Program.OnDrawUiConsole` (private) | unscience (HiddenUiFrameHook) | `AccessTools.Method(typeof(Program), "OnDrawUiConsole")` — `HiddenUiFrameHook.cs:44`. Miss throws at `Patch()` → logged/skipped; symptom is mods freezing on F2 again. Must remain an every-frame call *after* the `if (DrawUI)` block and *before* `ImGui.Render()` (`Program.cs:2103` @5348) | OK |
+| `Program.PrepareFrame(double,double)` → seven ordered Universe call seams | garrys-torch | private method + transpiler call matching | OK @5402; installation rejects missing, duplicate or reordered calls; see vehicle-physics standing timing invariant |
 | `Universe.ExecuteNextVehicleSolvers` | eternal-flame, kitchen-sink, kiwis-marbles | `AccessTools.Method` by name (no param array) | OK (single overload) |
 
 ---
@@ -1090,9 +1091,11 @@ consolidation** (`Part.IsLightSwitchedOff()`). Full review:
 **BEHAVIORAL (compile-clean, no symbol moved — needs a live pass)**
 - ⚠️ **pyro / game — exhaust refraction dead.** `_hasRefractionInstances` is never set true in 5402
   (OLD `VolumetricExhaustRenderer.cs:960`); pyro's Refraction slider is inert. Game-side. `scope/exhaust-plumes.md`
+- **garrys-torch actuator result retention (2026-09-06).** Welds now execute after completed results commit and before next physics snapshots through a guarded PrepareFrame transpiler. Orbit stamps use `SimStep.PreviousTime`. Managed Harmony regression passes; native light actuation, chains, F2 and pause/warp remain live checks. See `scope/vehicle-physics.md`.
 - ⚠️ **garrys-torch vs part failure.** `PartFailure.Detect` (`PhysicsBubble.cs:1459`) can now shed
-  debris / destroy overlapping welded vehicles; `WeldEngine.UpdateWeld:19` has no disposed guard.
-  `Vehicle.Teleport` byte-identical. Recommended: guard + live weld test. `scope/vehicle-physics.md`
+  debris / destroy overlapping welded vehicles. Disposed welds are now removed before animation
+  updates and scale restoration skips disposed sources; collisions still need a live weld test.
+  See `scope/vehicle-physics.md`.
 - ⚠️ **graffiti terrain decals.** `Celestial.GetTerrainHeightFromDirCcf` accurate path now uses
   `MeanRadius` (`Celestial.cs:825-857`). Live placement check. `scope/decals.md`
 - ✅ **IvaForceRender vs the `RenderPartModels` gate** — the postfix now mirrors both of the

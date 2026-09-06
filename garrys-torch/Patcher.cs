@@ -15,6 +15,7 @@ internal static class Patcher
         {
             _harmony ??= new Harmony("garrys-torch");
             HotkeyGuard.Patch(_harmony);
+            GarrysTorchPatches.Apply(_harmony);
             KittenScalePatches.Apply(_harmony);
         }
         catch (Exception ex)
@@ -29,6 +30,7 @@ internal static class Patcher
         {
             if (_harmony != null)
             {
+                GarrysTorchPatches.Remove(_harmony);
                 KittenScalePatches.Remove(_harmony);
                 HotkeyGuard.Unpatch(_harmony);
             }

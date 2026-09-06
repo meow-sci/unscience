@@ -31,22 +31,37 @@ Garry's Torch allows you to:
 
 #### Weld update timing
 
-The mod runs all weld physics from the StarMap `OnAfterUi` callback in `Mod.cs` (and from unscience's `OnAfterUi` when bundled in the supermod). That callback fires after the current frame's render, by which point the vehicle solver workers queued at the end of `Universe.ExecuteNextVehicleSolvers` have usually finished naturally.
+`GarrysTorchPatches` transpiles the private `Program.PrepareFrame(double, double)` caller.
+It replaces the single `Universe.GetJobSimStep(dtPlayer)` call with a wrapper that obtains the
+same step, updates welds, and returns that step unchanged. Both the standalone mod and Unscience
+install this shared patch; UI callbacks no longer advance welds, so F2 cannot stop or double them.
 
-To make the timing safe regardless of how long workers take, `GarrysTorchSubmod.UpdateWelds(dt)` explicitly calls `KSA.JobSystems.VehicleSolvers.Wait()` before touching any vehicle state. That blocks until all in-flight vehicle worker jobs complete, eliminating the two races that any uncoordinated `Vehicle.Teleport` call from a UI callback produces:
+KSA 5402 applies completed orbit, vehicle and cloth results before this call, then queues the next
+cloth, vehicle and orbit solvers after it. The patch validates those seven calls occur exactly once
+and in that order; an unexpected layout rejects installation with a logged error. Patching the
+caller also avoids depending on solver calls that may already have been inlined before mod loading.
 
-- **`Called SnapToLeader with body time X but origin time Y`** — `Vehicle.Teleport` advances the source's `_kinematicStates.Origin.Time` past `body.Time` while a worker still holds the old body snapshot.
-- **`System.InvalidOperationException: Collection was modified`** thrown from `VehicleUpdateTask.DoWorkAndStageResults` — `Vehicle.Teleport` → `RemoveFromTask` → `_vehicleStates.Remove(...)` while a worker iterates that list.
+The old UI callback waited for workers, then teleported the source **before their results were
+applied**. `Vehicle.Teleport` removes it from its physics bubble, so `ApplyResultsToVehicles` skipped
+its module-state commit. A light actuator repeatedly started from the same `TimeCurrent` instead
+of accumulating progress toward `TimeGoal`. Waiting for a worker is not the same as applying its
+results. Moving welding to this handoff lets KSA commit those results before the source is removed
+and reattached for the next tick.
 
-After our `Wait()` returns, the workers are done; we can call `Vehicle.Teleport` safely. The teleport itself calls `RemoveFromTask`, so the next frame's `Universe.ApplyVehicleSolvers` doesn't overwrite our teleport (the source is no longer in any task). The next `Universe.ExecuteNextVehicleSolvers` then calls `AddVehiclesToTasks` which re-attaches the source to a task and copies our teleported `_kinematicStates` into the worker state — so the following physics tick starts from the welded position.
+The orbit timestamp is now the supplied `SimStep.PreviousTime`, matching the just-applied body and
+bubble-origin time. `NextTime` would put it one tick ahead. Weld interpolation still uses the
+player delta time, preserving its existing pause/time-warp behavior. Kitten animation targeting is
+unchanged; light actuation depends on simulation module state rather than the skeletal renderer.
 
-Earlier versions of this mod tried a Harmony prefix on `Universe.ExecuteNextVehicleSolvers` and later a postfix on `Universe.ApplyVehicleSolvers`. Both approaches silently stopped firing after the recent KSA build (root cause not pinned down — other mods' Harmony patches on `ExecuteNextVehicleSolvers` still work, suggesting a build-specific quirk), so the mod no longer relies on Harmony for weld timing.
+The internal update entry point takes the committed state time explicitly. The old public
+`UpdateWelds(dt)` and `UpdateBeforeVehicleSolvers(dt)` callbacks were removed: hosts should install
+`GarrysTorchPatches` instead of invoking teleports from the UI.
 
 #### WeldEngine
 Stateless computation engine for vehicle welding. Contains all physics/math logic.
 
 **Key Methods**:
-- `UpdateWeld(WeldEntry weld)` - Teleports source vehicle to maintain relative position/rotation to target, then refreshes per-frame vehicle caches
+- `UpdateWeld(WeldEntry weld, UniverseTime stateTime)` - Teleports source vehicle to maintain relative position/rotation to target, then refreshes per-frame vehicle caches
 - `EulerDegreesToQuat(float pitch, float yaw, float roll)` - Converts Euler angles to quaternion with ZYX intrinsic convention
 - `ApplyVehicleScale(Vehicle vehicle, float3 scale)` - Applies independent X/Y/Z scale to all parts
 
@@ -82,7 +97,7 @@ Manages named presets persisted to a TOML file at `My Games/Kitten Space Agency/
 
 ### UI (Mod.cs / GarrysTorchSubmod)
 
-`Mod.OnBeforeUi` intentionally does **not** run weld physics. Weld physics runs from `Mod.OnAfterUi` (or unscience's `OnAfterUi` when bundled) via `GarrysTorchSubmod.UpdateWelds(dt)`, which calls `KSA.JobSystems.VehicleSolvers.Wait()` first to synchronise with the vehicle worker threads.
+`Mod.OnBeforeUi` and `Mod.OnAfterUi` do not advance weld physics. `GarrysTorchPatches` owns that work in the simulation handoff described above; the UI edits weld configuration.
 
 ImGui window with:
 - **Create Weld section** - Collapsible header with filterable source/target vehicle combos
@@ -161,8 +176,9 @@ var weld = new WeldEntry
     LockRotation = false
 };
 
-// Update the weld each frame
-WeldEngine.UpdateWeld(weld);
+// The installed GarrysTorchPatches drives registered welds automatically.
+// Low-level use is only safe in the same pre-solver handoff:
+WeldEngine.UpdateWeld(weld, simStep.PreviousTime);
 ```
 
 ## Math Reference
@@ -193,9 +209,17 @@ The animation system (`WeldAnimation`, `WeldAnimationManager`) enables smooth in
 - **Easing types**: Linear, EaseIn, EaseOut, EaseInOut
 - **Configurable power**: `easingPowerStart` and `easingPowerEnd` control the sharpness of the ease function
 - **Queue**: Multiple animations can be queued per weld; each starts when the previous completes
-- **Frame update**: Animations run in `GarrysTorchSubmod.UpdateBeforeVehicleSolvers(dt)` before the weld engine teleport, ensuring smooth motion without racing KSA vehicle solver jobs
+- **Frame update**: Animations run in `GarrysTorchSubmod.UpdateBeforeVehicleSolvers(dt, stateTime)` from the PrepareFrame hook before the weld engine teleport, ensuring smooth motion without racing KSA vehicle solver jobs
 - **Snap to target**: Animation completes by snapping to exact target values to prevent floating-point drift
 
+
+## Validation
+
+Run `dotnet run --project garrys-torch.tests/garrys-torch.tests.csproj` for the managed timing
+regression, including actual Harmony installation on a warmed-up fixture caller, result retention,
+start-of-step timestamps, pause/warp, unload, and rejected game-loop layouts. These checks do not
+run KSA's native physics or renderer. See [the library README](../garrys-torch.lib/README.md) for
+the in-game checks still required.
 
 ## Notes for Future Development
 

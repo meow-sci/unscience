@@ -50,13 +50,6 @@ public class Mod
             if (!_isInitialized || _isDisposed) return;
             if (ImGui.IsKeyPressed(ImGuiKey.F11)) _windowVisible = !_windowVisible;
             if (_windowVisible) RenderWindow();
-
-            // Run weld physics here, AFTER the UI and AFTER the vehicle solver
-            // workers (which were queued at the end of PrepareFrame and have
-            // likely finished by now during the render). UpdateWelds will Wait()
-            // on the worker scheduler before mutating any vehicle state to
-            // eliminate the race window completely.
-            _submod.UpdateWelds(dt);
         }
         catch (Exception ex)
         {

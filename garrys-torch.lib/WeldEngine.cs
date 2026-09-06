@@ -11,16 +11,16 @@ namespace MeowSci.GarrysTorchLib;
 public static class WeldEngine
 {
     /// <summary>
-    /// Teleports the source vehicle to maintain the weld relative to the target.
+    /// Teleports the source vehicle at the just-applied state time, before the next workers start.
     /// Returns false if the weld should be removed (e.g. parent body mismatch).
     /// </summary>
-    public static bool UpdateWeld(WeldEntry entry)
+    public static bool UpdateWeld(WeldEntry entry, UniverseTime stateTime)
     {
         // KSA 2026.9.7.5402 added structural part failure (KSA/PartFailure.cs), which can destroy a
         // vehicle mid-flight with no setting to turn it off — and welded craft are held overlapping
         // the target every frame, which is exactly the contact case that trips it. A destroyed
         // vehicle is disposed but our WeldEntry still references it, so read the flag before
-        // touching anything on it and drop the weld instead of throwing out of OnAfterUi.
+        // touching anything on it and drop the weld instead of throwing out of the solver hook.
         if (entry.Source.IsDisposed || entry.Target.IsDisposed)
         {
             Console.WriteLine("garrys-torch: welded vehicle no longer exists (destroyed or recovered), unwelding");
@@ -110,28 +110,9 @@ public static class WeldEngine
             }
         }
 
-        // Stamp the orbit with the time that the just-completed vehicle worker
-        // tick advanced to, NOT Universe.GetElapsedTime() (which is the
-        // PREVIOUS tick's end time — _lastSimStep doesn't roll forward until
-        // the next PrepareFrame's ApplyVehicleSolvers).
-        //
-        // Vehicle.Teleport calls _kinematicStates.OverwriteFromLeaderAnalytic
-        // which sets body.Time = orbit.StateVectors.StateTime. The target
-        // vehicle's task.Origin.Time has been propagated forward by the workers
-        // we just Wait()-ed on, so if we used the stale GetElapsedSimTime() the
-        // source's body.Time would land one frame behind the task's Origin.Time
-        // and the worker would log:
-        //   "Called SnapToLeader with body time X but origin time Y"
-        // (Y - X ≈ dtPlayer * achievedSpeed * simSpeed)
-        //
-        // GetJobSimStep is the same pure helper the game itself calls in
-        // PrepareFrame to build the SimStep that's about to be queued, so this
-        // value matches what the next-tick workers will be aligned to.
-        UniverseTime tickEndTime = Universe.GetJobSimStep(Program.GetPlayerDeltaTime()).NextTime;
-
         Orbit newOrbit = Orbit.CreateFromStateCci(
             entry.Source.Parent,
-            tickEndTime,
+            stateTime,
             newSrcPosCci,
             newSrcVelCci,
             entry.Source.Orbit.OrbitLineColor

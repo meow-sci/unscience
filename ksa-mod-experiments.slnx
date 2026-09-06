@@ -22,6 +22,7 @@
     <Project Path="hot-pursuit/hot-pursuit.csproj" />
     <Project Path="hot-pursuit.lib/hot-pursuit.lib.csproj" />
     <Project Path="garrys-torch.lib/garrys-torch.lib.csproj" />
+    <Project Path="garrys-torch.tests/garrys-torch.tests.csproj" />
     <Project Path="zippo/zippo.csproj" />
     <Project Path="zippo.lib/zippo.lib.csproj" />
     <Project Path="i-feel-seen/i-feel-seen.csproj" />
