@@ -74,3 +74,6 @@ that repo).
 
 Godzilla adds session-based Smart vessel resizing, raw XYZ Basic scaling, and restore controls.
 See [Godzilla](godzilla/README.md).
+
+BYO Music imports OGG/WAV/MP3 files into the common sounds library and attaches independently
+controllable 3D playback to vessels, with continuous repeat or gaps. See [BYO Music](byo-music/README.md).

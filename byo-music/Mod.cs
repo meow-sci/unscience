@@ -2,118 +2,82 @@ using System;
 using Brutal.Numerics;
 using Brutal.ImGuiApi;
 using StarMap.API;
-using KSA;
-using ByoMusicPlayer = MeowSci.ByoMusicLib.MusicPlayer;
+using MeowSci.ByoMusicLib;
 
 namespace MeowSci.ByoMusic;
 
 [StarMapMod]
 public class Mod
 {
-  public bool ImmediateUnload => false;
+    public bool ImmediateUnload => false;
 
-  private bool _isInitialized = false;
-  private bool _isDisposed = false;
-  private bool _windowVisible = false;
+    private bool _isInitialized;
+    private bool _isDisposed;
+    private bool _windowVisible;
+    private ByoMusicSubmod _submod = null!;
 
+    [StarMapImmediateLoad]
+    public void OnImmediateLoad() { }
 
-  [StarMapImmediateLoad]
-  public void OnImmediateLoad() { }
-
-  [StarMapAllModsLoaded]
-  public void OnFullyLoaded()
-  {
-    try
+    [StarMapAllModsLoaded]
+    public void OnFullyLoaded()
     {
-      Patcher.Patch();
-      _isInitialized = true;
-    }
-    catch (Exception ex)
-    {
-      Console.WriteLine($"byo-music: Error during initialization: {ex.Message}");
-    }
-  }
-
-  [StarMapBeforeGui]
-  public void OnBeforeUi(double dt) { }
-
-  [StarMapAfterGui]
-  public void OnAfterUi(double dt)
-  {
-    try
-    {
-      if (!_isInitialized || _isDisposed) return;
-
-      if (ImGui.IsKeyPressed(ImGuiKey.F11))
-        _windowVisible = !_windowVisible;
-
-      if (_windowVisible)
-        RenderWindow();
-    }
-    catch (Exception ex)
-    {
-      Console.WriteLine($"byo-music: Error in OnAfterUi: {ex.Message}");
-    }
-  }
-
-  [StarMapUnload]
-  public void Unload()
-  {
-    try
-    {
-      Patcher.Unload();
-      _isDisposed = true;
-    }
-    catch (Exception ex)
-    {
-      Console.WriteLine($"byo-music: Error during unload: {ex.Message}");
-    }
-  }
-
-  private void RenderWindow()
-  {
-    // Set initial window size
-    ImGui.SetNextWindowSize(new float2(600, 800), ImGuiCond.FirstUseEver);
-
-    // Begin window
-    if (ImGui.Begin("byo-music Mod", ref _windowVisible))
-    {
-      // Header
-      ImGui.TextColored(new float4(0.0f, 1.0f, 0.0f, 1.0f), "byo-music");
-      ImGui.Separator();
-
-      // Zoom Out Animation Configuration
-      if (ImGui.CollapsingHeader("thing", ImGuiTreeNodeFlags.DefaultOpen))
-      {
-        ImGui.Indent();
-        
-        if (ImGui.Button("Listen all ya'll"))
+        try
         {
-          Console.WriteLine("This is Sabotage!!!");
-          
-          // var sabotageMulti = ModLibrary.Get<MultiSound>("SabotageMulti");
-          // Console.WriteLine($"sabotageMulti: {sabotageMulti}");
-
-          // sabotageMulti.Play();
-
-          var sabotageMusic = ByoMusicPlayer.GetPlaylist("SabotageMusic");
-          // Console.WriteLine($"sabotageMusic: {sabotageMusic}");
-          if (sabotageMusic != null)
-            ByoMusicPlayer.Play(sabotageMusic);
-
-          // KSA.GameAudio.PlaySound();
+            _submod = new ByoMusicSubmod();
+            Patcher.Patch();
+            _submod.Initialize();
+            _isInitialized = true;
         }
-        
-        ImGui.Unindent();
-      }
-      
-      // Close button
-      if (ImGui.Button("Close"))
-      {
-        _windowVisible = false;
-      }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"byo-music: Error during initialization: {ex.Message}");
+        }
     }
-    ImGui.End();
-  }
-}
 
+    [StarMapBeforeGui]
+    public void OnBeforeUi(double dt)
+    {
+        if (!_isInitialized || _isDisposed) return;
+        _submod.Update(dt);
+    }
+
+    [StarMapAfterGui]
+    public void OnAfterUi(double dt)
+    {
+        try
+        {
+            if (!_isInitialized || _isDisposed) return;
+            if (ImGui.IsKeyPressed(ImGuiKey.F11)) _windowVisible = !_windowVisible;
+            if (_windowVisible) RenderWindow();
+            _submod.RenderFloatingWindows();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"byo-music: Error in OnAfterUi: {ex.Message}");
+        }
+    }
+
+    [StarMapUnload]
+    public void Unload()
+    {
+        try
+        {
+            _submod.Dispose();
+            Patcher.Unload();
+            _isDisposed = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"byo-music: Error during unload: {ex.Message}");
+        }
+    }
+
+    private void RenderWindow()
+    {
+        ImGui.SetNextWindowSize(new float2(450, 500), ImGuiCond.FirstUseEver);
+        if (ImGui.Begin("BYO Music###byo-music", ref _windowVisible))
+            _submod.RenderContent();
+        ImGui.End();
+    }
+}

@@ -15,6 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="Brutal.Fmod" Condition="Exists('$(KSAFolder)Brutal.Fmod.dll')">
+      <HintPath>$(KSAFolder)Brutal.Fmod.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Brutal.Core.Common" Condition="Exists('$(KSAFolder)Brutal.Core.Common.dll')">
       <HintPath>$(KSAFolder)Brutal.Core.Common.dll</HintPath>
       <Private>false</Private>

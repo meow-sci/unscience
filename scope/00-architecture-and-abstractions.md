@@ -559,3 +559,10 @@ Unscience uses `GarrysTorchPatches.Apply/Remove`, which delegates and subscribes
 the Godzilla development host installs the shared hook directly. Godzilla uses the existing kitten
 axis postfix as well. `VehicleScaleOwnership` prevents two tools from owning source scale; keys are
 weak and release checks the owner name. See vehicle-physics for typed integration and live checks.
+
+### Shared media import and BYO Music
+
+`SharedFileLibrary`/`LibraryFileBrowser` generalize the existing PNG copy/catalog/browser flow;
+`PngLibrary`/`PngFileBrowser` retain their APIs and `SoundLibrary` supplies `.unscience/sounds`.
+BYO Music is now an Unscience ISubmod, updating owned audio in the shell's existing visible/hidden
+HUD lifecycle. No additional shell patch. See [audio](audio.md) for native FMOD dependencies.

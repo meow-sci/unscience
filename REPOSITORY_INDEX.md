@@ -198,11 +198,13 @@ Kitten avatar animation controller. Plays every animation the game has loaded fo
 - **kitten-animations.lib**: `KittenAnimationsSubmod` (ISubmod — resolves and binds the selected kitten), `KittenAnimationCatalog` (discovers every loaded clip; ground set lives in private `KittenRenderable` fields), `KittenAnimProcessors` (typed handles on the game's four anim processors), `KittenExpressionController` (mod-owned `CatExpressionAnim` + envelope), `KittenAnimationDriver` (target ownership + override state applied from the pose prefix), `KittenAnimationPatches` (Harmony), `KittenAvatarAccessor` (live-kitten discovery/renderable/avatar access), `Ui/` (Target, Playback, AnimationLibrary, Expression, Strength, Tuning sections)
 
 ### [byo-music](byo-music) / [byo-music.lib](byo-music.lib)
-Bring Your Own Music - Custom music player. Plays audio playlists from defined assets (e.g., SabotageMusic playlist).
-- Playlist loading and playback
-- Asset-driven music integration
-- ImGui music control panel
-- Multi-sound support
+
+Unscience's BYO Music panel imports copied OGG/WAV/MP3 files into `.unscience/sounds`, with filterable
+sound/vessel pickers, independent 3D vessel playback, continuous repeat or real-time completion gaps,
+and live volume/range/repeat controls. `VesselSound` owns nonblocking FMOD streams and follows KSA's
+audio camera through `SpatialAudio`; stopped/lost targets release streams. The legacy `MusicPlayer`
+playlist helper remains for API compatibility. No new Harmony target. See project READMEs.
+
 
 ### [thug-life](thug-life) / [thug-life.lib](thug-life.lib)
 Apply the "thug life" pixel-art sunglasses meme as a 2D textured quad anchored to any vehicle's part or subpart in 3D space.
@@ -324,7 +326,7 @@ Define **brand-new planetary rings at runtime** and apply them to **any celestia
 ### [unscience](unscience)
 Unified supermod that consolidates the standalone feature mods into a single ImGui window with collapsible headers and a gear icon (⚙) context menu for per-submod visibility toggles. All submod logic lives directly in the respective `.lib` projects — unscience instantiates these lib submods and orchestrates them via the `ISubmod` interface from `ksa-abstractions.lib`. A single Harmony instance consolidates their patches. Standalone mods continue to work independently.
 - F11 window toggle with unified panel for all core submods
-- Submods: Blinky, Bloomin' Onion, Camera Controller Override, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Parts Now, Pebbles, Pyro, Rocky McRock Face, Skittles, Thug Life, Zippo (25 total)
+- Submods: Blinky, Bloomin' Onion, BYO Music, Camera Controller Override, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Parts Now, Pebbles, Pyro, Rocky McRock Face, Skittles, Thug Life, Zippo (26 total)
 - Uses `ISubmod` interface (from `ksa-abstractions.lib`): `Name`, `Initialize()`, `Update(dt)`, `RenderContent()`, `Dispose()`
 - Each submod class lives in its `.lib` project (for example `BlinkySubmod` in `blinky.lib`)
 - `unscience/Submods/` directory removed — no thin UI wrapper layer; submod classes own their own ImGui rendering
@@ -408,3 +410,8 @@ collision/mass data and descendant transform caches refresh after edits. See the
 
 Managed executable linking production scale snapshots and ownership against lightweight game
 fixtures. Covers transforms, animation preservation, mode changes, restore, topology and kitten scale.
+
+### [byo-music.tests](byo-music.tests)
+
+Managed executable checks production repeat/gap scheduling and `SharedFileLibrary` copied catalogs
+with isolated filesystem data, including duplicate handling, PNG compatibility and path validation.

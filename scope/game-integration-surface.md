@@ -1052,7 +1052,6 @@ on every game update FIRST.
 | Characters (e.g. `"Calico"`) | character | `ModLibrary.AllCharacters.GetList()` | `Core/*` | doh | OK (no hard-coded id) |
 | Reaction `"MMH_NTO"` (was combustion process `"MMH_NTO_1.6"`) | substance | `SubstanceLibrary.TryGetReaction(KeyHash)` → `MixtureReaction.AtMixtureRatio(DefaultMixtureRatio).ReactantMix` | `Core/Reactions.xml` (`<MixtureReaction Id="MMH_NTO">`, `DefaultMixtureRatio` 1.65) | doh | **CHANGED** (5018 — mixture ratio is no longer part of the id; old id resolves to nothing) |
 | Fur texture `"FurNoise"` | texture (indirect) | `CharacterRenderResources.FurTexture.BindlessHandle` | `Core/*` | doh | OK |
-| `MusicPlayList "SabotageMusic"` | sound | `ModLibrary.Get<MusicPlayList>("SabotageMusic")` | not stock (`Core/Sounds.xml` has `EarthSOIMusic`,…) | byo-music | n/a (placeholder; null-guarded; never stock in 4680/4750) |
 
 > **parts-now references no game asset by id and ships none.** It *consumes* the game's own
 > `<Assets>` bundle schema through the game's own serializer (`XmlHelper.Serializers`), and *writes*
@@ -1133,3 +1132,13 @@ also used by Godzilla. No additional string lookup or new Harmony target. The `P
 transpiler moved from Garry's Torch to `ksa-abstractions.lib/PhysicsFrameHook`; Garry's Torch registers
 its weld callback, and Godzilla queues edits before it. `ScaleFactors` max-axis behavior limits Basic
 XYZ collision fidelity. New StarMap/ISubmod consumers: `godzilla` development host and Unscience.
+
+## BYO Music spatial playback
+
+[Audio scope](audio.md) maps the new `ISubmod`/StarMap surface and all typed FMOD calls:
+`GameAudio.System`, `FmodSystem.TryCreateStream/TryPlaySound`, `Sound.TryGetOpenState/TryRelease`,
+`Channel.TryIsPlaying/TryStop/TrySetPaused/TrySetMode/TrySetLoopCount/TrySetVolume`, 3D
+attributes/min-max distance/spread/Doppler setters, `SpatialAudio.PositionView/VelocityView`,
+`ChannelGroupReference.ChannelGroup` and stock **Sfx** asset id. Existing vessel identity/disposal
+APIs handle source loss. No new Harmony patch or reflection. The old SabotageMusic placeholder is
+no longer referenced by the host UI; the legacy MusicPlayer library helper remains.

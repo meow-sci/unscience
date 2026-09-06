@@ -117,13 +117,12 @@ boundaries and the Unscience lifecycle are unchanged by this packaging refactor.
 | [`ground-clutter.md`](ground-clutter.md) | pebbles; [GLB materials](ground-clutter-glb-materials.md) | Per-body native clutter graphs, private materials, `ExecuteNextClothSolvers` transactions, collider/physics invalidation, GLB uploads and independent Workshop preview; shared Harmony ownership |
 | [`rings.md`](rings.md) | rocky-mcrock-face, bloomin-onion | planetary-ring mesh/texture swap (rocky) and **runtime ring definition on any celestial** (bloomin-onion) via the public `PlanetaryRingsReference` data tree + `Program.RebuildRenderer()`; **no Harmony patches**; `ModLibrary.AllMeshes`/`AllFiles` reflection, `MeshReference.<HostPrimitives>k__BackingField`, ctor-baking invariant in `PlanetaryRingsRenderData`; bloomin-onion adds `PlanetTransparenciesRenderer._anyRings` (load-bearing), `TextureReference.<TextureAsset>k__BackingField` (painted textures) and a cosmetic `DistantSphereRenderer._data` sync (new @5348) |
 | [`ui-customization.md`](ui-customization.md) | skittles, kitchen-sink | `ImGui` style surface, `ReinitializeDerivedValues` + IvaForceRender |
-| [`standalone-mods.md`](standalone-mods.md) | byo-music | **Not bundled in the supermod**; secondary reference |
+| [`audio.md`](audio.md) | byo-music | Shared sound imports, FMOD stream/channel ownership, vessel-relative 3D playback and repeat/gaps |
 
-Bundled in the unscience supermod (24): blinky, bloomin-onion, camera-controller-override, doh,
-dont-stifle-me, eternal-flame, free-fallin, garrys-torch, glass, graffiti, hot-pursuit, humble-arteest,
+Bundled in the unscience supermod (26): blinky, bloomin-onion, byo-music, camera-controller-override, doh,
+dont-stifle-me, eternal-flame, free-fallin, garrys-torch, glass, godzilla, graffiti, hot-pursuit, humble-arteest,
 i-feel-seen, its-so-shiny, kitchen-sink, kitten-animations, kiwis-marbles, parts-now, pebbles, pyro,
-rocky-mcrock-face, skittles, thug-life, zippo. (byo-music and jplrepo live in the repo but
-are **not** loaded by the supermod.)
+rocky-mcrock-face, skittles, thug-life, zippo. (jplrepo is a development reference and is not loaded by the supermod.)
 
 ---
 
@@ -219,3 +218,7 @@ its-so-shiny render checks. A green `dotnet build` and the managed Pebbles/Garry
 snapshot restoration and Garry's Torch scale ownership exclusion. The shared PrepareFrame hook
 queues edits before welds. Managed snapshot and Harmony checks pass; native scale/collision/animation
 and unload smoke tests remain. See [vehicle physics](vehicle-physics.md#godzilla-godzilla--godzillalib).
+
+**BYO Music added to Unscience:** copied shared sound catalog, nonblocking FMOD playback following
+vessels in the audio camera frame, live gain/range and repeat/gaps. Full solution and managed
+catalog/scheduler checks pass. Native listening/decoding/unload remain a live check; see [audio](audio.md).

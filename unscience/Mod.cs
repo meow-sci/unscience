@@ -6,6 +6,7 @@ using StarMap.API;
 using KSA;
 using MeowSci.KsaAbstractions;
 using MeowSci.BlinkyLib;
+using MeowSci.ByoMusicLib;
 using MeowSci.EternalFlameLib;
 using MeowSci.GarrysTorchLib;
 using MeowSci.GlassLib;
@@ -66,6 +67,7 @@ public class Mod
 
             _submods.Add(new BlinkySubmod());
             _submods.Add(new BloominOnionSubmod());
+            _submods.Add(new ByoMusicSubmod());
             _submods.Add(cameraOverride);
             _submods.Add(new DohSubmod());
             _submods.Add(new DontStifleMeSubmod());

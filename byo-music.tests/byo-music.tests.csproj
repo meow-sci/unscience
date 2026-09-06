@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../byo-music.lib/RepeatPlayback.cs" Link="RepeatPlayback.cs" />
+    <Compile Include="../ksa-abstractions.lib/SharedFileLibrary.cs" Link="SharedFileLibrary.cs" />
+  </ItemGroup>
+</Project>

@@ -167,3 +167,13 @@ this hook for Unscience and subscribes its weld callback; Godzilla queues edits 
 
 `VehicleScaleOwnership` keeps weak vehicle keys with tool names. `TryAcquire`, `GetOwner` and
 owner-checked `Release` prevent Godzilla/Garry's Torch from replacing one another's scale state.
+
+## Shared imported media
+
+`SharedFileLibrary` supplies a flat copied catalog with case-insensitive extension filtering,
+numbered collision names, no overwrites, sorted scans and catalog-only `FullPath` names.
+`LibraryFileBrowser` supplies folder navigation, quick links, filtering, refresh, double-click or
+explicit Import, and visible filesystem errors. `PngLibrary`/`PngFileBrowser` retain their public
+APIs as facades; `SoundLibrary.Files` adds `.unscience/sounds` for OGG/WAV/MP3. Consumers poll scans
+or use Refresh to discover externally added files; decoding remains the consumer's responsibility.
+Managed filesystem and loop checks: `dotnet run --project byo-music.tests`.

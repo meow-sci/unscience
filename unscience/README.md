@@ -4,7 +4,7 @@ Unscience is the only distributed mod. `dotnet build` deploys one `unscience/` f
 feature libraries remain separate projects with explicit references. Former standalone hosts are
 retained for development and are not deployed or published. See [distribution](../README.md#distribution).
 
-A unified supermod that consolidates 25 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
+A unified supermod that consolidates 26 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
 
 ## Included Submods
 
@@ -12,6 +12,7 @@ A unified supermod that consolidates 25 KSA feature libraries into a single ImGu
 |--------|-------------|
 | Blinky — Dynamic LCD Grid | Builds and controls pixel grids on vehicle light parts |
 | Bloomin' Onion | Creates and edits planetary ring systems at runtime |
+| BYO Music | Imported vessel-attached 3D sounds, repeat/gaps and live volume/range |
 | Camera Controller Override | 8 camera animation types (zoom, spiral, orbit, shake) with keyframe sequencing |
 | Doh | Spawns EVA kittens and customizes their materials |
 | Don't Stifle Me | Extends vehicle-editor scale and configurable-value limits |

@@ -1,4 +1,4 @@
-# BYO Music — vessel sounds
+# BYO Music library
 
 Open **F11 → BYO Music** in Unscience. Import an **Ogg Vorbis (.ogg), WAV, or MP3**, choose a
 sound and a vessel using the filterable pickers, then **Play on vessel**. The browser copies files
