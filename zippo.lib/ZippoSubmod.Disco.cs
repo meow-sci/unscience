@@ -25,6 +25,15 @@ public sealed partial class ZippoSubmod
                 "Run independent repeating color, mechanism, and spotlight-beam cycles. " +
                 "Light switches must be on; unsupported channels are skipped safely.");
 
+            if (BeginDiscoTable("##zp_disco_phase_jitter"))
+            {
+                DiscoFloatRow("Phase jitter", "##zp_disco_phase_jitter_seconds", ref _disco.PhaseJitter,
+                    0f, 3600f, "%.2f s");
+                ImGui.EndTable();
+            }
+            ImGui.TextDisabled(
+                "Each light and channel gets a stable random offset up to this value. Set to 0 for sync.");
+
             ImGui.Checkbox("Animate color##zp_disco_color", ref _disco.Color);
             if (_disco.Color)
             {

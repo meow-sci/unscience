@@ -11,6 +11,7 @@ public sealed class DiscoRecipe
     public bool Actuation;
     public bool Spread;
     public bool RandomColors;
+    public float PhaseJitter = 1f;
     public List<float3> Palette = new() { new(1f, 0f, 0.2f), new(0f, 0.8f, 1f), new(0.6f, 0f, 1f) };
     public DiscoTiming ColorTiming = new();
     public DiscoTiming ActuationTiming = new();
@@ -29,6 +30,7 @@ public sealed class DiscoRecipe
         Actuation = Actuation,
         Spread = Spread,
         RandomColors = RandomColors,
+        PhaseJitter = PhaseJitter,
         Palette = new List<float3>(Palette),
         ColorTiming = ColorTiming.Clone(),
         ActuationTiming = ActuationTiming.Clone(),
@@ -45,12 +47,14 @@ public sealed class DiscoRecipe
     {
         if (Palette == null || Palette.Count is < 1 or > 32
             || Palette.Exists(color => !Unit(color.X) || !Unit(color.Y) || !Unit(color.Z))
+            || !float.IsFinite(PhaseJitter) || PhaseJitter < 0f || PhaseJitter > 3600f
             || ColorTiming == null || ActuationTiming == null || SpreadTiming == null
             || !Unit(ActuationMin) || !Unit(ActuationMax) || ActuationMin > ActuationMax
             || !Angle(InnerMin) || !Angle(InnerMax) || !Angle(OuterMin) || !Angle(OuterMax)
             || InnerMin > OuterMin || InnerMax > OuterMax)
         {
-            throw new InvalidOperationException("Invalid Disco palette, actuation range, or spotlight cone angles.");
+            throw new InvalidOperationException(
+                "Invalid Disco palette, phase jitter, actuation range, or spotlight cone angles.");
         }
 
         ColorTiming.Validate();

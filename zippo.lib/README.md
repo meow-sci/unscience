@@ -10,7 +10,7 @@ Disco targets one selected light part or every light part on the selected vehicl
 - a matching light assembly's normalized keyframe actuation range; and
 - spotlight inner/outer cone half-angles.
 
-Color, actuation, and spread each have their own transition, hold, and easing settings. Each running light owns a deep copy of the recipe, so authoring changes do not alter live effects.
+Color, actuation, and spread each have their own transition, hold, and easing settings. A configurable phase jitter assigns an independent, stable random time offset to every channel on every active light, so vehicle-wide shows do not animate in lockstep; zero jitter restores synchronized playback. Each running light owns a deep copy of the recipe, so authoring changes do not alter live effects.
 
 `DiscoLight` replaces each runtime `LightModule.Template` with a complete module-local copy. It gives color and cone-angle channels private reference objects, leaving the shared `PartTemplate` untouched. A matching `KeyframeAnimationModule` is claimed by only one Disco light at a time. Stop, target disappearance, and unload restore the original template and restore actuator/switch values only while Zippo still owns the value it wrote.
 

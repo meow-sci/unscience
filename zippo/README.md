@@ -27,7 +27,7 @@ Zippo lets you:
 - **Queue-based animation** - Per-part animation queue (max 25) with color+intensity interpolation
 - **Easing functions** - Linear, EaseIn, EaseOut, EaseInOut with configurable power parameters
 - **Animation status UI** - Progress bar, elapsed/total time display
-- **Disco recipes** - Editable 1-32 color palette or deterministic random rainbow hues, independent transition/hold/easing per channel, single-light or vehicle-wide targeting
+- **Disco recipes** - Editable 1-32 color palette or deterministic random rainbow hues, independent transition/hold/easing per channel, configurable phase jitter, and single-light or vehicle-wide targeting
 - **Safe per-instance effects** - Disco color and cone-angle changes use module-local template copies and restore originals on stop, disappearance, or unload
 
 ## Architecture
@@ -89,7 +89,7 @@ Select a vehicle and optionally a light part, then expand **Disco Party Lights**
 - **Actuation** alternates a matching light assembly's keyframe animation between normalized minimum and maximum positions. Unsupported lights skip this channel. KSA moves toward each goal at the mechanism's own rate, so very short cycles can outpace it.
 - **Beam spread** alternates between two inner/outer cone half-angle pairs. Point lights skip this channel.
 
-Each channel has independent transition duration, hold duration, and easing. Pause freezes the recipe clock, although a mechanism may finish moving toward its most recent goal. Starting Disco again replaces the selected light's previous Disco effect and clears its ordinary Zippo animation queue. Applying an ordinary light edit or queuing a normal animation stops Disco on that light first. Both the standalone mod and the Unscience-hosted feature drive active effects from their frame lifecycle; Unscience's existing hidden-HUD fallback also keeps them moving while F2 hides the game UI.
+Each channel has independent transition duration, hold duration, and easing. **Phase jitter** gives every active light and every channel its own stable random time offset from zero up to the configured number of seconds, preventing color, actuation, and beam spread from moving in lockstep. The default is 1 second; set it to 0 for deliberately synchronized playback. Pause freezes the recipe clock, although a mechanism may finish moving toward its most recent goal. Starting Disco again replaces the selected light's previous Disco effect and clears its ordinary Zippo animation queue. Applying an ordinary light edit or queuing a normal animation stops Disco on that light first. Both the standalone mod and the Unscience-hosted feature drive active effects from their frame lifecycle; Unscience's existing hidden-HUD fallback also keeps them moving while F2 hides the game UI.
 
 Color and spread are isolated to each runtime light module rather than mutating the shared part template. An assembly actuator can have only one Disco owner; a later start takes ownership. Stop, part disappearance, and mod unload restore the original module template and restore the actuator goal when it is still owned. If another feature replaces the template or changes the goal, Zippo does not overwrite that external state.
 

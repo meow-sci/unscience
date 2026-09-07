@@ -130,7 +130,9 @@ Disco records are session-only.
 | D7 | StarMap lifecycle | `zippo/Mod.cs`; `unscience/Mod.cs` | `[StarMapBeforeGui]` → `Program.OnDrawUiFrame(double)` | `KSA/Program.cs:2639` | Standalone Zippo now calls `ZippoSubmod.Update(dt)` from its hook; Unscience calls the same method through `UpdateSubmods`. This is essential for ordinary queues and Disco. Unscience also uses `HiddenUiFrameHook` while F2 hides the HUD; standalone playback follows StarMap and pauses while that game UI hook is skipped. |
 
 `DiscoTiming` samples repeating hold/transition phases directly from elapsed time, so skipped frames do
-not require a catch-up loop. Random hues are stable per step and independently seeded per active light.
+not require a catch-up loop. Every active light receives independent, stable color/actuation/spread phase
+offsets within the recipe's configurable jitter window; zero jitter deliberately restores lockstep timing.
+Random hues are stable per step and independently seeded per active light.
 Pause freezes recipe time; it does not stop a mechanism already moving toward its last goal. Starting
 Disco cancels the ordinary queue for that light; every ordinary UI write and queue action stops Disco
 first. `Dispose()` stops all effects and restores owned state for both the standalone mod and Unscience.

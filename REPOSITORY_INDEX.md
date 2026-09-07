@@ -79,7 +79,7 @@ Light control and animation system. Selects vehicles and light parts, controls t
 - Light color: 950+ XKCD named colors via filterable combobox + custom color picker
 - On/off toggle for lights
 - **Animation system**: Queue-based single-step animations (max 25/part) interpolating color+intensity with Linear/EaseIn/EaseOut/EaseInOut easing + power control; manual controls locked during animation
-- **Disco system**: independent repeating color, moving-assembly actuation, and spotlight beam-spread channels; ordered 1-32 color palettes or deterministic random rainbow hues; per-channel transition/hold/easing
+- **Disco system**: independent repeating color, moving-assembly actuation, and spotlight beam-spread channels; ordered 1-32 color palettes or deterministic random rainbow hues; per-channel transition/hold/easing plus configurable per-light/channel phase jitter
 - **Runtime ownership**: Disco clones per-instance light templates, assigns shared assembly actuators to one owner, and restores owned state on stop, target disappearance, or unload
 - Recursive part tree search for light components
 - Real-time light property updates

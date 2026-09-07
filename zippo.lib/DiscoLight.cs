@@ -17,6 +17,9 @@ internal sealed class DiscoLight : IDisposable
     private readonly bool _originalSwitchState;
     private bool? _writtenSwitchState;
     private readonly uint _seed;
+    private readonly double _colorPhaseOffset;
+    private readonly double _actuationPhaseOffset;
+    private readonly double _spreadPhaseOffset;
 
     public DiscoLight(Part part, DiscoRecipe recipe)
     {
@@ -24,6 +27,9 @@ internal sealed class DiscoLight : IDisposable
         Recipe = recipe.Clone();
         Recipe.Validate();
         _seed = (uint)Random.Shared.Next();
+        _colorPhaseOffset = Random.Shared.NextSingle() * Recipe.PhaseJitter;
+        _actuationPhaseOffset = Random.Shared.NextSingle() * Recipe.PhaseJitter;
+        _spreadPhaseOffset = Random.Shared.NextSingle() * Recipe.PhaseJitter;
         _lightSwitch = part.LightSwitch ?? part.FullPart.LightSwitch;
         _originalSwitchState = _lightSwitch?.LightIsActive ?? true;
 
@@ -96,12 +102,12 @@ internal sealed class DiscoLight : IDisposable
         if (Paused) return;
         if (double.IsFinite(dt) && dt > 0d) Elapsed += dt;
 
-        var (colorStep, colorMix) = Recipe.ColorTiming.Sample(Elapsed);
+        var (colorStep, colorMix) = Recipe.ColorTiming.Sample(Elapsed + _colorPhaseOffset);
         float3 start = ColorAt(colorStep);
         float3 end = ColorAt(colorStep + 1);
         float3 color = start + (end - start) * colorMix;
 
-        var (spreadStep, spreadMix) = Recipe.SpreadTiming.Sample(Elapsed);
+        var (spreadStep, spreadMix) = Recipe.SpreadTiming.Sample(Elapsed + _spreadPhaseOffset);
         if (spreadStep % 2 != 0) spreadMix = 1f - spreadMix;
 
         foreach (var (module, _, owned) in _lights)
@@ -125,7 +131,7 @@ internal sealed class DiscoLight : IDisposable
             }
         }
 
-        var (actuationStep, actuationMix) = Recipe.ActuationTiming.Sample(Elapsed);
+        var (actuationStep, actuationMix) = Recipe.ActuationTiming.Sample(Elapsed + _actuationPhaseOffset);
         if (actuationStep % 2 != 0) actuationMix = 1f - actuationMix;
         foreach (var actuator in Actuators)
         {
