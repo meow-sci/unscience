@@ -432,16 +432,19 @@ without decoding the folder. `LibraryFileBrowser` is shared with PNG/sound impor
 adds copied-source and version-identity checks; see the Pebbles library README for behavior.
 
 ### [sphinx](sphinx) / [sphinx.lib](sphinx.lib)
-Body-fixed decorative GLB statics with terrain click placement, beside-vessel placement, slope
+Body-fixed GLB statics with automatic box/mesh colliders with terrain click placement, beside-vessel placement, slope
 alignment, live XYZ transforms, shared PNG overrides, live per-static UV scale/offset and reset,
 visibility, duplicate and removal controls. UV edits replace only private vertex buffers and
 preserve source UVs for repeatable edits; texture failures retain the previous texture.
 Reuses Pebbles' bounded importer/material fallbacks and shared GLB/PNG catalogs. Private GPU
 buffers use native StaticObjectRenderer pipelines through three scoped postfixes; no global mesh
-allocation, colliders or shadow casters. Session placements; files persist. See the project READMEs
+allocation or shadow casters. Scoped Bepu hooks manage per-bubble colliders, ground-contact
+filtering, origin snaps and pooled-simulation cleanup; Auto conservatively detects closed boxes
+and otherwise preserves mesh openings, with explicit box/mesh/off overrides and triangle budgets. Session placements; files persist. See the project READMEs
 and [integration scope](scope/statics.md). The standalone host is development-only.
 
 ### [sphinx.tests](sphinx.tests)
 Managed grounding/centering/offset, XYZ transforms and UV mapping checks, including edit/reset
 repeatability, source isolation and nonfinite/overflow rejection. Links production PlacementMath
-and TextureMapping without loading the game runtime.
+and TextureMapping without loading the game runtime. CollisionGeometry checks cover conservative
+box detection, openings, degenerates, triangle budgets and 200 collider/render alignment cases.

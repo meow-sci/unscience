@@ -16,6 +16,7 @@ public sealed partial class SphinxSubmod
     private string[] _glbs = [], _pngs = [];
     private string? _file, _png;
     private float3 _scale = new(1), _rotation, _offset;
+    private CollisionMode _collision = CollisionMode.Auto;
     private TextureMapping _mapping = TextureMapping.Identity;
     private bool _align = true, _uniform = true, _armed;
     private float _range = 5000, _besideDistance = 50;
@@ -33,6 +34,7 @@ public sealed partial class SphinxSubmod
         FileCombo("Texture##sphinx", ref _png, _pngs, _pngFilter, true);
         ImGui.TextWrapped("Embedded materials are used automatically. A PNG replaces color and transparency across the model; normal/PBR details stay from the GLB.");
         TextureFields("sphinx_new_texture", ref _mapping);
+        CollisionFields("sphinx_new_collision", ref _collision);
         TransformFields("sphinx_new", ref _scale, ref _rotation, ref _offset, ref _align, ref _uniform);
         ImGui.DragFloat("Pick range (m)##sphinx", ref _range, 10, 10, 100000);
         ImGui.DragFloat("Beside-vessel distance (m)##sphinx", ref _besideDistance, 1, 1, 100000);
@@ -47,7 +49,7 @@ public sealed partial class SphinxSubmod
             QueuePlacement(GroundPlacement.BesideControlled(clearance));
         });
         ImGui.EndDisabled();
-        ImGui.TextWrapped("Models use glTF's Y-up axis. The rotated/scaled bounds are centered on the picked point with their base at ground level. Decorative placements last for this session and stay fixed to their planet. Large models may need extra height on uneven terrain.");
+        ImGui.TextWrapped("Models use glTF's Y-up axis. The rotated/scaled bounds are centered on the picked point with their base at ground level. Placements last for this session and stay fixed to their planet. Large models may need extra height on uneven terrain.");
         if (Program.EditorFlag) ImGui.TextDisabled("Place statics in the flight scene.");
         if (_entries.Count > 0)
         {
@@ -55,7 +57,13 @@ public sealed partial class SphinxSubmod
             foreach (var entry in _entries.ToArray())
             {
                 ImGui.PushID(entry.Id);
-                ImGui.Checkbox("##visible", ref entry.Visible);
+                bool visible = entry.Visible;
+                if (ImGui.Checkbox("##visible", ref visible)) _pending.Enqueue(() =>
+                {
+                    if (!_entries.Contains(entry)) return;
+                    entry.Visible = visible;
+                    if (!visible) SphinxPhysics.Detach(entry);
+                });
                 ImGui.SameLine();
                 if (ImGui.Selectable($"#{entry.Id} {GlbIdentity.Label(entry.MeshId)} — {entry.Anchor.Body.Id}", entry.Id == _selectedId)) Select(entry);
                 ImGui.PopID();
@@ -66,6 +74,20 @@ public sealed partial class SphinxSubmod
         }
         ImGui.TextWrapped(_status);
         SubmodUI.EndContentArea();
+    }
+
+    private static bool CollisionFields(string id, ref CollisionMode mode)
+    {
+        string[] labels = ["Auto", "Mesh (preserves openings)", "Fitted box", "Off"];
+        bool changed = false;
+        if (ImGui.BeginCombo($"Colliders##{id}", labels[(int)mode]))
+        {
+            for (int i = 0; i < labels.Length; i++)
+                if (ImGui.Selectable(labels[i], (int)mode == i)) { mode = (CollisionMode)i; changed = true; }
+            ImGui.EndCombo();
+        }
+        ImGui.TextWrapped("Auto detects closed boxes; other models use their mesh. Over 100,000 triangles falls back to a box. Mesh surfaces collide from both sides; texture transparency does not cut holes.");
+        return changed;
     }
 
     private static bool FileCombo(string label, ref string? selected, string[] files, ImInputString filter, bool embeddedOption)

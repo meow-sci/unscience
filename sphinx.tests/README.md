@@ -11,5 +11,11 @@ negative/out-of-range repeating UVs, matching backfaces, 200 successive edit/res
 unchanged positions/normals and original source data, invalid/overflow rejection and the native
 32-byte vertex stride / UV byte offset. No GPU is needed for these regression checks.
 
+Production `CollisionGeometry` checks detect closed boxes, retain open/concave geometry, handle
+reversed duplicate faces, reject overlapping box-face triangles and nonfinite vertices, skip
+zero-area mesh triangles and enforce the triangle limit. Another 200 deterministic cases verify
+that both triangle-mesh vertices and fitted-box poses match rendered XYZ scale/rotation/offset
+transforms without mutating the source geometry.
+
 These checks do not exercise live terrain queries, matrix upload, shaders, Vulkan synchronization
-or UI picking. See [native acceptance](../scope/statics.md#validation).
+UI picking, actual Bepu contact filtering, bubble pooling or solver synchronization. See [native acceptance](../scope/statics.md#validation).

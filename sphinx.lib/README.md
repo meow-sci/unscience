@@ -27,11 +27,31 @@ See [Sphinx usage](../sphinx/README.md) for controls, limits and supported GLBs.
   reuse textures, indices, material descriptors and matrices; PNG changes rebuild the resource.
   Original per-entry vertices are retained in managed memory for noncumulative edits and released
   on disposal. Large models can briefly hitch during live texture edits.
-- `SphinxPatches.Apply/Remove` manages only its three postfixes on `StaticObjectRenderer`:
+- `SphinxPatches.Apply/Remove` owns three rendering postfixes on `StaticObjectRenderer`:
   UpdateRenderData, private WriteCommandsColor and WriteCommandsPrePass. Record only after the
   native pipeline/global lighting descriptors are bound; replace sets 2/3 and private mesh buffers.
   Terrain buckets, editor views and other celestial bodies are excluded. No global mesh slots,
-  static-object registry entries, custom shaders, physics objects or shadow casters are allocated.
+  static-object registry entries, custom shaders or shadow casters are allocated. Physics hooks are
+  owned separately by `SphinxPhysicsPatches` and removed by exact patch method.
+
+- `CollisionGeometry` detects only complete closed bounds boxes; otherwise Auto selects a two-sided
+  mesh (or a clearly reported bounds-box fallback above 100,000 triangles). `StaticCollider` owns
+  one global Bepu Box/Mesh per entry, baked from the original imported geometry with the same
+  grounded transform as rendering. Local center/rotation keep native coordinates compact. Geometry
+  validation and the 500,000-triangle total budget precede replacement. Texture edits do not touch
+  physics; failed collider builds retain the previous transform/shape.
+- `SphinxPhysics` owns handles per `ConstraintSim`, sharing an entry's shape across bubbles. It
+  synchronizes at BeginStaticObjectPass and UpdateSimForSnappedOrigin, scoped to CCF/body identity
+  and 2 km plus collider radius from any bubble vehicle. Default Bepu awakening handles removed
+  supporting surfaces. TryResetForPool/Dispose prefixes remove handles before ids can be reused.
+- `SphinxPhysicsPatches` extends the native ground-contact filter only for our simulation/handle
+  pairs and `IsGroundSurfaceFor` for surface friction, EVA normals and ground-contact bookkeeping.
+  The internal NarrowPhaseCallbacks transpiler validates exactly one BepuHandles.IsGroundSurface
+  call and appends its Sim field to a scoped helper; no per-contact reflection or thread-local state.
+- Pending edits, placement/removal and unload wait for both vehicle and cloth solvers before
+  mutating entries or global shapes. Native callbacks read stable entries; each bubble's handle map
+  is mutated only outside its narrow-phase workers. Main-thread retirement detaches every bubble
+  handle before RemoveAndDispose frees the global shape. Body/system cleanup uses the same path.
 
 Private uploads use Pebbles' cancellable `AssetUploadSubmission`. Resource retirement waits on
 its owning device before freeing descriptors/images/buffers. Removing all placements clears this

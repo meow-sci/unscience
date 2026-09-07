@@ -3,6 +3,7 @@ using System.Numerics;
 using MeowSci.SphinxLib;
 
 TextureMappingChecks.Run();
+CollisionGeometryChecks.Run();
 
 var min = new Vector3(-7, 3, -2);
 var max = new Vector3(11, 13, 5);

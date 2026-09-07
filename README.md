@@ -86,7 +86,7 @@ cancellation. See [Pyro](pyro/README.md#runtime-onoff-cycles).
 Pebbles copies imported GLBs into a shared persistent library and discovers them automatically in
 mesh pickers. See [shared GLBs](pebbles.lib/README.md#shared-glb-library).
 
-Sphinx places shared imported GLBs as body-fixed decorative models, with terrain alignment,
+Sphinx places shared imported GLBs as body-fixed models with automatic box/mesh colliders, with terrain alignment,
 live XYZ transforms, optional common PNG overrides and live per-static UV scale/offset controls
 with a mapping reset. See [Sphinx](sphinx/README.md) for controls
-and model support. Placements are session-only and do not add colliders or shadow casters.
+and model support. Placements are session-only; collider modes include Auto, Mesh, Fitted box and Off. No new shadow casters are added.

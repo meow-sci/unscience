@@ -4,6 +4,7 @@ using System.Linq;
 using Brutal.Numerics;
 using Brutal.VulkanApi;
 using KSA;
+using KSA.Concurrency;
 using MeowSci.KsaAbstractions;
 using MeowSci.PebblesLib;
 
@@ -13,7 +14,7 @@ public sealed partial class SphinxSubmod : ISubmod
 {
     public static SphinxSubmod? Instance { get; private set; }
     public string Name => "Sphinx";
-    public string Tooltip => "Place imported textured GLBs as decorative statics fixed to a planet's surface.";
+    public string Tooltip => "Place imported textured GLBs as solid statics fixed to a planet's surface.";
     private readonly ClutterAssets _assets = new();
     private readonly List<SphinxEntry> _entries = new();
     private readonly Queue<Action> _pending = new();
@@ -26,10 +27,12 @@ public sealed partial class SphinxSubmod : ISubmod
     public void Update(double dt)
     {
         if (_disposed) return;
+        if (_pending.Count > 0) WaitForPhysics();
         int count = _pending.Count;
         for (int i = 0; i < count; i++) Attempt(_pending.Dequeue());
         var bodies = CelestialProvider.GetAllCelestials();
-        foreach (var entry in _entries.Where(e => !bodies.Contains(e.Anchor.Body)).ToArray()) Remove(entry);
+        foreach (var entry in _entries.Where(e => !bodies.Contains(e.Anchor.Body)).ToArray())
+        { WaitForPhysics(); Remove(entry); }
         _scanTime -= dt;
         if (_scanTime <= 0) { _scanTime = 2; RefreshLibrary(); }
     }
@@ -44,6 +47,7 @@ public sealed partial class SphinxSubmod : ISubmod
         string file = _file ?? "";
         string? png = _png;
         var mapping = _mapping;
+        var collision = _collision;
         var scale = _scale; var rotation = _rotation; var offset = _offset; bool align = _align;
         _pending.Enqueue(() =>
         {
@@ -57,6 +61,8 @@ public sealed partial class SphinxSubmod : ISubmod
                 _ = PlacementMath.GroundedLocal(resource.Min, resource.Max, SphinxEntry.Vector(scale), SphinxEntry.Vector(rotation), SphinxEntry.Vector(offset));
                 var entry = new SphinxEntry { Id = _nextId++, MeshId = meshId, Png = png, Anchor = anchor, Model = resource,
                     Scale = scale, Rotation = rotation, Offset = offset, Align = align, Mapping = mapping };
+                entry.Collision = collision;
+                entry.Collider = BuildCollider(entry, collision, scale, rotation, offset);
                 _entries.Add(entry); Select(entry);
                 _status = $"Placed #{entry.Id} on {anchor.Body.Id}. " + string.Join(" ", _assets.GlbWarnings(meshId));
             }
@@ -84,7 +90,7 @@ public sealed partial class SphinxSubmod : ISubmod
         {
             if (!entry.Visible || !ReferenceEquals(entry.Anchor.Body, camera.NearbyCelestial)) continue;
             try { entry.Model.Prepare(viewport, frame, entry.Matrix(camera)); }
-            catch (Exception ex) { entry.Visible = false; _status = $"#{entry.Id} hidden: {ex.Message}"; Console.WriteLine($"sphinx: {ex}"); }
+            catch (Exception ex) { entry.Visible = false; _pending.Enqueue(() => SphinxPhysics.Detach(entry)); _status = $"#{entry.Id} hidden: {ex.Message}"; Console.WriteLine($"sphinx: {ex}"); }
         }
     }
     internal void Record(CommandBuffer command, IViewport viewport, int frame, bool prepass, bool alpha)
@@ -96,10 +102,31 @@ public sealed partial class SphinxSubmod : ISubmod
             (camera.GetPositionEgo(e.Anchor.Body) + e.Anchor.PositionCcf.Transform(e.Anchor.Body.GetCcf2Cce())).LengthSquared());
         foreach (var entry in entries)
             try { entry.Model.Record(command, viewport, frame, prepass, alpha); }
-            catch (Exception ex) { entry.Visible = false; _status = $"#{entry.Id} hidden: {ex.Message}"; Console.WriteLine($"sphinx: {ex}"); }
+            catch (Exception ex) { entry.Visible = false; _pending.Enqueue(() => SphinxPhysics.Detach(entry)); _status = $"#{entry.Id} hidden: {ex.Message}"; Console.WriteLine($"sphinx: {ex}"); }
     }
+    internal static void WaitForPhysics()
+    {
+        JobSystems.VehicleSolver.Wait(); JobSystems.ClothSolvers.Wait();
+    }
+    internal void SyncCollision(ConstraintSim sim)
+    {
+        if (_disposed) return;
+        try { SphinxPhysics.Sync(sim, _entries); }
+        catch (Exception ex)
+        {
+            SphinxPhysics.Clear(sim);
+            string message = $"Collision unavailable in this physics bubble: {ex.Message}";
+            if (_status != message) Console.WriteLine($"sphinx: {message}");
+            _status = message;
+        }
+    }
+    private StaticCollider? BuildCollider(SphinxEntry entry, CollisionMode mode, float3 scale, float3 rotation, float3 offset)
+        => StaticCollider.Build(_assets, entry, mode, SphinxEntry.Vector(scale), SphinxEntry.Vector(rotation), SphinxEntry.Vector(offset),
+            500_000 - _entries.Where(e => e != entry).Sum(e => e.Collider?.TriangleCount ?? 0));
+
     public void Dispose()
     {
+        WaitForPhysics();
         _disposed = true; _pending.Clear();
         if (ReferenceEquals(Instance, this)) Instance = null;
         Clear(); _assets.Dispose();

@@ -4,6 +4,7 @@
     <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../sphinx.lib/CollisionGeometry.cs" Link="CollisionGeometry.cs" />
     <Compile Include="../sphinx.lib/PlacementMath.cs" Link="PlacementMath.cs" />
     <Compile Include="../sphinx.lib/TextureMapping.cs" Link="TextureMapping.cs" />
   </ItemGroup>

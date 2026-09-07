@@ -63,13 +63,17 @@ internal static class GroundPlacement
 
     public static double4x4 Frame(GroundAnchor anchor, bool align, Camera camera)
     {
+        return FrameCcf(anchor, align) * double4x4.CreateFromQuaternion(anchor.Body.GetCcf2Cce())
+            * double4x4.CreateTranslation(camera.GetPositionEgo(anchor.Body));
+    }
+
+    public static double4x4 FrameCcf(GroundAnchor anchor, bool align)
+    {
         var up = align ? anchor.NormalCcf : anchor.PositionCcf.NormalizeOrZero();
         var x = East(anchor.PositionCcf.NormalizeOrZero());
         x = (x - up * double3.Dot(x, up)).NormalizeOrZero();
         var z = double3.Cross(x, up).NormalizeOrZero();
-        var toEgo = anchor.Body.GetCcf2Cce();
-        x = x.Transform(toEgo); up = up.Transform(toEgo); z = z.Transform(toEgo);
-        var p = camera.GetPositionEgo(anchor.Body) + anchor.PositionCcf.Transform(toEgo);
+        var p = anchor.PositionCcf;
         return new double4x4(x.X,x.Y,x.Z,0, up.X,up.Y,up.Z,0, z.X,z.Y,z.Z,0, p.X,p.Y,p.Z,1);
     }
 

@@ -15,6 +15,8 @@ internal sealed class SphinxEntry : IDisposable
     public float3 Scale = new(1), Rotation, Offset;
     public TextureMapping Mapping = TextureMapping.Identity;
     public required StaticModelResources Model;
+    public CollisionMode Collision = CollisionMode.Auto;
+    public StaticCollider? Collider;
 
     public float4x4 Matrix(Camera camera)
     {
@@ -24,5 +26,10 @@ internal sealed class SphinxEntry : IDisposable
         return float4x4.Pack(matrix * GroundPlacement.Frame(Anchor, Align, camera));
     }
     public static Vector3 Vector(float3 v) => new(v.X,v.Y,v.Z);
-    public void Dispose() => Model.Dispose();
+    public void Dispose()
+    {
+        SphinxPhysics.Detach(this);
+        Collider?.Dispose(); Collider = null;
+        Model.Dispose();
+    }
 }

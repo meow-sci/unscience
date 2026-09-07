@@ -24,6 +24,7 @@ public static class SphinxPatches
             harmony.Patch(prepare, postfix: new HarmonyMethod(typeof(SphinxPatches), nameof(AfterPrepare)));
             harmony.Patch(color, postfix: new HarmonyMethod(typeof(SphinxPatches), nameof(AfterColor)));
             harmony.Patch(prepass, postfix: new HarmonyMethod(typeof(SphinxPatches), nameof(AfterPrepass)));
+            SphinxPhysicsPatches.Apply(harmony);
             Ready = true;
         }
         catch { Remove(harmony); throw; }
@@ -31,6 +32,9 @@ public static class SphinxPatches
     public static void Remove(Harmony harmony)
     {
         Ready = false;
+        SphinxSubmod.WaitForPhysics();
+        SphinxPhysics.ClearAll();
+        SphinxPhysicsPatches.Remove(harmony);
         harmony.Unpatch(Prepare(), AccessTools.Method(typeof(SphinxPatches), nameof(AfterPrepare)));
         harmony.Unpatch(Color(), AccessTools.Method(typeof(SphinxPatches), nameof(AfterColor)));
         harmony.Unpatch(Prepass(), AccessTools.Method(typeof(SphinxPatches), nameof(AfterPrepass)));

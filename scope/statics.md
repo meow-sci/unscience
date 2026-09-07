@@ -16,8 +16,8 @@ UV scale/offset is session state, preserved by selection and duplication, with a
 Render hooks work with the HUD hidden. Entries are removed when their exact Celestial is no longer
 returned by CelestialProvider; unload retires entries before releasing their GLB textures/cache.
 
-No celestial/static-object registry mutation, physics patch, new shader or shared mesh allocation.
-Placements are session-only, have no collider and do not submit to the shadow-caster passes.
+No celestial/static-object registry mutation, new shader or shared mesh allocation.
+Placements are session-only, have optional automatic box/mesh colliders and do not submit to the shadow-caster passes.
 They receive native lighting/shadows, are occluded by depth and write native opaque depth/normals.
 
 ## Harmony and typed game surface
@@ -36,6 +36,43 @@ They receive native lighting/shadows, are occluded by depth and write native opa
 | `Vehicle.Parent`, shared VehicleProvider/CelestialProvider, `Universe.CurrentSystem` | `KSA/Vehicle.cs`, shared abstractions | Beside-vessel placement uses its Celestial parent; prevent queued placement into retired bodies. |
 | `MeshReference.{PrimitiveMaterialIds,PrimitiveCount,HostPrimitives}`, host vertex/index spans, `MeshAttribute.{Position,Normal,Uv0}` | game RenderCore mesh surface; Pebbles GLB adapter | uint triangle indices, normalized normals, UV0 and baked scene transforms. Layout checks reject incomplete streams. Material recipes map sorted material slots; double-sided vertices/backfaces are duplicated. |
 | `TextureReference.{BindlessHandle,EmptyWhite,EmptyNormal}` + Pebbles `ClutterAssets` | texture/material resolution | GLB/PBR conversions and fallback semantics are shared with Pebbles; explicit PNG override preserves native normal/PBR maps. |
+
+## Physics / collider contract
+
+`CollisionGeometry` recognizes a closed axis-aligned bounds box only when all six faces have two
+unique triangles sharing their face diagonal; duplicate reverse faces are accepted. Other meshes
+retain their triangles. Auto falls back to a bounds box above 100,000 source triangles with a visible
+warning; explicit Mesh rejects it. Fitted box and Off are manual overrides. Degenerate mesh triangles
+are skipped; triangles are duplicated with reverse winding because Bepu mesh surfaces are one-sided.
+Alpha textures never change collision topology. Per-entry geometry is limited to a 20 km diagonal,
+100 km local center offset and the suite to 500,000 source collision triangles.
+
+`StaticCollider` builds `BepuPhysics.Collidables.Box` or `Mesh` directly through
+`ConstraintSim.UnlockShapes()` / `ShapesUnlock.{Shapes,BufferPool}`, `Shapes.Add`, `BufferPool.Take`,
+`Mesh(Buffer<Triangle>,Vector3,BufferPool)`, and `Shapes.RemoveAndDispose`. The game-provided
+`MeshColliderTemplate.CreateShapeInto` is unsupported at this baseline and is deliberately bypassed.
+Mesh triangles bake the same grounded local XYZ transform as rendering, relative to a local center;
+boxes use scaled dimensions, transformed center and decomposed rotation. `GroundPlacement.FrameCcf`
+is shared with rendering to preserve Y-up/slope basis. Bubble translation subtracts double-precision
+`BubbleOrigin.PositionBub` before conversion to Bepu float coordinates.
+
+| Hook / direct seam | Use and update requirement |
+|---|---|
+| `ConstraintSim.BeginStaticObjectPass()` postfix | Refresh our handles once per substep before narrow phase; read `HandleToState`, `VehicleUpdateState.Origin/GetReadOnlyStates`, `ReadOnlyPhysicsStates.Kinematic.PositionPhys`. Require matching `BubbleOrigin.Parent` and `BubbleFrame.Ccf`; include statics within 2 km + shape radius of any bubble vehicle. |
+| `ConstraintSim.UpdateSimForSnappedOrigin(VehicleUpdateState)` postfix | Refresh poses after origin shifts; inspect ordering when the bubble reframes. |
+| `ConstraintSim.TryResetForPool()` / `Dispose()` prefixes | Remove all owned statics before the game clears/reuses handles or nulls Simulation. Shape ownership stays with entries. |
+| `ConstraintSim.IsGroundSurfaceFor(VehicleUpdateState,StaticHandle)` postfix | Recognize only Sphinx-owned handles in that exact simulation; stock results remain true. Required for ground friction, EVA contact normals and terrain-contact bookkeeping. Recheck callers/inlining on updates. |
+| **String/IL watchlist:** internal `KSA.NarrowPhaseCallbacks.AllowContactGeneration(int,CollidableReference,CollidableReference,ref float)` and its `Sim` field | Replace exactly one call to `BepuHandles.IsGroundSurface(StaticHandle)` with a helper that also checks the callback's own simulation. Validate the one-call invariant; preserve stock filtering and Pebbles' early return. Without this hook Sphinx statics never generate contacts. |
+| `ConstraintSim.Simulation`, `Simulation.Statics.{Add,ApplyDescription,Remove}`, `StaticDescription`, `RigidPose`, `StaticReference.{Pose,Shape}`, `StaticHandle`, `TypedIndex` | Per-simulation handles reference entry-owned global shapes. Default awakening wakes bodies when supporting statics are moved/removed. No shape changes from solver threads. |
+| `JobSystems.{VehicleSolver,ClothSolvers}.Wait()` | Before main-thread queued edits, body pruning, disposal or unpatch. All bubble handles detach before freeing shapes. No mutation during narrow-phase callbacks. |
+
+Per-simulation maps live in a concurrent registry; each bubble mutates only its own map outside its
+Bepu workers. Filtering reads stable handle sets. Main-thread entry edits wait for solver completion.
+Transform/collider replacement is prepared before retiring the old shape; texture changes leave it
+alone. Visibility-off, removal, clear, retired bodies and unload detach handles immediately after the
+wait. Pooled simulations discard handles without freeing entry-owned shapes. Origin/range changes
+refresh poses without allocations in the global shape registry. No native runtime acceptance is
+implied by these typed API checks.
 
 ## GPU / shader contract
 
@@ -105,7 +142,17 @@ geometry, invalid/overflow rejection and the vertex ABI. Pebbles managed tests c
 material conversion and shared catalog behavior. Source inspection confirms the three hook bodies,
 shader bindings, matrix convention and allocator ownership above.
 
-**Native acceptance remains required:** textured multi-material GLB on flat/sloped/polar terrain;
+Managed collider checks cover closed boxes, open/dented/nonfinite/overlapping faces, reversed
+backfaces, degenerate triangles, limits and 200 collider/render transform matches.
+
+**Native collision acceptance remains required:** walk an EVA kitten on/inside imported geometry;
+land a vessel on a roof; pass through mesh doorways/arches; compare fitted-box filling; nonuniform
+scale/rotation/slope/offset alignment; disable/hide/show, move while occupied, duplicate, remove,
+clear, failed/oversized edits and retry; multiple same/different-body bubbles, origin snaps, pool
+return/reuse, pause/warp/F2, system change, unload and stable shape/handle counts. Check stock
+terrain/launchpad and Pebbles collision coexistence and awake/sleep ground-contact behavior.
+
+**Native rendering acceptance remains required:** textured multi-material GLB on flat/sloped/polar terrain;
 click misses/range/Escape and UI capture; large XYZ-scaled/rotated meshes; opaque/masked/double-sided
 materials; PNG replacement failure retaining original; duplicate/hide/remove/re-import; moving
 and resizing existing statics continuously; live independent U/V scale and positive/negative

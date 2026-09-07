@@ -997,6 +997,7 @@ on every game update FIRST.
 
 | Type.Member (string) | Mod(s) | Why string-based | 5348 |
 |---|---|---|---|
+| `KSA.NarrowPhaseCallbacks.AllowContactGeneration(int,CollidableReference,CollidableReference,ref float)` / `Sim` | sphinx | Internal callback type/method + field lookup; transpiler requires exactly one `BepuHandles.IsGroundSurface` call. [Physics contract](statics.md#physics--collider-contract) | Added @5402; source inspected, native acceptance open |
 | `Camera.OnFrame` (`OrbitController`/`FlyController.OnFrame`) | camera-controller-override | `AccessTools.Method(…, "OnFrame")` | OK |
 | ~~`Controller.___Transform`~~ (field injector) | ~~camera-controller-override~~ | ~~Harmony field-injection by name~~ | **RETIRED @5261** — the prefix now reads the public `__instance.Camera` (`CameraControllerOverridePatches.cs:42-54`), so the injector is gone and this can no longer fail at `Apply` time. ((no `Transform` member exists on `KSA.Controller` in either tree), but `Camera` is the field that actually carries the view.) |
 | `Camera._fovRadians` | glass | `AccessTools.Field` private field by name | OK (single most-important glass check) |
@@ -1177,3 +1178,19 @@ See [ground clutter](ground-clutter.md#shared-glb-importdiscovery) for copy/vers
 
 Full scope and native acceptance: [statics.md](statics.md). Managed checks and compilation pass;
 terrain interaction and Vulkan rendering/lifetime have not been exercised in-game here.
+
+### Sphinx automatic collider surface (5402)
+
+| Surface | Integration | Ownership / update check |
+|---|---|---|
+| `ConstraintSim.BeginStaticObjectPass`, `UpdateSimForSnappedOrigin` | Postfixes | Per-bubble poses from CCF origin/body and vehicle positions; no global shape mutation on solver threads. |
+| `ConstraintSim.TryResetForPool`, `Dispose` | Prefixes | Detach owned handles before pool reuse/disposal. |
+| `ConstraintSim.IsGroundSurfaceFor` | Postfix | Scoped ground-contact/EVA recognition by simulation + handle. |
+| **Internal `KSA.NarrowPhaseCallbacks.AllowContactGeneration(int,CollidableReference,CollidableReference,ref float)`; `Sim` field** | **String-reflection / IL watchlist**, transpiler | Must contain exactly one `BepuHandles.IsGroundSurface` call; add Sphinx-owned handles while preserving all stock/Pebbles branches. |
+| `ConstraintSim.UnlockShapes`, `ShapesUnlock`, Bepu `Box/Mesh/Triangle`, `Shapes.Add/RemoveAndDispose`, `BufferPool` | Typed shape allocation | Entry-owned shapes; two-sided triangle mesh or fitted box, bounded source triangle counts. |
+| `ConstraintSim.Simulation/HandleToState`, `VehicleUpdateState.Origin/GetReadOnlyStates`, `BubbleOrigin.Parent/BubFrame/PositionBub`, `Simulation.Statics`, `StaticDescription/RigidPose` | Typed physics | Shared CCF surface basis; radius-aware proximity; update poses after origin snap and remove stale statics. |
+| `JobSystems.VehicleSolver.Wait`, `ClothSolvers.Wait` | Synchronization | Main-thread mutations/unload wait before detaching handles and disposing shapes. |
+
+See [Sphinx physics contract](statics.md#physics--collider-contract) for bounds, fallback behavior,
+threading and outstanding native acceptance. Managed collider detection/transform tests do not
+establish runtime contact filtering or physics correctness.
