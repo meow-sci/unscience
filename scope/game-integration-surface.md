@@ -1,5 +1,25 @@
 # Game Integration Surface — master index (unscience KSA mod suite)
 
+## Current Iron Man integration (2026-09-07, 5402)
+
+Default-off `IronManSubmod` is bundled in Unscience; the standalone StarMap host remains a
+development project. Complete signatures, direct APIs, save format and native acceptance are in
+[iron-man.md](iron-man.md).
+
+| Game surface | Owner / behavior | Validation / risk |
+|---|---|---|
+| `VehicleUpdateState.PrepareFromVehicle`; `ReadOnlyVehicle`, `IsKitten` | Per-instance ordinary-vessel worker routing | Managed gating passes; character servos, collision/failure branches and flight require native acceptance. |
+| `KittenEva.OnKey/ProcessInput`; original `Vehicle.OnKey/ProcessInput` | Conditional prefixes + reverse base dispatch | Actual Harmony dispatch checks; no change to inactive kittens. |
+| `Vehicle.UpdateRenderData`; `PartModelRenderer.UpdateRenderData`; `Program.VehiclesInFrame` | Early equipment upload / suppress late duplicate base; live nonvirtual base call preserves other mods | Actual Harmony render-order/coexistence checks; native multi-viewport acceptance pending. |
+| `SuperMeshRenderSystem.ClearBuckets`; `KittenEva.Renderable`; editor assembly matrix | Existing character inserted into editor render phase | Bucket-clear/prepass ordering is load-bearing; no shader or allocation changes. |
+| `VehicleEditor.OnFrame/OnMouseButton/OnKey/UpdateSelected/DeletePart/SetFocusedTree`; private `DuplicateHighlightedPart/RequestNewVehicle/FinalizeNewVehicle` | Protect EVA root while preserving accessory editing | String-method watchlist, entry/exit behavior and UI native checks. |
+| `VehicleSaveData.Create(string,PartTree)`; `Character` | Preserve authored live kitten blueprint metadata | Empty-editor spawning still creates plain Vehicle. |
+| `Part.GetReferenceWithChildren(ref uint,PartInstance,bool)`; `Part(string,PartTemplate,PartInstance,Part)` | Versioned instance-Id metadata and pre-index node reconstruction | Managed real Harmony + XML/index roundtrip; marked saves require mod. |
+| `Part.Connector.TemplateBase`, `TransformReference`, `Connectors`, `Connection`; `ScaleFactors`; `PartTree` dirty/recompute | Private up/down/custom nodes, bulk fuel links, transactional surface-link unload | Math/occupancy/unload/rollback checks; native snapping and resource flow pending. |
+| `KittenBackPackPart`; `Content/Core/PartGameData.xml` feet origin / -Z-up | Supported asset identity and coordinate convention | Shared stock template unchanged. |
+| `PhysicsFrameHook.Enqueue`; `VehicleProvider`; flight-computer/engine APIs; StarMap/ISubmod | Safe queued mutation, explicit session activation and restoration | Shared handoff from architecture scope; no saved activation. |
+
+
 ## Current Zippo Disco integration (backported 2026-09-06)
 
 | Game surface | Owner / behavior | Status against 5402 |
@@ -991,6 +1011,11 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 ---
 
 ## 4. String-based reflection watchlist (highest silent-break risk)
+
+**Iron Man additions:** recheck every exact target/signature in [its Harmony table](iron-man.md#harmony-and-reflection-watchlist),
+especially private `VehicleEditor.DuplicateHighlightedPart`, `RequestNewVehicle`, `FinalizeNewVehicle`,
+the internal three-argument Part serializer and four-argument Part constructor. Preserve constructor
+restoration before connection-index regeneration and Program render upload/bucket ordering.
 
 NOT compile-checked — a game rename breaks these at runtime with no build error. Re-verify each name
 on every game update FIRST.

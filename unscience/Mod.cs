@@ -18,6 +18,7 @@ using MeowSci.KittenAnimationsLib;
 using MeowSci.KiwisMarblesLib;
 using MeowSci.SkittlesLib;
 using MeowSci.SphinxLib;
+using MeowSci.IronManLib;
 using MeowSci.ZippoLib;
 using MeowSci.HumbleArteestLib;
 using MeowSci.DohLib;
@@ -81,6 +82,7 @@ public class Mod
             _submods.Add(new HotPursuitSubmod());
             _submods.Add(new HumbleArteestSubmod());
             _submods.Add(iFeelSeen);
+            _submods.Add(new IronManSubmod());
             _submods.Add(new ItsSoShinySubmod());
             _submods.Add(new KitchenSinkSubmod());
             _submods.Add(new KittenAnimationsSubmod());

@@ -1,0 +1,7 @@
+name = "iron-man"
+description = "Opt-in EVA vehicle editing and rocket flight"
+version = "0.1.0"
+author = "meow sci"
+
+[StarMap]
+EntryAssembly = "MeowSci.IronMan"

@@ -21,6 +21,7 @@
     <ProjectReference Include="..\garrys-torch.lib\garrys-torch.lib.csproj" />
     <ProjectReference Include="../godzilla.lib/godzilla.lib.csproj" />
     <ProjectReference Include="../sphinx.lib/sphinx.lib.csproj" />
+    <ProjectReference Include="../iron-man.lib/iron-man.lib.csproj" />
     <ProjectReference Include="..\graffiti.lib\graffiti.lib.csproj" />
     <ProjectReference Include="..\free-fallin.lib\free-fallin.lib.csproj" />
     <ProjectReference Include="..\hot-pursuit.lib\hot-pursuit.lib.csproj" />

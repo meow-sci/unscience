@@ -4,7 +4,7 @@ Unscience is the only distributed mod. `dotnet build` deploys one `unscience/` f
 feature libraries remain separate projects with explicit references. Former standalone hosts are
 retained for development and are not deployed or published. See [distribution](../README.md#distribution).
 
-A unified supermod that consolidates 27 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
+A unified supermod that consolidates 28 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
 
 ## Included Submods
 
@@ -25,6 +25,7 @@ A unified supermod that consolidates 27 KSA feature libraries into a single ImGu
 | Hot Pursuit | Mounts live secondary cameras on vehicle parts |
 | Humble Arteest | Kitten colors, engine emissive controls, and experimental vehicle paint |
 | I Feel Seen | Forces vehicle render data updates at any distance |
+| Iron Man | Opt-in EVA vehicle editing, configurable attachment nodes and vessel physics for rocket equipment |
 | Its So Shiny | Builds and controls Blinky-style pixel grids from built-in light parts |
 | Kitchen Sink | Miscellaneous editor and IVA-rendering experiments |
 | Kitten Animations | Targets any live EVA kitten through a filterable picker, then plays body animations and expressions |
@@ -76,3 +77,7 @@ See [Godzilla](../godzilla/README.md).
 
 Sphinx is registered as a regular submod; `Patcher.cs` applies/removes its native static-object
 render postfixes. [Sphinx usage](../sphinx/README.md) covers placements and model limits.
+
+Iron Man is registered with `IronManPatches` on the shared Harmony instance. Per-kitten activation
+is off by default; authored connector persistence and equipment rendering remain passive while
+flight mode is disabled. See [usage and save requirements](../iron-man/README.md).

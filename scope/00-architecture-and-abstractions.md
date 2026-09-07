@@ -26,7 +26,7 @@ Verification baseline:
   (NuGet **`StarMap.API` v0.3.6**, `PrivateAssets="all"`) is the loader seam, NOT the game — StarMap
   itself Harmony-patches the game's render loop and invokes the mod's attributed methods. So the
   shell never references the game's frame loop directly; it rides StarMap's hooks.
-- **Submod aggregation.** The host instantiates 24 `ISubmod` implementations (one per feature
+- **Submod aggregation.** The host instantiates 28 `ISubmod` implementations (one per feature
   lib), stores them in a list, and drives them uniformly: `Initialize()` once, `Update(dt)` every
   frame (even hidden), `RenderContent()` inside a `CollapsingHeader`, `RenderFloatingWindows()`
   always, `Dispose()` on unload. The same `ISubmod` classes are reused by each feature's own
@@ -82,6 +82,11 @@ drawn later), so a frame never runs both StarMap's hooks and the fallback.
 ---
 
 ## Consolidated Harmony patches (cross-reference)
+
+Iron Man adds `IronManPatches.Apply/Remove` on the shared owner, coordinating connector
+constructor/serialization, editor/root/avatar, worker/input and equipment-render hooks. Its
+`IronManSubmod` uses the existing physics handoff; no additional bundled frame hook is installed.
+See [complete inventory and passive-unload fallback](iron-man.md).
 
 `unscience/Patcher.cs` applies/removes the following on its single `Harmony("MeowSci.Unscience")`
 instance. Targets are listed at cross-reference granularity (type+member); per-class decomp deltas

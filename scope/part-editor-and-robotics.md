@@ -24,6 +24,12 @@ Legend for *In NEW?*: ✅ present & signature-compatible · ⚠️ present but c
 
 ---
 
+## iron-man
+
+The new EVA editor feature is mapped in [iron-man.md](iron-man.md), including instance connectors,
+save-index reconstruction, body/root guards, character rendering and per-kitten flight activation.
+The existing `KittenEva` object enters/exits the stock editor; no template XML is modified.
+
 ## dont-stifle-me
 
 ### Purpose
@@ -104,7 +110,8 @@ by hand.
 
 **Retired integration points** (no longer verify these on a game update):
 
-- `PartModelRenderer.UpdateRenderData(Viewport, int)` Harmony prefix is now unowned by any unscience mod.
+- The former flexo `PartModelRenderer.UpdateRenderData` hook was retired. Iron Man now uses a distinct
+  `PartModelRenderer.UpdateRenderData(IViewport,int)` prefix for EVA equipment upload timing; see [scope](iron-man.md).
 - `OrbitLinePass.AddLineVertex` / `.AddLineEnd` — likewise unowned; flexo's editor scene was the last user.
 - The whole hinge rotation surface: `Part.Asmb2ParentAsmb`, `Part.PositionParentAsmb`,
   `Part.BoundingBoxVehicleAsmb` / `ComputeBoundingBoxVehicleAsmb()`, `Part.TreeChildren`, `Part.SubParts`

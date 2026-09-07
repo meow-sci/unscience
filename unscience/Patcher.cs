@@ -13,6 +13,7 @@ using MeowSci.ItsSoShinyLib;
 using MeowSci.KittenAnimationsLib;
 using MeowSci.KsaAbstractions;
 using MeowSci.SphinxLib;
+using MeowSci.IronManLib;
 using MeowSci.KiwisMarblesLib;
 using MeowSci.ThugLifeLib;
 using MeowSci.DontStifleMeLib;
@@ -79,6 +80,7 @@ internal static class Patcher
         TryApply("dont-stifle-me editor limits", () => EditorValueLimitPatches.Apply(_harmony!));
         TryApply("kitten-animations", () => KittenAnimationPatches.Apply(_harmony!));
         TryApply("pyro", () => PyroPatches.Apply(_harmony!));
+        TryApply("iron-man", () => IronManPatches.Apply(_harmony!));
         TryApply("sphinx", () => SphinxPatches.Apply(_harmony!));
         TryApply("graffiti", () => GraffitiPatches.Apply(_harmony!));
         TryApply("free-fallin", () => FreeFallinPatches.Apply(_harmony!));
@@ -124,6 +126,7 @@ internal static class Patcher
                 TryRemove("thug-life", () => ThugLifeRenderPatches.Remove(_harmony!));
                 TryRemove("iva-force-render", () => IvaForceRender.Unpatch(_harmony!));
                 TryRemove("kitten-animations", () => KittenAnimationPatches.Remove(_harmony!));
+                TryRemove("iron-man", () => IronManPatches.Remove(_harmony!));
                 TryRemove("sphinx", () => SphinxPatches.Remove(_harmony!));
                 TryRemove("pyro", () => PyroPatches.Remove(_harmony!));
                 TryRemove("graffiti", () => GraffitiPatches.Remove(_harmony!));

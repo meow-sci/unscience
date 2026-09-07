@@ -330,7 +330,7 @@ Define **brand-new planetary rings at runtime** and apply them to **any celestia
 ### [unscience](unscience)
 Unified supermod that consolidates the standalone feature mods into a single ImGui window with collapsible headers and a gear icon (⚙) context menu for per-submod visibility toggles. All submod logic lives directly in the respective `.lib` projects — unscience instantiates these lib submods and orchestrates them via the `ISubmod` interface from `ksa-abstractions.lib`. A single Harmony instance consolidates their patches. Standalone mods continue to work independently.
 - F11 window toggle with unified panel for all core submods
-- Submods: Blinky, Bloomin' Onion, BYO Music, Camera Controller Override, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Parts Now, Pebbles, Pyro, Rocky McRock Face, Skittles, Sphinx, Thug Life, Zippo (27 total)
+- Submods: Blinky, Bloomin' Onion, BYO Music, Camera Controller Override, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Iron Man, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Parts Now, Pebbles, Pyro, Rocky McRock Face, Skittles, Sphinx, Thug Life, Zippo (28 total)
 - Uses `ISubmod` interface (from `ksa-abstractions.lib`): `Name`, `Initialize()`, `Update(dt)`, `RenderContent()`, `Dispose()`
 - Each submod class lives in its `.lib` project (for example `BlinkySubmod` in `blinky.lib`)
 - `unscience/Submods/` directory removed — no thin UI wrapper layer; submod classes own their own ImGui rendering
@@ -448,3 +448,26 @@ Managed grounding/centering/offset, XYZ transforms and UV mapping checks, includ
 repeatability, source isolation and nonfinite/overflow rejection. Links production PlacementMath
 and TextureMapping without loading the game runtime. CollisionGeometry checks cover conservative
 box detection, openings, degenerates, triangle budgets and 200 collider/render alignment cases.
+
+### [iron-man](iron-man) / [iron-man.lib](iron-man.lib)
+
+Opt-in existing EVA kitten vehicle editing and rocket flight. Keeps the `KittenEva` identity and
+avatar, adds private up/down or editable body nodes, preserves connector indices in saves/copies,
+uses ordinary vessel physics/input only after explicit per-kitten activation, and submits attached
+equipment at the correct render phase. Disabled by default, including after save load. Body parts
+are protected in the editor; engine/RCS controls live in the mod panel. Rigid body attachments,
+not animated foot bones. Saves with connected custom nodes require the mod. Ships within Unscience;
+the standalone host is development-only. See [usage](iron-man/README.md),
+[library](iron-man.lib/README.md), [research](plans/iron-man/RESEARCH.md) and [scope](scope/iron-man.md).
+
+### [iron-man.tests](iron-man.tests)
+
+Managed production connector/codec/Harmony-construction checks with real Brutal numerics: private
+node isolation, coordinate/scale validation, occupied-node guards, XML and connection-index round
+trips, malformed metadata, transactional unload and rollback. No native KSA initialization.
+
+### [iron-man-flight.tests](iron-man-flight.tests)
+
+Managed production Harmony flight/render checks: default-off and per-instance routing, base input
+dispatch, early equipment/late avatar rendering, visible disabled equipment, coexistence with another
+render prefix installed in either order, and unload/reapply. Native flight acceptance remains open.

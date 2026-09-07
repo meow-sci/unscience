@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <Compile Include="../iron-man.lib/IronManFlightPatches.cs" Link="IronManFlightPatches.cs" />
+    <Compile Include="../iron-man.lib/IronManRenderPatches.cs" Link="IronManRenderPatches.cs" />
+  </ItemGroup>
+</Project>

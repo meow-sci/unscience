@@ -1,0 +1,105 @@
+# Iron Man — EVA editor, connectors and vessel physics
+
+Baseline: **KSA 2026.9.7.5402**, `ksa-game-assemblies/current/decomp`. Added 2026-09-07.
+[Research evidence](../plans/iron-man/RESEARCH.md) explains the design;
+[player instructions](../iron-man/README.md) describe activation and save dependencies.
+
+## Scope and activation
+
+`iron-man.lib/IronManSubmod` is bundled through Unscience's `ISubmod` list, project reference and
+`IronManPatches.Apply/Remove` on its shared Harmony instance. `iron-man/Mod.cs` is a compile-checked
+StarMap development host with ImmediateLoad/AllModsLoaded/BeforeGui/AfterGui/Unload hooks and F11.
+Its Patcher installs mandatory HotkeyGuard and PhysicsFrameHook; the bundled implementation uses
+the existing shared physics handoff installed by Garry's Torch. No abstraction implementation changes.
+
+No kitten is activated automatically. The session reference registry gates editor behavior and
+worker/input routing. Authored-node restoration, data integrity and equipment rendering remain
+passive while flight is disabled. No stock asset/template is mutated.
+
+## Harmony and reflection watchlist
+
+Decomp paths below are under `KSA/`. By-name resolution (even with `nameof`) must be checked for
+signature/overload changes; private string names must be re-grepped on every game update.
+
+| Target | Patch / owner | Required behavior |
+|---|---|---|
+| `VehicleUpdateState.PrepareFromVehicle(bool,ManualControlInputs)` | flight postfix | Stock assigns `IsKitten` from `ReadOnlyVehicle` on main thread before workers; opted-in snapshots become ordinary vessels. |
+| `KittenEva.OnKey(GlfwKeyEvent)` / `ProcessInput(InputAction,GlfwKeyAction,GlfwModifier)` | flight prefixes | Enabled kittens use original base Vehicle input; reverse patches on `Vehicle.OnKey` / `ProcessInput` must retain nonvirtual dispatch. |
+| `Vehicle.UpdateRenderData(IViewport,int)` | render prefix; nonvirtual early base dispatch | Suppress late equipment submission without suppressing KittenEva's character draw. Early dispatch must retain other mods' base-render patches. |
+| `PartModelRenderer.UpdateRenderData(IViewport,int)` | render prefix | Submit authored EVA equipment before upload. `Program` skips EVA in early loop (`Program.cs:4210`), uploads at 4227, then draws avatar at 4327/4522. |
+| `SuperMeshRenderSystem.ClearBuckets()` | editor postfix | Only matching Program renderer/main viewport/editor: submit avatar after clearing and before prepass (`Program.cs:4793`). |
+| `VehicleEditor.OnFrame`, `OnMouseButton`, `OnKey`, `UpdateSelected` | editor root-selection guards | Clear body selection/grab without interfering with accessory parts. |
+| `VehicleEditor.DeletePart(Part)`, `SetFocusedTree(PartTree)` | editor prefixes | Preserve existing body root and focused tree. |
+| private `VehicleEditor.DuplicateHighlightedPart`, `RequestNewVehicle`, `FinalizeNewVehicle` | editor prefixes | Block duplication of body and replacement/new-vessel actions during an activated EVA edit. |
+| `VehicleSaveData.Create(string,PartTree)` | metadata postfix | Preserve Character for a live KittenEva with this exact authored root, including after disabling; no character guessed for unrelated trees. |
+| internal `Part.GetReferenceWithChildren(ref uint,PartInstance,bool)` | connector serialization postfix | Set marked instance Id only for owned nodes, preserving original Id, stock prefix count and ordered owned suffix. |
+| `Part(string,PartTemplate,PartInstance,Part)` | constructor prefix/postfix | Decode valid marked data, restore runtime Id, append nodes BEFORE `RegenerateConnectionsFromPartInstance` indexes them. |
+
+No private field reflection, shader strings, GPU byte offsets or game DLL modifications.
+Reverse-patch behavior and emitted nonvirtual dispatch are also covered by managed Harmony checks.
+
+## Direct APIs and behavioral dependencies
+
+- `Program.EditorFlag`, `IsEditorOpen`, `ControlledVehicle`, `Editor`, `MainViewport`,
+  `RenderedViewport`, `Instance.ResourceFrameIndex`, `Instance.SuperMeshRenderSystem`, `VehiclesInFrame`.
+- `VehicleEditor.ExistingVehicle`, `EditingSpace.Parts/GetMatrixAsmb2Ego`, `Highlighted`, `Selected`,
+  `HighlightConnector`, `RequestExit`, `Dispose`, `IsChangeStartOrEnd`; stock existing-editor exit
+  preserves the vehicle object. Empty-editor launch creates plain Vehicle and remains unsupported.
+- `KittenEva.Renderable`, `Character.Id`, `LocomotionState.Mode`; `KittenRenderable.HideHead` and
+  `UpdateRenderData(IViewport,int,double,float4x4,double3,double3,in LocomotionState,in KittenAnimInputs)`.
+  Assembly-to-camera transform must not subtract flight CoM again. Avatar is not part-tree geometry.
+- `Vehicle.Parts`, `IsDisposed`, `ClearHeldPlayerInput`, `SetEnum`, `UpdateVehicleConfiguration`;
+  `VehicleProvider.GetAllVehicles(true)` finds live objects. `FlightComputer.AttitudeMode`, `BurnMode`,
+  `RCSMode`, `SetManualThrustMode`, `RateHold`; `EngineController.SetIsActive` and module enumeration.
+- `Part.Connectors`, `Template.Id/Connectors`, `FullPart`, `Tree`, `Scale`, `PositionParentAsmb`,
+  `Asmb2ParentAsmb`; `Part.Connector.TemplateBase`, mutable `TransformReference`, capabilities,
+  `Connection`, owner, scale and transforms. `ScaleFactors` reduces scale to a single scalar.
+- `Part.Connection.Connect/Disconnect`, `Connection.Connectors[0/1]`, `IConnector.ConnectionPart`;
+  preserve resource capabilities on unload. Stock wildcard Part-to-Part links do not carry bulk fuel.
+- `PartTree.RecomputeAllDerivedData`, `HasUnsavedChanges`, `PerformanceSequences.SetDirty`;
+  serialized `PartInstance.Id` and connection-index regeneration. No undo/redo API in 5402.
+- `PhysicsFrameHook.Enqueue`: handoff after worker result application, before all next snapshots.
+  Teardown waits `JobSystems.VehicleSolver` and `ClothSolvers`; closes owned editor before unpatching.
+- Worker `IsKitten` branches in `PhysicsBubble.FlightComputerInputsFor/AdvanceKittenLocomotion`,
+  `PoseIntegratorCallbacks`, `NarrowPhaseCallbacks`, `PartFailure`, and G-load detection are
+  semantically load-bearing even without symbol changes. Normal vessel behavior replaces EVA servos,
+  ground movement, swim/ladder behavior and special failure allowances while activated.
+
+**Asset:** `KittenBackPackPart` template identity. Feet origin and `-Z` up convention in
+`Content/Core/PartGameData.xml:24`; connector outward normal is local `+X`. No added asset files.
+
+## Persistence and unload
+
+Marker `iron-man:v1:` in serialized instance Id stores original Id, stock connector count and up to
+16 nodes with name, position, direction and radius. Decoder enforces version, payload bounds,
+finite vectors/radius, supported template and matching stock node count; invalid marked saves fail
+before stock index resolution. No flight activation persists. Saved files require the mod while
+connected runtime indices exist; removing a mod cannot retroactively make these files stock-safe.
+
+Unload tracks weak roots, converts owned endpoints to stock surface links transactionally and
+recomputes resource graphs before removing nodes. It preserves the other endpoint; if bulk flow
+would be lost or a reconnect fails, it retains original links and passive hooks, logging the reason.
+Existing equipment is never silently deleted. Native behavior after completely removing rendering
+support follows the game's original EVA limitations.
+
+## Validation and open native acceptance
+
+Full solution compilation and managed tests check typed API compatibility, math/metadata bounds,
+constructor-before-index restoration, connector isolation and connection/unload semantics, and
+Harmony default-off/per-instance routing, base dispatch, render ordering and restoration. Fixture
+checks do not prove native rendering or physics.
+
+- [ ] Disabled startup: ordinary EVA walking, ladders, RCS, menu and save behavior unchanged.
+- [ ] Enable one of two kittens; only that kitten gets vessel controls/physics. Reject ladder enable.
+- [ ] Editor avatar aligns with body nodes, including a scaled kitten. Body/root actions are blocked;
+      accessory move/rotate/scale/copy/delete and blueprint accessory loading still work.
+- [ ] Up/down/custom nodes snap, fuel/electric graphs connect, occupied nodes remain locked;
+      round-trip connected part trees and reload a world save with nodes in correct index order.
+- [ ] Balanced tanks/engines consume correct propellant, produce thrust/torque and obey throttle;
+      attached RCS responds to vessel inputs. Main and secondary views show hardware once per frame.
+- [ ] Disable restores EVA movement and stops/disarms engines; equipment stays visible. Re-enable
+      and return through editor exit. Save/load starts flight mode off.
+- [ ] Coexistence: I Feel Seen distance override, Humble Arteest paint, Godzilla scaling and Kitten
+      Animations. Observe rigid equipment vs animated body; no foot-bone attachment is provided.
+- [ ] Unload while editing/in flight with attached/disabled/loaded nodes; inspect preserved resource
+      links and diagnostics. Previously saved marked files still require the mod.

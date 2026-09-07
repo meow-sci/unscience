@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <AssemblyName>MeowSci.IronManLib</AssemblyName>
+    <RootNamespace>MeowSci.IronManLib</RootNamespace>
+    <Description>Opt-in EVA vehicle editing and rocket flight</Description>
+    <PackageId>MeowSci.IronManLib</PackageId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ksa-abstractions.lib\ksa-abstractions.lib.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StarMap.API" Version="0.3.6" PrivateAssets="all" />
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="BepuUtilities" Condition="Exists('$(KSAFolder)BepuUtilities.dll')">
+      <HintPath>$(KSAFolder)BepuUtilities.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Core.Common" Condition="Exists('$(KSAFolder)Brutal.Core.Common.dll')">
+      <HintPath>$(KSAFolder)Brutal.Core.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Core.Numerics" Condition="Exists('$(KSAFolder)Brutal.Core.Numerics.dll')">
+      <HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.ImGui" Condition="Exists('$(KSAFolder)Brutal.ImGui.dll')">
+      <HintPath>$(KSAFolder)Brutal.ImGui.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.ImGui.Abstractions" Condition="Exists('$(KSAFolder)Brutal.ImGui.Abstractions.dll')">
+      <HintPath>$(KSAFolder)Brutal.ImGui.Abstractions.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Core.Strings" Condition="Exists('$(KSAFolder)Brutal.Core.Strings.dll')">
+      <HintPath>$(KSAFolder)Brutal.Core.Strings.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="KSA" Condition="Exists('$(KSAFolder)KSA.dll')">
+      <HintPath>$(KSAFolder)KSA.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Glfw"><HintPath>$(KSAFolder)Brutal.Glfw.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Brutal.Render.Common"><HintPath>$(KSAFolder)Brutal.Render.Common.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Planet.Render.Core"><HintPath>$(KSAFolder)Planet.Render.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Brutal.Concurrency"><HintPath>$(KSAFolder)Brutal.Concurrency.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Brutal.Core.Collections"><HintPath>$(KSAFolder)Brutal.Core.Collections.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Brutal.Vulkan"><HintPath>$(KSAFolder)Brutal.Vulkan.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+</Project>

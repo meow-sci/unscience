@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <Reference Include="Brutal.Core.Numerics"><HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath></Reference>
+    <Reference Include="Brutal.Core.Common"><HintPath>$(KSAFolder)Brutal.Core.Common.dll</HintPath></Reference>
+    <Compile Include="../iron-man.lib/IronManConnectors.cs" Link="IronManConnectors.cs" />
+    <Compile Include="../iron-man.lib/IronManConnectorData.cs" Link="IronManConnectorData.cs" />
+    <Compile Include="../iron-man.lib/IronManConnectorPatches.cs" Link="IronManConnectorPatches.cs" />
+    <Compile Include="../iron-man.lib/IronManConnectorUnload.cs" Link="IronManConnectorUnload.cs" />
+  </ItemGroup>
+</Project>
