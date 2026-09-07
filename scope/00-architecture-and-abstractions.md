@@ -566,3 +566,11 @@ weak and release checks the owner name. See vehicle-physics for typed integratio
 `PngLibrary`/`PngFileBrowser` retain their APIs and `SoundLibrary` supplies `.unscience/sounds`.
 BYO Music is now an Unscience ISubmod, updating owned audio in the shell's existing visible/hidden
 HUD lifecycle. No additional shell patch. See [audio](audio.md) for native FMOD dependencies.
+
+## Sphinx host addition
+
+Unscience registers `SphinxSubmod` and references sphinx.lib, which deliberately references
+pebbles.lib for GLB/material conversion and shared GPU upload helpers. Patcher TryApply/TryRemove
+calls `SphinxPatches.Apply/Remove` on the consolidated Harmony instance. The feature owns only its
+three StaticObjectRenderer postfixes and session resources; existing HotkeyGuard and hidden-HUD
+Update dispatch cover it. The copied standalone host remains development-only. See [statics.md](statics.md).

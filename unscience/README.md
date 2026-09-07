@@ -4,7 +4,7 @@ Unscience is the only distributed mod. `dotnet build` deploys one `unscience/` f
 feature libraries remain separate projects with explicit references. Former standalone hosts are
 retained for development and are not deployed or published. See [distribution](../README.md#distribution).
 
-A unified supermod that consolidates 26 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
+A unified supermod that consolidates 27 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
 
 ## Included Submods
 
@@ -34,6 +34,7 @@ A unified supermod that consolidates 26 KSA feature libraries into a single ImGu
 | Pebbles — Ground Clutter | Replaces selected planet clutter types with built-in meshes or GLBs, with scale, collider editing and per-planet restore |
 | Pyro | Customizes volumetric engine exhaust plumes |
 | Skittles — Theme Manager | Applies and saves ImGui themes with a built-in style editor |
+| Sphinx | Places imported textured GLB statics with terrain alignment, XYZ transforms and shared PNG overrides |
 | Thug Life | Renders a custom textured quad through KSA's main render pass |
 | Zippo — Light Control | Controls light appearance and queued transitions, plus repeating Disco color, actuation, and spotlight-spread cycles |
 
@@ -72,3 +73,6 @@ See [Pebbles README](../pebbles.lib/README.md) for usage and limitations.
 
 Godzilla adds session-based Smart vessel resizing, raw XYZ Basic scaling, and restore controls.
 See [Godzilla](../godzilla/README.md).
+
+Sphinx is registered as a regular submod; `Patcher.cs` applies/removes its native static-object
+render postfixes. [Sphinx usage](../sphinx/README.md) covers placements and model limits.

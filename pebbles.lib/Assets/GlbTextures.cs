@@ -85,7 +85,7 @@ internal sealed class GlbTexture : TextureReference
             result.Texture = new SimpleVkTexture(id, renderer.Allocator, pixels.Width, pixels.Height, 1,
                 VkFormat.R8G8B8A8UNorm, SimpleVkTexture.CalculateMaxMipLevels(pixels.Width, pixels.Height));
             result.ImageView = result.Texture.ImageView;
-            using (var submission = new PreviewSubmission(renderer))
+            using (var submission = new AssetUploadSubmission(renderer))
             {
                 result.Texture.UploadData(submission.Staging, submission.Command, pixels.Data.AsSpan(), [pixels.Data.Length]);
                 submission.SubmitAndWait();

@@ -1151,3 +1151,18 @@ member or patch. See [exhaust scope](exhaust-plumes.md#runtime-onoff-cycling).
 Lazy file choices from shared `GlbLibrary` are frozen by `ClutterAssets.ResolveSelection` before
 main/Workshop recipe assignment. Discovery changes no live GPU assets; no new game member or patch.
 See [ground clutter](ground-clutter.md#shared-glb-importdiscovery) for copy/version/retirement invariants.
+
+## Sphinx static placement integration (5402)
+
+| Surface | Kind | Source / details | Consumer / status |
+|---|---|---|---|
+| `StaticObjectRenderer.UpdateRenderData(IViewport,int)` and `WriteCommandsPrePass(CommandBuffer,IViewport,int)` | Harmony postfix | `KSA/StaticObjectRenderer.cs:275,367` | sphinx; typed overloads, prepare matrices / opaque prepass |
+| **Private** `StaticObjectRenderer.WriteCommandsColor(CommandBuffer,IViewport,int,VkPipeline,StaticObjectModel.DrawBucket)` | **String reflection watchlist**, Harmony postfix | `KSA/StaticObjectRenderer.cs:306`; full pipeline/global state must be bound at postfix | sphinx; Opaque/Blended only, exact parameter names matter |
+| `StaticObjectRenderer` layouts; `StaticObjectModel.PerDrawData`; `Renderer` frame counters/limits; `ViewportRegistry.MAX_VIEWPORTS` | Render/GPU | Native static shader bindings, six-int24-byte material, 32-byte vertex, 64-byte instance | sphinx; private allocation, offsets asserted; see [statics.md](statics.md#gpu--shader-contract) |
+| `StaticObject{.vert,.frag}`, `StaticObjectNormalIndirect.frag` | Shader assets / ABI | `Content/Core/Shaders/Mesh/`; direct draw ID0, set2 material/sampler, set3 matrix; native stock lighting sets retained | sphinx; alpha skips normal prepass; no new shaders or shadow casters |
+| `Celestial` terrain/frame APIs; `Camera.GetPositionEgo/NearbyCelestial`; `Cursor.GetEgoRay`; `Vehicle.Parent`; providers | Direct game APIs | Body-fixed anchors, accurate terrain march and slope sampling | sphinx; see [complete typed surface](statics.md#harmony-and-typed-game-surface) |
+| MeshReference host streams, TextureReference bindless handles; BufferEx/MappedMemory/descriptor/sampler/Vulkan draw APIs | Typed render APIs | Pebbles conversion + private uploads, per-frame/view aligned slices and device retirement | sphinx + shared `AssetUploadSubmission` / `ImportedPngTexture` in pebbles.lib |
+| `SphinxSubmod : ISubmod`, host `SphinxPatches.Apply/Remove`, HotkeyGuard | Lifecycle | Unscience is distributed; Sphinx host is development-only | Registered; session cleanup and hidden-HUD updates |
+
+Full scope and native acceptance: [statics.md](statics.md). Managed checks and compilation pass;
+terrain interaction and Vulkan rendering/lifetime have not been exercised in-game here.

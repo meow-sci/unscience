@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+  </PropertyGroup>
+  <ItemGroup><Compile Include="../sphinx.lib/PlacementMath.cs" Link="PlacementMath.cs" /></ItemGroup>
+</Project>

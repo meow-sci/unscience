@@ -9,17 +9,17 @@ namespace MeowSci.PebblesLib;
 /// A cancellable private command buffer. StagingPool owns upload memory only: unlike its native
 /// command list, this buffer is never automatically submitted from Dispose after a recording error.
 /// </summary>
-internal sealed class PreviewSubmission : IDisposable
+public sealed class AssetUploadSubmission : IDisposable
 {
     private readonly Renderer _renderer;
     private VkCommandPool _pool;
     private VkFence _fence;
     private StagingPool? _staging;
     private bool _submitted, _completed;
-    internal CommandBuffer Command { get; private set; }
-    internal StagingPool Staging => _staging ?? throw new ObjectDisposedException(nameof(PreviewSubmission));
+    public CommandBuffer Command { get; private set; }
+    public StagingPool Staging => _staging ?? throw new ObjectDisposedException(nameof(AssetUploadSubmission));
 
-    internal PreviewSubmission(Renderer renderer)
+    public AssetUploadSubmission(Renderer renderer)
     {
         _renderer = renderer;
         try
@@ -42,7 +42,7 @@ internal sealed class PreviewSubmission : IDisposable
         catch { Dispose(); throw; }
     }
 
-    internal void SubmitAndWait()
+    public void SubmitAndWait()
     {
         Command.End();
         CommandBuffer command = Command;
@@ -50,7 +50,7 @@ internal sealed class PreviewSubmission : IDisposable
         _renderer.Graphics.Submit(default(Span<VkSemaphore>), default(Span<VkPipelineStageFlags>),
             new Span<CommandBuffer>(ref command), default(Span<VkSemaphore>), _fence);
         var result = _renderer.Device.WaitForFence(_fence, -1);
-        if (result != VkResult.Success) throw new InvalidOperationException($"Preview completion failed: {result}.");
+        if (result != VkResult.Success) throw new InvalidOperationException($"Asset upload completion failed: {result}.");
         _completed = true;
     }
 

@@ -62,4 +62,7 @@
     <Project Path="godzilla.tests/godzilla.tests.csproj" />
     <Project Path="byo-music.tests/byo-music.tests.csproj" />
     <Project Path="pyro.tests/pyro.tests.csproj" />
+    <Project Path="sphinx/sphinx.csproj" />
+    <Project Path="sphinx.lib/sphinx.lib.csproj" />
+    <Project Path="sphinx.tests/sphinx.tests.csproj" />
 </Solution>

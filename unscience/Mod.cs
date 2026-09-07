@@ -17,6 +17,7 @@ using MeowSci.CameraControllerOverrideLib;
 using MeowSci.KittenAnimationsLib;
 using MeowSci.KiwisMarblesLib;
 using MeowSci.SkittlesLib;
+using MeowSci.SphinxLib;
 using MeowSci.ZippoLib;
 using MeowSci.HumbleArteestLib;
 using MeowSci.DohLib;
@@ -90,6 +91,7 @@ public class Mod
             _submods.Add(new PyroSubmod());
             _submods.Add(new RockyMcRockFaceSubmod());
             _submods.Add(skittles);
+            _submods.Add(new SphinxSubmod());
             _submods.Add(new ThugLifeSubmod());
             _submods.Add(new ZippoSubmod());
 

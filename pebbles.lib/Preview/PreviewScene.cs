@@ -39,7 +39,7 @@ internal sealed unsafe class PreviewScene : IDisposable
             {
                 MaxSets = count, PoolSizes = new Span<VkDescriptorPoolSize>(ref poolSize)
             }, null);
-            using var submission = new PreviewSubmission(renderer);
+            using var submission = new AssetUploadSubmission(renderer);
             var staging = submission.Staging;
             var command = submission.Command;
             foreach (var source in geometry.Draws)

@@ -327,7 +327,7 @@ Define **brand-new planetary rings at runtime** and apply them to **any celestia
 ### [unscience](unscience)
 Unified supermod that consolidates the standalone feature mods into a single ImGui window with collapsible headers and a gear icon (⚙) context menu for per-submod visibility toggles. All submod logic lives directly in the respective `.lib` projects — unscience instantiates these lib submods and orchestrates them via the `ISubmod` interface from `ksa-abstractions.lib`. A single Harmony instance consolidates their patches. Standalone mods continue to work independently.
 - F11 window toggle with unified panel for all core submods
-- Submods: Blinky, Bloomin' Onion, BYO Music, Camera Controller Override, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Parts Now, Pebbles, Pyro, Rocky McRock Face, Skittles, Thug Life, Zippo (26 total)
+- Submods: Blinky, Bloomin' Onion, BYO Music, Camera Controller Override, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Parts Now, Pebbles, Pyro, Rocky McRock Face, Skittles, Sphinx, Thug Life, Zippo (27 total)
 - Uses `ISubmod` interface (from `ksa-abstractions.lib`): `Name`, `Initialize()`, `Update(dt)`, `RenderContent()`, `Dispose()`
 - Each submod class lives in its `.lib` project (for example `BlinkySubmod` in `blinky.lib`)
 - `unscience/Submods/` directory removed — no thin UI wrapper layer; submod classes own their own ImGui rendering
@@ -427,3 +427,15 @@ catalog and lazy file choices. Pebbles' `ClutterAssets.ResolveSelection` freezes
 path/hash mesh ids before recipes retain them; main and Workshop mesh pickers auto-discover files
 without decoding the folder. `LibraryFileBrowser` is shared with PNG/sound imports. `pebbles.tests`
 adds copied-source and version-identity checks; see the Pebbles library README for behavior.
+
+### [sphinx](sphinx) / [sphinx.lib](sphinx.lib)
+Body-fixed decorative GLB statics with terrain click placement, beside-vessel placement, slope
+alignment, XYZ transforms, shared PNG overrides, visibility, duplicate and removal controls.
+Reuses Pebbles' bounded importer/material fallbacks and shared GLB/PNG catalogs. Private GPU
+buffers use native StaticObjectRenderer pipelines through three scoped postfixes; no global mesh
+allocation, colliders or shadow casters. Session placements; files persist. See the project READMEs
+and [integration scope](scope/statics.md). The standalone host is development-only.
+
+### [sphinx.tests](sphinx.tests)
+Managed grounding/centering/offset and XYZ transform checks, including nonfinite/overflow rejection.
+Links production PlacementMath without loading the game runtime.

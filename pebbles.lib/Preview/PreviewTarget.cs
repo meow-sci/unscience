@@ -54,7 +54,7 @@ internal sealed unsafe class PreviewTarget : IDisposable
 
     internal void Render(PreviewPipeline pipeline, PreviewScene scene, Matrix4x4 viewProjection, Vector3 eye)
     {
-        using var submission = new PreviewSubmission(_renderer);
+        using var submission = new AssetUploadSubmission(_renderer);
         var command = submission.Command;
         ImageTransition[] transitions =
         [

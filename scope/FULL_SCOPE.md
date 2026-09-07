@@ -87,7 +87,7 @@ boundaries and the Unscience lifecycle are unchanged by this packaging refactor.
 - **One consolidated Harmony instance.** `unscience/Patcher.cs` owns a single
   `Harmony("MeowSci.Unscience")`; each feature lib exposes `Apply(Harmony)`/`Remove(Harmony)` and the
   supermod applies them all onto that instance. `HotkeyGuard` is applied first.
-- **`ISubmod` aggregation.** 29 feature libs implement `ISubmod` (`Name`/`Initialize`/`Update`/
+- **`ISubmod` aggregation.** 27 bundled feature libraries implement `ISubmod` (`Name`/`Initialize`/`Update`/
   `RenderContent`/`RenderFloatingWindows`/`Dispose`); the same classes power each feature's standalone
   mod too.
 - **`ksa-abstractions.lib` is the game-facing seam.** Cross-cutting game access is funneled through a
@@ -115,18 +115,22 @@ boundaries and the Unscience lifecycle are unchanged by this packaging refactor.
 | [`decals.md`](decals.md) | graffiti | `RenderTarget.ResolveAttachments` postfix (GridPass-window projected-decal pass), `GlobalShaderBindings` + `BindlessTextureLibrary` descriptor sets, runtime GLSL vs `Common/*.glsl` headers, `Part.RayCastEgo` + live `Parachute.ClothPositionsFront` triangle picking + `Cursor.GetEgoRay`, CPU terrain march; **no string reflection** (new @5348; canopy picking added @5402) |
 | [`parachutes.md`](parachutes.md) | free-fallin | `ChuteRenderable.Draw`, `Utils.SetShaderFromMod`, and `ShaderModuleUtils.FromFile` prefixes; private `_renderable` + protected `AnimatedRenderable.MaterialIndices`; runtime `MaterialData` and PNG/PBR uploads; material-gated bind-pose projection through `Model{,_Skinned}.vert` / `ModelPbr.frag`; stock canopy assets (new @5402) |
 | [`ground-clutter.md`](ground-clutter.md) | pebbles; [GLB materials](ground-clutter-glb-materials.md) | Per-body native clutter graphs, private materials, `ExecuteNextClothSolvers` transactions, collider/physics invalidation, shared copied GLB discovery, uploads and independent Workshop preview; shared Harmony ownership |
+| [`statics.md`](statics.md) | sphinx | Body-fixed GLB placement; native static-renderer postfixes, private buffers/descriptors, shared GLB/PNG imports and terrain picking |
 | [`rings.md`](rings.md) | rocky-mcrock-face, bloomin-onion | planetary-ring mesh/texture swap (rocky) and **runtime ring definition on any celestial** (bloomin-onion) via the public `PlanetaryRingsReference` data tree + `Program.RebuildRenderer()`; **no Harmony patches**; `ModLibrary.AllMeshes`/`AllFiles` reflection, `MeshReference.<HostPrimitives>k__BackingField`, ctor-baking invariant in `PlanetaryRingsRenderData`; bloomin-onion adds `PlanetTransparenciesRenderer._anyRings` (load-bearing), `TextureReference.<TextureAsset>k__BackingField` (painted textures) and a cosmetic `DistantSphereRenderer._data` sync (new @5348) |
 | [`ui-customization.md`](ui-customization.md) | skittles, kitchen-sink | `ImGui` style surface, `ReinitializeDerivedValues` + IvaForceRender |
 | [`audio.md`](audio.md) | byo-music | Shared sound imports, FMOD stream/channel ownership, vessel-relative 3D playback and repeat/gaps |
 
-Bundled in the unscience supermod (26): blinky, bloomin-onion, byo-music, camera-controller-override, doh,
+Bundled in the unscience supermod (27): blinky, bloomin-onion, byo-music, camera-controller-override, doh,
 dont-stifle-me, eternal-flame, free-fallin, garrys-torch, glass, godzilla, graffiti, hot-pursuit, humble-arteest,
 i-feel-seen, its-so-shiny, kitchen-sink, kitten-animations, kiwis-marbles, parts-now, pebbles, pyro,
-rocky-mcrock-face, skittles, thug-life, zippo. (jplrepo is a development reference and is not loaded by the supermod.)
+rocky-mcrock-face, skittles, sphinx, thug-life, zippo. (jplrepo is a development reference and is not loaded by the supermod.)
 
 ---
 
 ## Current status against `5402` (summary)
+
+Sphinx adds private-buffer native static rendering and body-fixed GLB placements. Compilation and
+managed transform checks pass; native rendering/lifetime acceptance remains open in [statics.md](statics.md).
 
 Full detail lives in [`game-integration-surface.md`](game-integration-surface.md) §6; the remediation
 record is in [`../plans/KSA_5402_UPGRADE.md`](../plans/KSA_5402_UPGRADE.md). The 5348→5402 span

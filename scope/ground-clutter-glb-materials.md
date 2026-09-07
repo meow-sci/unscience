@@ -24,7 +24,7 @@ Opaque and alpha-mask materials are supported. Alpha-mask coverage is baked from
 
 `GetMaterial` builds only detached CPU images/recipes. `ResolveTexture` is invoked only while processing explicit preview refresh or Apply outside GUI rendering. Images remain cached with their source while live graphs or preview scenes can borrow them. Source identities include the file path and content digest. Texture IDs append material index and channel to that identity.
 
-GPU upload allocates an owned `SimpleVkTexture`, records `UploadData` in the existing private cancellable `PreviewSubmission`, submits and waits for completion, and only then allocates the bindless slot. No texture-loading constructor uses the native staging-pool command list, so a recording failure cannot be automatically submitted by `StagingPool.Dispose`. Private texture references set protected `Texture` and `ImageView` and the private `BindlessHandle` setter through an explicitly scoped reflection lookup. They never call stock `TextureReference.Dispose`, which expects a `TextureAsset` that this adapter does not own.
+GPU upload allocates an owned `SimpleVkTexture`, records `UploadData` in the existing private cancellable `AssetUploadSubmission`, submits and waits for completion, and only then allocates the bindless slot. No texture-loading constructor uses the native staging-pool command list, so a recording failure cannot be automatically submitted by `StagingPool.Dispose`. Private texture references set protected `Texture` and `ImageView` and the private `BindlessHandle` setter through an explicitly scoped reflection lookup. They never call stock `TextureReference.Dispose`, which expects a `TextureAsset` that this adapter does not own.
 
 Owner disposal must retire preview and live consumers first. `GlbMaterials.Dispose` then waits for every renderer that actually allocated a cached texture, before mutating cache state or recycling a bindless slot. CPU-only imports never query or touch the renderer during disposal. Each owned slot is freed once, then its image is disposed. As with the existing preview path, device-loss and constructor-internal native allocation failures cannot promise complete cleanup of unpublished native allocations.
 
@@ -34,10 +34,18 @@ Owner disposal must retire preview and live consumers first. `GlbMaterials.Dispo
 - Decoded `ITexture.Extent` and `Data` must agree with bounded RGBA8 dimensions. CPU data is copied before native image unload.
 - `SimpleVkTexture(string, IImageAllocator, width, height, depth, VkFormat, mipLevels, ...)`, `CalculateMaxMipLevels`, `UploadData`, `ImageView`, `Dispose`.
 - `TextureReference.Texture` / `ImageView` protected setters; `BindlessHandle` public property/private setter reflection; `SerializedId.SetHash`.
-- `Program.GetRenderer`, `Program.Instance.BindlessTextures.AddTexture` / `FreeTexture`; `PreviewSubmission` owns producer completion.
+- `Program.GetRenderer`, `Program.Instance.BindlessTextures.AddTexture` / `FreeTexture`; `AssetUploadSubmission` owns producer completion.
 - Source: `Brutal.GltfApi/GltfLoader.cs` image-buffer-view decoding; `RenderCore/SimpleVkTexture.cs:170`, `:378` explicit image allocation/upload; `KSA/TextureReference.cs:64`, `:145` binding ownership; `Brutal.VulkanApi.Abstractions/StagingPool.cs:167` implicit submission hazard.
 - Shaders: `GroundClutter/Solid.frag:291` diffuse/terrain-alpha conventions, `:302` AO/roughness/metal channels; `SolidDepth.frag:63` and `SolidShadow.frag:56` red-channel opacity.
 
 `GlbTextureChecks` exercises primary UV selection/transform order, scene UV preservation, alternate image source selection, main-color preservation with omitted details, malformed input rejection, cache isolation and blended cutouts through GlbMaterialReader with an injected synthetic decoder. These tests do not validate real encoded image decoding. Mapping follows the [Khronos texture-transform specification](https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_texture_transform); source fallback follows the [BasisU](https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_texture_basisu) and [WebP](https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Vendor/EXT_texture_webp) specifications.
 
 `GlbPixelChecks` exercises known sRGB factor values, separate-map AO/MR packing and resampling, normal renormalization, alpha threshold boundaries, missing-map defaults and unchanged source pixels without loading native/game assemblies. Managed validation and compilation do not establish native image decoding, bindless recycling, GPU synchronization, texture orientation, filtering or visual parity. In-game acceptance must include an embedded JPEG material, RGBA PNG alpha mask, constant-color untextured material, multiple material slots, shared source across preview/live bodies, unload after active use, and malformed/oversized/unsupported input errors without replacing live state.
+
+## Sphinx reuse
+
+`AssetUploadSubmission` is now public under Assets (renamed from the preview-only helper) and
+retains its cancellation/fence semantics for every existing consumer. `ImportedPngTexture` adds
+an owned common-library PNG color/cutout wrapper around the same GlbPixels/GlbTexture pipeline;
+64 MiB encoded bound, 4096px decode bound, 0.5 alpha cutoff and device retirement before release.
+Sphinx uses separate ClutterAssets ownership and private static buffers; see [statics.md](statics.md).

@@ -1,0 +1,103 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <AssemblyName>MeowSci.SphinxLib</AssemblyName>
+    <RootNamespace>MeowSci.SphinxLib</RootNamespace>
+    <Description>Body-fixed imported GLB statics.</Description>
+    <PackageId>MeowSci.SphinxLib</PackageId>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../pebbles.lib/pebbles.lib.csproj" />
+    <ProjectReference Include="..\ksa-abstractions.lib\ksa-abstractions.lib.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StarMap.API" Version="0.3.6" PrivateAssets="all" />
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="BepuPhysics"><HintPath>$(KSAFolder)BepuPhysics.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepuUtilities" Condition="Exists('$(KSAFolder)BepuUtilities.dll')">
+      <HintPath>$(KSAFolder)BepuUtilities.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Core.Common" Condition="Exists('$(KSAFolder)Brutal.Core.Common.dll')">
+      <HintPath>$(KSAFolder)Brutal.Core.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Core.Numerics" Condition="Exists('$(KSAFolder)Brutal.Core.Numerics.dll')">
+      <HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Core.Strings" Condition="Exists('$(KSAFolder)Brutal.Core.Strings.dll')">
+      <HintPath>$(KSAFolder)Brutal.Core.Strings.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Core.Memory" Condition="Exists('$(KSAFolder)Brutal.Core.Memory.dll')">
+      <HintPath>$(KSAFolder)Brutal.Core.Memory.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.ImGui" Condition="Exists('$(KSAFolder)Brutal.ImGui.dll')">
+      <HintPath>$(KSAFolder)Brutal.ImGui.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.ImGui.Abstractions" Condition="Exists('$(KSAFolder)Brutal.ImGui.Abstractions.dll')">
+      <HintPath>$(KSAFolder)Brutal.ImGui.Abstractions.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Vulkan" Condition="Exists('$(KSAFolder)Brutal.Vulkan.dll')">
+      <HintPath>$(KSAFolder)Brutal.Vulkan.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Vulkan.Abstractions" Condition="Exists('$(KSAFolder)Brutal.Vulkan.Abstractions.dll')">
+      <HintPath>$(KSAFolder)Brutal.Vulkan.Abstractions.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Vulkan.Vma" Condition="Exists('$(KSAFolder)Brutal.Vulkan.Vma.dll')">
+      <HintPath>$(KSAFolder)Brutal.Vulkan.Vma.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Texture" Condition="Exists('$(KSAFolder)Brutal.Texture.dll')">
+      <HintPath>$(KSAFolder)Brutal.Texture.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Texture.Abstractions" Condition="Exists('$(KSAFolder)Brutal.Texture.Abstractions.dll')">
+      <HintPath>$(KSAFolder)Brutal.Texture.Abstractions.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Gltf" Condition="Exists('$(KSAFolder)Brutal.Gltf.dll')">
+      <HintPath>$(KSAFolder)Brutal.Gltf.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Render.Common" Condition="Exists('$(KSAFolder)Brutal.Render.Common.dll')">
+      <HintPath>$(KSAFolder)Brutal.Render.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Render.Mesh" Condition="Exists('$(KSAFolder)Brutal.Render.Mesh.dll')">
+      <HintPath>$(KSAFolder)Brutal.Render.Mesh.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Planet.Core" Condition="Exists('$(KSAFolder)Planet.Core.dll')">
+      <HintPath>$(KSAFolder)Planet.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Planet.Render.Core" Condition="Exists('$(KSAFolder)Planet.Render.Core.dll')">
+      <HintPath>$(KSAFolder)Planet.Render.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="KSA" Condition="Exists('$(KSAFolder)KSA.dll')">
+      <HintPath>$(KSAFolder)KSA.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Brutal.Concurrency"><HintPath>$(KSAFolder)Brutal.Concurrency.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Brutal.ShaderC"><HintPath>$(KSAFolder)Brutal.ShaderC.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Brutal.Core.Collections"><HintPath>$(KSAFolder)Brutal.Core.Collections.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

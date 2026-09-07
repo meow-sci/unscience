@@ -68,7 +68,7 @@ patch a camera. `Program.GetRenderer()` supplies the device/allocator/graphics q
 (matrix 0, camera 64, maps 80, options 96), checked at runtime. The private descriptor
 layout has five combined image samplers at bindings 0–4. Native mesh streams must be
 float3 position/normal, float2 UV; indices are uint or converted ushort.
-`PreviewSubmission` owns command pool/buffer/fence submission and completion;
+`AssetUploadSubmission` owns command pool/buffer/fence submission and completion;
 `PreviewTarget` transitions color between attachment-write and sampled-read and registers
 its image through the ImGui texture API. Resize/replacement/release wait for GPU completion.
 Camera math and collider gizmos remain managed, with no Bepu simulation in the editor.

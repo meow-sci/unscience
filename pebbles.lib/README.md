@@ -82,3 +82,11 @@ borrower retirement; it never deletes the shared files.
 `pebbles.tests` now also checks copied GLB parsing after source deletion, managed recipe paths,
 changed-file hashes, lazy selection identities and pre-copy limits. Full solution builds; native
 preview, texture uploads, clutter retirement and actual file-picker UX retain their live-game checks.
+
+## Shared rendering utilities
+
+`AssetUploadSubmission` (formerly private `PreviewSubmission`) provides the same cancellable
+private command buffer/fence upload path for Pebbles previews, GLB textures and Sphinx geometry.
+`ImportedPngTexture` owns a common-library PNG color map and optional 0.5-cutoff opacity map using
+the bounded GLB decoder/upload path, with device retirement before release. Sphinx borrows
+`ClutterAssets` geometry/material conversion; each feature retains its own cache and ownership.

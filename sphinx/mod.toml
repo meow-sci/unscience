@@ -1,0 +1,7 @@
+name = "sphinx"
+description = "Place textured GLB statics on celestial surfaces"
+version = "0.1.0"
+author = "meow sci"
+
+[StarMap]
+EntryAssembly = "MeowSci.Sphinx"
