@@ -13,40 +13,33 @@ public sealed partial class SphinxSubmod
     private float3 _editScale, _editRotation, _editOffset;
     private bool _editAlign, _editUniform = true;
     private string? _editPng;
+    private TextureMapping _editMapping = TextureMapping.Identity;
     private readonly ImInputString _editPngFilter = new(128);
 
     private void Select(SphinxEntry entry)
     {
         _selectedId = entry.Id; _editScale = entry.Scale; _editRotation = entry.Rotation;
         _editOffset = entry.Offset; _editAlign = entry.Align; _editPng = entry.Png;
+        _editMapping = entry.Mapping;
         _editUniform = entry.Scale.X == entry.Scale.Y && entry.Scale.Y == entry.Scale.Z;
     }
     private void RenderEditing(SphinxEntry entry)
     {
         ImGui.SeparatorText($"Edit #{entry.Id}");
-        TransformFields("sphinx_edit", ref _editScale, ref _editRotation, ref _editOffset, ref _editAlign, ref _editUniform);
-        FileCombo("Texture##sphinx_edit", ref _editPng, _pngs, _editPngFilter, true);
-        if (ImGui.Button("Apply changes##sphinx_edit"))
+        ImGui.TextDisabled("Edits apply live. Texture changes may briefly pause for large models.");
+        bool transformChanged = TransformFields("sphinx_edit", ref _editScale, ref _editRotation, ref _editOffset, ref _editAlign, ref _editUniform);
+        bool textureChanged = FileCombo("Texture##sphinx_edit", ref _editPng, _pngs, _editPngFilter, true);
+        textureChanged |= TextureFields("sphinx_edit_texture", ref _editMapping);
+        if (transformChanged) QueueTransformEdit(entry);
+        if (textureChanged) QueueTextureEdit(entry);
+        if (_editPng != entry.Png || _editMapping != entry.Mapping)
         {
-            var scale = _editScale; var rotation = _editRotation; var offset = _editOffset; bool align = _editAlign; string? png = _editPng;
-            _pending.Enqueue(() =>
-            {
-                if (!_entries.Contains(entry)) return;
-                _ = PlacementMath.GroundedLocal(entry.Model.Min, entry.Model.Max, SphinxEntry.Vector(scale), SphinxEntry.Vector(rotation), SphinxEntry.Vector(offset));
-                if (png != entry.Png)
-                {
-                    // Build the replacement first; a bad PNG leaves the visible model intact.
-                    var replacement = new StaticModelResources(_assets, entry.MeshId, png, 8_000_000 - _entries.Where(e => e != entry).Sum(e => e.Model.VertexCount));
-                    try { entry.Model.Dispose(); }
-                    catch { replacement.Dispose(); throw; }
-                    entry.Model = replacement; entry.Png = png;
-                }
-                entry.Scale = scale; entry.Rotation = rotation; entry.Offset = offset; entry.Align = align;
-                _status = $"Updated #{entry.Id}.";
-            });
+            ImGui.TextDisabled("Texture edit pending or failed; the last successful texture remains visible.");
+            if (ImGui.Button(" Retry texture edit ##sphinx_edit")) QueueTextureEdit(entry);
+            ImGui.SameLine();
+            if (ImGui.Button(" Use current texture settings ##sphinx_edit"))
+            { _editPng = entry.Png; _editMapping = entry.Mapping; }
         }
-        ImGui.SameLine();
-        if (ImGui.Button("Reset edit fields##sphinx_edit")) Select(entry);
         if (ImGui.Button("Snap current position to ground##sphinx_edit")) _pending.Enqueue(() =>
         {
             if (!_entries.Contains(entry)) return;
@@ -66,13 +59,47 @@ public sealed partial class SphinxSubmod
         {
             if (!_entries.Contains(entry)) return;
             if (_entries.Count >= 32) throw new InvalidOperationException("Remove a static before duplicating another.");
-            var resource = new StaticModelResources(_assets, entry.MeshId, entry.Png, 8_000_000 - _entries.Sum(e => e.Model.VertexCount));
+            var resource = new StaticModelResources(_assets, entry.MeshId, entry.Png, 8_000_000 - _entries.Sum(e => e.Model.VertexCount), entry.Mapping);
             var copy = new SphinxEntry { Id = _nextId++, MeshId = entry.MeshId, Png = entry.Png, Anchor = entry.Anchor,
-                Align = entry.Align, Scale = entry.Scale, Rotation = entry.Rotation, Offset = entry.Offset, Model = resource };
+                Align = entry.Align, Scale = entry.Scale, Rotation = entry.Rotation, Offset = entry.Offset, Model = resource, Mapping = entry.Mapping };
             copy.Offset.X += Math.Max(1, (resource.Max.X - resource.Min.X) * entry.Scale.X);
             _entries.Add(copy); Select(copy); _status = $"Duplicated as #{copy.Id}; adjust offsets or snap to ground.";
         });
         ImGui.SameLine();
         if (ImGui.Button("Remove##sphinx_edit")) _pending.Enqueue(() => { if (_entries.Contains(entry)) Remove(entry); });
+    }
+
+    private void QueueTransformEdit(SphinxEntry entry)
+    {
+        var scale = _editScale; var rotation = _editRotation; var offset = _editOffset; bool align = _editAlign;
+        _pending.Enqueue(() =>
+        {
+            if (!_entries.Contains(entry)) return;
+            _ = PlacementMath.GroundedLocal(entry.Model.Min, entry.Model.Max, SphinxEntry.Vector(scale), SphinxEntry.Vector(rotation), SphinxEntry.Vector(offset));
+            entry.Scale = scale; entry.Rotation = rotation; entry.Offset = offset; entry.Align = align;
+            _status = $"Updated #{entry.Id}.";
+        });
+    }
+
+    private void QueueTextureEdit(SphinxEntry entry)
+    {
+        string? png = _editPng;
+        var mapping = _editMapping;
+        _pending.Enqueue(() =>
+        {
+            if (!_entries.Contains(entry)) return;
+            if (png != entry.Png)
+            {
+                // Build first: invalid images or UVs retain the complete previous material/mesh.
+                var replacement = new StaticModelResources(_assets, entry.MeshId, png,
+                    8_000_000 - _entries.Where(e => e != entry).Sum(e => e.Model.VertexCount), mapping);
+                try { entry.Model.Dispose(); }
+                catch { replacement.Dispose(); throw; }
+                entry.Model = replacement;
+            }
+            else if (mapping != entry.Mapping) entry.Model.UpdateTextureMapping(mapping);
+            entry.Png = png; entry.Mapping = mapping;
+            _status = $"Updated texture for #{entry.Id}.";
+        });
     }
 }

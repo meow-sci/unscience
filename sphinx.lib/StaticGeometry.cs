@@ -2,15 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using KSA;
 using MeowSci.PebblesLib;
 using RenderCore;
 
 namespace MeowSci.SphinxLib;
-
-[StructLayout(LayoutKind.Sequential)]
-internal struct StaticVertex { public Vector3 Position, Normal; public Vector2 Uv; }
 
 internal sealed class StaticGeometry
 {

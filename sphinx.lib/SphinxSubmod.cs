@@ -43,6 +43,7 @@ public sealed partial class SphinxSubmod : ISubmod
     {
         string file = _file ?? "";
         string? png = _png;
+        var mapping = _mapping;
         var scale = _scale; var rotation = _rotation; var offset = _offset; bool align = _align;
         _pending.Enqueue(() =>
         {
@@ -50,12 +51,12 @@ public sealed partial class SphinxSubmod : ISubmod
             if (_entries.Count >= 32) throw new InvalidOperationException("Sphinx has 32 statics. Remove one before placing another.");
             if (!CelestialProvider.GetAllCelestials().Contains(anchor.Body)) throw new InvalidOperationException("That body is no longer available.");
             string meshId = _assets.ImportGlb(GlbLibrary.Files.FullPath(file))[0].Id;
-            var resource = new StaticModelResources(_assets, meshId, png, 8_000_000 - _entries.Sum(e => e.Model.VertexCount));
+            var resource = new StaticModelResources(_assets, meshId, png, 8_000_000 - _entries.Sum(e => e.Model.VertexCount), mapping);
             try
             {
                 _ = PlacementMath.GroundedLocal(resource.Min, resource.Max, SphinxEntry.Vector(scale), SphinxEntry.Vector(rotation), SphinxEntry.Vector(offset));
                 var entry = new SphinxEntry { Id = _nextId++, MeshId = meshId, Png = png, Anchor = anchor, Model = resource,
-                    Scale = scale, Rotation = rotation, Offset = offset, Align = align };
+                    Scale = scale, Rotation = rotation, Offset = offset, Align = align, Mapping = mapping };
                 _entries.Add(entry); Select(entry);
                 _status = $"Placed #{entry.Id} on {anchor.Body.Id}. " + string.Join(" ", _assets.GlbWarnings(meshId));
             }

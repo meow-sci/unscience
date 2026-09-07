@@ -10,8 +10,11 @@ Implementation: `sphinx.lib`; hosts: Unscience (distributed), Sphinx (developmen
 RenderFloatingWindows/Dispose and its existing hidden-HUD fallback continues Update. Hosts apply
 HotkeyGuard and `SphinxPatches.Apply/Remove` through their normal Harmony lifecycle. Private GPU
 creation/replacement/removal runs from queued Update actions outside UI rendering. Render hooks
-work with the HUD hidden. Entries are removed when their exact Celestial is no longer returned by
-CelestialProvider; unload retires entries before releasing their GLB textures/cache.
+receive live transform edits on the next Update, with no Apply button. Texture selection and UV
+widgets capture per-entry changes separately; a failed texture edit leaves transforms usable.
+UV scale/offset is session state, preserved by selection and duplication, with an identity reset.
+Render hooks work with the HUD hidden. Entries are removed when their exact Celestial is no longer
+returned by CelestialProvider; unload retires entries before releasing their GLB textures/cache.
 
 No celestial/static-object registry mutation, physics patch, new shader or shared mesh allocation.
 Placements are session-only, have no collider and do not submit to the shadow-caster passes.
@@ -43,6 +46,10 @@ Shaders: `Core/Shaders/Mesh/StaticObject.vert`, `StaticObject.frag`,
 - Native vertex input: interleaved **32 bytes**, position float3 at **0**, normal float3 at **12**,
   UV float2 at **24**. Backface culling is counterclockwise; glTF double-sided backfaces reverse
   winding and normals. Shader inverse-transpose handles positive nonuniform scale.
+  Live UV mapping writes `original UV * scale + offset` at that same byte offset for every
+  primitive/backface; positions and normals stay unchanged. The native shader samples all maps
+  with these coordinates (including PNG alpha and GLB normal/PBR), using the Repeat sampler.
+  There is no new shader, descriptor layout, reflected member or Harmony target.
 - Descriptor **set 2 binding 0** is a **24-byte** six-int storage record: diffuse 0, normal 4,
   PBR 8, emissive 12, TFI 16, alpha 20. **Set 2 binding 1** is a sampler. Sphinx asserts every
   offset and stride at runtime. Emissive/TFI indices are -1, retaining importer fallback behavior.
@@ -68,6 +75,12 @@ Shaders: `Core/Shaders/Mesh/StaticObject.vert`, `StaticObject.frag`,
   `BufferEx`, `MappedMemory`, DescriptorPoolEx, sampler/descriptors, VkUtils staging and Vulkan
   command bindings are typed dependencies. Retirement waits for the owning device before freeing
   pool/mapping/buffers/sampler/PNG. GLB textures remain owned by ClutterAssets until its cache clears.
+- UV-only edits retain managed original vertex arrays and upload a complete replacement set of
+  private vertex buffers through AssetUploadSubmission, with transfer-to-vertex-input barriers.
+  After submit+wait and owning-device WaitIdle, swap all buffers and retire the previous set.
+  Failure before the swap leaves the visible mesh unchanged. Textures, indices, descriptors and
+  frame matrices are reused; PNG replacement still rebuilds the resource with the current mapping.
+  Recheck upload cancellation, old-buffer retirement and native vertex ABI on game updates.
 
 The feature deliberately avoids `DeviceMeshInterleaved.Shared`'s fixed allocation and SuperMesh's
 linear shared pools. Do not replace private buffers with those pools without a capacity/reclamation
@@ -86,13 +99,18 @@ RGBA decoder and `GlbTexture.Upload/Release`; it does not dispose borrowed stock
 ## Validation
 
 Full solution build: zero warnings/errors against 5402. Managed sphinx.tests exercises 200
-scale/rotation/offset grounding cases plus invalid and overflowing inputs. Pebbles managed tests
-cover importer/material conversion and shared catalog behavior. Source inspection confirms the
-three hook bodies, shader bindings, matrix convention and allocator ownership above.
+scale/rotation/offset grounding cases plus invalid and overflowing inputs. UV mapping tests cover
+scale/offset ordering, matching backfaces, 200 repeated edits/resets, unchanged source vertices and
+geometry, invalid/overflow rejection and the vertex ABI. Pebbles managed tests cover importer and
+material conversion and shared catalog behavior. Source inspection confirms the three hook bodies,
+shader bindings, matrix convention and allocator ownership above.
 
 **Native acceptance remains required:** textured multi-material GLB on flat/sloped/polar terrain;
 click misses/range/Escape and UI capture; large XYZ-scaled/rotated meshes; opaque/masked/double-sided
 materials; PNG replacement failure retaining original; duplicate/hide/remove/re-import; moving
-camera/body rotation/pause/warp/F2; secondary viewports; graphics pipeline rebuild; body/system
+and resizing existing statics continuously; live independent U/V scale and positive/negative
+offsets on embedded/PNG multi-material meshes; identity reset; duplicate mapping isolation;
+invalid texture retry with transforms still usable; repeated UV drags without resource growth;
+moving camera/body rotation/pause/warp/F2; secondary viewports; graphics pipeline rebuild; body/system
 change and unload with frames in flight. Verify no phantom alpha depth, wrong texture sampling,
 stock static corruption or retained freed descriptors. No GPU/runtime claim follows from compilation.

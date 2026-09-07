@@ -87,5 +87,6 @@ Pebbles copies imported GLBs into a shared persistent library and discovers them
 mesh pickers. See [shared GLBs](pebbles.lib/README.md#shared-glb-library).
 
 Sphinx places shared imported GLBs as body-fixed decorative models, with terrain alignment,
-XYZ transforms and optional common PNG overrides. See [Sphinx](sphinx/README.md) for controls
+live XYZ transforms, optional common PNG overrides and live per-static UV scale/offset controls
+with a mapping reset. See [Sphinx](sphinx/README.md) for controls
 and model support. Placements are session-only and do not add colliders or shadow casters.

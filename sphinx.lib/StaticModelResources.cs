@@ -14,7 +14,7 @@ using MeowSci.PebblesLib;
 namespace MeowSci.SphinxLib;
 
 /// <summary>Private geometry/descriptors using the native static-object shader layouts.</summary>
-internal sealed unsafe class StaticModelResources : IDisposable
+internal sealed unsafe partial class StaticModelResources : IDisposable
 {
     private sealed class Draw : IDisposable
     {
@@ -23,7 +23,8 @@ internal sealed unsafe class StaticModelResources : IDisposable
         public int Count;
         public bool Alpha;
         public TextureReference[] Textures = [];
-        public void Dispose() { Material?.Dispose(); Indices?.Dispose(); Vertices?.Dispose(); Textures = []; }
+        public StaticVertex[] OriginalVertices = [];
+        public void Dispose() { Material?.Dispose(); Indices?.Dispose(); Vertices?.Dispose(); Textures = []; OriginalVertices = []; }
     }
     private readonly List<Draw> _draws = new();
     private DescriptorPoolEx? _pool;
@@ -40,7 +41,7 @@ internal sealed unsafe class StaticModelResources : IDisposable
     public Vector3 Max { get; private set; }
     public int VertexCount { get; private set; }
 
-    public StaticModelResources(ClutterAssets assets, string meshId, string? png, int remainingVertices)
+    public StaticModelResources(ClutterAssets assets, string meshId, string? png, int remainingVertices, TextureMapping mapping)
     {
         Owner = Program.GetRenderer();
         _frames = Owner.MaxFramesInFlight;
@@ -60,6 +61,7 @@ internal sealed unsafe class StaticModelResources : IDisposable
             throw new InvalidOperationException("The game's static-object shader layout changed.");
         try
         {
+            mapping.Validate();
             if (!string.IsNullOrEmpty(png)) _png = new ImportedPngTexture(png);
             var geometry = StaticGeometry.Read(assets, meshId, _png);
             Min = geometry.Min; Max = geometry.Max; VertexCount = geometry.VertexCount;
@@ -93,12 +95,14 @@ internal sealed unsafe class StaticModelResources : IDisposable
             using var upload = new AssetUploadSubmission(Owner);
             foreach (var source in geometry.Primitives)
             {
-                var draw = new Draw { Count = source.Indices.Length, Alpha = source.Material.AlphaTextureIndex >= 0, Textures = source.Textures };
+                var draw = new Draw { Count = source.Indices.Length, Alpha = source.Material.AlphaTextureIndex >= 0,
+                    Textures = source.Textures, OriginalVertices = source.Vertices };
                 _draws.Add(draw);
                 draw.Vertices = Buffer("Sphinx vertices", ByteSize.Of<StaticVertex>(source.Vertices.Length), VkBufferUsageFlags.VertexBufferBit);
                 draw.Indices = Buffer("Sphinx indices", ByteSize.Of<uint>(source.Indices.Length), VkBufferUsageFlags.IndexBufferBit);
                 draw.Material = Buffer("Sphinx material", ByteSize.Of<StaticObjectModel.PerDrawData>(), VkBufferUsageFlags.StorageBufferBit);
-                VkUtils.StageAndUploadToBuffer(upload.Staging, draw.Vertices.Value.VkBuffer, draw.Vertices.Value.BindOffset, source.Vertices.AsSpan(), upload.Command);
+                var vertices = mapping.Apply(source.Vertices);
+                VkUtils.StageAndUploadToBuffer(upload.Staging, draw.Vertices.Value.VkBuffer, draw.Vertices.Value.BindOffset, vertices.AsSpan(), upload.Command);
                 VkUtils.StageAndUploadToBuffer(upload.Staging, draw.Indices.Value.VkBuffer, draw.Indices.Value.BindOffset, source.Indices.AsSpan(), upload.Command);
                 var material = source.Material;
                 VkUtils.StageAndUploadToBuffer(upload.Staging, draw.Material.Value.VkBuffer, draw.Material.Value.BindOffset, new Span<StaticObjectModel.PerDrawData>(ref material), upload.Command);

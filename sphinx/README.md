@@ -12,10 +12,21 @@ Open Unscience with F11 and expand Sphinx.
    you try again. Increase pick range for distant terrain. **Place beside controlled vessel** is
    an alternative, projecting an eastward offset onto that vessel's parent body's terrain.
 4. Select a placed model to edit it. Uniform or XYZ scale, XYZ rotations in degrees, local metre
-   offsets and terrain-slope alignment have explicit **Apply changes**. Y is up; Y rotation is
+   offsets and terrain-slope alignment **apply live** as you edit. Y is up; Y rotation is
    heading. Rotated/scaled bounds are centered horizontally and grounded before offsets.
 5. Use visibility, duplicate, snap-to-ground, remove or remove-all controls to manage placements.
    Snap projects the current translated anchor back onto terrain and clears its local offset.
+
+**Texture scale UV** and **Texture offset UV** are available before placement and on each selected
+static, and apply live to existing statics. Each pair is U then V. Scale defaults to (1, 1), with
+independent 0.01–1000 factors: 2 repeats the texture twice as often on that axis; 0.5 makes it twice
+as large. Offsets default to (0, 0); 0.5 shifts by half a repeat and negative values shift back.
+Ctrl-click a number to type a precise value. **Reset texture mapping** restores the imported UVs.
+The mapping is `imported UV × scale + offset`, shared by every material and its color, alpha,
+normal and PBR maps, including a selected PNG override. Duplicates inherit it independently.
+Selecting a different texture also applies immediately. Failed texture edits retain the previous
+texture; correct the settings or use **Retry texture edit** after fixing the image. Transform
+edits still work independently of a failed texture edit.
 
 Placements remain fixed in planet coordinates as the planet rotates and the camera moves. They
 last for the current session; imported files persist. Large objects on rough ground may need
@@ -28,7 +39,8 @@ Sphinx reuses [Pebbles' GLB reader and material conversions](../pebbles.lib/READ
 maps and material fallbacks with visible import warnings. Unsupported advanced features follow
 that reader's approximations or rejection rules; arbitrary skins/animations/Draco/external assets
 are not supported. Alpha masks and GLB blends are approximated as cutouts; PNG override alpha also
-uses a 0.5 cutoff. PNGs reuse existing UVs, so an unrelated image may not fit a model's UV layout.
+uses a 0.5 cutoff. UV scale/offset adjusts the existing layout; it cannot unwrap a mesh or repair
+individual UV islands, so an unrelated PNG may still need a matching layout prepared externally.
 Double-sided materials render both faces with reversed backface normals.
 
 These are **decorative models without physics colliders or new shadow casters**. They receive
@@ -44,6 +56,6 @@ briefly hitch for large models. Errors appear in the panel and game log.
 ## Implementation and validation
 
 [SphinxLib](../sphinx.lib/README.md) owns the implementation and native render hooks.
-[Managed tests](../sphinx.tests/README.md) check grounding and transform behavior. Full solution
+[Managed tests](../sphinx.tests/README.md) check grounding, transforms and UV mapping behavior. Full solution
 compilation checks typed APIs against KSA 2026.9.7.5402. Native rendering, terrain interaction and
 GPU lifetime acceptance still require an in-game run; see [integration scope](../scope/statics.md).

@@ -13,6 +13,7 @@ internal sealed class SphinxEntry : IDisposable
     public GroundAnchor Anchor;
     public bool Visible = true, Align = true;
     public float3 Scale = new(1), Rotation, Offset;
+    public TextureMapping Mapping = TextureMapping.Identity;
     public required StaticModelResources Model;
 
     public float4x4 Matrix(Camera camera)

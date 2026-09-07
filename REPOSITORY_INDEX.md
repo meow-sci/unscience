@@ -433,12 +433,15 @@ adds copied-source and version-identity checks; see the Pebbles library README f
 
 ### [sphinx](sphinx) / [sphinx.lib](sphinx.lib)
 Body-fixed decorative GLB statics with terrain click placement, beside-vessel placement, slope
-alignment, XYZ transforms, shared PNG overrides, visibility, duplicate and removal controls.
+alignment, live XYZ transforms, shared PNG overrides, live per-static UV scale/offset and reset,
+visibility, duplicate and removal controls. UV edits replace only private vertex buffers and
+preserve source UVs for repeatable edits; texture failures retain the previous texture.
 Reuses Pebbles' bounded importer/material fallbacks and shared GLB/PNG catalogs. Private GPU
 buffers use native StaticObjectRenderer pipelines through three scoped postfixes; no global mesh
 allocation, colliders or shadow casters. Session placements; files persist. See the project READMEs
 and [integration scope](scope/statics.md). The standalone host is development-only.
 
 ### [sphinx.tests](sphinx.tests)
-Managed grounding/centering/offset and XYZ transform checks, including nonfinite/overflow rejection.
-Links production PlacementMath without loading the game runtime.
+Managed grounding/centering/offset, XYZ transforms and UV mapping checks, including edit/reset
+repeatability, source isolation and nonfinite/overflow rejection. Links production PlacementMath
+and TextureMapping without loading the game runtime.

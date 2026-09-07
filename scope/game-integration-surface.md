@@ -1173,6 +1173,7 @@ See [ground clutter](ground-clutter.md#shared-glb-importdiscovery) for copy/vers
 | `Celestial` terrain/frame APIs; `Camera.GetPositionEgo/NearbyCelestial`; `Cursor.GetEgoRay`; `Vehicle.Parent`; providers | Direct game APIs | Body-fixed anchors, accurate terrain march and slope sampling | sphinx; see [complete typed surface](statics.md#harmony-and-typed-game-surface) |
 | MeshReference host streams, TextureReference bindless handles; BufferEx/MappedMemory/descriptor/sampler/Vulkan draw APIs | Typed render APIs | Pebbles conversion + private uploads, per-frame/view aligned slices and device retirement | sphinx + shared `AssetUploadSubmission` / `ImportedPngTexture` in pebbles.lib |
 | `SphinxSubmod : ISubmod`, host `SphinxPatches.Apply/Remove`, HotkeyGuard | Lifecycle | Unscience is distributed; Sphinx host is development-only | Registered; session cleanup and hidden-HUD updates |
+| Live transform/PNG/UV controls; `StaticVertex.Uv` at byte 24; `AssetUploadSubmission`, transfer/vertex-input barrier and owning-device `WaitIdle` | Render/GPU update | UV scale then offset from original per-entry vertices; replace only private vertex buffers after completed upload and retirement wait | All maps share remapped UVs and Repeat sampling; failed texture changes retain previous resources; no new shader or patch target. See [statics.md](statics.md#gpu--shader-contract). |
 
 Full scope and native acceptance: [statics.md](statics.md). Managed checks and compilation pass;
 terrain interaction and Vulkan rendering/lifetime have not been exercised in-game here.
