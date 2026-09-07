@@ -64,6 +64,10 @@ public sealed partial class IronManSubmod
     private void DrawFlightControls(KittenEva kitten)
     {
         ImGui.SeparatorText("Rocket controls"u8);
+        ImGui.TextWrapped("Use the stock Autopilot Settings panel for attitude targets, reference frames and burn controls. If hidden, enable it from the HUD menu."u8);
+        var axes = kitten.FlightComputer.ActiveControlSystem;
+        ImGui.Text($"Attitude control: X {axes.X}, Y {axes.Y}, Z {axes.Z}");
+        ImGui.TextWrapped("Rcs uses fueled thrusters; Tvc uses engine gimbals with thrust. None means the flight computer currently has no actuator assigned on that axis."u8);
         if (ImGui.Button("Arm attached engines"u8))
             Queue(kitten, () =>
             {

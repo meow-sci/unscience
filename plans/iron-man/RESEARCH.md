@@ -53,9 +53,9 @@ before removing persistence hooks where possible.
 - Ordinary vessel physics replaces walking, swimming, righting and ladder behavior while enabled.
   Normal structural failure and G-load limits replace special EVA handling. This is a deliberate
   consequence of the selected routing flag, not a custom flight model.
-- Stock EVA HUD actions and part picking remain EVA-specific. The mod exposes engine/RCS/manual
-  attitude controls, and equipment is configured through the editor. No promise of full regular
-  vessel HUD parity is made.
+- The initial version left native EVA HUD restrictions in place. The [flight-computer follow-up](FLIGHT_COMPUTER.md)
+  now selects vessel gauges and stock button eligibility for enabled kittens. Part picking remains
+  EVA-specific; equipment is configured through the editor.
 - Tank propellants, resource groups, engine activation, balance and available thrust still matter.
   Asymmetric boots can spin the kitten; RCS/TVC authority must counter the actual torque.
 - Marked saves with connected nodes require the mod. Loading those files in stock KSA can index

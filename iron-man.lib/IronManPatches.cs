@@ -15,6 +15,7 @@ public static class IronManPatches
             IronManConnectorPatches.Apply(harmony);
             IronManEditorPatches.Apply(harmony);
             IronManFlightPatches.Apply(harmony);
+            IronManFlightComputerPatches.Apply(harmony);
             Ready = true;
         }
         catch
@@ -27,6 +28,7 @@ public static class IronManPatches
     public static void Remove(Harmony harmony)
     {
         Ready = false;
+        RemoveSafely(() => IronManFlightComputerPatches.Remove(harmony));
         if (!IronManConnectorUnload.PrepareForUnload())
         {
             Console.WriteLine("iron-man: retaining passive hooks because attached nodes could not be safely converted for unload");

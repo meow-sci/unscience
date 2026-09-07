@@ -9,7 +9,7 @@ namespace MeowSci.IronManLib;
 /// <summary>Session-only, explicit per-kitten authorization for editor and rigid-vessel flight.</summary>
 public sealed partial class IronManSubmod : ISubmod
 {
-    private readonly Dictionary<KittenEva, FlightSettings> _enabled = new();
+    private readonly Dictionary<KittenEva, IronManFlightSettings> _enabled = new();
     private bool _disposed;
     private bool _pending;
     private string _status = "Off by default. Control an EVA kitten to begin.";
@@ -65,7 +65,7 @@ public sealed partial class IronManSubmod : ISubmod
             throw new InvalidOperationException("Return to flight before enabling Iron Man.");
         if (kitten.LocomotionState.Mode == LocomotionMode.Ladder)
             throw new InvalidOperationException("Release the ladder before enabling Iron Man.");
-        var original = new FlightSettings(kitten.FlightComputer);
+        var original = new IronManFlightSettings(kitten.FlightComputer);
         IronManConnectors.EnsureDefaults(kitten.Parts.Root);
         kitten.Parts.RecomputeAllDerivedData();
         kitten.UpdateVehicleConfiguration();
@@ -134,29 +134,5 @@ public sealed partial class IronManSubmod : ISubmod
         _enabled.Clear();
         _disposed = true;
         if (ReferenceEquals(Instance, this)) Instance = null;
-    }
-
-    private sealed class FlightSettings
-    {
-        private readonly FlightComputerAttitudeMode _attitude;
-        private readonly FlightComputerBurnMode _burn;
-        private readonly FlightComputerManualThrustMode _thrust;
-        private readonly FlightComputerRCSMode _rcs;
-
-        public FlightSettings(FlightComputer computer)
-        {
-            _attitude = computer.AttitudeMode;
-            _burn = computer.BurnMode;
-            _thrust = computer.ManualThrustMode;
-            _rcs = computer.RCSMode;
-        }
-
-        public void Restore(FlightComputer computer)
-        {
-            computer.AttitudeMode = _attitude;
-            computer.BurnMode = _burn;
-            computer.SetManualThrustMode(_thrust);
-            computer.RCSMode = _rcs;
-        }
     }
 }

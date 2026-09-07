@@ -23,13 +23,17 @@ is a development host and does not produce a separate release.
 6. Use the stock part browser to snap compatible small tanks/engines/RCS onto the body or attached
    equipment. Nodes carry bulk propellant, service fluid and electrical connections. Configure
    tank propellants and resource groups as for any vessel; arrange thrust around the center of mass.
-7. Choose **Return to flight**, completing the stock editor exit prompts. Use **Arm attached
-   engines**, **Ignite**, normal vessel throttle/movement bindings and **RCS enabled**. The panel
-   also offers manual attitude, rotation-rate hold and **Shut down and disarm**. Arming affects
-   every engine module on this kitten. Iron Man supplies no free fuel or extra thrust.
+7. Choose **Return to flight**, completing the stock editor exit prompts. The normal vessel
+   **Autopilot Settings** panel replaces the EVA-only controls while Iron Man is enabled. If hidden,
+   open **HUD → Autopilot Settings**. Use its attitude targets, reference-frame holds, roll/RCS,
+   profiles and applicable burn controls. Missing-target, engine and burn restrictions remain stock.
+   Iron Man also offers **Arm attached engines**, **Ignite**, quick attitude/RCS controls and
+   **Shut down and disarm**; arming affects every engine module on this kitten. Normal vessel
+   throttle/movement bindings apply. Iron Man supplies no free fuel or extra thrust.
 8. Return to flight before clearing the enable checkbox. Disabling stops/disarms engines and
-   restores the previous flight-computer modes and stock EVA movement. Equipment and nodes stay
-   attached and visible; remove equipment in the editor when you no longer want its mass.
+   restores the previous flight-computer modes, frame/target, roll and tuning settings, and stock
+   EVA movement. Equipment and nodes stay attached and visible; remove equipment in the editor
+   when you no longer want its mass.
 
 ## Saves and limits
 
@@ -49,15 +53,24 @@ metadata when saving a blueprint of a live authored kitten, but does not replace
 The current game editor has no undo/redo interface; node changes mark it dirty for normal saves.
 
 Equipment is rigidly attached to the body, **not animated foot bones**. Rocket boots can visually
-separate from walking/posed feet. Stock EVA HUD/picking remains specialized, so use this panel and
-the vehicle editor for equipment. Normal vessel collisions, structural failure and G-load rules
-apply while activated. Test balanced, low-thrust setups first; this is not a tuned flight assist.
+separate from walking/posed feet. Stock EVA part picking remains specialized, so configure equipment
+in the vehicle editor. The native vessel flight-computer gauges are enabled only for activated
+kittens. Normal vessel collisions, structural failure and G-load rules apply while activated.
+Test balanced, low-thrust setups first; this is not a tuned flight assist.
 Only stock `KittenBackPackPart` roots are supported. Shared templates/assets are not modified.
+
+The panel's **Attitude control: X/Y/Z** readout shows the native actuator assigned on each axis:
+`Rcs` needs fueled thrusters, `Tvc` needs thrust from gimballed engines, and `None` means no actuator
+is currently assigned. Autopilot cannot steer without torque. Control orientation is unchanged:
+without a chosen control part/connector, the kitten's nose is +X and body-up is -Z. Pointing the
+nose upward does not automatically orient rocket boots downward. See the
+[flight-computer investigation](../plans/iron-man/FLIGHT_COMPUTER.md).
 
 ## Validation
 
 Built against KSA **2026.9.7.5402**. Managed checks exercise real production connector persistence
-and Harmony dispatch with small game fixtures. They do not run Vulkan/Bepu or simulate rocket
-flight. **In-game acceptance is still required** for avatar alignment, snapping, engine fuel use,
-flight handling and save reload. See [research](../plans/iron-man/RESEARCH.md),
+and Harmony dispatch, native HUD eligibility/button state, and control-settings restoration with
+small game fixtures. They do not run Vulkan/Bepu or simulate rocket flight. **In-game acceptance
+is still required**, especially for the new autopilot panel and physical attitude response.
+See [research](../plans/iron-man/RESEARCH.md),
 [integration scope](../scope/iron-man.md) and [library details](../iron-man.lib/README.md).

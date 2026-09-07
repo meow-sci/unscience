@@ -22,6 +22,13 @@ Iron Man development host. See [player controls](../iron-man/README.md) and the 
 - `IronManFlightPatches` changes only opted-in worker snapshots' `IsKitten` classification and
   routes keyboard/actions through nonvirtual base Vehicle implementations. Stock modules calculate
   mass, fuel, forces, RCS and collision responses. Character simulation is restored on disable.
+- `IronManFlightComputerPatches` changes only enabled kittens' native EVA/Vehicle canvas
+  classification and both gauge button policy call sites. A nonvirtual base-policy call
+  preserves stock target/burn/engine restrictions and avoids patching shared generic JIT code.
+  `IronManFlightSettings` restores mode/frame/target/roll/tuning without rewinding burn progress
+  or solver telemetry. The panel displays native per-axis control-system assignments. Composition
+  with other mods patching the closed generic base policy is unsupported; see the
+  [follow-up research](../plans/iron-man/FLIGHT_COMPUTER.md).
 - `IronManRenderPatches` submits authored equipment before the normal part-batch upload while
   leaving the avatar in its original later phase. Rendering remains enabled for authored parts
   after flight activation is switched off.

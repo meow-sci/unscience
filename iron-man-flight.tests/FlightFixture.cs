@@ -10,7 +10,7 @@ namespace KSA
     public enum InputAction { Forward }
     public interface IViewport { }
     public class Viewport : IViewport { }
-    public class Vehicle
+    public partial class Vehicle
     {
         public int BaseKeys, BaseInputs, BaseRenders;
         public PartTree Parts = new();
@@ -18,7 +18,7 @@ namespace KSA
         [MethodImpl(MethodImplOptions.NoInlining)] public virtual void ProcessInput(InputAction action, GlfwKeyAction keyAction, GlfwModifier modifiers) { BaseInputs++; }
         [MethodImpl(MethodImplOptions.NoInlining)] public virtual void UpdateRenderData(IViewport viewport, int inFrameIndex) { BaseRenders++; PartModelRenderer.Pending++; }
     }
-    public class KittenEva : Vehicle
+    public partial class KittenEva : Vehicle
     {
         public int EvaKeys, EvaInputs, AvatarRenders;
         [MethodImpl(MethodImplOptions.NoInlining)] public override bool OnKey(GlfwKeyEvent keyEvent) { EvaKeys++; return false; }
@@ -35,7 +35,7 @@ namespace KSA
     }
     public class Scheduler { public int Waits; public void Wait() { Waits++; } }
     public static class JobSystems { public static Scheduler VehicleSolver = new(); }
-    public static class Program { public static object? Editor; public static Vehicle[] VehiclesInFrame = []; }
+    public static class Program { public static object? Editor; public static Vehicle[] VehiclesInFrame = []; public static Vehicle? ControlledVehicle; }
     public static class PartModelRenderer
     {
         public static int Pending, Uploaded;

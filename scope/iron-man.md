@@ -3,6 +3,7 @@
 Baseline: **KSA 2026.9.7.5402**, `ksa-game-assemblies/current/decomp`. Added 2026-09-07.
 [Research evidence](../plans/iron-man/RESEARCH.md) explains the design;
 [player instructions](../iron-man/README.md) describe activation and save dependencies.
+The [flight-computer follow-up](../plans/iron-man/FLIGHT_COMPUTER.md) records the native HUD fix.
 
 ## Scope and activation
 
@@ -23,6 +24,8 @@ signature/overload changes; private string names must be re-grepped on every gam
 
 | Target | Patch / owner | Required behavior |
 |---|---|---|
+| `GaugeCanvas.IsContextVisible()` | flight-computer transpiler | Exactly two `isinst KittenEva` sites become a session-gated EVA classifier. Preserve all other context predicates, AND behavior, empty/null cases and saved canvas settings. |
+| `GaugeButtonFlightComputer.IsDisabled()` / `PackData()` | flight-computer transpilers | Exactly one `Vehicle.IsFlightComputerDisabled<Enum>` call per method routes through the same adapter: enabled kitten uses nonvirtual base policy, all others keep virtual dispatch. Packed disabled/selected state and click eligibility stay consistent. |
 | `VehicleUpdateState.PrepareFromVehicle(bool,ManualControlInputs)` | flight postfix | Stock assigns `IsKitten` from `ReadOnlyVehicle` on main thread before workers; opted-in snapshots become ordinary vessels. |
 | `KittenEva.OnKey(GlfwKeyEvent)` / `ProcessInput(InputAction,GlfwKeyAction,GlfwModifier)` | flight prefixes | Enabled kittens use original base Vehicle input; reverse patches on `Vehicle.OnKey` / `ProcessInput` must retain nonvirtual dispatch. |
 | `Vehicle.UpdateRenderData(IViewport,int)` | render prefix; nonvirtual early base dispatch | Suppress late equipment submission without suppressing KittenEva's character draw. Early dispatch must retain other mods' base-render patches. |
@@ -37,6 +40,11 @@ signature/overload changes; private string names must be re-grepped on every gam
 
 No private field reflection, shader strings, GPU byte offsets or game DLL modifications.
 Reverse-patch behavior and emitted nonvirtual dispatch are also covered by managed Harmony checks.
+The new HUD adapters do **not** patch generic JIT methods: they resolve and emit a call to the closed
+`Vehicle.IsFlightComputerDisabled<Enum>(Enum)` only. Private `_enumValue` reflection is unnecessary.
+Other mods' Harmony patches on that closed generic base method are not guaranteed to compose;
+the managed runtime experiment bypassed a postfix. No current repository mod patches that method.
+Unexpected IL match counts fail installation with rollback; removed hooks restore the original UI.
 
 ## Direct APIs and behavioral dependencies
 
@@ -51,6 +59,15 @@ Reverse-patch behavior and emitted nonvirtual dispatch are also covered by manag
 - `Vehicle.Parts`, `IsDisposed`, `ClearHeldPlayerInput`, `SetEnum`, `UpdateVehicleConfiguration`;
   `VehicleProvider.GetAllVehicles(true)` finds live objects. `FlightComputer.AttitudeMode`, `BurnMode`,
   `RCSMode`, `SetManualThrustMode`, `RateHold`; `EngineController.SetIsActive` and module enumeration.
+  `IronManFlightSettings` additionally snapshots/restores `AttitudeFrame`, `AttitudeTrackTarget`,
+  `CustomAttitudeTarget:double3`, `RollMode`, `AngleDeadband`, `RateLimit`. No live burn/telemetry rollback.
+  UI reads `FlightComputer.ActiveControlSystem.{X,Y,Z}` (`AttitudeControlSystem.None/Rcs/Tvc`).
+- `GaugeCanvas.VisibleInContext` / `GaugeVisibilityFlag` AND semantics; separate `_enabled` and
+  HUD menu settings remain untouched. `Content/Core/Gauges.xml`: `AutopilotSettings` requires Vehicle,
+  `KittenFlightControl` requires EVA. Neither asset is edited. `GaugeButtonFlightComputer.OnReleased`
+  calls the patched `IsDisabled` before queuing native `InputEvents.FlightComputerInputData`; unchanged
+  `Vehicle.SetEnum/ToggleEnum` applies action + navball frame and native input reset. `IsSet<Enum>`
+  already delegates to base for ordinary actions. Missing target/burn/engine restrictions stay active.
 - `Part.Connectors`, `Template.Id/Connectors`, `FullPart`, `Tree`, `Scale`, `PositionParentAsmb`,
   `Asmb2ParentAsmb`; `Part.Connector.TemplateBase`, mutable `TransformReference`, capabilities,
   `Connection`, owner, scale and transforms. `ScaleFactors` reduces scale to a single scalar.
@@ -86,10 +103,22 @@ support follows the game's original EVA limitations.
 
 Full solution compilation and managed tests check typed API compatibility, math/metadata bounds,
 constructor-before-index restoration, connector isolation and connection/unload semantics, and
-Harmony default-off/per-instance routing, base dispatch, render ordering and restoration. Fixture
+Harmony default-off/per-instance routing, base dispatch, render ordering and restoration.
+Native-HUD checks add context combinations, default-off/per-instance/control switching,
+both button call sites and native restrictions, deferred clicks, GPU bits, changed-IL
+rejection, unpatch/reapply and control-settings restoration without telemetry rollback. Fixture
 checks do not prove native rendering or physics.
 
+The user reports that the initial mod works apart from the unavailable flight computer. The new
+HUD correction addresses that reported gap; live autopilot response remains to be verified.
+
 - [ ] Disabled startup: ordinary EVA walking, ladders, RCS, menu and save behavior unchanged.
+- [ ] Enable a kitten: native Autopilot Settings replaces EVA-only controls, honoring HUD visibility.
+      Select valid frame/attitude/roll/profile/RCS actions; selected and disabled appearance matches
+      actual clicks. Missing target/burn/engine still disables the corresponding controls. Switch to
+      another inactive kitten and back; disable restores EVA UI and original control settings.
+- [ ] Verify actual attitude response with fueled RCS/gimbals and valid burn execution; confirm the
+      native X/Y/Z actuator readout. Preserve the stock +X control nose; no boots-frame override.
 - [ ] Enable one of two kittens; only that kitten gets vessel controls/physics. Reject ladder enable.
 - [ ] Editor avatar aligns with body nodes, including a scaled kitten. Body/root actions are blocked;
       accessory move/rotate/scale/copy/delete and blueprint accessory loading still work.

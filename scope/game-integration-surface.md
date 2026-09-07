@@ -8,6 +8,8 @@ development project. Complete signatures, direct APIs, save format and native ac
 
 | Game surface | Owner / behavior | Validation / risk |
 |---|---|---|
+| `GaugeCanvas.IsContextVisible`; `GaugeButtonFlightComputer.IsDisabled/PackData`; closed base `Vehicle.IsFlightComputerDisabled<Enum>` | Three guarded transpilers select vessel gauges + native policy for enabled kittens, preserve remaining context/target/burn/engine gates | Actual Harmony fixture checks; no generic-method patch or saved UI changes. See [flight-computer research](../plans/iron-man/FLIGHT_COMPUTER.md). |
+| `FlightComputer.AttitudeFrame/AttitudeTrackTarget/CustomAttitudeTarget/RollMode/AngleDeadband/RateLimit`; `ActiveControlSystem.X/Y/Z` | Expanded disable/unload settings restoration and native actuator readout | Typed, managed snapshot checks; burn progress/telemetry untouched. |
 | `VehicleUpdateState.PrepareFromVehicle`; `ReadOnlyVehicle`, `IsKitten` | Per-instance ordinary-vessel worker routing | Managed gating passes; character servos, collision/failure branches and flight require native acceptance. |
 | `KittenEva.OnKey/ProcessInput`; original `Vehicle.OnKey/ProcessInput` | Conditional prefixes + reverse base dispatch | Actual Harmony dispatch checks; no change to inactive kittens. |
 | `Vehicle.UpdateRenderData`; `PartModelRenderer.UpdateRenderData`; `Program.VehiclesInFrame` | Early equipment upload / suppress late duplicate base; live nonvirtual base call preserves other mods | Actual Harmony render-order/coexistence checks; native multi-viewport acceptance pending. |
@@ -1014,7 +1016,9 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 
 **Iron Man additions:** recheck every exact target/signature in [its Harmony table](iron-man.md#harmony-and-reflection-watchlist),
 especially private `VehicleEditor.DuplicateHighlightedPart`, `RequestNewVehicle`, `FinalizeNewVehicle`,
-the internal three-argument Part serializer and four-argument Part constructor. Preserve constructor
+the internal three-argument Part serializer and four-argument Part constructor. The flight-computer
+follow-up also requires exactly two EVA type checks in `GaugeCanvas.IsContextVisible` and one closed
+`IsFlightComputerDisabled<Enum>` call each in gauge-button `IsDisabled`/`PackData`. Preserve constructor
 restoration before connection-index regeneration and Program render upload/bucket ordering.
 
 NOT compile-checked — a game rename breaks these at runtime with no build error. Re-verify each name
