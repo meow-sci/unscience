@@ -64,6 +64,9 @@ public sealed partial class IronManSubmod
     private void DrawFlightControls(KittenEva kitten)
     {
         ImGui.SeparatorText("Rocket controls"u8);
+        ImGui.TextWrapped(kitten.ControlPart == null
+            ? "Rocket orientation: head is the nose, feet are the tail. Autopilot Up points your head away from the surface."
+            : "Control orientation follows your selected control part or docking port.");
         ImGui.TextWrapped("Use the stock Autopilot Settings panel for attitude targets, reference frames and burn controls. If hidden, enable it from the HUD menu."u8);
         var axes = kitten.FlightComputer.ActiveControlSystem;
         ImGui.Text($"Attitude control: X {axes.X}, Y {axes.Y}, Z {axes.Z}");

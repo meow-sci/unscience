@@ -84,10 +84,11 @@ The computer needs torque to steer: `FlightComputer.UpdateActiveControlSystems`,
 engines; RCS requires working fueled thrusters with suitable placement. The panel displays these
 native assignments without granting extra authority.
 
-Control orientation remains stock. [Vehicle.Ctrl2Body](../../../ksa-game-assemblies/current/decomp/KSA/Vehicle.cs),
+The initial flight-computer fix left control orientation stock. This is superseded by the
+[upright orientation correction](ORIENTATION.md). [Vehicle.Ctrl2Body](../../../ksa-game-assemblies/current/decomp/KSA/Vehicle.cs),
 line 584, uses the selected control part/connector or identity. For a default kitten, +X is its
 forward direction and -Z is body-up. An autopilot nose-pointing target does not automatically mean
-"boots downward." This fix does not silently rotate controls or add a new control-frame feature.
+"boots downward." The follow-up now supplies a headward default control frame for enabled kittens.
 
 ## Validation
 

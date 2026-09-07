@@ -456,7 +456,8 @@ avatar, adds private up/down or editable body nodes, preserves connector indices
 uses ordinary vessel physics/input only after explicit per-kitten activation, and submits attached
 equipment at the correct render phase. Disabled by default, including after save load. Body parts
 are protected in the editor; activated kittens use native vessel flight-computer gauges and stock
-action eligibility, with quick engine/RCS and per-axis actuator readouts in the mod panel. Rigid body attachments,
+action eligibility, upright whole-scene editor view, headward default rocket controls and geometric
+backpack RCS mapping, with quick engine/RCS and per-axis actuator readouts in the mod panel. Rigid body attachments,
 not animated foot bones. Saves with connected custom nodes require the mod. Ships within Unscience;
 the standalone host is development-only. See [usage](iron-man/README.md),
 [library](iron-man.lib/README.md), [research](plans/iron-man/RESEARCH.md) and [scope](scope/iron-man.md).
@@ -472,4 +473,5 @@ trips, malformed metadata, transactional unload and rollback. No native KSA init
 Managed production Harmony flight/render checks: default-off and per-instance routing, base input
 dispatch, early equipment/late avatar rendering, visible disabled equipment, coexistence with another
 render prefix installed in either order, native gauge context/button dispatch and control-settings
-restoration, and unload/reapply. Native flight-computer acceptance remains open.
+restoration, rocket/editor orientation, scoped backpack RCS mapping, and unload/reapply.
+Native flight-computer acceptance remains open.

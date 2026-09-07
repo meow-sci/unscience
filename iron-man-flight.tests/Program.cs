@@ -68,6 +68,7 @@ class Checks
             otherMod.UnpatchAll(otherMod.Id);
         }
         FlightComputerChecks.Run();
+        OrientationChecks.Run();
         Console.WriteLine("PASS: production Harmony apply/reapply, default-off and per-EVA solver/input gates, reverse-base input, live nonvirtual render dispatch, cross-mod install order, early GPU submission with late avatar, disabled equipment, and safe unload");
     }
 }

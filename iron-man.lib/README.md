@@ -32,6 +32,12 @@ Iron Man development host. See [player controls](../iron-man/README.md) and the 
 - `IronManRenderPatches` submits authored equipment before the normal part-batch upload while
   leaving the avatar in its original later phase. Rendering remains enabled for authored parts
   after flight activation is switched off.
+- `IronManControlFramePatches` supplies headward default rocket controls through `Vehicle.Ctrl2Body`;
+  explicit control parts/ports keep their native frame. `IronManEditorOrientationPatches` changes
+  the orbit camera basis and vertical pan/bounds for the complete editor scene, preserving geometry.
+  `IronManRcsOrientationPatches` lets native geometry remap enabled root-backpack jets without
+  changing authored maps. Membership is published as immutable snapshots for worker reads;
+  enable/disable invalidate thruster authority at the joined handoff. See [orientation](../plans/iron-man/ORIENTATION.md).
 
 `Apply(Harmony)` / `Remove(Harmony)` use the caller's Harmony owner. Unscience supplies the shared
 frame handoff through Garry's Torch's existing installation; the development host installs it

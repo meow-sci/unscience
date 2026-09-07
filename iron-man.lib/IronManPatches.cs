@@ -16,6 +16,9 @@ public static class IronManPatches
             IronManEditorPatches.Apply(harmony);
             IronManFlightPatches.Apply(harmony);
             IronManFlightComputerPatches.Apply(harmony);
+            IronManControlFramePatches.Apply(harmony);
+            IronManEditorOrientationPatches.Apply(harmony);
+            IronManRcsOrientationPatches.Apply(harmony);
             Ready = true;
         }
         catch
@@ -28,6 +31,9 @@ public static class IronManPatches
     public static void Remove(Harmony harmony)
     {
         Ready = false;
+        RemoveSafely(() => IronManRcsOrientationPatches.Remove(harmony));
+        RemoveSafely(() => IronManEditorOrientationPatches.Remove(harmony));
+        RemoveSafely(() => IronManControlFramePatches.Remove(harmony));
         RemoveSafely(() => IronManFlightComputerPatches.Remove(harmony));
         if (!IronManConnectorUnload.PrepareForUnload())
         {

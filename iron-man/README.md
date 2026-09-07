@@ -10,7 +10,8 @@ is a development host and does not produce a separate release.
 2. Explicitly check **Enable Iron Man for this kitten**. Every kitten starts disabled, including
    after loading a save. Release any ladder first. Activation stops engines and selects manual
    vessel control; walking/swimming/ladder movement is replaced while enabled.
-3. Choose **Edit this kitten**. The actual kitten stays visible in the stock editor, and its body
+3. Choose **Edit this kitten**. The kitten appears upright, with matching vertical camera scrolling.
+   The actual kitten stays visible in the stock editor, and its body
    cannot be deleted, grabbed, copied, replaced as root or turned into a new vehicle.
 4. Two body nodes are added automatically: **Up** at `(0,0,-0.43)` pointing toward `-Z`, and **Down**
    at `(0,0,-0.10)` pointing toward `+Z`, each with radius `0.12 m`. Coordinates use the kitten
@@ -61,9 +62,12 @@ Only stock `KittenBackPackPart` roots are supported. Shared templates/assets are
 
 The panel's **Attitude control: X/Y/Z** readout shows the native actuator assigned on each axis:
 `Rcs` needs fueled thrusters, `Tvc` needs thrust from gimballed engines, and `None` means no actuator
-is currently assigned. Autopilot cannot steer without torque. Control orientation is unchanged:
-without a chosen control part/connector, the kitten's nose is +X and body-up is -Z. Pointing the
-nose upward does not automatically orient rocket boots downward. See the
+is currently assigned. Autopilot cannot steer without torque. While enabled, the default rocket
+nose points from the feet toward the head: **Up** points the head away from the surface with boots
+below it. Navball, attitude controls and backpack RCS share that frame. An explicitly selected
+control part or docking port keeps its chosen orientation. Disabling restores the EVA frame.
+Existing attachment positions and save coordinates are unchanged. See the
+[orientation correction](../plans/iron-man/ORIENTATION.md) and the
 [flight-computer investigation](../plans/iron-man/FLIGHT_COMPUTER.md).
 
 ## Validation

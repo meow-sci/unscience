@@ -8,6 +8,7 @@ development project. Complete signatures, direct APIs, save format and native ac
 
 | Game surface | Owner / behavior | Validation / risk |
 |---|---|---|
+| `Vehicle.Ctrl2Body`; private `OrbitController.GetFrame2Ecl/EditorOnScroll`; `ThrusterController.RecomputeDynamicData/ManualControlMap` | Enabled Iron Man rocket frame, upright complete editor view/pan, geometric root-backpack RCS maps | Getter/camera postfixes and guarded pan/map transpilers; explicit control choices preserved. Native authority cache reset at joined membership changes. See [orientation](../plans/iron-man/ORIENTATION.md). |
 | `GaugeCanvas.IsContextVisible`; `GaugeButtonFlightComputer.IsDisabled/PackData`; closed base `Vehicle.IsFlightComputerDisabled<Enum>` | Three guarded transpilers select vessel gauges + native policy for enabled kittens, preserve remaining context/target/burn/engine gates | Actual Harmony fixture checks; no generic-method patch or saved UI changes. See [flight-computer research](../plans/iron-man/FLIGHT_COMPUTER.md). |
 | `FlightComputer.AttitudeFrame/AttitudeTrackTarget/CustomAttitudeTarget/RollMode/AngleDeadband/RateLimit`; `ActiveControlSystem.X/Y/Z` | Expanded disable/unload settings restoration and native actuator readout | Typed, managed snapshot checks; burn progress/telemetry untouched. |
 | `VehicleUpdateState.PrepareFromVehicle`; `ReadOnlyVehicle`, `IsKitten` | Per-instance ordinary-vessel worker routing | Managed gating passes; character servos, collision/failure branches and flight require native acceptance. |
@@ -1020,6 +1021,9 @@ the internal three-argument Part serializer and four-argument Part constructor. 
 follow-up also requires exactly two EVA type checks in `GaugeCanvas.IsContextVisible` and one closed
 `IsFlightComputerDisabled<Enum>` call each in gauge-button `IsDisabled`/`PackData`. Preserve constructor
 restoration before connection-index regeneration and Program render upload/bucket ordering.
+The orientation follow-up adds the `Vehicle.Ctrl2Body` getter, private orbit-camera frame/scroll
+methods, exactly two editor pan axes/bounds and one `ThrusterController.ManualControlMap` read;
+preserve common control-frame use by navball/navigation/module updates and native authority invalidation.
 
 NOT compile-checked — a game rename breaks these at runtime with no build error. Re-verify each name
 on every game update FIRST.

@@ -22,6 +22,15 @@ disable/missing-state/unload/reapply behavior and rejection of unexpected IL. Th
 test changes every exposed setting and checks restoration without rewinding the current burn or
 solver telemetry.
 
+Orientation checks link the production control-frame, editor-frame and backpack-map patches.
+Real Brutal quaternion math verifies headward rocket controls, inverse frame round trips, explicit
+control part/connector precedence, and identity/nonidentity editor assembly frames. Actual Harmony
+patches verify scoped whole-scene editor orientation and pan direction/bounds without modifying
+assembly geometry; per-root backpack map bypass, unchanged authored maps and global cache reset;
+default-off, disable, unload and reapply. IL checks preserve labels/exception boundaries and reject
+missing/duplicate target patterns. The control getter fixture mirrors the game's nullable control
+selection expression without a `NoInlining` attribute; Debug and Release exercise warmed callers.
+
 A bounded compatibility experiment found that a Harmony postfix on the closed generic
 `Vehicle.IsFlightComputerDisabled<Enum>` entry point affects normal virtual calls but can be
 bypassed by the emitted nonvirtual call. `AccessTools.MethodDelegate` could not bind this patched

@@ -25,8 +25,8 @@ namespace KSA
         [MethodImpl(MethodImplOptions.NoInlining)] public override void ProcessInput(InputAction action, GlfwKeyAction keyAction, GlfwModifier modifiers) { EvaInputs++; }
         [MethodImpl(MethodImplOptions.NoInlining)] public override void UpdateRenderData(IViewport viewport, int inFrameIndex) { base.UpdateRenderData(viewport, inFrameIndex); AvatarRenders++; }
     }
-    public class PartTree { public Part Root = new(); }
-    public class Part { public List<Connector> Connectors = new(); public class Connector { public bool Owned; } }
+    public partial class PartTree { public Part Root = new(); }
+    public partial class Part { public List<Connector> Connectors = new(); public partial class Connector { public bool Owned; } }
     public class VehicleUpdateState(Vehicle vehicle)
     {
         public readonly Vehicle ReadOnlyVehicle = vehicle;
@@ -35,7 +35,7 @@ namespace KSA
     }
     public class Scheduler { public int Waits; public void Wait() { Waits++; } }
     public static class JobSystems { public static Scheduler VehicleSolver = new(); }
-    public static class Program { public static object? Editor; public static Vehicle[] VehiclesInFrame = []; public static Vehicle? ControlledVehicle; }
+    public static class Program { public static VehicleEditor? Editor; public static Vehicle[] VehiclesInFrame = []; public static Vehicle? ControlledVehicle; }
     public static class PartModelRenderer
     {
         public static int Pending, Uploaded;
@@ -44,7 +44,7 @@ namespace KSA
 }
 namespace MeowSci.IronManLib
 {
-    public static class IronManConnectors { public static bool IsOwned(KSA.Part.Connector connector) => connector.Owned; }
+    public static class IronManConnectors { public const string BackpackTemplateId = "KittenEvaBackpack"; public static bool IsOwned(KSA.Part.Connector connector) => connector.Owned; }
     public class IronManSubmod
     {
         public static IronManSubmod? Instance;

@@ -11,5 +11,9 @@
     <Compile Include="../iron-man.lib/IronManRenderPatches.cs" Link="IronManRenderPatches.cs" />
     <Compile Include="../iron-man.lib/IronManFlightComputerPatches.cs" Link="IronManFlightComputerPatches.cs" />
     <Compile Include="../iron-man.lib/IronManFlightSettings.cs" Link="IronManFlightSettings.cs" />
+    <Compile Include="../iron-man.lib/IronManOrientation.cs" Link="IronManOrientation.cs" />
+    <Compile Include="../iron-man.lib/IronManControlFramePatches.cs" Link="IronManControlFramePatches.cs" />
+    <Compile Include="../iron-man.lib/IronManEditorOrientationPatches.cs" Link="IronManEditorOrientationPatches.cs" />
+    <Compile Include="../iron-man.lib/IronManRcsOrientationPatches.cs" Link="IronManRcsOrientationPatches.cs" />
   </ItemGroup>
 </Project>

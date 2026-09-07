@@ -24,6 +24,10 @@ signature/overload changes; private string names must be re-grepped on every gam
 
 | Target | Patch / owner | Required behavior |
 |---|---|---|
+| `Vehicle.get_Ctrl2Body()` | control-frame postfix | Enabled kitten without explicit control part/connector: control X→body -Z, Y→Y, Z→X. Shared by navball, rates, worker navigation and modules. |
+| private `OrbitController.GetFrame2Ecl(IFollowable,CameraReferenceFrame)` | editor-orientation postfix | Own enabled EditingSpace + Editor frame only: camera +Z maps to body -Z; geometry unchanged. |
+| private `OrbitController.EditorOnScroll(GlfwWindow,double2)` | editor-orientation transpiler | Exactly two UnitX getters and two CameraOffset.X field reads become scoped headward pan and projected bounds. |
+| `ThrusterController.RecomputeDynamicData` | RCS orientation transpiler | Exactly one ManualControlMap field read; enabled actual root-backpack uses native geometric mapping, authored field untouched. |
 | `GaugeCanvas.IsContextVisible()` | flight-computer transpiler | Exactly two `isinst KittenEva` sites become a session-gated EVA classifier. Preserve all other context predicates, AND behavior, empty/null cases and saved canvas settings. |
 | `GaugeButtonFlightComputer.IsDisabled()` / `PackData()` | flight-computer transpilers | Exactly one `Vehicle.IsFlightComputerDisabled<Enum>` call per method routes through the same adapter: enabled kitten uses nonvirtual base policy, all others keep virtual dispatch. Packed disabled/selected state and click eligibility stay consistent. |
 | `VehicleUpdateState.PrepareFromVehicle(bool,ManualControlInputs)` | flight postfix | Stock assigns `IsKitten` from `ReadOnlyVehicle` on main thread before workers; opted-in snapshots become ordinary vessels. |
@@ -48,6 +52,13 @@ Unexpected IL match counts fail installation with rollback; removed hooks restor
 
 ## Direct APIs and behavioral dependencies
 
+- `Vehicle.ControlPart/ControlConnector/Ctrl2Body`; `VehicleEditingSpace.Asmb2Ecl`,
+  `VehicleEditor.CameraOffset`; `ThrusterController.Parent.FullPart/ManualControlMap`,
+  `Part.Tree.OwningVehicle/Template.Id`; root `KittenBackPackPart` authored RCS mappings.
+  `ModuleStateful<ThrusterController,ThrusterControllerState,ThrusterControllerGlobalState,EmptyStruct>`
+  `InitializeHotPathList(Parts.States).GetMutableGlobalStateForInitialization()` resets authority to
+  `ThrusterControllerGlobalState.Zero` at joined enable/disable/disposal. Native cache checks Ctrl2Body;
+  membership reads use published arrays on workers. See [orientation evidence](../plans/iron-man/ORIENTATION.md).
 - `Program.EditorFlag`, `IsEditorOpen`, `ControlledVehicle`, `Editor`, `MainViewport`,
   `RenderedViewport`, `Instance.ResourceFrameIndex`, `Instance.SuperMeshRenderSystem`, `VehiclesInFrame`.
 - `VehicleEditor.ExistingVehicle`, `EditingSpace.Parts/GetMatrixAsmb2Ego`, `Highlighted`, `Selected`,
@@ -118,7 +129,11 @@ HUD correction addresses that reported gap; live autopilot response remains to b
       actual clicks. Missing target/burn/engine still disables the corresponding controls. Switch to
       another inactive kitten and back; disable restores EVA UI and original control settings.
 - [ ] Verify actual attitude response with fueled RCS/gimbals and valid burn execution; confirm the
-      native X/Y/Z actuator readout. Preserve the stock +X control nose; no boots-frame override.
+      native X/Y/Z actuator readout. Default Up points the kitten's head away from the surface;
+      explicit control parts/ports retain their selected axes. Disable restores EVA controls.
+- [ ] Editor opens upright with equipment/nodes/picking aligned; scroll moves vertically and bounds
+      work for a rotated EditingSpace. Exit/re-enter leaves root/attachment geometry unchanged.
+- [ ] Backpack RCS follows rocket axes, including engines off; disable restores authored EVA maps.
 - [ ] Enable one of two kittens; only that kitten gets vessel controls/physics. Reject ladder enable.
 - [ ] Editor avatar aligns with body nodes, including a scaled kitten. Body/root actions are blocked;
       accessory move/rotate/scale/copy/delete and blueprint accessory loading still work.

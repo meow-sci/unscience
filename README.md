@@ -92,6 +92,7 @@ with a mapping reset. See [Sphinx](sphinx/README.md) for controls
 and model support. Placements are session-only; collider modes include Auto, Mesh, Fitted box and Off. No new shadow casters are added.
 
 Iron Man adds opt-in editing and rocket flight for existing EVA kittens, with configurable body
-attachment nodes, native flight-computer gauges and save restoration. It starts off for every kitten. See [Iron Man](iron-man/README.md)
+attachment nodes, upright editor/rocket controls, native flight-computer gauges and save restoration.
+It starts off for every kitten. See [Iron Man](iron-man/README.md)
 and its [source research](plans/iron-man/RESEARCH.md). Managed checks run with
 `dotnet run --project iron-man.tests` and `dotnet run --project iron-man-flight.tests`.

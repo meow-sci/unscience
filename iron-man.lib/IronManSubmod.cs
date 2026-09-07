@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using KSA;
 using MeowSci.KsaAbstractions;
 
@@ -10,6 +11,7 @@ namespace MeowSci.IronManLib;
 public sealed partial class IronManSubmod : ISubmod
 {
     private readonly Dictionary<KittenEva, IronManFlightSettings> _enabled = new();
+    private KittenEva[] _enabledSnapshot = Array.Empty<KittenEva>();
     private bool _disposed;
     private bool _pending;
     private string _status = "Off by default. Control an EVA kitten to begin.";
@@ -17,7 +19,10 @@ public sealed partial class IronManSubmod : ISubmod
     public static IronManSubmod? Instance { get; private set; }
     public string Name => "Iron Man";
     public string Tooltip => "Opt an EVA kitten into vessel editing, attachment nodes and rocket flight.";
-    public bool IsEnabled(KittenEva kitten) => !_disposed && _enabled.ContainsKey(kitten);
+    // The control frame and RCS mapping are also read by physics workers. Publish membership
+    // snapshots so pruning a disposed kitten never races a worker's Dictionary lookup.
+    public bool IsEnabled(KittenEva kitten) => Array.IndexOf(Volatile.Read(ref _enabledSnapshot), kitten) >= 0;
+    private void PublishEnabled() => Volatile.Write(ref _enabledSnapshot, _enabled.Keys.ToArray());
     private static KittenEva? Target => Program.Editor?.ExistingVehicle as KittenEva
         ?? Program.ControlledVehicle as KittenEva;
 
@@ -29,9 +34,11 @@ public sealed partial class IronManSubmod : ISubmod
         if (Universe.CurrentSystem == null) _pending = false;
         if (_enabled.Count == 0) return;
         var live = VehicleProvider.GetAllVehicles(includeDebris: true);
+        bool changed = false;
         foreach (var kitten in _enabled.Keys.ToArray())
             if (kitten.IsDisposed || !live.Contains(kitten))
-                _enabled.Remove(kitten);
+                changed |= _enabled.Remove(kitten);
+        if (changed) PublishEnabled();
     }
 
     private void Queue(KittenEva kitten, Action action)
@@ -75,6 +82,8 @@ public sealed partial class IronManSubmod : ISubmod
         kitten.FlightComputer.BurnMode = FlightComputerBurnMode.Manual;
         kitten.FlightComputer.SetManualThrustMode(FlightComputerManualThrustMode.Direct);
         _enabled.Add(kitten, original);
+        PublishEnabled();
+        IronManRcsOrientationPatches.InvalidateCache(kitten);
         _status = "Enabled for this kitten. Open the editor to attach equipment.";
         Console.WriteLine($"iron-man: enabled {kitten.Id}");
     }
@@ -87,6 +96,8 @@ public sealed partial class IronManSubmod : ISubmod
         StopEngines(kitten);
         original.Restore(kitten.FlightComputer);
         _enabled.Remove(kitten);
+        PublishEnabled();
+        IronManRcsOrientationPatches.InvalidateCache(kitten);
         _status = "Disabled. EVA movement restored; attached equipment and nodes remain.";
         Console.WriteLine($"iron-man: disabled {kitten.Id}");
     }
@@ -128,10 +139,16 @@ public sealed partial class IronManSubmod : ISubmod
         foreach (var pair in _enabled)
         {
             if (pair.Key.IsDisposed) continue;
-            try { StopEngines(pair.Key); pair.Value.Restore(pair.Key.FlightComputer); }
+            try
+            {
+                StopEngines(pair.Key);
+                pair.Value.Restore(pair.Key.FlightComputer);
+                IronManRcsOrientationPatches.InvalidateCache(pair.Key);
+            }
             catch (Exception ex) { Console.WriteLine($"iron-man: teardown {pair.Key.Id}: {ex}"); }
         }
         _enabled.Clear();
+        PublishEnabled();
         _disposed = true;
         if (ReferenceEquals(Instance, this)) Instance = null;
     }
