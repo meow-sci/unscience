@@ -9,4 +9,5 @@ public struct WeldPreset
     public float3 Rotation;
     public float3 Scale;
     public bool LockRotation;
+    public bool Collisions;
 }

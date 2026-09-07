@@ -113,6 +113,7 @@ public sealed class PresetManager
                             GetFloat(entry, "rotation_y"),
                             GetFloat(entry, "rotation_z")),
                         Scale = ReadScale(entry),
+                        Collisions = entry.TryGetValue("collisions", out var collisions) && collisions is true,
                         LockRotation = entry.TryGetValue("lock_rotation", out var lr) && lr is bool b ? b : true,
                     };
                 }
@@ -147,6 +148,7 @@ public sealed class PresetManager
                     ["scale_y"] = (double)preset.Scale.Y,
                     ["scale_z"] = (double)preset.Scale.Z,
                     ["lock_rotation"] = preset.LockRotation,
+                    ["collisions"] = preset.Collisions,
                 };
             }
 

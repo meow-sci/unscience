@@ -43,8 +43,27 @@ Native KSA physics/rendering still needs an in-game smoke pass:
 4. Remove the source/target, unweld and unload; watch for collection/shape-lock errors,
    `SnapToLeader` time mismatches and structural part failure.
 
-These timing changes preserve completed simulation results; they do not disable collisions or
-structural destruction between overlapping welded vehicles.
+`WeldEntry.Collisions` defaults to false. `WeldCollisionPatches` brackets both
+`ConstraintSim.DetectCollisions(double)` and `Simulate(double, in SimStep)` with a Harmony prefix
+and finalizer. Before each pass, enabled collision-free sources temporarily become shapeless via
+Bepu `BodyReference.SetShape(default)`, removing their broad-phase entries. The finalizer restores
+the exact shapes, even on exceptions. Vehicle/module state, collider geometry and animation updates
+are retained. This avoids patching the aggressively inlined generic narrow-phase callbacks.
+
+The frame handoff publishes an immutable source-identity set after weld validation. Workers use that
+snapshot rather than reading mutable UI/weld lists. Create/modify and direct field edits take effect
+on the next snapshot. Disabled, removed, disposed or parent-mismatched welds are excluded; unload
+clears the set and unpatches both passes. `Collisions = true` leaves the stock collision behavior.
+The option is available in create/edit UI, both API scale overloads and saved presets; missing TOML
+`collisions` means false. It controls rigid-body contacts, not ocean/aerodynamic forces or all damage.
+
+Managed tests use the game-version Bepu assembly to verify warmed-up Harmony patches, vehicle and
+static contacts, unaffected other pairs, continued simulation, immutable snapshots, opt-in, suspension,
+unweld, destruction, parent mismatch, exception restoration and unload. Preset tests check legacy
+migration and round-trip. The native KSA acceptance pass should additionally overlap two crafts,
+actuate a welded light, toggle collisions and Weld Enabled, test terrain/scenery and a weld chain,
+and check animated/scaled collider restoration. Unweld or opt-in at a safe offset to inspect normal
+contact behavior.
 
 The caller transpiler now lives in `ksa-abstractions.lib/PhysicsFrameHook`; Garry's Torch registers
 its weld callback. Queued Godzilla edits run before this callback. Source scale ownership is exclusive:

@@ -22,6 +22,8 @@ public class WeldEntry
     public float3 Scale = WeldScale.Identity;
     /// <summary>When false, only position is locked; source can rotate freely.</summary>
     public bool LockRotation = true;
+    /// <summary>Allow source collisions while enabled. Defaults to false; module simulation continues.</summary>
+    public bool Collisions;
     /// <summary>When false, the weld is suspended (no physics applied) but kept in the list.</summary>
     public bool WeldEnabled = true;
 }

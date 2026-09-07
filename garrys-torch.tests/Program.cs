@@ -11,6 +11,8 @@ internal static class Checks
 {
     private static void Main()
     {
+        CollisionChecks.Run();
+        PresetChecks.Run();
         CheckRejectedLayouts();
         var game = new KSA.Program();
 

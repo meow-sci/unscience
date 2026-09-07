@@ -17,6 +17,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="BepuPhysics">
+      <HintPath>$(KSAFolder)BepuPhysics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="BepuUtilities" Condition="Exists('$(KSAFolder)BepuUtilities.dll')">
       <HintPath>$(KSAFolder)BepuUtilities.dll</HintPath>
       <Private>false</Private>

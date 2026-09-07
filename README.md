@@ -26,7 +26,9 @@ See [Kitten Animations](kitten-animations/README.md).
 
 `garrys-torch` updates welded vehicles after simulation results are applied and before the next
 physics snapshots, preserving light-part actuation progress. Its shared frame hook also runs while
-the HUD is hidden. See [Garry's Torch](garrys-torch/README.md) for timing and validation details.
+the HUD is hidden. Weld sources default to **Collisions off**, retaining part animations while
+passing through vehicles and scenery; the per-weld checkbox and saved presets can opt in.
+See [Garry's Torch](garrys-torch/README.md) for timing and validation details.
 
 ## building
 

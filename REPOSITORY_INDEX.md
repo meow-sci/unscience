@@ -47,6 +47,7 @@ Vehicle welding system. Attaches one vehicle to another with support for positio
 - Per-weld rotation offset (pitch/yaw/roll)
 - Independent per-axis vehicle scaling with a KittenEva model-transform correction
 - Rotation lock toggle and auto-unweld on parent mismatch
+- **Collisions** defaults off per weld, with create/edit controls, optional API arguments, and TOML preset persistence (legacy presets default off). Scoped Bepu shape suppression preserves module simulation; disabling/removing a weld restores collisions at the next snapshot.
 - Weld updates run through `GarrysTorchPatches` via shared `PhysicsFrameHook` at the `Program.PrepareFrame` simulation handoff, after completed results are applied and before cloth/vehicle/orbit workers start. Source light actuation retains committed progress; teleports use `SimStep.PreviousTime`. The patch validates the call order and is independent of HUD visibility.
 - Multiple simultaneous welds with topological sort for correct ordering
 - User-defined presets persisted to TOML (`~/.unscience/garrys-torch-presets.toml`)
@@ -59,7 +60,9 @@ Vehicle welding system. Attaches one vehicle to another with support for positio
 ### [garrys-torch.tests](garrys-torch.tests)
 Managed executable linking the production weld-timing Harmony patch against a small game-loop
 fixture. Reproduces discarded actuator results and checks result retention, timestamps, pause/warp,
-patch removal, and rejection of missing/duplicate/reordered solver seams. Does not run native KSA.
+patch removal, and rejection of missing/duplicate/reordered solver seams. Also runs the production
+collision patches against game-version Bepu for contact suppression/restoration and checks TOML
+preset migration/round-trip. Does not run native KSA.
 See its [README](garrys-torch.tests/README.md) for usage.
 
 ### [kiwis-marbles](kiwis-marbles) / [kiwis-marbles.lib](kiwis-marbles.lib)

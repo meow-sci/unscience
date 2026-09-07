@@ -137,6 +137,29 @@ Disposed source/target welds are removed before animation updates, because apply
 destroy vehicles; scale restoration skips disposed sources. Per-kitten animation targeting and the
 skeletal render pipeline are unchanged.
 
+**Source collision control (2026-09-06)** — `WeldEntry.Collisions` defaults false, with create/edit
+checkboxes, optional create/modify API arguments and preset TOML `collisions` (missing = false).
+`GarrysTorchPatches` publishes an immutable set of valid, enabled, collision-free source identities
+at the same result/snapshot handoff. `WeldCollisionPatches` prefixes/finalizes both
+`ConstraintSim.DetectCollisions(double)` and `Simulate(double, in SimStep)`. Before Bepu dispatches
+workers, each source body's current shape is captured and `BodyReference.SetShape(default)` removes
+its broad-phase entry. Finalizers restore exact shapes, including when a pass throws. Bodies remain
+in the simulation and geometry stays allocated; the actuator-result path above is unchanged.
+
+This suppresses rigid-body contacts with other vehicles, terrain, static objects and clutter. It does
+not suppress ocean/aerodynamic forces or every structural-failure cause. Other bodies retain stock
+behavior. Disabling/removing a weld, disposal, or parent mismatch releases suppression at the next
+snapshot; unload clears the snapshot and unpatches. Workers never enumerate mutable weld lists.
+No patch targets the aggressively inlined generic `NarrowPhaseCallbacks` methods.
+
+Update risks: both ConstraintSim methods must still bracket **all** rigid-body collision dispatch,
+run on the owning bubble worker, and return only after Bepu workers finish. `SetShape(default)` must
+continue to remove broad-phase participation without deleting the body/geometry; shape restoration
+must remain legal after a pass and on failure. Re-check `BepuPhysics/Bodies.cs:350-378` on upgrades.
+Actual game-version Bepu tests pass for source/static contacts, unrelated pairs, opt-in, suspension,
+stale welds, exception restoration and unload; preset migration/round-trip is covered. Live-check
+welded animated light parts, nonuniform compound scaling, chains, terrain/scenery and F2/pause/warp.
+
 **Standing timing invariant** — In 5402, `Program.PrepareFrame:2103-2109` waits on orbit/vehicle/cloth
 workers and applies all three result sets. The `GetJobSimStep` call at `:2143` follows, before cloth,
 vehicle and orbit scheduling at `:2144-2146`. The transpiler requires exactly one of each of these
@@ -172,6 +195,8 @@ the legacy scalar `scale` key uniformly for backwards compatibility.
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|------|----------------------|----------------------------------------|-------------------|---------|----------|------------|
 | 1 | **Harmony transpiler / private method** | `ksa-abstractions.lib/PhysicsFrameHook.cs` | `Program.PrepareFrame(double currentPlayerTime, double dtPlayer)`; wraps the single `Universe.GetJobSimStep(double)` call | `KSA/Program.cs:2094,2143` | Yes | New mod hook against unchanged 5402 surface | Requires unique ordered ApplyOrbit/Vehicle/Cloth, GetJobSimStep, ExecuteNextCloth/Vehicle/Orbit calls. Re-read game wait/snapshot semantics on updates. No UI fallback. |
+| C1 | Harmony prefix/finalizer | `garrys-torch.lib/WeldCollisionPatches.cs` | `ConstraintSim.DetectCollisions(double)` / `Simulate(double, in SimStep)` | `KSA/ConstraintSim.cs:834,851` | Yes | New mod hooks on current surface | Scope shape removal/restoration around detection and full timesteps, before/after Bepu worker dispatch. |
+| C2 | Direct typed API | `WeldCollisionPatches.cs` | `ConstraintSim.HandleToState`, `VehicleUpdateState.ReadOnlyVehicle`, `ConstraintSim.Simulation`, `Simulation.Bodies[BodyHandle]`, `BodyReference.Collidable.Shape`, `BodyReference.SetShape(TypedIndex)` | `KSA/ConstraintSim.cs:52,54`; `KSA/VehicleUpdateState.cs:14`; `BepuPhysics/BodyReference.cs:195`; `BepuPhysics/Bodies.cs:350-378` | Yes | New dependencies | Read source identity, capture exact shape, temporarily remove broad-phase entry; preserve body/module state and allocated shape geometry. |
 | 2 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:19,75` | `Vehicle.Parent` — `public IParentBody Parent => Orbit.Parent` | `KSA/Vehicle.cs:372` | Yes | Same (OLD `Vehicle.cs:370`) | Reference-compared for parent-body match; `.GetCci2Cce()` called on it (#10). |
 | 3 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:28` | `Vehicle.GetPositionCci()` — `public double3` | `KSA/Vehicle.cs:2590` | Yes | Same (OLD `Vehicle.cs:2433`) | Target world position. |
 | 4 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:29` | `Vehicle.GetVelocityCci()` — `public double3` | `KSA/Vehicle.cs:2538` | Yes | Same (OLD `Vehicle.cs:2381`) | Source velocity = target velocity. |
@@ -460,7 +485,8 @@ the decomp diff. Solution builds clean against 5402.
   would otherwise throw into the weld callback. The caller already treats `false` as "remove this weld"
   (`GarrysTorchSubmod.cs:107`). ⚠ **Still open:** live-test a two-capsule weld and watch for
   *"exceeded its crash tolerance"* log lines / debris — the guard makes the aftermath survivable but
-  does not stop the game from destroying a welded craft.
+  does not itself stop destruction. The subsequent **Source collision control** above now defaults
+  rigid-body contacts off; opt-in contacts and other damage causes still need a live pass.
 - ✅ **Debris no longer fills every vehicle list.** `Vehicle.IsDebris` (`Vehicle.cs:392`) and
   `Class => IsDebris ? "Debris" : "Vehicle"` (`:423`) are new, and every vehicle picker in the suite
   enumerates through `VehicleProvider.GetAllVehicles()`, so shed fragments would have appeared in all of

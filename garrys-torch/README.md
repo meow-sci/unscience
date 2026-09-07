@@ -22,6 +22,7 @@ Garry's Torch allows you to:
 - **Part-anchored welding** - Anchor to any part on the target vehicle; the weld tracks that part, not the vehicle CoM. Immune to CoM drift as fuel burns, and naturally follows robotics-moved parts
 - **Physics-loop safe updates** - Welds run immediately before KSA queues vehicle solver jobs, avoiding worker-thread state races in the refactored physics loop
 - **Part-frame coordinates** - Positions and rotations specified in the target part's local coordinate system
+- **Source collisions** - Off by default, preserving part animations while passing through vehicles, terrain and scenery. Toggle **Collisions** on the create form or an active weld to opt in; presets remember it
 - **Rotation locking** - Option to prevent source vehicle from rotating relative to target
 - **Parent validation** - Welds automatically break if vehicles cross celestial body boundaries
 - **Quaternion-based math** - Proper 3D rotation handling with Euler angle conversion
@@ -85,12 +86,14 @@ public class WeldEntry
     public float3 RelativePosition { get; set; }  // Offset relative to anchor (part frame or body frame)
     public float3 RelativeRotation { get; set; }  // Pitch/Yaw/Roll relative to anchor orientation (degrees)
     public float3 Scale { get; set; }             // XYZ factors (0.05 to 20.0 per axis)
+    public bool Collisions { get; set; }          // Default false; suppress source rigid-body contacts
     public bool LockRotation { get; set; }        // Prevent relative rotation
 }
 ```
 
 #### WeldPreset
-Data container for preset weld configuration (position, rotation, XYZ scale, lock rotation).
+Data container for preset weld configuration (position, rotation, XYZ scale, lock rotation, collisions).
+Presets store `collisions`; older presets without it load as false.
 
 #### PresetManager
 Manages named presets persisted to a TOML file at `My Games/Kitten Space Agency/.unscience/garrys-torch-presets.toml`.
@@ -164,6 +167,7 @@ All weld parameters are configured through the ImGui window:
 | Roll | -180 to +180° | Rotation around right axis |
 | Scale X/Y/Z | 0.05 to 20.0x each | Independent local-axis scaling |
 | Lock Rotation | true/false | Freeze relative orientation |
+| Collisions | true/false (default false) | Source rigid-body collisions while Weld Enabled; changes take effect at the next physics snapshot |
 
 ## Usage Example
 
@@ -215,6 +219,18 @@ The animation system (`WeldAnimation`, `WeldAnimationManager`) enables smooth in
 - **Frame update**: Animations run in `GarrysTorchSubmod.UpdateBeforeVehicleSolvers(dt, stateTime)` from the PrepareFrame hook before the weld engine teleport, ensuring smooth motion without racing KSA vehicle solver jobs
 - **Snap to target**: Animation completes by snapping to exact target values to prevent floating-point drift
 
+
+## Collision behavior
+
+**Collisions** affects only the enabled weld's source. The target and other vehicles keep their
+normal collisions unless they are also sources of a weld with collisions off. Disabling or removing
+the weld restores normal collisions on the next physics snapshot; unloading removes the patch.
+Sources continue their normal actuator/module updates. This controls rigid-body contacts, including
+terrain and scenery, rather than aerodynamic/ocean forces or every cause of structural failure.
+
+The public `CreateWeld` overloads accept optional `collisions = false` after `targetPart`;
+`ModifyWeld` accepts optional `bool? collisions = null`. `WeldEntry.Collisions` can also be edited
+directly. Existing source calls can omit the new argument.
 
 ## Validation
 

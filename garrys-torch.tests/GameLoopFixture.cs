@@ -84,6 +84,7 @@ namespace MeowSci.GarrysTorchLib
         public double PlayerDelta;
         public KSA.UniverseTime StateTime;
         public bool ThrowOnUpdate;
+        public IReadOnlyList<WeldEntry> Welds { get; } = Array.Empty<WeldEntry>();
 
         internal void UpdateBeforeVehicleSolvers(double dt, KSA.UniverseTime stateTime)
         {

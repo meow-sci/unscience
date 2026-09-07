@@ -31,6 +31,7 @@ public sealed class GarrysTorchSubmod : ISubmod
     private float3 _pendingRotation = new float3(0f, 0f, 0f);
     private float3 _pendingScale = WeldScale.Identity;
     private bool _pendingLockRotation = true;
+    private bool _pendingCollisions;
     private string? _weldError;
 
     // Combo filters
@@ -134,6 +135,7 @@ public sealed class GarrysTorchSubmod : ISubmod
             VehicleScaleOwnership.Release(weld.Source, "Garry's Torch");
         }
         _welds.Clear();
+        WeldCollisionPatches.Clear();
         Instance = null;
     }
 
@@ -239,6 +241,8 @@ public sealed class GarrysTorchSubmod : ISubmod
         // Position / Rotation / Scale + Lock Rotation
         RenderDataFields("##gt_create", ref _pendingPosition, ref _pendingRotation,
             ref _pendingScale, ref _pendingLockRotation);
+        ImGui.Checkbox("Collisions##gt_create"u8, ref _pendingCollisions);
+        ImGui.SetItemTooltip("Allow the welded source to collide with vehicles and scenery. Off keeps part animations running."u8);
 
         // Create button
         ImGui.Spacing();
@@ -250,7 +254,7 @@ public sealed class GarrysTorchSubmod : ISubmod
         {
             InitiateWeld(vehicles[_pendingSourceIndex], vehicles[_pendingTargetIndex],
                 _targetParts[_targetPartIndex],
-                _pendingPosition, _pendingRotation, _pendingScale, _pendingLockRotation);
+                _pendingPosition, _pendingRotation, _pendingScale, _pendingLockRotation, _pendingCollisions);
         }
         if (!canCreate) ImGui.EndDisabled();
 
@@ -305,6 +309,8 @@ public sealed class GarrysTorchSubmod : ISubmod
 
         ImGui.Spacing();
         ImGui.Checkbox($"Weld Enabled##gt_w{index}_enabled", ref weld.WeldEnabled);
+        ImGui.Checkbox($"Collisions##gt_w{index}_collisions", ref weld.Collisions);
+        ImGui.SetItemTooltip("Allow source collisions while welded. Changes apply on the next physics step. Disabling the weld restores normal collisions."u8);
 
         ImGui.Spacing();
         if (ImGui.Button($" Save settings as preset... ##gt_save_{index}"))
@@ -315,6 +321,7 @@ public sealed class GarrysTorchSubmod : ISubmod
                 Rotation = weld.Rotation,
                 Scale = weld.Scale,
                 LockRotation = weld.LockRotation,
+                Collisions = weld.Collisions,
             };
             _savePresetName.Clear();
             _savePresetError = null;
@@ -431,6 +438,7 @@ public sealed class GarrysTorchSubmod : ISubmod
                     _pendingRotation = preset.Value.Rotation;
                     _pendingScale = preset.Value.Scale;
                     _pendingLockRotation = preset.Value.LockRotation;
+                    _pendingCollisions = preset.Value.Collisions;
                 }
             }
             if (sel) ImGui.SetItemDefaultFocus();
@@ -511,7 +519,7 @@ public sealed class GarrysTorchSubmod : ISubmod
     public (WeldEntry? Weld, string? Error) CreateWeld(
         string sourceVehicleId, string targetVehicleId,
         float3 position, float3 rotation, float3 scale, bool lockRotation,
-        Part? targetPart = null)
+        Part? targetPart = null, bool collisions = false)
     {
         if (!WeldScale.IsValid(scale))
             return (null, $"Scale axes must each be between {WeldScale.Minimum} and {WeldScale.Maximum}.");
@@ -546,6 +554,7 @@ public sealed class GarrysTorchSubmod : ISubmod
             Rotation = rotation,
             Scale = scale,
             LockRotation = lockRotation,
+            Collisions = collisions,
         };
         _welds.Add(entry);
 
@@ -561,9 +570,9 @@ public sealed class GarrysTorchSubmod : ISubmod
     public (WeldEntry? Weld, string? Error) CreateWeld(
         string sourceVehicleId, string targetVehicleId,
         float3 position, float3 rotation, float scale, bool lockRotation,
-        Part? targetPart = null) =>
+        Part? targetPart = null, bool collisions = false) =>
         CreateWeld(sourceVehicleId, targetVehicleId, position, rotation,
-            WeldScale.Uniform(scale), lockRotation, targetPart);
+            WeldScale.Uniform(scale), lockRotation, targetPart, collisions);
 
     /// <summary>Finds a weld by its source vehicle ID.</summary>
     public WeldEntry? FindWeld(string sourceVehicleId)
@@ -576,7 +585,7 @@ public sealed class GarrysTorchSubmod : ISubmod
 
     /// <summary>Modifies an existing weld. Only non-null fields are updated.</summary>
     public (WeldEntry? Weld, string? Error) ModifyWeld(
-        string sourceVehicleId, float3? position, float3? rotation, float3? scale, bool? lockRotation)
+        string sourceVehicleId, float3? position, float3? rotation, float3? scale, bool? lockRotation, bool? collisions = null)
     {
         var weld = FindWeld(sourceVehicleId);
         if (weld == null)
@@ -588,6 +597,7 @@ public sealed class GarrysTorchSubmod : ISubmod
         if (position.HasValue) weld.Position = position.Value;
         if (rotation.HasValue) weld.Rotation = rotation.Value;
         if (lockRotation.HasValue) weld.LockRotation = lockRotation.Value;
+        if (collisions.HasValue) weld.Collisions = collisions.Value;
 
         if (scale.HasValue && !WeldScale.Equals(scale.Value, weld.Scale))
         {
@@ -600,9 +610,9 @@ public sealed class GarrysTorchSubmod : ISubmod
 
     /// <summary>Backwards-compatible overload for uniformly scaled partial updates.</summary>
     public (WeldEntry? Weld, string? Error) ModifyWeld(
-        string sourceVehicleId, float3? position, float3? rotation, float? scale, bool? lockRotation) =>
+        string sourceVehicleId, float3? position, float3? rotation, float? scale, bool? lockRotation, bool? collisions = null) =>
         ModifyWeld(sourceVehicleId, position, rotation,
-            scale.HasValue ? WeldScale.Uniform(scale.Value) : null, lockRotation);
+            scale.HasValue ? WeldScale.Uniform(scale.Value) : null, lockRotation, collisions);
 
     /// <summary>Removes a weld by its source vehicle ID.</summary>
     public bool RemoveWeld(string sourceVehicleId)
@@ -660,9 +670,9 @@ public sealed class GarrysTorchSubmod : ISubmod
     // ---- Weld Logic (Internal) ----
 
     private void InitiateWeld(Vehicle source, Vehicle target, Part targetPart, float3 position, float3 rotation,
-        float3 scale, bool lockRotation)
+        float3 scale, bool lockRotation, bool collisions)
     {
-        var (_, error) = CreateWeld(source.Id, target.Id, position, rotation, scale, lockRotation, targetPart);
+        var (_, error) = CreateWeld(source.Id, target.Id, position, rotation, scale, lockRotation, targetPart, collisions);
         if (error != null)
         {
             _weldError = error;
@@ -674,6 +684,7 @@ public sealed class GarrysTorchSubmod : ISubmod
         _pendingRotation = new float3(0f, 0f, 0f);
         _pendingScale = WeldScale.Identity;
         _pendingLockRotation = true;
+        _pendingCollisions = false;
     }
 
     private void RemoveWeld(WeldEntry entry)

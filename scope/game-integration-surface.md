@@ -523,6 +523,14 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 | `{MOD_TOML, CONTENT_FOLDER, LocalModsFolderPath, LocalManifestPath, Manifest}` | direct API | `KSA/ModLibrary.cs:136,138,166,168,148` | parts-now | `Io/ModIdValidator.cs:158,175,214`; `Io/ModFolderWriter.cs:110,146,174`; `Runtime/PartsNowSettings.cs:65`; `Io/ModFolderScanner.cs:135` | OK | never hardcode a mods path in place of `LocalModsFolderPath`. `Manifest` is a public static field initialised to `null` |
 | `Get<SoundBehavior>(string)` | direct API (validation only) | `KSA/ModLibrary.cs:975`; `KSA/SoundBehavior.cs:6` | parts-now | `Runtime/BundleValidatorRulesReferences.cs:295` | OK | V10 `<SoundEvent SoundId>` check. Only public path — `AllSoundBehaviours` is internal (`:108`) and `TryGet<T>` takes the strict `IsSubclassOf` branch (`:745`), so it never matches the base type. Throws `NullReferenceException` on a miss |
 
+### KSA.ConstraintSim — Garry's Torch source collisions
+
+| Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | Status | Notes |
+|---|---|---|---|---|---|---|
+| `DetectCollisions(double)` / `Simulate(double, in SimStep)` | Harmony prefix + finalizer | `KSA/ConstraintSim.cs:834,851` | garrys-torch | `WeldCollisionPatches.cs` | Compiled; real Bepu fixture passes | Scope shape suppression around both collision dispatch paths; restore even on exceptions. Must run before Bepu workers start and restore only after they finish. |
+| `HandleToState : Dictionary<BodyHandle, VehicleUpdateState>`; `VehicleUpdateState.ReadOnlyVehicle` | direct API | `KSA/ConstraintSim.cs:54`; `KSA/VehicleUpdateState.cs:14` | garrys-torch | `WeldCollisionPatches.cs` | OK | Compare against source-identity snapshot published at PrepareFrame handoff; never inspect mutable weld/UI lists on workers. |
+| `Simulation`; `Simulation.Bodies[BodyHandle]`; `BodyReference.Collidable.Shape`; `BodyReference.SetShape(TypedIndex)` | direct API + Bepu behavior | `KSA/ConstraintSim.cs:52`; `BepuPhysics/BodyReference.cs:195`; `BepuPhysics/Bodies.cs:350-378` | garrys-torch | `WeldCollisionPatches.cs` | Real Bepu fixture passes | Empty shape removes broad-phase participation while retaining body and allocated collider geometry. Finalizer restores captured shape. Re-check shapeless bodies and contact cleanup on upgrades. |
+
 ### KSA.Module
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
@@ -1093,7 +1101,9 @@ consolidation** (`Part.IsLightSwitchedOff()`). Full review:
 - **garrys-torch actuator result retention (2026-09-06).** Welds now execute after completed results commit and before next physics snapshots through a guarded PrepareFrame transpiler. Orbit stamps use `SimStep.PreviousTime`. Managed Harmony regression passes; native light actuation, chains, F2 and pause/warp remain live checks. See `scope/vehicle-physics.md`.
 - ⚠️ **garrys-torch vs part failure.** `PartFailure.Detect` (`PhysicsBubble.cs:1459`) can now shed
   debris / destroy overlapping welded vehicles. Disposed welds are now removed before animation
-  updates and scale restoration skips disposed sources; collisions still need a live weld test.
+  updates and scale restoration skips disposed sources. Per-weld **Collisions** now defaults false;
+  scoped Bepu shape suppression preserves simulation/actuation. Native collision/animation acceptance
+  remains open; opt-in contacts and non-contact damage still use stock behavior.
   See `scope/vehicle-physics.md`.
 - ⚠️ **graffiti terrain decals.** `Celestial.GetTerrainHeightFromDirCcf` accurate path now uses
   `MeanRadius` (`Celestial.cs:825-857`). Live placement check. `scope/decals.md`

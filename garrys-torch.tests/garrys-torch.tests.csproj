@@ -5,7 +5,16 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <PackageReference Include="Tomlyn" Version="0.19.0" />
+    <Compile Include="../garrys-torch.lib/WeldPreset.cs" Link="WeldPreset.cs" />
+    <Compile Include="../garrys-torch.lib/PresetManager.cs" Link="PresetManager.cs" />
     <Compile Include="../ksa-abstractions.lib/PhysicsFrameHook.cs" Link="PhysicsFrameHook.cs" />
     <Compile Include="../garrys-torch.lib/GarrysTorchPatches.cs" Link="GarrysTorchPatches.cs" />
+    <Compile Include="../garrys-torch.lib/WeldCollisionPatches.cs" Link="WeldCollisionPatches.cs" />
+    <Compile Include="../garrys-torch.lib/WeldEntry.cs" Link="WeldEntry.cs" />
+    <Compile Include="../garrys-torch.lib/WeldScale.cs" Link="WeldScale.cs" />
+    <Reference Include="BepuPhysics"><HintPath>$(KSAFolder)BepuPhysics.dll</HintPath></Reference>
+    <Reference Include="BepuUtilities"><HintPath>$(KSAFolder)BepuUtilities.dll</HintPath></Reference>
+    <Reference Include="Brutal.Core.Numerics"><HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath></Reference>
   </ItemGroup>
 </Project>

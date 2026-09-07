@@ -105,7 +105,7 @@ boundaries and the Unscience lifecycle are unchanged by this packaging refactor.
 |---|---|---|
 | [`game-integration-surface.md`](game-integration-surface.md) | **Master cross-reference index** — every game type/member touched, merged across mods | Start here for "does the game still have X?"; includes the string-reflection watchlist + shader/asset table |
 | [`00-architecture-and-abstractions.md`](00-architecture-and-abstractions.md) | unscience supermod shell (`Mod.cs`/`Patcher.cs`/`MenuBarPatch`/`UnscienceState`) + `ksa-abstractions.lib` | StarMap lifecycle map, consolidated-Harmony cross-ref, `HotkeyGuard`, `IvaForceRender`, providers |
-| [`vehicle-physics.md`](vehicle-physics.md) | eternal-flame, garrys-torch, godzilla, i-feel-seen | `Universe.ExecuteNextVehicleSolvers`, `Battery.Refill`, `Vehicle.Teleport`, KittenEva reflection; **garrys-torch PrepareFrame handoff preserves actuator results before teleport** |
+| [`vehicle-physics.md`](vehicle-physics.md) | eternal-flame, garrys-torch, godzilla, i-feel-seen | `Universe.ExecuteNextVehicleSolvers`, `Battery.Refill`, `Vehicle.Teleport`, KittenEva reflection; **garrys-torch preserves actuator results; default-off source collisions use scoped Bepu shape suppression** |
 | [`celestial-and-lights.md`](celestial-and-lights.md) | kiwis-marbles, zippo | `Celestial.SetOrbit`, `IParentBody.Children`/`UpdatePerFrameDataTree`, `Universe.ExecuteNextVehicleSolvers` prefix (kiwis-marbles sim-step timing, fixed 2026-08-23), `IOrbiter`, `LightModule`/`LightSwitch`; Zippo Disco's per-instance templates, cone angles and `KeyframeAnimationModule.TimeGoal` ownership |
 | [`camera.md`](camera.md) | camera-controller-override, glass, hot-pursuit | `OrbitController/FlyController/FixedController.OnFrame`, `Camera._fovRadians`; four public secondary-viewport leases under the sealed 8-slot registry; part-raycast camera mounts; Hot Pursuit nearby-celestial sync and stock secondary-render omissions |
 | [`pixel-grids-and-render.md`](pixel-grids-and-render.md) | blinky, its-so-shiny, thug-life | three `*Module.UpdateRenderData` patches, `PartTree.CreateFromNewPartTree`, `RocketCore.FeedConnectors` (blinky ignition), `SuperMeshRenderSystem.RenderMainPass`, UnlitMesh shaders |
@@ -160,7 +160,9 @@ craft destruction and unload restoration still need an in-game smoke pass. See [
 **Garry's Torch actuator fix:** a guarded `Program.PrepareFrame` transpiler now welds after completed
 module states commit and before the next cloth/vehicle/orbit snapshots, using `SimStep.PreviousTime`.
 Managed Harmony timing checks cover the old discarded-result regression, pause/warp and unload;
-native actuation, weld chains and HUD-hidden behavior still need a live pass. See [vehicle physics](vehicle-physics.md).
+native actuation, weld chains and HUD-hidden behavior still need a live pass. Per-weld **Collisions**
+now defaults false using `ConstraintSim.DetectCollisions` / `Simulate` shape suppression with finalizer
+restoration; real Bepu contact tests pass, with native collision/animation acceptance still open. See [vehicle physics](vehicle-physics.md).
 
 **Behavioral — compile-clean, needs a live pass before any code change:**
 - **hot-pursuit** — nearby-celestial synchronization now prevents the 5402 secondary distant-sphere
@@ -170,9 +172,9 @@ native actuation, weld chains and HUD-hidden behavior still need a live pass. Se
   close/reopen lease behavior.
 - **pyro (and the game) — refraction is dead in 5402.** Nothing sets `_hasRefractionInstances` any
   more, so pyro's Refraction slider is inert. Game-side; confirm on a stock engine.
-- **garrys-torch vs part failure.** Overlapping welded vehicles can now shed debris or be destroyed.
-  `WeldEngine.UpdateWeld` gained a disposed guard so the aftermath unwelds cleanly instead of throwing,
-  but nothing stops the game destroying a welded craft — that still needs eyes on it.
+- **garrys-torch vs part failure.** Enabled welds now default source rigid-body collisions off while
+  retaining actuator simulation. The checkbox opts into stock contacts; ocean/aerodynamic forces and
+  other destruction causes remain. Disposed guards still unweld cleanly. Live overlap checks remain.
 - **garrys-torch XYZ scale.** Weld state, UI, presets, animation, and the public API now carry independent
   X/Y/Z factors. Normal vehicles write the existing `Part.Scale : double3`; KittenEva's scalar-only
   character path is corrected by a narrow postfix on `KittenRenderable.ModelToBodyMatrix`. Legacy
