@@ -1,6 +1,7 @@
 # Iron Man: full EVA / rocket flight modes
 
-Implemented option 1 from the mode/teleport investigation. **No teleport patch is added.**
+Implemented option 1 from the mode/teleport investigation. The separately implemented option 2 is
+documented in [surface teleport](SURFACE_TELEPORT.md); mode transitions themselves do not teleport.
 
 ## State and UI
 
@@ -47,8 +48,9 @@ restriction against Direct control in CCF. No pose, velocity, mass or attachment
   Preserve that bookkeeping alongside the matching restored EVA settings. Clearing it independently
   could strand a captured transient camera-follow target. Native locomotion re-evaluates the current
   surface/water/attitude conditions when `IsKitten` returns true; it may legitimately update modes.
-- `Vehicle.TeleportToLocation` remains stock: it places body +X upright and ignores Ctrl2Body.
-  EVA mode restores native righting afterward, not an immediate upright teleport pose.
+- Native `Vehicle.TeleportToLocation` places body +X upright and ignores Ctrl2Body. A subsequent
+  scoped correction now places active Iron Man kittens head-up; EVA mode retains native placement
+  and righting. See the surface-teleport follow-up above.
 
 ## Validation
 

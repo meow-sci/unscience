@@ -458,7 +458,9 @@ equipment at the correct render phase. Full-width EVA/Iron Man mode buttons sepa
 behavior from rocket flight; editing remains available in both modes. Starts in EVA after save load. Body parts
 are protected in the editor; activated kittens use native vessel flight-computer gauges and stock
 action eligibility, upright whole-scene editor view, headward default rocket controls and geometric
-backpack RCS mapping, with quick engine/RCS and per-axis actuator readouts in the mod panel. Rigid body attachments,
+backpack RCS mapping, with quick engine/RCS and per-axis actuator readouts in the mod panel.
+Surface debug teleport placement is corrected only for active Iron Man kittens, including terrain
+clearance for their equipment. Rigid body attachments,
 not animated foot bones. Saves with connected custom nodes require the mod. Ships within Unscience;
 the standalone host is development-only. See [usage](iron-man/README.md),
 [library](iron-man.lib/README.md), [research](plans/iron-man/RESEARCH.md) and [scope](scope/iron-man.md).
@@ -474,7 +476,8 @@ trips, malformed metadata, transactional unload and rollback. No native KSA init
 Managed production Harmony flight/render checks: default-off and per-instance routing, base input
 dispatch, early equipment/late avatar rendering, visible disabled equipment, coexistence with another
 render prefix installed in either order, native gauge context/button dispatch and control-settings
-restoration, rocket/editor orientation, scoped backpack RCS mapping, and unload/reapply.
+restoration, rocket/editor orientation, scoped backpack RCS mapping, surface-teleport bounds/frame/
+rate conversion and request-time mode isolation, and unload/reapply.
 Native flight-computer acceptance remains open.
 
 ### [iron-man-mode.tests](iron-man-mode.tests)

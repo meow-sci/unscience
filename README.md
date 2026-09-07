@@ -94,7 +94,8 @@ and model support. Placements are session-only; collider modes include Auto, Mes
 Iron Man adds opt-in editing and rocket flight for existing EVA kittens, with configurable body
 attachment nodes, upright editor/rocket controls, native flight-computer gauges and save restoration.
 Full-width EVA/Iron Man mode buttons switch native kitten and rocket behavior; editing works in
-either mode. Every kitten starts in EVA mode. See [Iron Man](iron-man/README.md)
+either mode. Surface debug teleports place Iron Man kittens upright with equipment clearance;
+every kitten starts in EVA mode. See [Iron Man](iron-man/README.md)
 and its [source research](plans/iron-man/RESEARCH.md). Managed checks run with
 `dotnet run --project iron-man.tests`, `dotnet run --project iron-man-flight.tests` and
 `dotnet run --project iron-man-mode.tests`.

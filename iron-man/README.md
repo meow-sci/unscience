@@ -47,8 +47,12 @@ Node definitions persist inside the existing part-instance save data. Runtime pa
 stock templates remain unchanged. Deep-copy/serialization restores the nodes before resolving
 connection indices. Activation is never serialized.
 
-The mode selector does not change the game's **Teleport To...** placement. EVA mode restores native
-righting behavior afterward; immediate upright surface placement is a separate, unimplemented fix.
+In **iron man** mode, physics-debug **Teleport To...** and its named surface destinations place the
+kitten head-up with feet/equipment clearance calculated from the full vehicle bounds. This applies
+only to the specific kitten in Iron Man mode when the teleport is requested. Wait for a pending
+mode switch to finish before teleporting. EVA-mode kittens, ordinary vessels and other teleport
+paths retain stock behavior. Existing attitude commands may subsequently turn the kitten normally.
+See [surface teleport details](../plans/iron-man/SURFACE_TELEPORT.md).
 
 **Saves with connected Iron Man nodes require Unscience/Iron Man to load correctly.** Keep the mod
 installed. Old saved files are not rewritten on unload. Normal unload converts supported live

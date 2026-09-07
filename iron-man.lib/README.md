@@ -34,6 +34,11 @@ Iron Man development host. See [player controls](../iron-man/README.md) and the 
 - `IronManRenderPatches` submits authored equipment before the normal part-batch upload while
   leaving the avatar in its original later phase. Rendering remains enabled for authored parts
   after flight activation is switched off.
+- `IronManTeleportPatches` replaces only the surface-placement helper call inside
+  `Vehicle.TeleportToLocation`. Active Iron Man kittens use headward proxy bounds for native terrain/
+  launchpad clearance, then convert orientation/rates back into unchanged body coordinates.
+  EVA mode, ordinary vessels, general teleports and other placement-helper callers remain stock.
+  See [surface teleport](../plans/iron-man/SURFACE_TELEPORT.md).
 - `IronManControlFramePatches` supplies headward default rocket controls through `Vehicle.Ctrl2Body`;
   explicit control parts/ports keep their native frame. `IronManEditorOrientationPatches` changes
   the orbit camera basis and vertical pan/bounds for the complete editor scene, preserving geometry.

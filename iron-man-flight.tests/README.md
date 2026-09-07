@@ -30,6 +30,15 @@ assembly geometry; per-root backpack map bypass, unchanged authored maps and glo
 default-off, disable, unload and reapply. IL checks preserve labels/exception boundaries and reject
 missing/duplicate target patterns. The control getter fixture mirrors the game's nullable control
 selection expression without a `NoInlining` attribute; Debug and Release exercise warmed callers.
+
+Surface-teleport checks link the production placement transpiler and adapter. They verify one
+native helper call and the unchanged deferred teleport queue, asymmetric bounds and all eight
+corners, the four lowest-face terrain probes, exact feet/accessory clearance, center-of-mass
+conversion, nonidentity orientation and physical angular-rate preservation. Celestial, time,
+latitude/longitude, color and the native orbit object survive unchanged. Default/configured EVA,
+disposed kittens, ordinary vehicles, direct shared-helper calls and unrelated teleport paths stay
+native. Tests also cover explicit control-part independence, mode changes after enqueueing,
+disable/unload/reapply, and receiver insertion with preserved branch/exception metadata.
 Configured EVA-mode fixtures also retain upright editor/panning while restoring the native flight
 frame and RCS map. [Mode lifecycle tests](../iron-man-mode.tests/README.md) additionally exercise the
 actual production submod's transition/configuration logic.

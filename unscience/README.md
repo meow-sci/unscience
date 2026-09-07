@@ -25,7 +25,7 @@ A unified supermod that consolidates 28 KSA feature libraries into a single ImGu
 | Hot Pursuit | Mounts live secondary cameras on vehicle parts |
 | Humble Arteest | Kitten colors, engine emissive controls, and experimental vehicle paint |
 | I Feel Seen | Forces vehicle render data updates at any distance |
-| Iron Man | EVA/Iron Man flight-mode buttons, upright editing in either mode, configurable nodes and headward rocket flight controls |
+| Iron Man | EVA/Iron Man flight-mode buttons, upright editing, configurable nodes, rocket controls and upright surface teleports in Iron Man mode |
 | Its So Shiny | Builds and controls Blinky-style pixel grids from built-in light parts |
 | Kitchen Sink | Miscellaneous editor and IVA-rendering experiments |
 | Kitten Animations | Targets any live EVA kitten through a filterable picker, then plays body animations and expressions |

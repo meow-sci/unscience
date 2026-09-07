@@ -8,7 +8,8 @@ development project. Complete signatures, direct APIs, save format and native ac
 
 | Game surface | Owner / behavior | Validation / risk |
 |---|---|---|
-| `IronManSubmod.IsConfigured/IsEnabled`; `KittenEva.ControlMode/SetControlMode`; `Vehicle.SetControlPart` | Full EVA/Iron Man mode switching; editor support independent of flight, valid EVA control-selection restoration | Actual production submod lifecycle fixture; queued transitions and native mode restrictions. No teleport patch. See [flight modes](../plans/iron-man/FLIGHT_MODES.md). |
+| `IronManSubmod.IsConfigured/IsEnabled`; `KittenEva.ControlMode/SetControlMode`; `Vehicle.SetControlPart` | Full EVA/Iron Man mode switching; editor support independent of flight, valid EVA control-selection restoration | Actual production submod lifecycle fixture; queued transitions and native mode restrictions. See [flight modes](../plans/iron-man/FLIGHT_MODES.md). |
+| `Vehicle.TeleportToLocation`; static `GetInitialKinematicStateForLocation`; `Vehicle.InitialKinematicState` | One guarded call-site adapter: active Iron Man kittens receive head-up surface placement with transformed full bounds, preserving native terrain/launchpad/orbit/event logic | Exact signatures and one-call IL guard; managed bounds/frame/rates/queue/isolation checks. General teleport and other helper callers untouched. See [surface teleport](../plans/iron-man/SURFACE_TELEPORT.md). |
 | `Vehicle.Ctrl2Body`; private `OrbitController.GetFrame2Ecl/EditorOnScroll`; `ThrusterController.RecomputeDynamicData/ManualControlMap` | Enabled Iron Man rocket frame, upright complete editor view/pan, geometric root-backpack RCS maps | Getter/camera postfixes and guarded pan/map transpilers; explicit control choices preserved. Native authority cache reset at joined membership changes. See [orientation](../plans/iron-man/ORIENTATION.md). |
 | `GaugeCanvas.IsContextVisible`; `GaugeButtonFlightComputer.IsDisabled/PackData`; closed base `Vehicle.IsFlightComputerDisabled<Enum>` | Three guarded transpilers select vessel gauges + native policy for enabled kittens, preserve remaining context/target/burn/engine gates | Actual Harmony fixture checks; no generic-method patch or saved UI changes. See [flight-computer research](../plans/iron-man/FLIGHT_COMPUTER.md). |
 | `FlightComputer.AttitudeFrame/AttitudeTrackTarget/CustomAttitudeTarget/RollMode/AngleDeadband/RateLimit`; `ActiveControlSystem.X/Y/Z` | Expanded disable/unload settings restoration and native actuator readout | Typed, managed snapshot checks; burn progress/telemetry untouched. |
@@ -1025,6 +1026,9 @@ restoration before connection-index regeneration and Program render upload/bucke
 The orientation follow-up adds the `Vehicle.Ctrl2Body` getter, private orbit-camera frame/scroll
 methods, exactly two editor pan axes/bounds and one `ThrusterController.ManualControlMap` read;
 preserve common control-frame use by navball/navigation/module updates and native authority invalidation.
+The surface-teleport follow-up requires exactly one eight-argument static placement helper call inside
+`Vehicle.TeleportToLocation(Celestial,double,double)`. Preserve mass-centered bounds, +X-up placement,
+mutable initial state fields and native queued application; eligibility is active Iron Man at request time.
 
 NOT compile-checked — a game rename breaks these at runtime with no build error. Re-verify each name
 on every game update FIRST.

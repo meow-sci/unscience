@@ -15,8 +15,8 @@ the existing shared physics handoff installed by Garry's Torch. No abstraction i
 
 Every kitten starts in EVA mode. Full-width `eva mode` / `iron man` buttons queue mode changes.
 `IsConfigured` authorizes editor support after an explicit Edit or Iron Man action, including in
-EVA mode; `IsEnabled` gates rocket worker/input/HUD/frame/RCS behavior only. Authored-node restoration,
-data integrity and equipment rendering remain passive in EVA mode. No stock asset/template is mutated.
+EVA mode; `IsEnabled` gates rocket worker/input/HUD/frame/RCS behavior and surface-teleport correction.
+Authored-node restoration, data integrity and equipment rendering remain passive in EVA mode. No stock asset/template is mutated.
 See [mode transitions](../plans/iron-man/FLIGHT_MODES.md).
 
 ## Harmony and reflection watchlist
@@ -26,6 +26,7 @@ signature/overload changes; private string names must be re-grepped on every gam
 
 | Target | Patch / owner | Required behavior |
 |---|---|---|
+| `Vehicle.TeleportToLocation(Celestial,double,double)` | surface-teleport transpiler | Exactly one static `GetInitialKinematicStateForLocation(Celestial,UniverseTime,double,double,double3,double3,double3,byte4)` call receives the vehicle via an adapter. Only live active Iron Man kittens: permute full bounds/center to rocket axes, reuse native placement, convert returned orientation/body rates; preserve orbit and native event queue. |
 | `Vehicle.get_Ctrl2Body()` | control-frame postfix | Enabled kitten without explicit control part/connector: control X→body -Z, Y→Y, Z→X. Shared by navball, rates, worker navigation and modules. |
 | private `OrbitController.GetFrame2Ecl(IFollowable,CameraReferenceFrame)` | editor-orientation postfix | Own configured EditingSpace + Editor frame only, in either flight mode: camera +Z maps to body -Z; geometry unchanged. |
 | private `OrbitController.EditorOnScroll(GlfwWindow,double2)` | editor-orientation transpiler | Exactly two UnitX getters and two CameraOffset.X field reads become scoped headward pan and projected bounds. |
@@ -54,6 +55,12 @@ Unexpected IL match counts fail installation with rollback; removed hooks restor
 
 ## Direct APIs and behavioral dependencies
 
+- `Vehicle.InitialKinematicState` mutable `Orbit/Body2Cce/BodyRates`; native surface helper assumes
+  +X-up and samples minimum-X footprint. `TeleportToLocation` passes mass-centered bounds from
+  `MassToGeometryAsmb` and `BoundingBoxAsmb`, with zero center. Preserve native terrain/launchpad
+  placement and surface velocity. Eligibility is checked on the receiver at request time;
+  `InputEvents.TeleportInputData.Apply` runs before the mod mode-change handoff in `Program.PrepareFrame`.
+  No shared helper or general `Vehicle.Teleport` patch. See [surface teleport](../plans/iron-man/SURFACE_TELEPORT.md).
 - `IronManEvaSettings` additionally captures `Vehicle.ControlPart/ControlConnector` and
   `KittenEva.ControlMode`; restores through `Vehicle.SetControlPart` (same-tree guard plus native
   validation) and `KittenEva.SetControlMode` (native CCF restrictions). Both transition directions
@@ -125,7 +132,9 @@ Harmony default-off/per-instance routing, base dispatch, render ordering and res
 Native-HUD checks add context combinations, default-off/per-instance/control switching,
 both button call sites and native restrictions, deferred clicks, GPU bits, changed-IL
 rejection, unpatch/reapply and control-settings restoration without telemetry rollback. Fixture
-checks do not prove native rendering or physics.
+checks do not prove native rendering or physics. Surface-teleport checks exercise all corners of
+asymmetric bounds, center/clearance, nonidentity orientation and world angular rates, native
+argument/orbit identity, queued request timing, active-only isolation, other paths and IL boundaries/count guards.
 
 The user reports that the initial mod works apart from the unavailable flight computer. The new
 HUD correction addresses that reported gap; live autopilot response remains to be verified.
@@ -144,6 +153,11 @@ HUD correction addresses that reported gap; live autopilot response remains to b
       explicit control parts/ports retain their selected axes. Disable restores EVA controls.
 - [ ] Editor opens upright with equipment/nodes/picking aligned; scroll moves vertically and bounds
       work for a rotated EditingSpace. Exit/re-enter leaves root/attachment geometry unchanged.
+- [ ] In active Iron Man mode, map Apply and named Teleport To destinations place the head upward
+      with boots/equipment clear of terrain and launchpads, including scaled/asymmetric builds.
+      EVA-mode/configured kittens, other inactive kittens, ordinary vessels and other teleport paths
+      retain native placement. Wait for queued mode selection before teleport; an existing FC
+      attitude target may turn the kitten afterward.
 - [ ] Backpack RCS follows rocket axes, including engines off; disable restores authored EVA maps.
 - [ ] Enable one of two kittens; only that kitten gets vessel controls/physics. Reject ladder enable.
 - [ ] Editor avatar aligns with body nodes, including a scaled kitten. Body/root actions are blocked;

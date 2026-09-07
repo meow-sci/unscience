@@ -145,7 +145,7 @@ public class GaugeButtonFlightComputer(Enum value)
     }
 }
 
-public static class InputEvents
+public static partial class InputEvents
 {
     public static readonly List<(Vehicle Vehicle, Enum Value)> Commands = new();
     public static void ApplyAll()

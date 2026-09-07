@@ -19,6 +19,7 @@ public static class IronManPatches
             IronManControlFramePatches.Apply(harmony);
             IronManEditorOrientationPatches.Apply(harmony);
             IronManRcsOrientationPatches.Apply(harmony);
+            IronManTeleportPatches.Apply(harmony);
             Ready = true;
         }
         catch
@@ -31,6 +32,7 @@ public static class IronManPatches
     public static void Remove(Harmony harmony)
     {
         Ready = false;
+        RemoveSafely(() => IronManTeleportPatches.Remove(harmony));
         RemoveSafely(() => IronManRcsOrientationPatches.Remove(harmony));
         RemoveSafely(() => IronManEditorOrientationPatches.Remove(harmony));
         RemoveSafely(() => IronManControlFramePatches.Remove(harmony));
