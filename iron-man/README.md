@@ -7,10 +7,12 @@ is a development host and does not produce a separate release.
 ## Use
 
 1. Control a live EVA kitten. Open **F11 → Iron Man**.
-2. Explicitly check **Enable Iron Man for this kitten**. Every kitten starts disabled, including
-   after loading a save. Release any ladder first. Activation stops engines and selects manual
-   vessel control; walking/swimming/ladder movement is replaced while enabled.
-3. Choose **Edit this kitten**. The kitten appears upright, with matching vertical camera scrolling.
+2. Under **flight mode**, use the full-width button pair: **eva mode** on the left and **iron man**
+   on the right. The current mode is highlighted. Every kitten starts in EVA mode, including after
+   loading a save. EVA uses native walking/swimming/ladder/MMU controls; Iron Man uses vessel physics,
+   headward rocket controls, vessel HUD and geometric backpack RCS. Both modes retain equipment.
+3. Choose **Edit this kitten** in either mode. Release any ladder before editing or entering Iron
+   Man. The kitten appears upright, with matching vertical camera scrolling.
    The actual kitten stays visible in the stock editor, and its body
    cannot be deleted, grabbed, copied, replaced as root or turned into a new vehicle.
 4. Two body nodes are added automatically: **Up** at `(0,0,-0.43)` pointing toward `-Z`, and **Down**
@@ -24,23 +26,29 @@ is a development host and does not produce a separate release.
 6. Use the stock part browser to snap compatible small tanks/engines/RCS onto the body or attached
    equipment. Nodes carry bulk propellant, service fluid and electrical connections. Configure
    tank propellants and resource groups as for any vessel; arrange thrust around the center of mass.
-7. Choose **Return to flight**, completing the stock editor exit prompts. The normal vessel
-   **Autopilot Settings** panel replaces the EVA-only controls while Iron Man is enabled. If hidden,
+7. Choose **Return to flight**, completing the stock editor exit prompts. Editing preserves your
+   selected flight mode. Choose **iron man** to fly the rockets; entry stops/disarms all engines and
+   selects manual attitude/burn/direct thrust. The normal vessel **Autopilot Settings** panel
+   replaces the EVA-only controls in Iron Man mode. If hidden,
    open **HUD → Autopilot Settings**. Use its attitude targets, reference-frame holds, roll/RCS,
    profiles and applicable burn controls. Missing-target, engine and burn restrictions remain stock.
    Iron Man also offers **Arm attached engines**, **Ignite**, quick attitude/RCS controls and
    **Shut down and disarm**; arming affects every engine module on this kitten. Normal vessel
    throttle/movement bindings apply. Iron Man supplies no free fuel or extra thrust.
-8. Return to flight before clearing the enable checkbox. Disabling stops/disarms engines and
-   restores the previous flight-computer modes, frame/target, roll and tuning settings, and stock
-   EVA movement. Equipment and nodes stay attached and visible; remove equipment in the editor
-   when you no longer want its mass.
+8. Choose **eva mode** to return to native kitten behavior. This stops/disarms engines and restores
+   the pre-entry EVA flight-computer settings, valid control part/port and View/Direct preference
+   (subject to the game's restrictions). Editor access and equipment remain available. Subsequent
+   Iron Man entries start manual again; arm/ignite explicitly. The buttons are unavailable while
+   an operation is pending or the editor is open. Switching does not rotate or teleport the kitten.
 
 ## Saves and limits
 
 Node definitions persist inside the existing part-instance save data. Runtime part IDs and shared
 stock templates remain unchanged. Deep-copy/serialization restores the nodes before resolving
 connection indices. Activation is never serialized.
+
+The mode selector does not change the game's **Teleport To...** placement. EVA mode restores native
+righting behavior afterward; immediate upright surface placement is a separate, unimplemented fix.
 
 **Saves with connected Iron Man nodes require Unscience/Iron Man to load correctly.** Keep the mod
 installed. Old saved files are not rewritten on unload. Normal unload converts supported live
@@ -66,7 +74,8 @@ is currently assigned. Autopilot cannot steer without torque. While enabled, the
 nose points from the feet toward the head: **Up** points the head away from the surface with boots
 below it. Navball, attitude controls and backpack RCS share that frame. An explicitly selected
 control part or docking port keeps its chosen orientation. Disabling restores the EVA frame.
-Existing attachment positions and save coordinates are unchanged. See the
+Existing attachment positions and save coordinates are unchanged. The editor stays upright in
+both modes. See the [mode-switch design](../plans/iron-man/FLIGHT_MODES.md), the
 [orientation correction](../plans/iron-man/ORIENTATION.md) and the
 [flight-computer investigation](../plans/iron-man/FLIGHT_COMPUTER.md).
 

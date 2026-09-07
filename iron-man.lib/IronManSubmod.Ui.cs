@@ -15,7 +15,7 @@ public sealed partial class IronManSubmod
 
     public void RenderContent()
     {
-        ImGui.TextWrapped("Fit tanks, engines and RCS to an existing EVA kitten. Activation lasts for this session only."u8);
+        ImGui.TextWrapped("Fit tanks, engines and RCS to an existing EVA kitten. Choose native EVA movement or Iron Man rocket flight."u8);
         if (!IronManPatches.Ready)
         {
             ImGui.TextWrapped("Iron Man could not install its game hooks. See the game log."u8);
@@ -25,29 +25,32 @@ public sealed partial class IronManSubmod
         if (kitten == null)
         {
             ImGui.TextDisabled("Control an EVA kitten to configure it."u8);
-            ImGui.Text($"Enabled kittens: {_enabled.Count}");
+            ImGui.Text($"Kittens in Iron Man mode: {_enabled.Count}");
             return;
         }
 
         ImGui.Text($"Kitten: {kitten.Id}");
-        bool enabled = IsEnabled(kitten);
+        bool rocket = IsEnabled(kitten);
         bool editing = Program.Editor?.ExistingVehicle == kitten;
+        ImGui.Text("flight mode"u8);
         ImGui.BeginDisabled(_pending || Program.IsEditorOpen);
-        if (ImGui.Checkbox("Enable Iron Man for this kitten"u8, ref enabled))
-        {
-            bool desired = enabled;
-            Queue(kitten, () => { if (desired) Enable(kitten); else Disable(kitten); });
-        }
+        float width = Math.Max(1f, (ImGui.GetContentRegionAvail().X - ImGui.GetStyle().ItemSpacing.X) / 2f);
+        if (ModeButton("eva mode"u8, !rocket, width) && rocket)
+            Queue(kitten, () => Disable(kitten));
+        ImGui.SameLine();
+        if (ModeButton("iron man"u8, rocket, width) && !rocket)
+            Queue(kitten, () => Enable(kitten));
         ImGui.EndDisabled();
         ImGui.TextWrapped(_status);
-        if (!IsEnabled(kitten)) return;
 
-        ImGui.TextWrapped("Vessel mode replaces walking, swimming and ladder controls. Equipment follows the body, not animated feet."u8);
+        ImGui.TextWrapped(rocket
+            ? "Iron Man uses vessel physics, headward rocket controls and the flight computer."
+            : "EVA mode uses native walking, swimming, ladder and MMU controls. Equipment stays attached.");
         ImGui.BeginDisabled(_pending);
         if (!editing)
         {
             if (ImGui.Button("Edit this kitten"u8)) Queue(kitten, () => OpenEditor(kitten));
-            DrawFlightControls(kitten);
+            if (rocket) DrawFlightControls(kitten);
         }
         else
         {
@@ -57,8 +60,15 @@ public sealed partial class IronManSubmod
         }
         ImGui.EndDisabled();
         ImGui.Separator();
-        ImGui.TextWrapped("Saves containing these nodes require Iron Man to load connected parts. Keep Unscience installed. Activation stays off after loading."u8);
+        ImGui.TextWrapped("Saves containing these nodes require Iron Man to load connected parts. Keep Unscience installed. Flight mode starts as EVA after loading."u8);
         ImGui.TextWrapped("Use this existing-kitten workflow; launching an EVA blueprint from an empty stock editor does not create a kitten."u8);
+    }
+
+    private static bool ModeButton(ImString label, bool selected, float width)
+    {
+        if (selected) ImGui.PushStyleColor(ImGuiCol.Button, ImGui.GetColorU32(ImGuiCol.ButtonActive));
+        try { return ImGui.Button(label, new float2(width, 0)); }
+        finally { if (selected) ImGui.PopStyleColor(); }
     }
 
     private void DrawFlightControls(KittenEva kitten)
@@ -168,7 +178,7 @@ public sealed partial class IronManSubmod
         Queue(kitten, () =>
         {
             var editor = Program.Editor;
-            if (!IsEnabled(kitten) || editor?.ExistingVehicle != kitten || editor.EditingSpace.Parts?.Root != root)
+            if (!IsConfigured(kitten) || editor?.ExistingVehicle != kitten || editor.EditingSpace.Parts?.Root != root)
                 throw new InvalidOperationException("The edited body changed; select the node again.");
             edit();
             editor.EditingSpace.Parts.RecomputeAllDerivedData();

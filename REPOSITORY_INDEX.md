@@ -454,7 +454,8 @@ box detection, openings, degenerates, triangle budgets and 200 collider/render a
 Opt-in existing EVA kitten vehicle editing and rocket flight. Keeps the `KittenEva` identity and
 avatar, adds private up/down or editable body nodes, preserves connector indices in saves/copies,
 uses ordinary vessel physics/input only after explicit per-kitten activation, and submits attached
-equipment at the correct render phase. Disabled by default, including after save load. Body parts
+equipment at the correct render phase. Full-width EVA/Iron Man mode buttons separate native kitten
+behavior from rocket flight; editing remains available in both modes. Starts in EVA after save load. Body parts
 are protected in the editor; activated kittens use native vessel flight-computer gauges and stock
 action eligibility, upright whole-scene editor view, headward default rocket controls and geometric
 backpack RCS mapping, with quick engine/RCS and per-axis actuator readouts in the mod panel. Rigid body attachments,
@@ -475,3 +476,10 @@ dispatch, early equipment/late avatar rendering, visible disabled equipment, coe
 render prefix installed in either order, native gauge context/button dispatch and control-settings
 restoration, rocket/editor orientation, scoped backpack RCS mapping, and unload/reapply.
 Native flight-computer acceptance remains open.
+
+### [iron-man-mode.tests](iron-man-mode.tests)
+
+Managed checks linking the production submod and EVA/flight-settings snapshots against lifecycle
+fixtures. Covers deferred mode changes, manual/disarmed entry, native settings/control restoration,
+editor access in either mode, guards, repeated cycles, per-kitten isolation and disposal/pruning.
+No native physics or GUI initialization; see [test details](iron-man-mode.tests/README.md).

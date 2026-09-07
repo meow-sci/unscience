@@ -67,7 +67,7 @@ public static class IronManEditorPatches
     private static KittenEva? GetKitten(VehicleEditor? editor)
     {
         return editor?.ExistingVehicle is KittenEva kitten && !kitten.IsDisposed
-            && IronManSubmod.Instance?.IsEnabled(kitten) == true ? kitten : null;
+            && IronManSubmod.Instance?.IsConfigured(kitten) == true ? kitten : null;
     }
 
     private static bool IsBody(Part? part, KittenEva kitten)

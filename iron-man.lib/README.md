@@ -4,9 +4,11 @@
 Iron Man development host. See [player controls](../iron-man/README.md) and the source-backed
 [design research](../plans/iron-man/RESEARCH.md).
 
-- `IronManSubmod` keeps activation by actual `KittenEva` reference, snapshots flight-computer modes,
-  queues mutations through the shared `PhysicsFrameHook`, rejects ladder activation and restores
-  modes on disable. UI code owns editor entry/exit, attachment forms and engine/RCS controls.
+- `IronManSubmod` separates configured editor support from active rocket mode by actual `KittenEva`
+  reference. Full-width EVA/Iron Man buttons queue transitions through `PhysicsFrameHook`; both
+  modes can edit equipment. `IronManEvaSettings` restores the pre-entry flight-computer settings,
+  valid control part/port and native View/Direct preference. Each rocket entry is manual/disarmed.
+  Existing MMU worker bookkeeping is preserved alongside its matching EVA settings snapshot.
 - `IronManPatches` coordinates transactional installation. An installation failure disables the
   feature rather than leaving the UI capable of activating a partial integration.
 - `IronManConnectors` owns private connector templates per instance. It maintains authored
@@ -37,7 +39,9 @@ Iron Man development host. See [player controls](../iron-man/README.md) and the 
   the orbit camera basis and vertical pan/bounds for the complete editor scene, preserving geometry.
   `IronManRcsOrientationPatches` lets native geometry remap enabled root-backpack jets without
   changing authored maps. Membership is published as immutable snapshots for worker reads;
-  enable/disable invalidate thruster authority at the joined handoff. See [orientation](../plans/iron-man/ORIENTATION.md).
+  mode changes invalidate thruster authority at the joined handoff. Editor hooks use `IsConfigured`;
+  physics/input/HUD/control-frame/RCS hooks use `IsEnabled` (active Iron Man mode).
+  See [orientation](../plans/iron-man/ORIENTATION.md) and [mode transitions](../plans/iron-man/FLIGHT_MODES.md).
 
 `Apply(Harmony)` / `Remove(Harmony)` use the caller's Harmony owner. Unscience supplies the shared
 frame handoff through Garry's Torch's existing installation; the development host installs it

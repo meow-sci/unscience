@@ -10,11 +10,12 @@ namespace MeowSci.IronManLib;
 /// <summary>Session-only, explicit per-kitten authorization for editor and rigid-vessel flight.</summary>
 public sealed partial class IronManSubmod : ISubmod
 {
-    private readonly Dictionary<KittenEva, IronManFlightSettings> _enabled = new();
+    private readonly Dictionary<KittenEva, IronManEvaSettings> _enabled = new();
+    private readonly HashSet<KittenEva> _configured = new();
     private KittenEva[] _enabledSnapshot = Array.Empty<KittenEva>();
     private bool _disposed;
     private bool _pending;
-    private string _status = "Off by default. Control an EVA kitten to begin.";
+    private string _status = "EVA mode by default. Edit your equipment or choose iron man to fly.";
 
     public static IronManSubmod? Instance { get; private set; }
     public string Name => "Iron Man";
@@ -22,6 +23,7 @@ public sealed partial class IronManSubmod : ISubmod
     // The control frame and RCS mapping are also read by physics workers. Publish membership
     // snapshots so pruning a disposed kitten never races a worker's Dictionary lookup.
     public bool IsEnabled(KittenEva kitten) => Array.IndexOf(Volatile.Read(ref _enabledSnapshot), kitten) >= 0;
+    public bool IsConfigured(KittenEva kitten) => !_disposed && _configured.Contains(kitten);
     private void PublishEnabled() => Volatile.Write(ref _enabledSnapshot, _enabled.Keys.ToArray());
     private static KittenEva? Target => Program.Editor?.ExistingVehicle as KittenEva
         ?? Program.ControlledVehicle as KittenEva;
@@ -32,12 +34,15 @@ public sealed partial class IronManSubmod : ISubmod
     {
         // A new save/system never inherits activation, even if its vehicle ids are identical.
         if (Universe.CurrentSystem == null) _pending = false;
-        if (_enabled.Count == 0) return;
+        if (_configured.Count == 0) return;
         var live = VehicleProvider.GetAllVehicles(includeDebris: true);
         bool changed = false;
-        foreach (var kitten in _enabled.Keys.ToArray())
+        foreach (var kitten in _configured.ToArray())
             if (kitten.IsDisposed || !live.Contains(kitten))
+            {
+                _configured.Remove(kitten);
                 changed |= _enabled.Remove(kitten);
+            }
         if (changed) PublishEnabled();
     }
 
@@ -66,40 +71,51 @@ public sealed partial class IronManSubmod : ISubmod
     private void Enable(KittenEva kitten)
     {
         if (IsEnabled(kitten)) return;
-        if (!IronManPatches.Ready)
-            throw new InvalidOperationException("Iron Man integration is unavailable; see the game log.");
-        if (Program.IsEditorOpen)
-            throw new InvalidOperationException("Return to flight before enabling Iron Man.");
-        if (kitten.LocomotionState.Mode == LocomotionMode.Ladder)
-            throw new InvalidOperationException("Release the ladder before enabling Iron Man.");
-        var original = new IronManFlightSettings(kitten.FlightComputer);
-        IronManConnectors.EnsureDefaults(kitten.Parts.Root);
-        kitten.Parts.RecomputeAllDerivedData();
-        kitten.UpdateVehicleConfiguration();
-        kitten.ClearHeldPlayerInput();
-        kitten.SetEnum(VehicleEngine.MainShutdown);
+        CheckCanEnter(kitten);
+        Configure(kitten);
+        var original = new IronManEvaSettings(kitten);
+        StopEngines(kitten);
         kitten.FlightComputer.AttitudeMode = FlightComputerAttitudeMode.Manual;
         kitten.FlightComputer.BurnMode = FlightComputerBurnMode.Manual;
         kitten.FlightComputer.SetManualThrustMode(FlightComputerManualThrustMode.Direct);
         _enabled.Add(kitten, original);
         PublishEnabled();
         IronManRcsOrientationPatches.InvalidateCache(kitten);
-        _status = "Enabled for this kitten. Open the editor to attach equipment.";
-        Console.WriteLine($"iron-man: enabled {kitten.Id}");
+        _status = "Iron Man mode. Rocket controls are manual; arm and ignite when ready.";
+        Console.WriteLine($"iron-man: rocket mode {kitten.Id}");
+    }
+
+    private static void CheckCanEnter(KittenEva kitten)
+    {
+        if (!IronManPatches.Ready)
+            throw new InvalidOperationException("Iron Man integration is unavailable; see the game log.");
+        if (Program.IsEditorOpen)
+            throw new InvalidOperationException("Return to flight before changing modes.");
+        if (kitten.LocomotionState.Mode == LocomotionMode.Ladder)
+            throw new InvalidOperationException("Release the ladder before editing or entering Iron Man mode.");
+    }
+
+    private void Configure(KittenEva kitten)
+    {
+        if (IsConfigured(kitten)) return;
+        IronManConnectors.EnsureDefaults(kitten.Parts.Root);
+        kitten.Parts.RecomputeAllDerivedData();
+        kitten.UpdateVehicleConfiguration();
+        _configured.Add(kitten);
     }
 
     private void Disable(KittenEva kitten)
     {
         if (!_enabled.TryGetValue(kitten, out var original)) return;
         if (Program.IsEditorOpen)
-            throw new InvalidOperationException("Return to flight before disabling Iron Man.");
+            throw new InvalidOperationException("Return to flight before changing modes.");
         StopEngines(kitten);
-        original.Restore(kitten.FlightComputer);
+        original.Restore(kitten);
         _enabled.Remove(kitten);
         PublishEnabled();
         IronManRcsOrientationPatches.InvalidateCache(kitten);
-        _status = "Disabled. EVA movement restored; attached equipment and nodes remain.";
-        Console.WriteLine($"iron-man: disabled {kitten.Id}");
+        _status = "EVA mode. Native kitten controls restored; equipment and editor remain available.";
+        Console.WriteLine($"iron-man: EVA mode {kitten.Id}");
     }
 
     private static void StopEngines(KittenEva kitten)
@@ -113,8 +129,10 @@ public sealed partial class IronManSubmod : ISubmod
 
     private void OpenEditor(KittenEva kitten)
     {
-        if (!IsEnabled(kitten) || Program.IsEditorOpen || Program.ControlledVehicle != kitten)
-            throw new InvalidOperationException("Control the enabled kitten in flight before opening the editor.");
+        CheckCanEnter(kitten);
+        if (Program.ControlledVehicle != kitten)
+            throw new InvalidOperationException("Control this kitten in flight before opening the editor.");
+        Configure(kitten);
         StopEngines(kitten);
         Program.EditorFlag = true;
         _status = "Editing the existing kitten. Return to flight applies the assembled equipment.";
@@ -126,7 +144,7 @@ public sealed partial class IronManSubmod : ISubmod
         // Lifecycle teardown is outside the normal queued handoff: wait before touching modules.
         JobSystems.VehicleSolver.Wait();
         JobSystems.ClothSolvers.Wait();
-        if (Program.Editor?.ExistingVehicle is KittenEva editing && IsEnabled(editing))
+        if (Program.Editor?.ExistingVehicle is KittenEva editing && IsConfigured(editing))
         {
             // Finish the existing-vessel transaction while the avatar and root guards still
             // exist. This applies the edited tree just as the stock frame-loop teardown does.
@@ -142,12 +160,13 @@ public sealed partial class IronManSubmod : ISubmod
             try
             {
                 StopEngines(pair.Key);
-                pair.Value.Restore(pair.Key.FlightComputer);
+                pair.Value.Restore(pair.Key);
                 IronManRcsOrientationPatches.InvalidateCache(pair.Key);
             }
             catch (Exception ex) { Console.WriteLine($"iron-man: teardown {pair.Key.Id}: {ex}"); }
         }
         _enabled.Clear();
+        _configured.Clear();
         PublishEnabled();
         _disposed = true;
         if (ReferenceEquals(Instance, this)) Instance = null;

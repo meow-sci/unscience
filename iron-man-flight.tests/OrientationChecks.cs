@@ -61,9 +61,18 @@ internal static class OrientationChecks
             CheckBackpackMapping(kitten, jets, submod);
 
             submod.Enabled.Remove(kitten);
+            submod.Configured.Add(kitten);
             SameRotation(kitten.Ctrl2Body, doubleQuat.Identity, "disable restores stock control frame");
             jets.RecomputeDynamicData();
             Require(jets.ResolvedMap == ThrusterMapFlags.PitchUp, "disable restores original authored map");
+            var configuredFrame = controller.GetFrame(editor.EditingSpace, CameraReferenceFrame.Editor);
+            Near(double3.UnitZ.Transform(configuredFrame), (-double3.UnitZ).Transform(editor.EditingSpace.Asmb2Ecl),
+                "configured EVA mode retains upright editor independently of rocket controls");
+            editor.CameraOffset = double3.Zero;
+            controller.Scroll(1);
+            Near(editor.CameraOffset, (-double3.UnitZ).Transform(editor.EditingSpace.Asmb2Ecl),
+                "configured EVA mode retains upright editor pan");
+            submod.Configured.Remove(kitten);
             var stockFrame = controller.GetFrame(editor.EditingSpace, CameraReferenceFrame.Editor);
             Near(double3.UnitZ.Transform(stockFrame), double3.UnitX.Transform(editor.EditingSpace.Asmb2Ecl),
                 "disable restores rocket editor up");

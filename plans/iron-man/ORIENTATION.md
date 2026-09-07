@@ -19,6 +19,10 @@ worker navigation construction paths in [PhysicsBubble](../../../ksa-game-assemb
 therefore points the headward rocket nose toward its target; Up means head away from the surface.
 This enables appropriate commands; it does not add steering torque.
 
+The [flight-mode selector](FLIGHT_MODES.md) subsequently separates editor authorization from active
+rocket mode: the editor stays upright in either mode, while flight-frame/RCS changes apply only in
+Iron Man mode. The orientation implementation below is otherwise unchanged.
+
 ## Backpack RCS
 
 The stock backpack has explicit `ManualControlMap` assignments authored for the original EVA

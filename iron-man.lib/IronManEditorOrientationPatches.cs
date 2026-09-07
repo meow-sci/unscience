@@ -53,7 +53,7 @@ public static class IronManEditorOrientationPatches
         if (!_applied) return null;
         var editor = Program.Editor;
         return editor?.ExistingVehicle is KittenEva kitten && !kitten.IsDisposed
-            && IronManSubmod.Instance?.IsEnabled(kitten) == true ? editor.EditingSpace : null;
+            && IronManSubmod.Instance?.IsConfigured(kitten) == true ? editor.EditingSpace : null;
     }
 
     private static void FramePostfix(IFollowable focused, CameraReferenceFrame referenceFrame, ref doubleQuat __result)

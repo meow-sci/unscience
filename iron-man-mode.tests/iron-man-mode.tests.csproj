@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Brutal.Core.Numerics"><HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath></Reference>
+    <Reference Include="Brutal.Core.Common"><HintPath>$(KSAFolder)Brutal.Core.Common.dll</HintPath></Reference>
+    <Compile Include="../iron-man.lib/IronManSubmod.cs" Link="IronManSubmod.cs" />
+    <Compile Include="../iron-man.lib/IronManFlightSettings.cs" Link="IronManFlightSettings.cs" />
+    <Compile Include="../iron-man.lib/IronManEvaSettings.cs" Link="IronManEvaSettings.cs" />
+  </ItemGroup>
+</Project>

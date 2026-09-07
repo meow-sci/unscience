@@ -30,6 +30,9 @@ assembly geometry; per-root backpack map bypass, unchanged authored maps and glo
 default-off, disable, unload and reapply. IL checks preserve labels/exception boundaries and reject
 missing/duplicate target patterns. The control getter fixture mirrors the game's nullable control
 selection expression without a `NoInlining` attribute; Debug and Release exercise warmed callers.
+Configured EVA-mode fixtures also retain upright editor/panning while restoring the native flight
+frame and RCS map. [Mode lifecycle tests](../iron-man-mode.tests/README.md) additionally exercise the
+actual production submod's transition/configuration logic.
 
 A bounded compatibility experiment found that a Harmony postfix on the closed generic
 `Vehicle.IsFlightComputerDisabled<Enum>` entry point affects normal virtual calls but can be

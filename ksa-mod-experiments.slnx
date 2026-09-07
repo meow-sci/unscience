@@ -68,5 +68,6 @@
     <Project Path="iron-man.tests/iron-man.tests.csproj" />
     <Project Path="iron-man/iron-man.csproj" />
     <Project Path="iron-man-flight.tests/iron-man-flight.tests.csproj" />
+    <Project Path="iron-man-mode.tests/iron-man-mode.tests.csproj" />
     <Project Path="iron-man.lib/iron-man.lib.csproj" />
 </Solution>

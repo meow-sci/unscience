@@ -49,6 +49,8 @@ namespace MeowSci.IronManLib
     {
         public static IronManSubmod? Instance;
         public HashSet<KSA.KittenEva> Enabled = new();
+        public HashSet<KSA.KittenEva> Configured = new();
         public bool IsEnabled(KSA.KittenEva kitten) => Enabled.Contains(kitten);
+        public bool IsConfigured(KSA.KittenEva kitten) => Configured.Contains(kitten) || Enabled.Contains(kitten);
     }
 }

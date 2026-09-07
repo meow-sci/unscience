@@ -13,9 +13,11 @@ StarMap development host with ImmediateLoad/AllModsLoaded/BeforeGui/AfterGui/Unl
 Its Patcher installs mandatory HotkeyGuard and PhysicsFrameHook; the bundled implementation uses
 the existing shared physics handoff installed by Garry's Torch. No abstraction implementation changes.
 
-No kitten is activated automatically. The session reference registry gates editor behavior and
-worker/input routing. Authored-node restoration, data integrity and equipment rendering remain
-passive while flight is disabled. No stock asset/template is mutated.
+Every kitten starts in EVA mode. Full-width `eva mode` / `iron man` buttons queue mode changes.
+`IsConfigured` authorizes editor support after an explicit Edit or Iron Man action, including in
+EVA mode; `IsEnabled` gates rocket worker/input/HUD/frame/RCS behavior only. Authored-node restoration,
+data integrity and equipment rendering remain passive in EVA mode. No stock asset/template is mutated.
+See [mode transitions](../plans/iron-man/FLIGHT_MODES.md).
 
 ## Harmony and reflection watchlist
 
@@ -25,7 +27,7 @@ signature/overload changes; private string names must be re-grepped on every gam
 | Target | Patch / owner | Required behavior |
 |---|---|---|
 | `Vehicle.get_Ctrl2Body()` | control-frame postfix | Enabled kitten without explicit control part/connector: control X→body -Z, Y→Y, Z→X. Shared by navball, rates, worker navigation and modules. |
-| private `OrbitController.GetFrame2Ecl(IFollowable,CameraReferenceFrame)` | editor-orientation postfix | Own enabled EditingSpace + Editor frame only: camera +Z maps to body -Z; geometry unchanged. |
+| private `OrbitController.GetFrame2Ecl(IFollowable,CameraReferenceFrame)` | editor-orientation postfix | Own configured EditingSpace + Editor frame only, in either flight mode: camera +Z maps to body -Z; geometry unchanged. |
 | private `OrbitController.EditorOnScroll(GlfwWindow,double2)` | editor-orientation transpiler | Exactly two UnitX getters and two CameraOffset.X field reads become scoped headward pan and projected bounds. |
 | `ThrusterController.RecomputeDynamicData` | RCS orientation transpiler | Exactly one ManualControlMap field read; enabled actual root-backpack uses native geometric mapping, authored field untouched. |
 | `GaugeCanvas.IsContextVisible()` | flight-computer transpiler | Exactly two `isinst KittenEva` sites become a session-gated EVA classifier. Preserve all other context predicates, AND behavior, empty/null cases and saved canvas settings. |
@@ -37,7 +39,7 @@ signature/overload changes; private string names must be re-grepped on every gam
 | `SuperMeshRenderSystem.ClearBuckets()` | editor postfix | Only matching Program renderer/main viewport/editor: submit avatar after clearing and before prepass (`Program.cs:4793`). |
 | `VehicleEditor.OnFrame`, `OnMouseButton`, `OnKey`, `UpdateSelected` | editor root-selection guards | Clear body selection/grab without interfering with accessory parts. |
 | `VehicleEditor.DeletePart(Part)`, `SetFocusedTree(PartTree)` | editor prefixes | Preserve existing body root and focused tree. |
-| private `VehicleEditor.DuplicateHighlightedPart`, `RequestNewVehicle`, `FinalizeNewVehicle` | editor prefixes | Block duplication of body and replacement/new-vessel actions during an activated EVA edit. |
+| private `VehicleEditor.DuplicateHighlightedPart`, `RequestNewVehicle`, `FinalizeNewVehicle` | editor prefixes | Block body duplication/replacement/new-vessel actions during a configured kitten edit in either flight mode. |
 | `VehicleSaveData.Create(string,PartTree)` | metadata postfix | Preserve Character for a live KittenEva with this exact authored root, including after disabling; no character guessed for unrelated trees. |
 | internal `Part.GetReferenceWithChildren(ref uint,PartInstance,bool)` | connector serialization postfix | Set marked instance Id only for owned nodes, preserving original Id, stock prefix count and ordered owned suffix. |
 | `Part(string,PartTemplate,PartInstance,Part)` | constructor prefix/postfix | Decode valid marked data, restore runtime Id, append nodes BEFORE `RegenerateConnectionsFromPartInstance` indexes them. |
@@ -52,6 +54,11 @@ Unexpected IL match counts fail installation with rollback; removed hooks restor
 
 ## Direct APIs and behavioral dependencies
 
+- `IronManEvaSettings` additionally captures `Vehicle.ControlPart/ControlConnector` and
+  `KittenEva.ControlMode`; restores through `Vehicle.SetControlPart` (same-tree guard plus native
+  validation) and `KittenEva.SetControlMode` (native CCF restrictions). Both transition directions
+  clear held input, MainShutdown and disarm; rocket entry selects manual attitude/burn/direct thrust.
+  Preserve worker MMU bookkeeping with its matching saved EVA FC state; no locomotion reset/teleport.
 - `Vehicle.ControlPart/ControlConnector/Ctrl2Body`; `VehicleEditingSpace.Asmb2Ecl`,
   `VehicleEditor.CameraOffset`; `ThrusterController.Parent.FullPart/ManualControlMap`,
   `Part.Tree.OwningVehicle/Template.Id`; root `KittenBackPackPart` authored RCS mappings.
@@ -124,6 +131,10 @@ The user reports that the initial mod works apart from the unavailable flight co
 HUD correction addresses that reported gap; live autopilot response remains to be verified.
 
 - [ ] Disabled startup: ordinary EVA walking, ladders, RCS, menu and save behavior unchanged.
+- [ ] Flight-mode buttons fill one row with current selection highlighted. Edit in EVA without
+      entering rocket mode; return preserves mode. Switch repeatedly through native walking/MMU and
+      rocket controls; engines stay disarmed on every switch, EVA preferences restore, other kittens
+      stay unchanged. Unload while editing a configured EVA closes the protected editor correctly.
 - [ ] Enable a kitten: native Autopilot Settings replaces EVA-only controls, honoring HUD visibility.
       Select valid frame/attitude/roll/profile/RCS actions; selected and disabled appearance matches
       actual clicks. Missing target/burn/engine still disables the corresponding controls. Switch to
