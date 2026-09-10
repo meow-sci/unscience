@@ -69,3 +69,27 @@ The caller transpiler now lives in `ksa-abstractions.lib/PhysicsFrameHook`; Garr
 its weld callback. Queued Godzilla edits run before this callback. Source scale ownership is exclusive:
 restore Godzilla before welding, or unweld before applying Godzilla. Managed checks also cover queued
 mutation ordering, reentrant deferral, exception isolation and stale-system queue disposal.
+
+## Scale preservation
+
+`WeldEngine.Scaling` owns a weak per-source `WeldScaleSnapshot`, captured during `CreateWeld`
+even at identity. Full-part scale edits multiply captured XYZ values; SubPart local scale,
+position and rotation stay game-owned. Descendant matrix caches are invalidated after parent
+scale edits so nested render transforms/anchors update. This keeps Flexo authored proportions
+and avoids multiplying the weld factor once per nested child. Full-part spacing remains fixed.
+The existing raw scaling path's module/collider limitations remain; this change does not add
+physics/module rescaling or alter mutation scheduling.
+
+UI/API/presets and queued animations all use the same `ApplyVehicleScale` implementation.
+`RestoreVehicleScale` restores only changed full parts still in the source, restores the captured
+kitten avatar scalar and clears its axis correction, and releases the snapshot even for a disposed
+source (without accessing disposed parts). Added full parts are captured at their first scale edit;
+detached parts are left alone. Restore without a snapshot is a no-op. Low-level callers must pair
+`ApplyVehicleScale` with `RestoreVehicleScale`; identity returns to baseline but keeps the session.
+The compatibility `SetPartScaleRecursive` helper remains an explicit absolute override and is
+not used by welding. Only `_characterAvatar` remains reflected; Core/Scale access is typed.
+
+Managed checks link these production implementations, animation queue and real kitten Harmony
+patch with the game numerics. Live-check Flexo nested custom scales with identity weld/unweld,
+unequal-axis edits, queued animations, automatic removal and unload; verify animated local
+transforms continue and original proportions return.

@@ -67,7 +67,7 @@ Stateless computation engine for vehicle welding. Contains all physics/math logi
 **Key Methods**:
 - `UpdateWeld(WeldEntry weld, UniverseTime stateTime)` - Teleports source vehicle to maintain relative position/rotation to target, then refreshes per-frame vehicle caches
 - `EulerDegreesToQuat(float pitch, float yaw, float roll)` - Converts Euler angles to quaternion with ZYX intrinsic convention
-- `ApplyVehicleScale(Vehicle vehicle, float3 scale)` - Applies independent X/Y/Z scale to all parts
+- `ApplyVehicleScale(Vehicle vehicle, float3 scale)` - Applies independent X/Y/Z multipliers to captured full-part scales
 
 **Key Logic**:
 - Uses quaternion multiplication: `worldRotation = targetRotation * relativeRotation`
@@ -149,7 +149,24 @@ Welds automatically break if:
 This prevents welds from stretching across planetary bodies.
 
 ### Scaling
-Each scale component is written to `Part.Scale` in the part's local X/Y/Z axes. KittenEva bypasses the ordinary part render transform, so Garry's Torch patches its private model-to-body matrix and applies the missing Y/X and Z/X corrections after retaining X in the game's scalar `CharacterCore.Scale` field.
+Scale XYZ is a multiplier of each full part's original local scale, captured when welding.
+SubParts inherit their parent's scaled transform; their authored scales (including Flexo custom
+scales) and animated local transforms are left intact. The multiplier is applied once through the
+hierarchy, and repeated edits or animations always use the captured baseline. Full-part spacing
+is unchanged. Returning the weld multiplier to `(1,1,1)` recovers the original proportions.
+
+Unweld, automatic weld removal and unload restore the full-part scales actually changed by the
+weld, then release the baseline. An identity weld makes no scale writes on removal. A new weld
+captures the current instance again. Detached parts keep their current scale; full parts added to
+the source are captured on the next scale edit. No XML definitions are changed.
+
+KittenEva uses its captured `CharacterCore.Scale` as the scalar X baseline, with the existing
+model-to-body matrix correction supplying Y/X and Z/X. Unweld restores the original avatar scalar
+and removes the axis correction, including when the starting size differs from the stock default.
+
+Previously, unweld unconditionally assigned `(1,1,1)` to every part and SubPart. Existing saves
+whose scales were already overwritten cannot be reconstructed by this fix; it preserves scales
+present when the new weld begins.
 
 The game exposes only a scalar `ScaleFactors` value to rescalable modules (derived from the largest axis). Garry's Torch therefore provides a true anisotropic part/model transform, but it does not invent anisotropic mass or module physics that KSA itself does not expose.
 

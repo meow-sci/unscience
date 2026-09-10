@@ -130,8 +130,7 @@ public sealed class GarrysTorchSubmod : ISubmod
         _animationManager.Clear();
         foreach (var weld in _welds)
         {
-            if (!weld.Source.IsDisposed)
-                WeldEngine.ApplyVehicleScale(weld.Source, WeldScale.Identity);
+            WeldEngine.RestoreVehicleScale(weld.Source);
             VehicleScaleOwnership.Release(weld.Source, "Garry's Torch");
         }
         _welds.Clear();
@@ -545,6 +544,18 @@ public sealed class GarrysTorchSubmod : ISubmod
         if (!VehicleScaleOwnership.TryAcquire(source, "Garry's Torch"))
             return (null, $"Restore {VehicleScaleOwnership.GetOwner(source)} scaling on {source.Id} before welding it.");
 
+        try
+        {
+            // Capture even at identity: unwelding must restore this instance, not template defaults.
+            WeldEngine.CaptureVehicleScale(source);
+        }
+        catch (Exception ex)
+        {
+            VehicleScaleOwnership.Release(source, "Garry's Torch");
+            Console.WriteLine($"garrys-torch: Could not capture source scale: {ex}");
+            return (null, $"Could not capture source scale: {ex.Message}");
+        }
+
         var entry = new WeldEntry
         {
             Source = source,
@@ -690,8 +701,7 @@ public sealed class GarrysTorchSubmod : ISubmod
     private void RemoveWeld(WeldEntry entry)
     {
         _animationManager.CancelAll(entry);
-        if (!entry.Source.IsDisposed)
-            WeldEngine.ApplyVehicleScale(entry.Source, WeldScale.Identity);
+        WeldEngine.RestoreVehicleScale(entry.Source);
         Console.WriteLine($"garrys-torch: Unwelded {entry.Source.Id} from {entry.Target.Id}");
         _welds.Remove(entry);
         VehicleScaleOwnership.Release(entry.Source, "Garry's Torch");

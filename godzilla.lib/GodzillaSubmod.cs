@@ -150,7 +150,7 @@ public sealed class GodzillaSubmod : ISubmod
         }
         else
         {
-            ImGui.TextWrapped("Basic sets every part and subpart's XYZ scale, like Garry's Torch. Part spacing stays fixed; overlaps and exaggerated child sizes are intentional. The game uses the largest axis for collider size.");
+            ImGui.TextWrapped("Basic sets every part and subpart's absolute XYZ scale. Part spacing stays fixed; overlaps and exaggerated child sizes are intentional. The game uses the largest axis for collider size.");
             ImGui.DragFloat3("XYZ scale##godzilla", ref _axes, 0.01f, 0.05f, 20f);
         }
         ImGui.TextWrapped("Changes last for this session; Restore returns the captured original size and layout. Growing on the ground can push geometry into the terrain.");

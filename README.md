@@ -99,3 +99,7 @@ every kitten starts in EVA mode. See [Iron Man](iron-man/README.md)
 and its [source research](plans/iron-man/RESEARCH.md). Managed checks run with
 `dotnet run --project iron-man.tests`, `dotnet run --project iron-man-flight.tests` and
 `dotnet run --project iron-man-mode.tests`.
+
+Garry's Torch weld scaling preserves custom authored SubPart scales (including Flexo parts).
+XYZ controls multiply captured full-part scales; unweld/unload restore the original instance
+proportions. See [scaling behavior](garrys-torch/README.md#scaling) for inheritance and restoration.

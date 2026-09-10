@@ -6,7 +6,7 @@ Godzilla lives in the single Unscience package. Open **F11 → Godzilla**, choos
 - **Smart** uses a uniform multiplier (0.05–20), scales full-part positions about the original
   center of mass, and multiplies their authored scales. Subparts inherit the result; their animated
   local positions, rotations and scales remain owned by the game.
-- **Basic** sets raw XYZ scales on all parts/subparts, like Garry's Torch, without changing full-part
+- **Basic** sets raw XYZ scales on all parts/subparts without changing full-part
   spacing. Child inheritance can exaggerate dimensions. KSA's `ScaleFactors` uses the largest axis
   for modules/colliders; anisotropic visuals do not imply anisotropic collision shapes.
 - **Restore original**, each entry's **Restore**, and **Restore all** recover captured part scales

@@ -19,7 +19,7 @@ seams and preserve branch/exception metadata. The intentional exception-isolatio
 one `fixture weld failure` log before the final PASS line. Any failed assertion exits nonzero.
 
 This validates the hook and timing contract, not the actual game's native physics, light rendering,
-part-anchor math or scale behavior. See the [library README](../garrys-torch.lib/README.md) for
+part-anchor math or native scale rendering. See the [library README](../garrys-torch.lib/README.md) for
 the required in-game checks and [scope](../scope/vehicle-physics.md) for the 5402 source trace.
 
 The caller transpiler now lives in `ksa-abstractions.lib/PhysicsFrameHook`; Garry's Torch registers
@@ -37,3 +37,15 @@ welds, restoration after exceptions and unload. `PresetChecks` uses production T
 a temporary directory to verify absent `collisions` defaults false and true/false values round-trip.
 These complement the existing actuator result-retention regression; they do not replace an in-game
 check of animated light parts, scaled compound colliders, weld chains, terrain and scenery.
+
+## Scale preservation regression
+
+`ScaleChecks` links production `WeldEngine.Scaling`, `WeldScaleSnapshot`, `WeldAnimation`,
+`WeldAnimationManager`, `ReflectionHelpers` and `KittenScalePatches` against managed part/avatar
+fixtures and real Brutal numerics. Checks cover custom XYZ full-part/SubPart baselines, identity
+unweld without writes, nested inheritance with warmed caches, repeated noncumulative edits,
+identity reset, animation midpoints/completion/queued reset, ongoing child animation, full-part
+spacing, detached/added parts, fresh baselines after restore, invalid inputs and disposed sources.
+A warmed-up kitten matrix method is patched with actual Harmony to check nondefault avatar scale,
+XYZ correction and complete restoration; failed avatar capture can be retried. The fixtures do
+not run the production UI or native KSA rendering/physics.

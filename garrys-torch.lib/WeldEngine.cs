@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using Brutal.Numerics;
 using KSA;
-using MeowSci.KsaAbstractions;
 
 namespace MeowSci.GarrysTorchLib;
 
 /// <summary>Stateless core weld computation logic.</summary>
-public static class WeldEngine
+public static partial class WeldEngine
 {
     /// <summary>
     /// Teleports the source vehicle at the just-applied state time, before the next workers start.
@@ -142,69 +140,6 @@ public static class WeldEngine
         // Compose: Yaw * Pitch * Roll (ZYX intrinsic Euler)
         return doubleQuat.Concatenate(doubleQuat.Concatenate(qYaw, qPitch), qRoll);
     }
-
-    /// <summary>Applies independent X/Y/Z scale factors to all parts of a vehicle.</summary>
-    public static void ApplyVehicleScale(Vehicle vehicle, float3 scale)
-    {
-        foreach (var part in vehicle.Parts.Parts)
-            SetPartScaleRecursive(part, scale);
-
-        // KittenEva's character model bypasses Part.Scale and renders via the scalar
-        // CharacterAvatar.Core.Scale (0.01 = 1:1). Keep X in that field as a safe
-        // uniform fallback, then let KittenScalePatches apply Y/X and Z/X to the
-        // private ModelToBodyMatrix result for a true anisotropic model transform.
-        if (vehicle is KittenEva kitten)
-        {
-            try
-            {
-                var renderable = kitten.Renderable;
-
-                var avatar = ReflectionHelpers.GetFieldValue(renderable, "_characterAvatar");
-                if (avatar == null) return;
-
-                var allFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-                var coreField = avatar.GetType().GetField("Core", allFlags);
-                var core = coreField?.GetValue(avatar);
-                if (core == null) return;
-
-                var scaleField = core.GetType().GetField("Scale", allFlags);
-                var scaleProp  = core.GetType().GetProperty("Scale", allFlags);
-
-                if (scaleField != null && scaleField.FieldType == typeof(float))
-                {
-                    scaleField.SetValue(core, scale.X * 0.01f);
-                    coreField!.SetValue(avatar, core);
-                }
-                else if (scaleProp != null && scaleProp.PropertyType == typeof(float))
-                {
-                    scaleProp.SetValue(core, scale.X * 0.01f);
-                    coreField!.SetValue(avatar, core);
-                }
-
-                KittenScalePatches.SetScale(renderable, scale);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"garrys-torch: KittenEva scale error: {ex.Message}");
-            }
-        }
-    }
-
-    /// <summary>Backwards-compatible uniform-scale overload.</summary>
-    public static void ApplyVehicleScale(Vehicle vehicle, float factor) =>
-        ApplyVehicleScale(vehicle, WeldScale.Uniform(factor));
-
-    /// <summary>Recursively sets XYZ scale on a part and all its sub-parts.</summary>
-    public static void SetPartScaleRecursive(Part part, float3 scale)
-    {
-        part.Scale = new double3(scale.X, scale.Y, scale.Z);
-        foreach (var sub in part.SubParts)
-            SetPartScaleRecursive(sub, scale);
-    }
-
-    /// <summary>Backwards-compatible uniform-scale overload.</summary>
-    public static void SetPartScaleRecursive(Part part, float factor) =>
-        SetPartScaleRecursive(part, WeldScale.Uniform(factor));
 
     /// <summary>
     /// Returns welds sorted so that a target is always processed before its source.

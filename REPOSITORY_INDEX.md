@@ -45,7 +45,7 @@ Vehicle welding system. Attaches one vehicle to another with support for positio
 - Vehicle-to-vehicle welding anchored to a **specific part** on the target vehicle (CoM-drift-proof; tracks robotics-moved parts)
 - Position and rotation offsets expressed relative to the target part's local frame
 - Per-weld rotation offset (pitch/yaw/roll)
-- Independent per-axis vehicle scaling with a KittenEva model-transform correction
+- Independent per-axis multipliers of captured full-part scales; preserves authored/animated SubPart scales through inheritance and restores originals on unweld/unload, including nondefault KittenEva avatar size
 - Rotation lock toggle and auto-unweld on parent mismatch
 - **Collisions** defaults off per weld, with create/edit controls, optional API arguments, and TOML preset persistence (legacy presets default off). Scoped Bepu shape suppression preserves module simulation; disabling/removing a weld restores collisions at the next snapshot.
 - Weld updates run through `GarrysTorchPatches` via shared `PhysicsFrameHook` at the `Program.PrepareFrame` simulation handoff, after completed results are applied and before cloth/vehicle/orbit workers start. Source light actuation retains committed progress; teleports use `SimStep.PreviousTime`. The patch validates the call order and is independent of HUD visibility.
@@ -62,7 +62,7 @@ Managed executable linking the production weld-timing Harmony patch against a sm
 fixture. Reproduces discarded actuator results and checks result retention, timestamps, pause/warp,
 patch removal, and rejection of missing/duplicate/reordered solver seams. Also runs the production
 collision patches against game-version Bepu for contact suppression/restoration and checks TOML
-preset migration/round-trip. Does not run native KSA.
+preset migration/round-trip. Scale checks link production snapshots, scale APIs, animation queue and kitten Harmony correction to cover authored nested scales, identity unweld, restoration and topology changes. Does not run native KSA.
 See its [README](garrys-torch.tests/README.md) for usage.
 
 ### [kiwis-marbles](kiwis-marbles) / [kiwis-marbles.lib](kiwis-marbles.lib)

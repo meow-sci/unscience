@@ -209,17 +209,17 @@ the legacy scalar `scale` key uniformly for backwards compatibility.
 | 11 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:75` | `IParentBody.GetCci2Cce()` — `doubleQuat` (interface) | `KSA/IParentBody.cs:51` | Yes | Same (file byte-identical) | Called on `Vehicle.Parent`. |
 | 12 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:58` | `Part.PositionVehicleAsmb` — `public double3` (computed property) | `KSA/Part.cs:704` | Yes | Same (OLD `Part.cs:696`) | Part-anchor position. |
 | 13 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:61` | `Part.Asmb2VehicleAsmb` — `public doubleQuat` (computed property) | `KSA/Part.cs:720` | Yes | Same (OLD `Part.cs:712`) | Part-anchor orientation. (5402 also added `Asmb2VehicleAsmb` to the nested `Part.Connection.IConnector` interface, `Part.cs:483` — unrelated to this binding.) |
-| 14 | Direct typed API (write) | `garrys-torch.lib/WeldEngine.cs` | `Part.Scale` — `public double3 Scale { get; set; }` (setter calls `ResetCachedPosMatrixValues`) | `KSA/Part.cs:815` | Yes | Same (OLD `Part.cs:807`) | Recursive XYZ scale write. KSA's separate `ScaleFactors(double3)` collapses module rescaling to the largest axis; Garry's Torch does not claim anisotropic mass/module physics. |
-| 15 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:157,201` | `Part.SubParts` — `public ReadOnlySpan<Part> SubParts`; `PartTree.Parts` — `public ReadOnlySpan<Part> Parts` | `KSA/Part.cs:1079`; `KSA/PartTree.cs:95` | Yes | Same (OLD `Part.cs:1052`; `PartTree.cs:95`) | Part-tree walk for scaling + target-part list. |
+| 14 | Direct typed API (read/write) | `garrys-torch.lib/WeldScaleSnapshot.cs` | `Part.Scale` — `public double3 Scale { get; set; }` (setter calls `ResetCachedPosMatrixValues`) | `KSA/Part.cs:815` | Yes | Same (OLD `Part.cs:807`) | Captured full-part XYZ multipliers; SubPart local scales are never overwritten by welding. KSA's separate `ScaleFactors(double3)` collapses module rescaling to the largest axis; Garry's Torch does not claim anisotropic mass/module physics. |
+| 15 | Direct typed API | `garrys-torch.lib/WeldScaleSnapshot.cs`; `WeldEngine.Scaling.cs` | `Part.SubParts` — `public ReadOnlySpan<Part> SubParts`; `PartTree.Parts` — `public ReadOnlySpan<Part> Parts` | `KSA/Part.cs:1079`; `KSA/PartTree.cs:95` | Yes | Same (OLD `Part.cs:1052`; `PartTree.cs:95`) | Part-tree walk for scaling + target-part list. |
 | 16 | Direct typed API | `garrys-torch.lib/GarrysTorchSubmod.cs:190,198` | `Part.Template` (`public PartTemplate Template`) -> `PartTemplate.Id` (`public string Id`, inherited `SerializedId.Id`); `Part.Id` (`public string Id { get; init; }`) | `KSA/Part.cs:576`,`698`; `KSA/SerializedId.cs:13` | Yes | Same (OLD `Part.cs:568`,`690`) | Target-part combo labels. |
 | 17 | Direct typed API | `ksa-abstractions.lib/PhysicsFrameHook.cs` | `Universe.GetJobSimStep(double)`; `SimStep.PreviousTime : UniverseTime` | `KSA/Universe.cs:2322`; `KSA/SimStep.cs:5` | Yes | Same | The wrapper computes the original step once and returns it unchanged. PreviousTime stamps the source orbit before workers start. |
 | 18 | Behavioral / callback argument | `ksa-abstractions.lib/PhysicsFrameHook.cs` | `Program.PrepareFrame` supplies `dtPlayer` to `GetJobSimStep` | `KSA/Program.cs:2143` | Yes | Same | Player delta also advances weld interpolation. No direct `Program.GetPlayerDeltaTime()` dependency remains in Garry's Torch. |
 | 19 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:121` | `Orbit.CreateFromStateCci(IParentBody parent, UniverseTime stateTime, double3 positionCci, double3 velocityCci, byte4 orbitLineColor)` — `public static Orbit` | `KSA/Orbit.cs:1563` | Yes | Same (OLD `Orbit.cs:1563`) | 5-arg factory; arg order/types unchanged since the 5261 `SimTime`→`UniverseTime` rename. |
 | 20 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:126` | `Orbit.OrbitLineColor` — `public byte4 OrbitLineColor` (field) | `KSA/Orbit.cs:1138` | Yes | Same (OLD `Orbit.cs:1138`) | — |
-| 21 | Direct typed API | `garrys-torch.lib/WeldEngine.cs` | `vehicle is KittenEva`; `KittenEva.Renderable : KittenRenderable` | `KSA/KittenEva.cs:13,59` | Yes | Same | Compile-checked replacement for the former type-name + `_renderable` reflection. |
-| 22 | Reflection (private field, string) | `garrys-torch.lib/WeldEngine.cs` | `KittenRenderable._characterAvatar` — `private CharacterAvatar _characterAvatar` | `KSA/KittenRenderable.cs:12` | Yes | Same | **String field name.** Entry to scalar X fallback. |
-| 23 | Reflection (public field, string) | `garrys-torch.lib/WeldEngine.cs` | `CharacterAvatar.Core` — `public CharacterCore Core` (**struct** field) | `KSA/CharacterAvatar.cs:211` | Yes | Same | Mod writes the boxed struct back via `SetValue`; requires `Core` to remain a value-type field. |
-| 24 | Reflection (public field, string) | `garrys-torch.lib/WeldEngine.cs` | `CharacterCore.Scale` — `public float Scale = 0.01f` (field) | `KSA/CharacterAvatar.cs:34` | Yes | Same | Stores `scale.X * 0.01f`; property fallback retained. |
+| 21 | Direct typed API | `garrys-torch.lib/WeldScaleSnapshot.cs` | `vehicle is KittenEva`; `KittenEva.Renderable : KittenRenderable` | `KSA/KittenEva.cs:13,59` | Yes | Same | Compile-checked replacement for the former type-name + `_renderable` reflection. |
+| 22 | Reflection (private field, string) | `garrys-torch.lib/WeldScaleSnapshot.cs` | `KittenRenderable._characterAvatar` — `private CharacterAvatar _characterAvatar` | `KSA/KittenRenderable.cs:12` | Yes | Same | **String field name.** Capture avatar and original scalar before any scale mutation; missing avatar rejects weld creation. |
+| 23 | Direct typed API | `garrys-torch.lib/WeldScaleSnapshot.cs` | `CharacterAvatar.Core` — `public CharacterCore Core` (**struct** field) | `KSA/CharacterAvatar.cs:211` | Yes | Same | Typed `CharacterAvatar.Core` access, shared with the Godzilla snapshot pattern; boxed reflection removed. |
+| 24 | Direct typed API | `garrys-torch.lib/WeldScaleSnapshot.cs` | `CharacterCore.Scale` — `public float Scale = 0.01f` (field) | `KSA/CharacterAvatar.cs:34` | Yes | Same | Stores `capturedAvatarScale * factor.X` and restores the exact original scalar. |
 | 25 | **Harmony postfix + Reflection** | `garrys-torch.lib/KittenScalePatches.cs` | private `KittenRenderable.ModelToBodyMatrix() : float4x4` | `KSA/KittenRenderable.cs:106-109` | Yes | Same | Load-bearing for anisotropic KittenEva rendering. Postfix pre-multiplies `(1, Y/X, Z/X)` into the original matrix; weak-table lookup makes non-welded kittens a constant-time no-op. Loud `MissingMethodException` at patch apply if renamed. |
 | 26 | Direct typed API (UI color) | `garrys-torch.lib/GarrysTorchSubmod.cs` | `KSAColor.Xkcd.Scarlet`, `KSAColor.Xkcd.PaleGrey` — `static Color.Preset` | `KSA/KSAColor.cs:1561`,`837` | Yes | Same (file byte-identical) | Unweld-button styling only; failure is visual, not functional. |
 | 27 | Direct typed API | `ksa-abstractions.lib/VehicleProvider.cs:14` | `Universe.CurrentSystem` / `CelestialSystem.All` / `LookupCollection.UnsafeAsList` / `Vehicle.Id` | `KSA/Universe.cs:94` etc. | Yes | Same | Shared enumerator (see eternal-flame #12). |
@@ -236,7 +236,22 @@ the legacy scalar `scale` key uniformly for backwards compatibility.
   Responses and newly saved presets use explicit XYZ values.
 - Ordinary parts use their existing compile-checked `Part.Scale : double3`. KittenEva requires the
   new row #25 because its separate character render path exposes only one scalar. Live-test both a
-  normal multi-part vehicle and a kitten with visibly unequal axes, then unweld and confirm identity.
+  normal multi-part vehicle and a kitten with visibly unequal axes, then unweld and confirm their original scales.
+
+**Authored scale preservation (2026-09-09)**
+
+`WeldScaleSnapshot` captures source full-part `Part.Scale` at creation (including identity welds)
+and at the first edit for subsequently added full parts. Scale edits multiply that baseline once;
+`Part.MatrixAsmb2VehicleAsmb` composes the SubPart parent chain (`KSA/Part.cs:736`) and
+`ScaleTotal` (`:802`) explains why recursively multiplying child local scales is incorrect.
+SubPart authored/animated local scales and transforms are not modified. Full-part spacing is fixed.
+After a parent write, `Part.ResetCachedPosMatrixValues()` (`KSA/Part.cs`) is called throughout its
+subtree: the native Scale setter only invalidates that one part's transform caches.
+Unweld/auto-removal/unload restore changed full parts still in the source; detached/disposed parts
+are not touched. Source snapshots are then released. Identity-only welds do no scale writes.
+All UI/API/preset/animation scale paths use this baseline. Module/collider rescaling and scheduling
+are unchanged. Managed scale/animation/kitten-Harmony checks pass; native Flexo custom-scale
+identity/edit/animation/unweld and unload acceptance remain live checks.
 
 **Historical update-risk findings (5117 → 5261)**
 

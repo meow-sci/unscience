@@ -11,13 +11,13 @@ using BepuUtilities.Memory;
 
 namespace KSA;
 
-public sealed class Vehicle
+public class Vehicle
 {
     public bool IsDisposed;
     public object? Parent;
+    public PartTree Parts = new();
 }
 
-public sealed class Part;
 public sealed class VehicleUpdateState(Vehicle vehicle)
 {
     public readonly Vehicle ReadOnlyVehicle = vehicle;

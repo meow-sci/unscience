@@ -193,7 +193,7 @@ restoration; real Bepu contact tests pass, with native collision/animation accep
 - **garrys-torch XYZ scale.** Weld state, UI, presets, animation, and the public API now carry independent
   X/Y/Z factors. Normal vehicles write the existing `Part.Scale : double3`; KittenEva's scalar-only
   character path is corrected by a narrow postfix on `KittenRenderable.ModelToBodyMatrix`. Legacy
-  scalar TOML/API inputs migrate uniformly. Live-check unequal axes and identity restore on unweld.
+  scalar TOML/API inputs migrate uniformly. Weld multipliers now preserve captured full-part scales and inherited authored/animated SubPart scales; unweld restores originals, including nondefault kitten size. Managed scale regressions pass; live-check Flexo custom parts, unequal axes, animation and unload restoration.
 - **graffiti terrain decals** — the accurate terrain-height path now derives from `MeanRadius`.
 - **IvaForceRender** — `PartModel.AddInstance` now early-returns for viewports without
   `RenderPartModels`; a postfix still runs after that, so the postfix now mirrors the gate (and reads

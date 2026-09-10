@@ -13,6 +13,13 @@
     <Compile Include="../garrys-torch.lib/WeldCollisionPatches.cs" Link="WeldCollisionPatches.cs" />
     <Compile Include="../garrys-torch.lib/WeldEntry.cs" Link="WeldEntry.cs" />
     <Compile Include="../garrys-torch.lib/WeldScale.cs" Link="WeldScale.cs" />
+    <Compile Include="../garrys-torch.lib/WeldEngine.Scaling.cs" Link="WeldEngine.Scaling.cs" />
+    <Compile Include="../garrys-torch.lib/WeldScaleSnapshot.cs" Link="WeldScaleSnapshot.cs" />
+    <Compile Include="../garrys-torch.lib/WeldAnimation.cs" Link="WeldAnimation.cs" />
+    <Compile Include="../garrys-torch.lib/WeldAnimationManager.cs" Link="WeldAnimationManager.cs" />
+    <Compile Include="../garrys-torch.lib/KittenScalePatches.cs" Link="KittenScalePatches.cs" />
+    <Compile Include="../ksa-abstractions.lib/ReflectionHelpers.cs" Link="ReflectionHelpers.cs" />
+    <Compile Include="../ksa-abstractions.lib/EasingHelper.cs" Link="EasingHelper.cs" />
     <Reference Include="BepuPhysics"><HintPath>$(KSAFolder)BepuPhysics.dll</HintPath></Reference>
     <Reference Include="BepuUtilities"><HintPath>$(KSAFolder)BepuUtilities.dll</HintPath></Reference>
     <Reference Include="Brutal.Core.Numerics"><HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath></Reference>
