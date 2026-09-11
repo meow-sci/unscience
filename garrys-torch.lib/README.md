@@ -9,6 +9,9 @@ animation for the standalone Garry's Torch mod and Unscience. See the
 Hosts create/initialize `GarrysTorchSubmod`, install `GarrysTorchPatches` and `KittenScalePatches`
 on their Harmony instance, render the submod UI, then remove patches and dispose the submod.
 The `CreateWeld`, `ModifyWeld`, `RemoveWeld`, `AnimateWeld` and preset APIs edit the weld configuration.
+The red **Delete All Welds** UI button beside **Create Weld** uses the existing per-weld removal
+path for every entry, cancelling animations, restoring source scales and releasing scale ownership.
+It is disabled when the weld list is empty; normal collisions resume at the next physics snapshot.
 `Update(dt)` does not advance physics. The old public `UpdateWelds(dt)` and single-argument
 `UpdateBeforeVehicleSolvers(dt)` methods were removed; hosts must install the shared frame hook.
 

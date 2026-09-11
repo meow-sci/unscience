@@ -257,6 +257,20 @@ public sealed class GarrysTorchSubmod : ISubmod
         }
         if (!canCreate) ImGui.EndDisabled();
 
+        ImGui.SameLine(0, 8);
+        ImGui.PushStyleColor(ImGuiCol.Button, ImGui.GetColorU32(KSAColor.Xkcd.Scarlet));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new float4(1f, 0.2f, 0.2f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new float4(0.7f, 0.05f, 0.05f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetColorU32(KSAColor.Xkcd.PaleGrey));
+        ImGui.BeginDisabled(_welds.Count == 0);
+        if (ImGui.Button(" Delete All Welds ##gt_deleteallwelds"u8))
+        {
+            for (int i = _welds.Count - 1; i >= 0; i--)
+                RemoveWeld(_welds[i]);
+        }
+        ImGui.EndDisabled();
+        ImGui.PopStyleColor(4);
+
         // Validation / error messages
         if (_pendingSourceIndex >= 0 && _pendingTargetIndex >= 0
             && _pendingSourceIndex == _pendingTargetIndex)

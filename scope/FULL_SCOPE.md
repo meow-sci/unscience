@@ -130,6 +130,9 @@ rocky-mcrock-face, skittles, sphinx, thug-life, zippo. (jplrepo is a development
 
 ## Current status against `5402` (summary)
 
+Garry's Torch adds a red **Delete All Welds** button beside **Create Weld**, disabled when empty,
+using existing unweld cleanup. See [vehicle physics](vehicle-physics.md) for restoration behavior.
+
 Iron Man adds explicitly enabled per-kitten vessel editing and flight with editable attachment nodes.
 The user reports the initial feature works except for flight-computer access. A targeted follow-up
 now enables native vessel gauge contexts and button policy for activated kittens, retaining stock

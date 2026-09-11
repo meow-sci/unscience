@@ -28,6 +28,7 @@ See [Kitten Animations](kitten-animations/README.md).
 physics snapshots, preserving light-part actuation progress. Its shared frame hook also runs while
 the HUD is hidden. Weld sources default to **Collisions off**, retaining part animations while
 passing through vehicles and scenery; the per-weld checkbox and saved presets can opt in.
+The red **Delete All Welds** button beside **Create Weld** removes all welds and is disabled when none exist.
 See [Garry's Torch](garrys-torch/README.md) for timing and validation details.
 
 ## building

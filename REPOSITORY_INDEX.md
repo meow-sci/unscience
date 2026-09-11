@@ -50,6 +50,7 @@ Vehicle welding system. Attaches one vehicle to another with support for positio
 - **Collisions** defaults off per weld, with create/edit controls, optional API arguments, and TOML preset persistence (legacy presets default off). Scoped Bepu shape suppression preserves module simulation; disabling/removing a weld restores collisions at the next snapshot.
 - Weld updates run through `GarrysTorchPatches` via shared `PhysicsFrameHook` at the `Program.PrepareFrame` simulation handoff, after completed results are applied and before cloth/vehicle/orbit workers start. Source light actuation retains committed progress; teleports use `SimStep.PreviousTime`. The patch validates the call order and is independent of HUD visibility.
 - Multiple simultaneous welds with topological sort for correct ordering
+- Red **Delete All Welds** button beside **Create Weld** removes every weld through normal cleanup; disabled when no welds exist
 - User-defined presets persisted to TOML (`~/.unscience/garrys-torch-presets.toml`)
 - Save weld settings as named presets, load presets into create form
 - ImGui control panel with filterable combos (vehicle → part → preset) and bordered weld sections

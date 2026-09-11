@@ -1236,6 +1236,10 @@ establish runtime contact filtering or physics correctness.
 
 ### Garry's Torch authored scale preservation
 
+The red **Delete All Welds** control beside **Create Weld** reuses per-weld cleanup for every
+entry (including disabled welds), restoring scales and releasing ownership; it is disabled for an
+empty list. Collision restoration keeps the existing next-snapshot behavior; no new game seam.
+
 `WeldEngine.Scaling` / `WeldScaleSnapshot` capture and restore per-source full-part scales,
 preserve authored/animated SubPart local transforms, and multiply original XYZ only at full parts.
 Dependencies: `PartTree.Parts` (full parts), `Part.Scale`, `Part.SubParts`, inherited

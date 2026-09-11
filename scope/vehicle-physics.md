@@ -117,6 +117,11 @@ pose relative to a *target* vehicle (optionally anchored to a specific target `P
 position/rotation offset, independent local-axis X/Y/Z part scaling (including `KittenEva` avatars), and
 optional rotation lock. Also supports eased animation of weld params.
 
+**Bulk removal UI** — Red **Delete All Welds** sits to the right of **Create Weld** and is disabled
+for an empty weld list. It removes entries in reverse order through the existing `RemoveWeld`
+cleanup, cancelling animations, restoring source scales and releasing scale ownership. Collision
+suppression ends at the next snapshot as for individual unwelds; no new game integration is added.
+
 **Unscience integration** — `GarrysTorchSubmod : ISubmod` holds weld state and animation;
 `WeldEngine.UpdateWeld(entry, stateTime)` computes and teleports each source.
 `GarrysTorchPatches` is installed/removed by both `garrys-torch/Patcher.cs` and

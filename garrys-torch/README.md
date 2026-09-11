@@ -114,6 +114,7 @@ ImGui window with:
 - **Active Welds list** - Bordered child windows per weld with live-edit controls
 - **Save as preset** - Modal popup to save active weld settings as a named preset
 - **Weld Management** - Create/unweld with validation and error messages
+- **Delete All Welds** - Red button to the right of **Create Weld**, disabled when the Active Welds list is empty. Removes every weld, including disabled welds, cancels their animations and restores source scales.
 
 ## Key Implementation Details
 
