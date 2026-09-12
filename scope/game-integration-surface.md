@@ -1046,6 +1046,7 @@ on every game update FIRST.
 | `Vehicle.GetWorldMatrix` / `Vehicle.UpdateRenderData` | i-feel-seen | `AccessTools.Method(typeof(Vehicle), "…")` | OK |
 | `VolumetricExhaustTemplate.References` (internal static field) | pyro | `AccessTools.Field(…, "References")` → `SerializedCollection<T>.GetList()` (`PlumeTemplates.cs:46`) | OK @5348 — soft: falls back to the stock 7 ids via public `Get(id)` |
 | `VolumetricExhaustInstance._shaderData` (private struct field) | pyro | `AccessTools.FieldRefAccess<…, ExhaustInstance>("_shaderData")` (`PlumeEmitter.cs:25`) | OK @5348 — soft: per-plume look overrides disable with a UI notice |
+| `Vehicle.UpdateCollisionGeometry()` | godzilla | private method; open delegate and prefix/finalizer preserve nominal bounds during independent collider rebuilds | Added @5402; managed checks, native contacts pending |
 | `KittenRenderable.ModelToBodyMatrix` / `KittenRenderable._characterAvatar` → `CharacterAvatar.Core` → `CharacterCore.Scale` | garrys-torch, doh, kitten-animations | private method Harmony target + private avatar field; garrys uses typed `KittenEva.Renderable` and `CharacterAvatar.Core.Scale` | OK @5402 |
 | `ChuteRenderable._renderable` → `AnimatedRenderable.MaterialIndices` | free-fallin | private/protected field chain used immediately before `ChuteRenderable.Draw`; writes material slot zero and weakly tracks the renderable for restore | OK @5402 — new game surface and new consumer; both exact names are load-bearing |
 | `CharacterAvatar.Core.{CharacterModel,Fur,Attachments}…MaterialIndices` (AnimatedRenderable/CatFurRenderable/StaticMeshRenderable) | doh | private field-path + `protected int[]` | OK |
@@ -1185,6 +1186,11 @@ also used by Godzilla. Visual-only rendering adds guarded transpilers on
 `Vehicle.UpdateRenderData(IViewport,int)` / `GetWorldMatrix(Camera)` for their `MeanRadius` cull
 reads, a `GetWorldMatrix` postfix, and a `PartTree.UpdateRenderData` matrix prefix/finalizer keyed
 through `PartTree.OwningVehicle`. See the area map for exact signatures, COM math and limitations.
+Independent colliders add `ColliderModule.SetScale(in ScaleFactors)` prefix/finalizer,
+`ColliderModule.PositionVehicleAsmb` postfix, and private `Vehicle.UpdateCollisionGeometry()`
+via an open delegate and bounds-preserving prefix/finalizer. Typed seams include `Part.PartParent`,
+`ScaleTotal`, orientations/positions, `ColliderModule.NeedsColliderUpdate`, `ScaleFactors` and mutable
+`VehicleProperties` nominal bounds. See the collider subsection for worker flags and coverage limits.
 No new private field, shader or asset dependency. The `Program.PrepareFrame`
 transpiler moved from Garry's Torch to `ksa-abstractions.lib/PhysicsFrameHook`; Garry's Torch registers
 its weld callback, and Godzilla queues edits before it. `ScaleFactors` max-axis behavior limits Basic

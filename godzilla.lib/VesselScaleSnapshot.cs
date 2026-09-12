@@ -9,10 +9,11 @@ using MeowSci.KsaAbstractions;
 namespace MeowSci.GodzillaLib;
 
 /// <summary>Captured once: edits always derive from the original, never the last applied scale.</summary>
-internal sealed class VesselScaleSnapshot
+internal sealed partial class VesselScaleSnapshot
 {
     private sealed record Original(Part Part, double3 Scale, double3 Position, bool FullPart);
     private readonly List<Original> _originals = new();
+    private readonly Dictionary<Part, Original> _byPart = new();
     private readonly double3 _pivot;
     private readonly CharacterAvatar? _avatar;
     private readonly float _avatarScale;
@@ -36,6 +37,7 @@ internal sealed class VesselScaleSnapshot
     private void Capture(Part part, bool full)
     {
         _originals.Add(new(part, part.Scale, part.PositionParentAsmb, full));
+        _byPart.Add(part, _originals[^1]);
         foreach (var child in part.SubParts) Capture(child, false);
     }
 
@@ -53,18 +55,35 @@ internal sealed class VesselScaleSnapshot
 
     public bool TopologyMatches() => CurrentParts().SetEquals(_originals.Select(o => o.Part));
 
-    public void Apply(bool smart, float3 factor, bool visualOnly = false)
+    public void Apply(bool smart, float3 factor, bool visualOnly = false) => Apply(smart, factor, !visualOnly, !visualOnly);
+
+    public void ValidateApply(float3 factor, bool scalePhysics, bool scaleColliders)
     {
         if (!WeldScale.IsValid(factor)) throw new ArgumentOutOfRangeException(nameof(factor), "Scale must be positive and finite.");
         if (!TopologyMatches()) throw new InvalidOperationException("The vessel's parts changed. Restore before scaling again.");
-        if (smart) factor = new float3(factor.X);
-        if (visualOnly)
+        if (!scalePhysics && !VisualScalePatches.IsApplied)
+            throw new InvalidOperationException("Visual scaling patches are unavailable.");
+        if (scaleColliders != scalePhysics)
         {
-            if (!VisualScalePatches.IsApplied)
-                throw new InvalidOperationException("Visual scaling patches are unavailable.");
+            if (!ColliderScalePatches.IsApplied)
+                throw new InvalidOperationException("Independent collider scaling patches are unavailable.");
+            if (Vehicle.Parts.Modules.Get<ColliderModule>().Length == 0)
+                throw new InvalidOperationException("This vessel has no authored colliders; independent collider scaling requires them.");
+        }
+    }
+
+    public void Apply(bool smart, float3 factor, bool scalePhysics, bool scaleColliders)
+    {
+        ValidateApply(factor, scalePhysics, scaleColliders);
+        if (smart) factor = new float3(factor.X);
+        bool independent = scaleColliders != scalePhysics;
+        ColliderScalePatches.Clear(Vehicle);
+        if (!scalePhysics)
+        {
             // Return the simulation to its captured size before registering a draw-only multiplier.
             if (_physicalApplied) Restore();
             VisualScalePatches.SetScale(Vehicle, factor);
+            if (independent) ColliderScalePatches.Set(new(this, scaleColliders, factor));
             return;
         }
         VisualScalePatches.ClearScale(Vehicle);
@@ -87,11 +106,13 @@ internal sealed class VesselScaleSnapshot
         _basic = !smart;
         SetCharacterScale(smart ? new float3(factor.X) : factor);
         Refresh();
+        if (independent) ColliderScalePatches.Set(new(this, scaleColliders, factor));
     }
 
     public void Restore()
     {
         VisualScalePatches.ClearScale(Vehicle);
+        ColliderScalePatches.Clear(Vehicle);
         if (Vehicle.IsDisposed || !_physicalApplied) return;
         var current = CurrentParts();
         foreach (var original in _originals)
@@ -123,5 +144,6 @@ internal sealed class VesselScaleSnapshot
         foreach (var part in parts) part.UpdateBounds();
         Vehicle.Parts.RecomputeAllDerivedData();
         Vehicle.UpdateAfterPartTreeModification();
+        foreach (var collider in Vehicle.Parts.Modules.Get<ColliderModule>()) collider.NeedsColliderUpdate = true;
     }
 }

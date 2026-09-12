@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Reference Include="BepuPhysics">
+      <HintPath>$(KSAFolder)BepuPhysics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <ProjectReference Include="../garrys-torch.lib/garrys-torch.lib.csproj" />
     <ProjectReference Include="..\ksa-abstractions.lib\ksa-abstractions.lib.csproj" />
   </ItemGroup>

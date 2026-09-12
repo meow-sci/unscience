@@ -525,7 +525,7 @@ the decomp diff. Solution builds clean against 5402.
 ## godzilla (`godzilla` / `godzilla.lib`)
 
 Unscience `ISubmod` panel for Smart uniform and Basic raw XYZ vessel scaling, plus a global runtime
-visual-only toggle (default off) that switches existing sessions at the safe handoff:
+pair of physics/collider toggles (both default on) that switch existing sessions at the safe handoff:
 `GarrysTorchPatches` now delegates the validated caller transpiler to shared `PhysicsFrameHook` and
 registers welding as a listener. Godzilla queues Apply/Restore before those listeners. The original
 weld timing invariant and managed Harmony tests remain in force.
@@ -553,10 +553,11 @@ actuation at scale, docking/staging and unload still need a live game pass.
 
 ### Godzilla visual-only rendering (@5402)
 
-`VisualScalePatches` is installed/removed by both hosts. Visual sessions keep `Part.Scale`, full-part
-positions, `CharacterAvatar.Core.Scale`, mass/modules/colliders and physical radii at captured size.
-Only a transition from physical scaling restores/rebuilds these once. Subsequent visual edits and
-restore do no physical refresh. Registrations use weak vehicle keys, clear on restore/prune/unload,
+`VisualScalePatches` is installed/removed by both hosts. With Scale physics off, sessions keep `Part.Scale`, full-part
+positions, `CharacterAvatar.Core.Scale`, mass/modules and nominal physical radii at captured size;
+collider dimensions/positions are now controlled separately (see below).
+Only a transition from physical scaling restores/rebuilds these once. Subsequent visual-only edits and
+restore do no physical refresh; collider-only edits perform only collision rebuilds. Registrations use weak vehicle keys, clear on restore/prune/unload,
 and retain existing Torch ownership exclusion. XYZ uses whole-craft assembly/body-axis multipliers;
 it deliberately has different geometry from physical Basic's absolute per-part overrides.
 
@@ -565,11 +566,11 @@ it deliberately has different geometry from physical Basic's absolute per-part o
 | `Vehicle.UpdateRenderData(IViewport,int)` and `Vehicle.GetWorldMatrix(Camera)` transpilers | `Vehicle.cs:3662–3691`: each contains exactly one `MeanRadius` getter read for the one-pixel cull. Replace only that read with physical radius × max visual axis. Guarded match count; patch installation rolls back on failure. Never patch the radius getter globally. |
 | `Vehicle.GetWorldMatrix(Camera)` postfix | Used by `KittenEva.UpdateRenderData` (`KittenEva.cs:1062`); premultiply its result by visual body-axis scale. Preserve world translation, null culling and other prefixes' transforms (I Feel Seen). Avatar/helmet/fur/MMU inherit; `ModelToBodyMatrix` and bone-local queries remain physical. |
 | `PartTree.UpdateRenderData(ref readonly double4x4,bool,IViewport,int)` prefix/finalizer | `PartTree.cs:912`; `OwningVehicle` field gates lookup. Premultiply draw input by `T(-COM) * Scale * T(COM)` using live `Vehicle.CenterOfMassAsmb`. The finalizer restores the caller's readonly matrix even on exceptions. Part models/dynamic/glass and local draw consumers inherit; physical part/assembly matrices remain unchanged. |
-| Host lifecycle | `godzilla/Patcher.cs`, `unscience/Patcher.cs`: add `VisualScalePatches.Apply/Remove`; no new StarMap hooks. Queued `SetVisualOnly(bool)` converts current sessions in order with Apply/Restore. |
+| Host lifecycle | `godzilla/Patcher.cs`, `unscience/Patcher.cs`: add `VisualScalePatches.Apply/Remove`; no new StarMap hooks. Queued channel setters convert current sessions in order with Apply/Restore; legacy `SetVisualOnly` sets both. |
 
 Bubble envelopes use physical `ReadOnlyVehicle/VehicleProperties.BoundingSphereRadiusBody`
-(`PhysicsBubble.cs:357,374`), which the render hooks never modify. Camera targeting, picking and
-contact remain at native size. Separate world-space exhaust and simulated cloth are not scaled by
+(`PhysicsBubble.cs:357,374`), which the render hooks never modify. Camera targeting and picking
+remain physical-sized; contacts follow the independent collider channel. Separate world-space exhaust and simulated cloth are not scaled by
 these hooks. `Program.RefreshVehiclesInFrame` includes all current-system vehicles (`Program.cs:583`);
 recheck this if upstream adds earlier size culling. No new shader, asset or private field dependency.
 
@@ -577,3 +578,33 @@ Managed checks cover planet-scale multipliers, no physics refresh, both cull pat
 exception restoration, mode transitions, kitten scalar isolation, external render prefix coexistence
 and patch reload. Native bubbles, planet-scale clipping/shadows/LOD, terrain overlap, Iron Man early
 part submission and restoration still require an in-game acceptance pass.
+
+### Godzilla independent collider scaling (@5402)
+
+`ScalePhysics` and `ScaleColliders` default true. Existing `SetVisualOnly(true/false)` maps to both
+off/on. Mixed settings require authored colliders; fallback-only vessels reject them before part
+mutations. Stock EVA has a capsule in `Content/Core/PartGameData.xml` → `KittenBackPackPart`.
+For matched settings, remove independent overrides and use stock physical or visual-only behavior.
+For mixed settings, clear previous overrides, complete the physical edit/restore first (establishing
+nominal physical bounds), then register a `ColliderScaleState` and rebuild only collision geometry.
+
+| Integration | Source / invariant |
+|---|---|
+| `ColliderModule.SetScale(in ScaleFactors)` prefix/finalizer | `ColliderModule.cs:46`: substitute only this module's shape scale. **Restore the readonly input on success/exception**: `Part.RefreshScale` passes the same local to all `IRescale` modules (`Part.cs:1571`); leaking it changes mass/fuel modules. Native template-owned/instance-owned shape creation and disposal remain in KSA. |
+| `ColliderModule.PositionVehicleAsmb` getter postfix | `ColliderModule.cs:42`: collider-only mode moves centers around live COM with whole-craft XYZ; dimensions use largest axis. Physics-only mode reconstructs the original part hierarchy using captured full-part scales/positions, captured Basic child scales, and live child animation/rotations. Orientation remains native `Collider2VehicleAsmb`. |
+| `Vehicle.UpdateCollisionGeometry()` private method | `Vehicle.cs:1931`: open `Action<Vehicle>` delegate rebuilds compounds without mass/aero/module refresh. Prefix/finalizer preserve `GetPhysicsStatesMutable().Props.{BoundingBoxAsmb,GeometricCenterAsmb,BoundingSphereRadiusBody}` during override/rebuild, including exceptions. This intentionally keeps bubble/terrain coverage tied to the physics channel. New string reflection watchpoint. |
+| `Vehicle.Parts.Modules.Get<ColliderModule>()`, `ColliderModule.Parent`, `PositionPartAsmb`, `NeedsColliderUpdate`, `ScaleFactors.Scale` | Typed native shape/pose inputs. Reflag colliders after collision-only rebuilds and full snapshot refreshes because native compound rebuild clears the flags. `ConstraintSim.UpdateShape` (`ConstraintSim.cs:424`) must return true for `PushBodyStateToSim` to refresh broad-phase bounds (`:261`). No new ConstraintSim patch. |
+| `Part.PartParent`, `ScaleTotal`, `Asmb2ParentAsmb`, `Asmb2VehicleAsmb`, `PositionVehicleAsmb` | `Part.cs:704–815`; reconstruct collision-only original transforms without changing cached game matrices. `KeyframeAnimationModule.cs:334–363` updates child transforms and marks colliders dirty; preserve this native pose path. |
+| Lifecycle / resources | Module+vehicle registrations are changed at the shared handoff after worker waits; workers read stable registrations. Clear restores surviving modules through native SetScale, rebuilds/flags the compound and retains retry state if restoration throws. Prune forgets disposed/unloaded references. Collider membership changes are checked alongside part topology. Both hosts install/remove `ColliderScalePatches`. |
+
+Detached modules keep their last native shape until their new owner refreshes/disposes them; no
+Godzilla pose override survives. No private shape ownership or template replacement is introduced.
+Native fallback box-only colliders are intentionally unsupported for mixed settings.
+
+**Limits:** nominal bubble envelopes/terrain patches remain based on the physics channel. Large
+colliders can miss distant/cross-bubble contacts; real contacts still change velocities, exert torque
+and can cause damage. Huge shapes still cost collision work. XYZ dimensions use native max-axis
+scaling, not true anisotropic shapes. Managed checks verify all four modes, shape structs, animation,
+shared-input and nominal-bounds isolation, dirty flags, exceptions/retry/topology and patch reload.
+Native KSA contacts, terrain coverage, stationary-body broad-phase changes and huge-scale stability
+remain live acceptance items.

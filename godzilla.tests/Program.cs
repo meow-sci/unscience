@@ -64,3 +64,4 @@ Check(VehicleScaleOwnership.TryAcquire(vessel,"Garry's Torch"), "Release allows 
 Console.WriteLine("PASS: Smart layout, authored scales, animation preservation, mode switches, restoration, topology, kitten scale and ownership");
 
 VisualScaleChecks.Run();
+ColliderScaleChecks.Run();

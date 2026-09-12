@@ -24,6 +24,7 @@ internal static class Patcher
                 PhysicsFrameHook.Apply(_harmony);
                 KittenScalePatches.Apply(_harmony);
                 VisualScalePatches.Apply(_harmony);
+                ColliderScalePatches.Apply(_harmony);
             }
         }
         catch (Exception ex)
@@ -42,6 +43,7 @@ internal static class Patcher
                 PhysicsFrameHook.Remove(_harmony);
                 KittenScalePatches.Remove(_harmony);
                 VisualScalePatches.Remove(_harmony);
+                ColliderScalePatches.Remove(_harmony);
             }
             _harmony?.UnpatchAll("godzilla");
             _harmony = null;

@@ -408,17 +408,19 @@ Run `dotnet run --project pebbles.tests/pebbles.tests.csproj`; see its [README](
 ### [godzilla](godzilla) / [godzilla.lib](godzilla.lib)
 
 Vessel/EVA scaling panel in Unscience: Smart uniform layout-preserving size, Basic raw XYZ size,
-filterable targeting, per-vessel original snapshots and restore-all. Runtime **Visual only** converts
-all sessions to draw-transform multipliers with original physics/bubble bounds and separate visual
-pixel culling; XYZ in this mode scales the whole craft. Mutations use the shared physics
-handoff; `VehicleScaleOwnership` excludes simultaneous Garry's Torch source scaling. Modules,
-collision/mass data and descendant transform caches refresh after edits. See the project README.
+filterable targeting, per-vessel original snapshots and restore-all. Independent runtime **Scale physics**
+and **Scale colliders** switches permit visual-only, visual+collider-only, physics with original
+colliders, or full scaling. Collider overrides retain original nominal bubble bounds when physics
+scaling is off; real contacts still exert forces and cross-bubble/terrain coverage can miss huge
+shapes. Requires authored colliders for mixed modes. Uses shared physics handoff, Torch ownership
+exclusion and native owned shapes. See the Godzilla READMEs and vehicle-physics scope.
 
 ### [godzilla.tests](godzilla.tests)
 
-Managed executable linking production scale snapshots and ownership against lightweight game
-fixtures and real Brutal numerics/Harmony. Covers transforms, animation preservation, mode changes,
-restore, topology, kitten scale, visual-only physics isolation, culling, patch coexistence and reload.
+Managed executable linking production snapshots and visual/collider Harmony hooks against small
+KSA fixtures with real Brutal numerics and Bepu shape structs. Covers all four channel combinations,
+COM/XYZ math, animation, readonly-input isolation, nominal bounds preservation, broad-phase flags,
+restoration/failure retry, topology, patch coexistence and reload. Native contact acceptance remains open.
 
 ### [byo-music.tests](byo-music.tests)
 

@@ -5,6 +5,11 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <Reference Include="BepuPhysics"><HintPath>$(KSAFolder)BepuPhysics.dll</HintPath></Reference>
+    <Reference Include="BepuUtilities"><HintPath>$(KSAFolder)BepuUtilities.dll</HintPath></Reference>
+    <Compile Include="../godzilla.lib/ColliderScalePatches.cs" Link="ColliderScalePatches.cs" />
+    <Compile Include="../godzilla.lib/ColliderScaleState.cs" Link="ColliderScaleState.cs" />
+    <Compile Include="../godzilla.lib/VesselScaleSnapshot.Colliders.cs" Link="VesselScaleSnapshot.Colliders.cs" />
     <Reference Include="Brutal.Core.Numerics"><HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath></Reference>
     <Reference Include="Brutal.Core.Common"><HintPath>$(KSAFolder)Brutal.Core.Common.dll</HintPath></Reference>
     <Compile Include="../godzilla.lib/VisualScalePatches.cs" Link="VisualScalePatches.cs" />

@@ -15,3 +15,10 @@ The production `WeldScale` validator is linked too. Checks exercise Smart and Ba
 caller matrix restoration on success/exception, physical↔visual transitions, avatar scale isolation,
 coexistence with an external GetWorldMatrix prefix, and unload/reapply. Physical bubble execution
 and actual KSA render submissions still need in-game testing.
+
+`ColliderScaleChecks` applies the production collider patches to native-shaped managed fixtures
+with real Bepu sphere/box structs. Covers all four physics/collider combinations, independent XYZ
+centers/max-axis dimensions, animated children, preserving nominal bounds and other physics fields,
+restoring the caller's shared readonly scale (also on exceptions), native refresh interception,
+worker broad-phase dirty flags, Basic/Smart switches, failure/restoration retry, collider membership
+changes, unsupported fallback rejection and unload/reload. It does not execute KSA or Bepu contacts.

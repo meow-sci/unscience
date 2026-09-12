@@ -6,16 +6,30 @@ namespace KSA
     using Brutal.Numerics;
     public class Part
     {
+        public Part? PartParent;
+        public ModuleList Modules = new();
+        public doubleQuat Asmb2ParentAsmb = doubleQuat.Identity;
+        public doubleQuat Asmb2VehicleAsmb => PartParent == null ? Asmb2ParentAsmb : Asmb2ParentAsmb.Concatenate(PartParent.Asmb2VehicleAsmb);
+        public double3 ScaleTotal => PartParent == null ? Scale : Scale * PartParent.ScaleTotal;
+        public double4x4 Matrix => double4x4.CreateScale(Scale) * double4x4.CreateFromQuaternion(Asmb2ParentAsmb) * double4x4.CreateTranslation(PositionParentAsmb) * (PartParent?.Matrix ?? double4x4.Identity);
+        public double3 PositionVehicleAsmb => Matrix.Translation;
         public double3 Scale = new(1);
         public double3 PositionParentAsmb;
         public List<Part> SubParts = new();
         public int Invalidations, Refreshes, Bounds;
         public void ResetCachedPosMatrixValues() => Invalidations++;
-        public void RefreshScale() { Refreshes++; foreach(var p in SubParts) p.RefreshScale(); }
+        public void RefreshScale()
+        {
+            Refreshes++;
+            var scale = new ScaleFactors(ScaleTotal);
+            foreach (var collider in Modules.Get<ColliderModule>()) collider.SetScale(in scale);
+            foreach(var p in SubParts) p.RefreshScale();
+        }
         public void UpdateBounds() => Bounds++;
     }
     public class PartTree
     {
+        public ModuleList Modules = new();
         public Vehicle? OwningVehicle;
         public List<Part> Parts = new();
         public int Refreshes;
@@ -34,6 +48,25 @@ namespace KSA
     public class Vehicle
     {
         public Vehicle() { Parts.OwningVehicle = this; }
+        private readonly PhysicsStates _physics = new();
+        public PhysicsStates GetPhysicsStatesMutable() => _physics;
+        public int ColliderRebuilds;
+        public bool ThrowOnColliderRebuild;
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void UpdateCollisionGeometry()
+        {
+            ColliderRebuilds++;
+            var size = 1d;
+            foreach (var collider in Parts.Modules.Get<ColliderModule>())
+            {
+                size = Math.Max(size, collider.PositionVehicleAsmb.Length() + collider.AppliedScale);
+                collider.NeedsColliderUpdate = false;
+            }
+            _physics.Props.BoundingSphereRadiusBody = (float)size;
+            _physics.Props.BoundingBoxAsmb = new BepuPhysics.Collidables.Box((float)size, (float)size, (float)size);
+            _physics.Props.GeometricCenterAsmb = new float3((float)size);
+            if (ThrowOnColliderRebuild) throw new InvalidOperationException("test collider rebuild failure");
+        }
         public bool IsDisposed;
         public virtual double MeanRadius { [MethodImpl(MethodImplOptions.NoInlining)] get => 1; }
         public double4x4 GetMatrixAsmb2Ego(Camera camera) =>
@@ -55,7 +88,11 @@ namespace KSA
         public double3 CenterOfMassAsmb;
         public PartTree Parts = new();
         public int Refreshes;
-        public void UpdateAfterPartTreeModification() => Refreshes++;
+        public void UpdateAfterPartTreeModification()
+        {
+            Refreshes++;
+            if (Parts.Modules.Get<ColliderModule>().Length != 0) UpdateCollisionGeometry();
+        }
     }
     public interface IViewport { Camera GetCamera(); }
     public sealed class TestViewport : IViewport

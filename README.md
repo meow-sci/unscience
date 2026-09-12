@@ -82,7 +82,7 @@ The private assemblies come from `meow-sci/ksa-game-assemblies` via the
 `KSA_GAME_ASSEMBLIES_PAT` repo secret (fine-grained PAT, read-only Contents on
 that repo).
 
-Godzilla adds session-based Smart vessel resizing, raw XYZ Basic scaling, a runtime **Visual only** toggle that preserves original physics, and restore controls.
+Godzilla adds session-based Smart vessel resizing, raw XYZ Basic scaling, independent **Scale physics** and **Scale colliders** runtime toggles, and restore controls.
 See [Godzilla](godzilla/README.md).
 
 BYO Music imports OGG/WAV/MP3 files into the common sounds library and attaches independently

@@ -105,7 +105,7 @@ boundaries and the Unscience lifecycle are unchanged by this packaging refactor.
 |---|---|---|
 | [`game-integration-surface.md`](game-integration-surface.md) | **Master cross-reference index** — every game type/member touched, merged across mods | Start here for "does the game still have X?"; includes the string-reflection watchlist + shader/asset table |
 | [`00-architecture-and-abstractions.md`](00-architecture-and-abstractions.md) | unscience supermod shell (`Mod.cs`/`Patcher.cs`/`MenuBarPatch`/`UnscienceState`) + `ksa-abstractions.lib` | StarMap lifecycle map, consolidated-Harmony cross-ref, `HotkeyGuard`, `IvaForceRender`, providers |
-| [`vehicle-physics.md`](vehicle-physics.md) | eternal-flame, garrys-torch, godzilla, i-feel-seen | `Universe.ExecuteNextVehicleSolvers`, `Battery.Refill`, `Vehicle.Teleport`, KittenEva reflection; **Godzilla visual-only scale separates draw size from physics bubbles; garrys-torch preserves actuator results; default-off source collisions use scoped Bepu shape suppression** |
+| [`vehicle-physics.md`](vehicle-physics.md) | eternal-flame, garrys-torch, godzilla, i-feel-seen | `Universe.ExecuteNextVehicleSolvers`, `Battery.Refill`, `Vehicle.Teleport`, KittenEva reflection; **Godzilla separates visual, collider and nominal physics size; garrys-torch preserves actuator results; default-off source collisions use scoped Bepu shape suppression** |
 | [`celestial-and-lights.md`](celestial-and-lights.md) | kiwis-marbles, zippo | `Celestial.SetOrbit`, `IParentBody.Children`/`UpdatePerFrameDataTree`, `Universe.ExecuteNextVehicleSolvers` prefix (kiwis-marbles sim-step timing, fixed 2026-08-23), `IOrbiter`, `LightModule`/`LightSwitch`; Zippo Disco's per-instance templates, cone angles and `KeyframeAnimationModule.TimeGoal` ownership |
 | [`camera.md`](camera.md) | camera-controller-override, glass, hot-pursuit | `OrbitController/FlyController/FixedController.OnFrame`, `Camera._fovRadians`; four public secondary-viewport leases under the sealed 8-slot registry; part-raycast camera mounts; Hot Pursuit nearby-celestial sync and stock secondary-render omissions |
 | [`pixel-grids-and-render.md`](pixel-grids-and-render.md) | blinky, its-so-shiny, thug-life | three `*Module.UpdateRenderData` patches, `PartTree.CreateFromNewPartTree`, `RocketCore.FeedConnectors` (blinky ignition), `SuperMeshRenderSystem.RenderMainPass`, UnlitMesh shaders |
@@ -246,13 +246,11 @@ parachute edits with symmetry; kiwis-marbles weld near
 a deployed chute; hot-pursuit placement/motion/lease contention + Glass independent FOV; the standing thug-life / humble-arteest / blinky /
 its-so-shiny render checks. A green `dotnet build` and the managed Pebbles/Garry's Torch checks do not cover these native behaviors.
 
-**Godzilla:** runtime **Visual only** (default off) restores original physics and scales draw transforms
-and visual pixel culling independently. Managed Harmony isolation/transition/culling checks pass;
-native bubbles and planet-scale render acceptance remain open. Smart uniform layout-preserving
-vessel scaling and Basic raw XYZ physical scales retain
-snapshot restoration and Garry's Torch scale ownership exclusion. The shared PrepareFrame hook
-queues edits before welds. Managed snapshot and Harmony checks pass; native scale/collision/animation
-and unload smoke tests remain. See [vehicle physics](vehicle-physics.md#godzilla-godzilla--godzillalib).
+**Godzilla:** independent **Scale physics** / **Scale colliders** toggles (both default on) separate
+rendered size, authored collision geometry and nominal physics/bubble bounds. Collider-only changes
+still exert contact forces and may miss contacts beyond the original bubble/terrain coverage.
+Managed four-mode/animation/input-isolation/bounds/restore checks pass; native contacts and huge-scale
+render acceptance remain open. See [vehicle physics](vehicle-physics.md#godzilla-godzilla--godzillalib).
 
 **BYO Music added to Unscience:** copied shared sound catalog, nonblocking FMOD playback following
 vessels in the audio camera frame, live gain/range and repeat/gaps. Full solution and managed
