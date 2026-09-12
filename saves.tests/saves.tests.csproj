@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/NativeSaveHooks.cs" Link="NativeSaveHooks.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/ISaveParticipant.cs" Link="ISaveParticipant.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveJson.cs" Link="SaveJson.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveDocument.cs" Link="SaveDocument.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveStorage.cs" Link="SaveStorage.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SceneSaveCoordinator.cs" Link="SceneSaveCoordinator.cs" />
+  </ItemGroup>
+</Project>

@@ -183,3 +183,24 @@ Managed filesystem and loop checks: `dotnet run --project byo-music.tests`.
 must resolve these into content-version identities before retaining a live recipe. `SharedFileLibrary`
 now accepts an optional pre-copy byte limit; PNG/sound defaults remain unrestricted. Shared GLB
 content tests live in `pebbles.tests`.
+
+## Scene persistence
+
+`Persistence/` contains the shared `ISaveParticipant` / `ISaveParticipantSource` contract,
+`SaveParticipant<T>` typed adapter, `SaveJson`, versioned `SaveDocument`, bounded atomic
+`SaveStorage`, conservative `SavedPartReference`, `SceneSaveCoordinator`, and `NativeSaveHooks`.
+Feature libraries own detached recipes and normal reset/apply APIs; the host wires callbacks.
+
+Restore runs in ascending `RestoreOrder`; cleanup reverses it. `PrepareRestore` must validate
+without mutating native state. `SaveRestoreContext.Warn` marks a partial restore: the source feature
+record is retained instead of silently dropping missing entries on the next save. `Info` is for
+nonfailure notices. Failed capture keeps the last good record when available. Unsupported feature
+versions remain opaque. Reset and replay errors are isolated and visible in the host.
+
+Part references use vehicle IDs and full-part/subpart tree addresses with template checks, never
+runtime IDs or name fallback. Their validity is scoped to the hash-bound native save; they are not
+an arbitrary cross-craft matching API. The JSON serializer is for explicit DTOs only, not live game
+objects. Sidecars are limited to 32 MiB/depth 64 and paired to SHA-256 of universe.xml.
+
+See [save integration](../scope/saves.md), [plan](../plans/SAVES.md) and
+[managed checks](../saves.tests/README.md). GPU/native acceptance is separate from managed tests.

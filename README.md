@@ -111,3 +111,11 @@ and its [source research](plans/iron-man/RESEARCH.md). Managed checks run with
 Garry's Torch weld scaling preserves custom authored SubPart scales (including Flexo parts).
 XYZ controls multiply captured full-part scales; unweld/unload restore the original instance
 proportions. See [scaling behavior](garrys-torch/README.md#scaling) for inheritance and restoration.
+
+## Saving Unscience setups
+
+Ordinary KSA Save/Load now includes Unscience scene setups through a versioned `unscience.json`
+file in the native save folder. The existing toolbox shows capture/restore diagnostics. Window
+layout autosave remains separate. Keep imported asset libraries and runtime part mods alongside
+your installation; saves reference those dependencies. See [scene-save usage and limits](unscience/README.md#scene-saves),
+the [research and implementation plan](plans/SAVES.md), and [integration scope](scope/saves.md).

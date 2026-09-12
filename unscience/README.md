@@ -81,3 +81,42 @@ render postfixes. [Sphinx usage](../sphinx/README.md) covers placements and mode
 Iron Man is registered with `IronManPatches` on the shared Harmony instance. Per-kitten activation
 is off by default; authored connector persistence and equipment rendering remain passive while
 flight mode is disabled. See [usage and save requirements](../iron-man/README.md).
+
+## Scene saves
+
+Use KSA's ordinary **Save**, **Overwrite** and **Load**. Unscience adds `unscience.json` beside
+`universe.xml` in each save directory, and automatically reconstructs scene setups when that save
+is loaded. This is separate from **State → Auto save window layout**. Scene state is saved when
+KSA saves the game; the window-layout timer does not save the game.
+
+The toolbox displays the most recent save/load result and expandable diagnostics. It captures
+feature-owned configuration, targets and original values needed by Restore/Unweld controls.
+Created grid parts, spawned kittens and other native state are rebound after KSA reconstructs them;
+they are not spawned twice. Runtime part IDs are remapped using durable tree addresses.
+Loads execute at the next simulation boundary before new physics and UI work.
+
+Loading a native save without Unscience data clears old scene setups. Missing targets/assets,
+incompatible feature versions and partial restores are listed. Failed/partial feature records
+remain in subsequent saves so missing entries are not silently lost. While a feature record is
+retained, its current edits do not replace that record; **Use current setup for future saves**
+discards retained records understood by this build so the current setup can be saved instead.
+Unknown feature versions stay retained. Original save files are unchanged until overwritten.
+
+Imported **PNG, GLB and sound libraries** and **Parts Now mod folders** must remain installed.
+When moving a save to another computer, copy these dependencies too. Runtime part templates must
+be available before native save parsing; missing dependencies cannot be recreated from the sidecar.
+Named preset libraries remain global. Skittles also stores the applied style in scene saves.
+
+Camera sequences restore stopped; audio entries restore paused with **Resume** starting from the
+beginning. Iron Man modes restore with engines disarmed. One-shot weld/light/body animation
+activity and raw GPU/audio/physics execution state are not simulation checkpoints. See each
+feature's README and the [coverage assessment](../plans/saves-state-inventory.md) for details.
+
+A sidecar copied beside a different `universe.xml`, malformed data, or a future document schema is
+reported and not applied. Native saves remain usable without the sidecar where their required
+part mods are installed. Atomic sidecar writing does not make KSA's native overwrite atomic: KSA
+still deletes the old save directory first. Keep normal backup copies for valuable scenes.
+
+Architecture: `UnscienceSaves` discovers library participants and wires shared `NativeSaveHooks`;
+`SceneSaveCoordinator` orders/reset/replays them and retains failed records. See the
+[implementation plan](../plans/SAVES.md) and [integration map](../scope/saves.md).

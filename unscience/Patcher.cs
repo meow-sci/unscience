@@ -13,6 +13,7 @@ using MeowSci.HumbleArteestLib;
 using MeowSci.ItsSoShinyLib;
 using MeowSci.KittenAnimationsLib;
 using MeowSci.KsaAbstractions;
+using MeowSci.KsaAbstractions.Persistence;
 using MeowSci.SphinxLib;
 using MeowSci.IronManLib;
 using MeowSci.KiwisMarblesLib;
@@ -61,6 +62,7 @@ internal static class Patcher
             MenuBarPatch.ToggleWindow = MenuBarToggle;
             MenuBarPatch.Apply(_harmony!);
         });
+        TryApply("scene saves", () => NativeSaveHooks.Apply(_harmony!));
         TryApply("blinky", () => BlinkyPatches.Apply(_harmony!));
         TryApply("its-so-shiny", () => ShinyPatches.Apply(_harmony!));
         TryApply("camera-controller-override", () =>
@@ -111,6 +113,7 @@ internal static class Patcher
         {
             if (_harmony != null)
             {
+                TryRemove("scene saves", () => NativeSaveHooks.Remove(_harmony!));
                 TryRemove("hotkey-guard", () => HotkeyGuard.Unpatch(_harmony!));
                 TryRemove("hidden-ui-frame-hook", () => HiddenUiFrameHook.Unpatch(_harmony!));
                 TryRemove("menu-bar", () => MenuBarPatch.Remove(_harmony!));

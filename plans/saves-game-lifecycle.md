@@ -228,3 +228,26 @@ future routes that use these same methods. `Universe.LoadSystem(string)` and `Lo
 construct a new celestial system and reset roster; add lifecycle cleanup there if runtime system
 switching becomes supported. On normal startup the mod can initialize empty state; no save replay
 should occur simply from save-list scanning.
+
+## Implementation correction: defer the entire load before next-frame UI
+
+Further cross-feature analysis found that console commands execute in `OnDrawUiConsole` after some
+mod panels can already have emitted ImGui texture references. Joining simulation workers alone is
+not sufficient: synchronous reset can dispose a preview texture still referenced by that frame's
+ImGui draw data. The implementation therefore supersedes the immediate prefix execution described
+above with WHOLE-TRANSACTION deferral. `UncompressedSave.Load`, direct `Universe.DeserializeSave`
+and existing-world `Universe.LoadSystem` queue the latest request in `PhysicsFrameHook`.
+
+The queued method is called at the joined `Program.PrepareFrame` handoff, before
+`Universe.GetJobSimStep` and before the next ImGui frame. A guarded replay runs the ordinary native
+method plus the same capture/preflight/reset/restore/finalizer callbacks; nested native deserialize
+calls do not requeue themselves. Time-step creation must follow replay so it observes the loaded
+universe time. Deferred native exceptions retain their original exception through the native hook
+finalizer, then are logged by the frame dispatcher because the requesting UI call has returned.
+
+Startup `LoadSystem` with no current world remains synchronous. Editor-refused loads remain native
+rejections with no queued work or cleanup. Installing native save hooks now first requires successful
+installation of the frame handoff; if that seam fails, no native save hooks are installed, and stock
+saving/loading remains available. Unloading removes pending world requests. Real Harmony fixture
+checks cover whole-load deferral; the linked production PhysicsFrameHook tests assert replacement
+before step computation, latest-request precedence, old mutation invalidation and failure guard cleanup.

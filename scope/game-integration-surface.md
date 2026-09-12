@@ -1265,3 +1265,15 @@ remains reflected; `CharacterAvatar.Core.Scale` is now typed and captured instea
 to 0.01. Unweld/unload restore changed surviving originals; managed baseline/inheritance,
 animated local state, topology, repeatability and kitten correction checks cover these contracts.
 Native acceptance remains in [vehicle physics](vehicle-physics.md).
+
+## Scene save/load extension
+
+See [saves.md](saves.md) for the authoritative lifecycle and cross-feature persistence map.
+`NativeSaveHooks` patches `GameSave.Populate`, `UncompressedSave.Write/Load`,
+`Universe.DeserializeSave(UniverseData)` and `Universe.LoadSystem(string)`, using the shared
+`PhysicsFrameHook` for deferred world replacement. Save-local part addresses traverse
+`Vehicle.Parts.Root`, `Part.TreeChildren`, `Part.SubParts` and verify `Part.Template.Id`.
+Reset waits `JobSystems.OrbitSolvers/VehicleSolver/ClothSolvers` and clears queued old-world edits.
+The existing single Unscience Harmony owner installs/removes these hooks. Native constructor
+metadata reconstruction (Iron Man) remains active before late feature replay. No new shader or
+asset ID is introduced by the persistence foundation.
