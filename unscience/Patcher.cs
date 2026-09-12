@@ -7,6 +7,7 @@ using MeowSci.CameraControllerOverrideLib.Animation;
 using MeowSci.EternalFlameLib;
 using MeowSci.GlassLib;
 using MeowSci.GarrysTorchLib;
+using MeowSci.GodzillaLib;
 using MeowSci.IFeelSeenLib;
 using MeowSci.HumbleArteestLib;
 using MeowSci.ItsSoShinyLib;
@@ -71,6 +72,7 @@ internal static class Patcher
         TryApply("kiwis-marbles", () => KiwisMarblesPatches.Apply(_harmony!));
         TryApply("garrys-torch weld timing", () => GarrysTorchPatches.Apply(_harmony!));
         TryApply("garrys-torch kitten scale", () => KittenScalePatches.Apply(_harmony!));
+        TryApply("godzilla visual scale", () => VisualScalePatches.Apply(_harmony!));
         TryApply("glass", () => GlassPatches.Apply(_harmony!));
         TryApply("i-feel-seen", () => IFeelSeenPatches.Apply(_harmony!, IFeelSeenTracker!));
         TryApply("vehicle-paint", () => VehiclePaintPatches.Apply(_harmony!));
@@ -118,6 +120,7 @@ internal static class Patcher
                 TryRemove("kiwis-marbles", () => KiwisMarblesPatches.Remove(_harmony!));
                 TryRemove("garrys-torch weld timing", () => GarrysTorchPatches.Remove(_harmony!));
                 TryRemove("garrys-torch kitten scale", () => KittenScalePatches.Remove(_harmony!));
+                TryRemove("godzilla visual scale", () => VisualScalePatches.Remove(_harmony!));
                 TryRemove("glass", () => GlassPatches.Remove(_harmony!));
                 TryRemove("i-feel-seen", () => IFeelSeenPatches.Remove(_harmony!));
                 TryRemove("engine-emissive", () => EngineEmissivePatches.Remove(_harmony!));

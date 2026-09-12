@@ -408,14 +408,17 @@ Run `dotnet run --project pebbles.tests/pebbles.tests.csproj`; see its [README](
 ### [godzilla](godzilla) / [godzilla.lib](godzilla.lib)
 
 Vessel/EVA scaling panel in Unscience: Smart uniform layout-preserving size, Basic raw XYZ size,
-filterable targeting, per-vessel original snapshots and restore-all. Mutations use the shared physics
+filterable targeting, per-vessel original snapshots and restore-all. Runtime **Visual only** converts
+all sessions to draw-transform multipliers with original physics/bubble bounds and separate visual
+pixel culling; XYZ in this mode scales the whole craft. Mutations use the shared physics
 handoff; `VehicleScaleOwnership` excludes simultaneous Garry's Torch source scaling. Modules,
 collision/mass data and descendant transform caches refresh after edits. See the project README.
 
 ### [godzilla.tests](godzilla.tests)
 
 Managed executable linking production scale snapshots and ownership against lightweight game
-fixtures. Covers transforms, animation preservation, mode changes, restore, topology and kitten scale.
+fixtures and real Brutal numerics/Harmony. Covers transforms, animation preservation, mode changes,
+restore, topology, kitten scale, visual-only physics isolation, culling, patch coexistence and reload.
 
 ### [byo-music.tests](byo-music.tests)
 

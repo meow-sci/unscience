@@ -562,7 +562,9 @@ and session cleanup), after prior results and before next snapshots. Reentrant e
 frame; absent systems and removal clear pending work. Exceptions are isolated. Hosts install once:
 Unscience uses `GarrysTorchPatches.Apply/Remove`, which delegates and subscribes the weld listener;
 the Godzilla development host installs the shared hook directly. Godzilla uses the existing kitten
-axis postfix as well. `VehicleScaleOwnership` prevents two tools from owning source scale; keys are
+axis postfix as well. Both hosts also install `VisualScalePatches` for render-only transforms and
+visual pixel culling; its runtime toggle queues current-session conversion through the same handoff.
+`VehicleScaleOwnership` prevents two tools from owning source scale; keys are
 weak and release checks the owner name. See vehicle-physics for typed integration and live checks.
 
 ### Shared media import and BYO Music

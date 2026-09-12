@@ -62,3 +62,5 @@ Check(VehicleScaleOwnership.GetOwner(vessel)=="Godzilla", "Wrong owner cannot re
 VehicleScaleOwnership.Release(vessel,"Godzilla");
 Check(VehicleScaleOwnership.TryAcquire(vessel,"Garry's Torch"), "Release allows next tool");
 Console.WriteLine("PASS: Smart layout, authored scales, animation preservation, mode switches, restoration, topology, kitten scale and ownership");
+
+VisualScaleChecks.Run();

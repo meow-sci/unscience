@@ -3,6 +3,7 @@ using HarmonyLib;
 using Brutal.Numerics;
 using KSA;
 using MeowSci.GarrysTorchLib;
+using MeowSci.GodzillaLib;
 using MeowSci.KsaAbstractions;
 
 namespace MeowSci.Godzilla;
@@ -22,6 +23,7 @@ internal static class Patcher
                 HotkeyGuard.Patch(_harmony);
                 PhysicsFrameHook.Apply(_harmony);
                 KittenScalePatches.Apply(_harmony);
+                VisualScalePatches.Apply(_harmony);
             }
         }
         catch (Exception ex)
@@ -39,6 +41,7 @@ internal static class Patcher
                 HotkeyGuard.Unpatch(_harmony);
                 PhysicsFrameHook.Remove(_harmony);
                 KittenScalePatches.Remove(_harmony);
+                VisualScalePatches.Remove(_harmony);
             }
             _harmony?.UnpatchAll("godzilla");
             _harmony = null;

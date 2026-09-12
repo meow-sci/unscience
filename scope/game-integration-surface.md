@@ -1181,7 +1181,11 @@ map. New consumers: `Vehicle.Parts`, `CenterOfMassAsmb`, `IsDisposed`, `UpdateAf
 `Part.SubParts`, `Scale`, `PositionParentAsmb`, `ResetCachedPosMatrixValues`, `RefreshScale`, `UpdateBounds`;
 `PartTree.RecomputeAllDerivedData`; `JobSystems` solver waits; `KittenEva.Renderable` and
 `CharacterAvatar.Core.Scale`. String reflection: existing `KittenRenderable._characterAvatar` is now
-also used by Godzilla. No additional string lookup or new Harmony target. The `Program.PrepareFrame`
+also used by Godzilla. Visual-only rendering adds guarded transpilers on
+`Vehicle.UpdateRenderData(IViewport,int)` / `GetWorldMatrix(Camera)` for their `MeanRadius` cull
+reads, a `GetWorldMatrix` postfix, and a `PartTree.UpdateRenderData` matrix prefix/finalizer keyed
+through `PartTree.OwningVehicle`. See the area map for exact signatures, COM math and limitations.
+No new private field, shader or asset dependency. The `Program.PrepareFrame`
 transpiler moved from Garry's Torch to `ksa-abstractions.lib/PhysicsFrameHook`; Garry's Torch registers
 its weld callback, and Godzilla queues edits before it. `ScaleFactors` max-axis behavior limits Basic
 XYZ collision fidelity. New StarMap/ISubmod consumers: `godzilla` development host and Unscience.

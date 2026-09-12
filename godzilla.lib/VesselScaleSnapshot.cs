@@ -17,6 +17,7 @@ internal sealed class VesselScaleSnapshot
     private readonly CharacterAvatar? _avatar;
     private readonly float _avatarScale;
     private bool _basic;
+    private bool _physicalApplied;
     public Vehicle Vehicle { get; }
 
     public VesselScaleSnapshot(Vehicle vehicle)
@@ -52,10 +53,22 @@ internal sealed class VesselScaleSnapshot
 
     public bool TopologyMatches() => CurrentParts().SetEquals(_originals.Select(o => o.Part));
 
-    public void Apply(bool smart, float3 factor)
+    public void Apply(bool smart, float3 factor, bool visualOnly = false)
     {
         if (!WeldScale.IsValid(factor)) throw new ArgumentOutOfRangeException(nameof(factor), "Scale must be positive and finite.");
         if (!TopologyMatches()) throw new InvalidOperationException("The vessel's parts changed. Restore before scaling again.");
+        if (smart) factor = new float3(factor.X);
+        if (visualOnly)
+        {
+            if (!VisualScalePatches.IsApplied)
+                throw new InvalidOperationException("Visual scaling patches are unavailable.");
+            // Return the simulation to its captured size before registering a draw-only multiplier.
+            if (_physicalApplied) Restore();
+            VisualScalePatches.SetScale(Vehicle, factor);
+            return;
+        }
+        VisualScalePatches.ClearScale(Vehicle);
+        _physicalApplied = true; // Includes partially applied edits so rollback can restore them.
         // Undo Basic's child scales on a mode switch, but do not reset animation-owned child
         // transforms on repeated Smart edits or Smart restore.
         foreach (var original in _originals)
@@ -78,7 +91,8 @@ internal sealed class VesselScaleSnapshot
 
     public void Restore()
     {
-        if (Vehicle.IsDisposed) return;
+        VisualScalePatches.ClearScale(Vehicle);
+        if (Vehicle.IsDisposed || !_physicalApplied) return;
         var current = CurrentParts();
         foreach (var original in _originals)
         {
@@ -89,6 +103,8 @@ internal sealed class VesselScaleSnapshot
         }
         SetCharacterScale(new float3(1));
         Refresh();
+        _physicalApplied = false;
+        _basic = false;
     }
 
     private void SetCharacterScale(float3 factor)

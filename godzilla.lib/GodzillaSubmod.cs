@@ -12,7 +12,7 @@ namespace MeowSci.GodzillaLib;
 public sealed class GodzillaSubmod : ISubmod
 {
     private const string Owner = "Godzilla";
-    private sealed record Session(VesselScaleSnapshot Snapshot, bool Smart, float3 Factor);
+    private sealed record Session(VesselScaleSnapshot Snapshot, bool Smart, float3 Factor, bool VisualOnly);
     private readonly Dictionary<Vehicle, Session> _sessions = new();
     private readonly ImInputString _filter = new(128);
     private string? _vehicleId;
@@ -21,6 +21,21 @@ public sealed class GodzillaSubmod : ISubmod
     private float3 _axes = new(1);
     private string _status = "Choose a vessel, set its size, then Apply.";
     private bool _disposed;
+
+    public bool VisualOnly { get; private set; }
+
+    /// <summary>Switch every current session and subsequent edits at the safe physics handoff.</summary>
+    public void SetVisualOnly(bool value)
+    {
+        if (_disposed || VisualOnly == value) return;
+        VisualOnly = value;
+        PhysicsFrameHook.Enqueue(() =>
+        {
+            if (_disposed) return;
+            foreach (var (vehicle, session) in _sessions.ToArray())
+                ApplyNow(vehicle, session.Smart, session.Factor, value);
+        });
+    }
 
     public string Name => "Godzilla";
     public string Tooltip => "Resize vessels and kittens. Smart scaling preserves the craft's layout.";
@@ -33,43 +48,46 @@ public sealed class GodzillaSubmod : ISubmod
         if (!WeldScale.IsValid(factor)) { _status = "Each scale must be positive and finite."; return; }
         if (smart) factor = new float3(factor.X);
         _status = $"Applying to {vehicle.Id}…";
-        PhysicsFrameHook.Enqueue(() =>
+        bool visualOnly = VisualOnly;
+        PhysicsFrameHook.Enqueue(() => ApplyNow(vehicle, smart, factor, visualOnly));
+    }
+
+    private void ApplyNow(Vehicle vehicle, bool smart, float3 factor, bool visualOnly)
+    {
+        if (_disposed) return;
+        if (!IsLive(vehicle)) { _status = "That vessel is no longer available."; return; }
+        if (!VehicleScaleOwnership.TryAcquire(vehicle, Owner))
         {
-            if (_disposed) return;
-            if (!IsLive(vehicle)) { _status = "That vessel is no longer available."; return; }
-            if (!VehicleScaleOwnership.TryAcquire(vehicle, Owner))
-            {
-                _status = $"Release {VehicleScaleOwnership.GetOwner(vehicle)} control of this vessel first (unweld a source).";
-                return;
-            }
-            VesselScaleSnapshot? snapshot = null;
+            _status = $"Release {VehicleScaleOwnership.GetOwner(vehicle)} control of this vessel first (unweld a source).";
+            return;
+        }
+        VesselScaleSnapshot? snapshot = null;
+        try
+        {
+            snapshot = _sessions.TryGetValue(vehicle, out var session) ? session.Snapshot : new(vehicle);
+            snapshot.Apply(smart, factor, visualOnly);
+            _sessions[vehicle] = new(snapshot, smart, factor, visualOnly);
+            _status = $"Applied {(visualOnly ? "visual-only" : "physical")} {(smart ? "Smart" : "XYZ")} scaling to {vehicle.Id}.";
+        }
+        catch (Exception ex)
+        {
+            _status = $"Could not scale {vehicle.Id}: {ex.Message}";
+            Console.WriteLine($"godzilla: {ex}");
+            // Roll back partial mutations before the next worker can snapshot them.
             try
             {
-                snapshot = _sessions.TryGetValue(vehicle, out var session) ? session.Snapshot : new(vehicle);
-                snapshot.Apply(smart, factor);
-                _sessions[vehicle] = new(snapshot, smart, factor);
-                _status = $"Applied {(smart ? "Smart" : "Basic")} scaling to {vehicle.Id}.";
+                snapshot?.Restore();
+                _sessions.Remove(vehicle);
+                VehicleScaleOwnership.Release(vehicle, Owner);
             }
-            catch (Exception ex)
+            catch (Exception restoreError)
             {
-                _status = $"Could not scale {vehicle.Id}: {ex.Message}";
-                Console.WriteLine($"godzilla: {ex}");
-                // Roll back partial mutations before the next worker can snapshot them.
-                try
-                {
-                    snapshot?.Restore();
-                    _sessions.Remove(vehicle);
-                    VehicleScaleOwnership.Release(vehicle, Owner);
-                }
-                catch (Exception restoreError)
-                {
-                    // Keep the snapshot and ownership so Restore remains available for retry.
-                    if (snapshot != null) _sessions[vehicle] = new(snapshot, smart, factor);
-                    _status += " Restoration also failed; use Restore to retry.";
-                    Console.WriteLine($"godzilla: restore failed: {restoreError}");
-                }
+                // Keep the snapshot and ownership so Restore remains available for retry.
+                if (snapshot != null) _sessions[vehicle] = new(snapshot, smart, factor, visualOnly);
+                _status += " Restoration also failed; use Restore to retry.";
+                Console.WriteLine($"godzilla: restore failed: {restoreError}");
             }
-        });
+        }
     }
 
     public void RequestRestore(Vehicle vehicle)
@@ -84,6 +102,7 @@ public sealed class GodzillaSubmod : ISubmod
         try
         {
             if (IsLive(vehicle)) session.Snapshot.Restore();
+            VisualScalePatches.ClearScale(vehicle);
             _sessions.Remove(vehicle);
             VehicleScaleOwnership.Release(vehicle, Owner);
             _status = $"Restored {vehicle.Id}.";
@@ -103,6 +122,7 @@ public sealed class GodzillaSubmod : ISubmod
         {
             if (!IsLive(vehicle))
             {
+                VisualScalePatches.ClearScale(vehicle);
                 _sessions.Remove(vehicle);
                 VehicleScaleOwnership.Release(vehicle, Owner);
             }
@@ -142,6 +162,10 @@ public sealed class GodzillaSubmod : ISubmod
         }
         if (ImGui.Button("Use controlled vessel##godzilla"))
             _vehicleId = VehicleProvider.GetControlledVehicle()?.Id;
+        bool visualOnly = VisualOnly;
+        if (ImGui.Checkbox("Visual only (keep original physics)##godzilla"u8, ref visualOnly))
+            SetVisualOnly(visualOnly);
+        ImGui.TextWrapped("Applies immediately to all scaled vessels. Physics, collisions and picking keep the original size when enabled."u8);
         ImGui.Checkbox("Smart scaling##godzilla", ref _smart);
         if (_smart)
         {
@@ -150,7 +174,9 @@ public sealed class GodzillaSubmod : ISubmod
         }
         else
         {
-            ImGui.TextWrapped("Basic sets every part and subpart's absolute XYZ scale. Part spacing stays fixed; overlaps and exaggerated child sizes are intentional. The game uses the largest axis for collider size.");
+            if (VisualOnly)
+                ImGui.TextWrapped("Visual XYZ multiplies the entire craft along its assembly/body axes, including part spacing."u8);
+            else ImGui.TextWrapped("Basic sets every part and subpart's absolute XYZ scale. Part spacing stays fixed; overlaps and exaggerated child sizes are intentional. The game uses the largest axis for collider size.");
             ImGui.DragFloat3("XYZ scale##godzilla", ref _axes, 0.01f, WeldScale.Minimum, WeldScale.Maximum);
         }
         ImGui.TextWrapped("Changes last for this session; Restore returns the captured original size and layout. Growing on the ground can push geometry into the terrain.");
@@ -168,7 +194,7 @@ public sealed class GodzillaSubmod : ISubmod
             foreach (var (vehicle, session) in _sessions.ToArray())
             {
                 ImGui.PushID(vehicle.Id);
-                ImGui.Text($"{vehicle.Id} — {(session.Smart ? "Smart" : "Basic")}");
+                ImGui.Text($"{vehicle.Id} — {(session.Smart ? "Smart" : "XYZ")} / {(session.VisualOnly ? "Visual only" : "Physical")}");
                 ImGui.SameLine();
                 if (ImGui.SmallButton("Restore"u8)) RequestRestore(vehicle);
                 ImGui.PopID();
@@ -188,7 +214,11 @@ public sealed class GodzillaSubmod : ISubmod
         JobSystems.VehicleSolver.Wait();
         JobSystems.ClothSolvers.Wait();
         foreach (var vehicle in _sessions.Keys.ToArray()) Restore(vehicle);
-        foreach (var vehicle in _sessions.Keys) VehicleScaleOwnership.Release(vehicle, Owner);
+        foreach (var vehicle in _sessions.Keys)
+        {
+            VisualScalePatches.ClearScale(vehicle);
+            VehicleScaleOwnership.Release(vehicle, Owner);
+        }
         _sessions.Clear();
     }
 }

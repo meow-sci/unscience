@@ -524,7 +524,8 @@ the decomp diff. Solution builds clean against 5402.
 
 ## godzilla (`godzilla` / `godzilla.lib`)
 
-New Unscience `ISubmod` panel for Smart uniform and Basic raw XYZ vessel scaling. No new game patch:
+Unscience `ISubmod` panel for Smart uniform and Basic raw XYZ vessel scaling, plus a global runtime
+visual-only toggle (default off) that switches existing sessions at the safe handoff:
 `GarrysTorchPatches` now delegates the validated caller transpiler to shared `PhysicsFrameHook` and
 registers welding as a listener. Godzilla queues Apply/Restore before those listeners. The original
 weld timing invariant and managed Harmony tests remain in force.
@@ -549,3 +550,30 @@ kitten baseline and owner exclusion. Production shared Harmony patch also passes
 including queued edits before welds, deferred reentrant work, exceptions and unloaded-system discard.
 Full solution compiles against 5402. Native collisions, scale-sensitive module behavior, kitten fur,
 actuation at scale, docking/staging and unload still need a live game pass.
+
+### Godzilla visual-only rendering (@5402)
+
+`VisualScalePatches` is installed/removed by both hosts. Visual sessions keep `Part.Scale`, full-part
+positions, `CharacterAvatar.Core.Scale`, mass/modules/colliders and physical radii at captured size.
+Only a transition from physical scaling restores/rebuilds these once. Subsequent visual edits and
+restore do no physical refresh. Registrations use weak vehicle keys, clear on restore/prune/unload,
+and retain existing Torch ownership exclusion. XYZ uses whole-craft assembly/body-axis multipliers;
+it deliberately has different geometry from physical Basic's absolute per-part overrides.
+
+| New integration | Current source / invariant |
+|---|---|
+| `Vehicle.UpdateRenderData(IViewport,int)` and `Vehicle.GetWorldMatrix(Camera)` transpilers | `Vehicle.cs:3662–3691`: each contains exactly one `MeanRadius` getter read for the one-pixel cull. Replace only that read with physical radius × max visual axis. Guarded match count; patch installation rolls back on failure. Never patch the radius getter globally. |
+| `Vehicle.GetWorldMatrix(Camera)` postfix | Used by `KittenEva.UpdateRenderData` (`KittenEva.cs:1062`); premultiply its result by visual body-axis scale. Preserve world translation, null culling and other prefixes' transforms (I Feel Seen). Avatar/helmet/fur/MMU inherit; `ModelToBodyMatrix` and bone-local queries remain physical. |
+| `PartTree.UpdateRenderData(ref readonly double4x4,bool,IViewport,int)` prefix/finalizer | `PartTree.cs:912`; `OwningVehicle` field gates lookup. Premultiply draw input by `T(-COM) * Scale * T(COM)` using live `Vehicle.CenterOfMassAsmb`. The finalizer restores the caller's readonly matrix even on exceptions. Part models/dynamic/glass and local draw consumers inherit; physical part/assembly matrices remain unchanged. |
+| Host lifecycle | `godzilla/Patcher.cs`, `unscience/Patcher.cs`: add `VisualScalePatches.Apply/Remove`; no new StarMap hooks. Queued `SetVisualOnly(bool)` converts current sessions in order with Apply/Restore. |
+
+Bubble envelopes use physical `ReadOnlyVehicle/VehicleProperties.BoundingSphereRadiusBody`
+(`PhysicsBubble.cs:357,374`), which the render hooks never modify. Camera targeting, picking and
+contact remain at native size. Separate world-space exhaust and simulated cloth are not scaled by
+these hooks. `Program.RefreshVehiclesInFrame` includes all current-system vehicles (`Program.cs:583`);
+recheck this if upstream adds earlier size culling. No new shader, asset or private field dependency.
+
+Managed checks cover planet-scale multipliers, no physics refresh, both cull paths, COM/XYZ math,
+exception restoration, mode transitions, kitten scalar isolation, external render prefix coexistence
+and patch reload. Native bubbles, planet-scale clipping/shadows/LOD, terrain overlap, Iron Man early
+part submission and restoration still require an in-game acceptance pass.

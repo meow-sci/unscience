@@ -1,17 +1,6 @@
 using System;
 using System.Collections.Generic;
-namespace Brutal.Numerics
-{
-    public readonly record struct double3(double X, double Y, double Z)
-    {
-        public double3(double v) : this(v, v, v) { }
-        public static double3 operator +(double3 a, double3 b) => new(a.X+b.X,a.Y+b.Y,a.Z+b.Z);
-        public static double3 operator -(double3 a, double3 b) => new(a.X-b.X,a.Y-b.Y,a.Z-b.Z);
-        public static double3 operator *(double3 a, double b) => new(a.X*b,a.Y*b,a.Z*b);
-    }
-    public readonly record struct float3(float X, float Y, float Z)
-    { public float3(float v) : this(v,v,v) { } }
-}
+using System.Runtime.CompilerServices;
 namespace KSA
 {
     using Brutal.Numerics;
@@ -27,17 +16,58 @@ namespace KSA
     }
     public class PartTree
     {
+        public Vehicle? OwningVehicle;
         public List<Part> Parts = new();
         public int Refreshes;
+        public double4x4 RenderMatrix;
+        public int Draws;
+        public bool ThrowOnDraw;
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void UpdateRenderData(ref readonly double4x4 matrixAsmb2Ego, bool isEditedVehicle, IViewport viewport, int frameIndex)
+        {
+            RenderMatrix = matrixAsmb2Ego;
+            Draws++;
+            if (ThrowOnDraw) throw new InvalidOperationException("test draw failure");
+        }
         public void RecomputeAllDerivedData() => Refreshes++;
     }
     public class Vehicle
     {
+        public Vehicle() { Parts.OwningVehicle = this; }
         public bool IsDisposed;
+        public virtual double MeanRadius { [MethodImpl(MethodImplOptions.NoInlining)] get => 1; }
+        public double4x4 GetMatrixAsmb2Ego(Camera camera) =>
+            double4x4.CreateTranslation(camera.Position - CenterOfMassAsmb);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public virtual void UpdateRenderData(IViewport viewport, int inFrameIndex)
+        {
+            var camera = viewport.GetCamera();
+            if (camera.GetObjectDiameterPixels(2 * MeanRadius, camera.Position.Length()) < 1) return;
+            var matrix = GetMatrixAsmb2Ego(camera);
+            Parts.UpdateRenderData(in matrix, false, viewport, inFrameIndex);
+        }
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public float4x4? GetWorldMatrix(Camera camera)
+        {
+            if (camera.GetObjectDiameterPixels(2 * MeanRadius, camera.Position.Length()) < 1) return null;
+            return float4x4.CreateTranslation(float3.Pack(camera.Position));
+        }
         public double3 CenterOfMassAsmb;
         public PartTree Parts = new();
         public int Refreshes;
         public void UpdateAfterPartTreeModification() => Refreshes++;
+    }
+    public interface IViewport { Camera GetCamera(); }
+    public sealed class TestViewport : IViewport
+    {
+        public Camera Camera = new();
+        public Camera GetCamera() => Camera;
+    }
+    public class Camera
+    {
+        public double3 Position = new(100, 200, 300);
+        public double PixelFactor = 1;
+        public double GetObjectDiameterPixels(double diameter, double distance) => diameter * PixelFactor;
     }
     public class KittenEva : Vehicle { public KittenRenderable Renderable = new(); }
     public class KittenRenderable { public CharacterAvatar Avatar = new(); public float3 Correction; }

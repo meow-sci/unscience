@@ -18,7 +18,7 @@ A unified supermod that consolidates 28 KSA feature libraries into a single ImGu
 | Don't Stifle Me | Extends vehicle-editor scale and configurable-value limits |
 | Eternal Flame — Infinite Fuel | Monitors vehicles and periodically refills all fuel tanks |
 | Garry's Torch | Welds vehicles together with position/rotation offsets and independent X/Y/Z scale |
-| Godzilla | Smart vessel sizing, Basic XYZ scales and restoration |
+| Godzilla | Smart vessel sizing, Basic XYZ scales, visual-only physics isolation and restoration |
 | Glass — Camera Lens | Overrides camera FOV with presets or manual control |
 | Graffiti — PNG Decals | Click-to-place projected PNG decals on vehicle hulls, deployed parachute cloth, and terrain |
 | Free Fallin — Parachute Customizer | Applies a global stock tint, panel-tiled or cohesive full-canopy PNG, centered decal, and canopy PBR controls |
@@ -72,7 +72,7 @@ Pebbles methods. The host's existing HotkeyGuard and hidden-HUD update hook cove
 No newux shell, workspace persistence or Live State framework is included.
 See [Pebbles README](../pebbles.lib/README.md) for usage and limitations.
 
-Godzilla adds session-based Smart vessel resizing, raw XYZ Basic scaling, and restore controls.
+Godzilla adds session-based Smart vessel resizing, raw XYZ Basic scaling, a runtime **Visual only** toggle that preserves original physics, and restore controls.
 See [Godzilla](../godzilla/README.md).
 
 Sphinx is registered as a regular submod; `Patcher.cs` applies/removes its native static-object
