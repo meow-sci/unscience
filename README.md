@@ -31,6 +31,9 @@ passing through vehicles and scenery; the per-weld checkbox and saved presets ca
 The red **Delete All Welds** button beside **Create Weld** removes all welds and is disabled when none exist.
 See [Garry's Torch](garrys-torch/README.md) for timing and validation details.
 
+Garry's Torch and Godzilla use 0.05–20 as a mouse-drag range only. Double-click or Ctrl-click
+their scale fields to type values outside that range; APIs, presets and animations accept them too.
+
 ## building
 
 Every project compiles against the proprietary KSA game assemblies, which are

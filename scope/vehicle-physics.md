@@ -236,7 +236,7 @@ the legacy scalar `scale` key uniformly for backwards compatibility.
 **XYZ scale enhancement (2026-09-06)**
 
 - Weld state, live UI editing, presets, queued animation, and the public/RPC APIs now carry a
-  `float3` scale. Each axis is validated to `0.05..20`; animation lerps all three components.
+  `float3` scale. The `0.05..20` range is a drag-widget convenience only; typed values, APIs, presets and animations can exceed it. Animation lerps all three components.
 - Old TOML `scale = n` values and old HTTP numeric `scale` inputs are expanded to `(n,n,n)`.
   Responses and newly saved presets use explicit XYZ values.
 - Ordinary parts use their existing compile-checked `Part.Scale : double3`. KittenEva requires the

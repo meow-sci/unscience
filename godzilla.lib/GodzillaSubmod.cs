@@ -30,7 +30,7 @@ public sealed class GodzillaSubmod : ISubmod
     /// <summary>Schedule a scale edit at the next safe physics handoff.</summary>
     public void RequestApply(Vehicle vehicle, bool smart, float3 factor)
     {
-        if (!WeldScale.IsValid(factor)) { _status = "Each scale must be between 0.05 and 20."; return; }
+        if (!WeldScale.IsValid(factor)) { _status = "Each scale must be positive and finite."; return; }
         if (smart) factor = new float3(factor.X);
         _status = $"Applying to {vehicle.Id}…";
         PhysicsFrameHook.Enqueue(() =>
@@ -146,12 +146,12 @@ public sealed class GodzillaSubmod : ISubmod
         if (_smart)
         {
             ImGui.TextWrapped("Uniform size, preserving part spacing and original proportions. Child animations inherit the new size.");
-            ImGui.DragFloat("Size multiplier##godzilla", ref _uniform, 0.01f, 0.05f, 20f);
+            ImGui.DragFloat("Size multiplier##godzilla", ref _uniform, 0.01f, WeldScale.Minimum, WeldScale.Maximum);
         }
         else
         {
             ImGui.TextWrapped("Basic sets every part and subpart's absolute XYZ scale. Part spacing stays fixed; overlaps and exaggerated child sizes are intentional. The game uses the largest axis for collider size.");
-            ImGui.DragFloat3("XYZ scale##godzilla", ref _axes, 0.01f, 0.05f, 20f);
+            ImGui.DragFloat3("XYZ scale##godzilla", ref _axes, 0.01f, WeldScale.Minimum, WeldScale.Maximum);
         }
         ImGui.TextWrapped("Changes last for this session; Restore returns the captured original size and layout. Growing on the ground can push geometry into the terrain.");
         ImGui.BeginDisabled(target == null);

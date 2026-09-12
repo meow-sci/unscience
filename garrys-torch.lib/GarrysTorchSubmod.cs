@@ -377,8 +377,12 @@ public sealed class GarrysTorchSubmod : ISubmod
             ImGui.TableNextRow();
             ImGui.TableNextColumn(); ImGui.AlignTextToFramePadding(); ImGui.Text("Scale XYZ");
             ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1f);
-            ImGui.DragFloat3($"{idPrefix}_scaleval", ref scale, 0.001f,
-                WeldScale.Minimum, WeldScale.Maximum);
+            var editedScale = scale;
+            if (ImGui.DragFloat3($"{idPrefix}_scaleval", ref editedScale, 0.001f,
+                WeldScale.Minimum, WeldScale.Maximum)
+                && WeldScale.IsValid(editedScale))
+                scale = editedScale;
+            ImGui.SetItemTooltip("Drag range: 0.05–20. Double-click or Ctrl-click to type values outside this range."u8);
 
             ImGui.EndTable();
         }
@@ -535,7 +539,7 @@ public sealed class GarrysTorchSubmod : ISubmod
         Part? targetPart = null, bool collisions = false)
     {
         if (!WeldScale.IsValid(scale))
-            return (null, $"Scale axes must each be between {WeldScale.Minimum} and {WeldScale.Maximum}.");
+            return (null, "Scale axes must each be positive and finite.");
 
         if (sourceVehicleId == targetVehicleId)
             return (null, "Source and target must be different vehicles.");
@@ -617,7 +621,7 @@ public sealed class GarrysTorchSubmod : ISubmod
             return (null, $"No weld found with source vehicle '{sourceVehicleId}'.");
 
         if (scale.HasValue && !WeldScale.IsValid(scale.Value))
-            return (null, $"Scale axes must each be between {WeldScale.Minimum} and {WeldScale.Maximum}.");
+            return (null, "Scale axes must each be positive and finite.");
 
         if (position.HasValue) weld.Position = position.Value;
         if (rotation.HasValue) weld.Rotation = rotation.Value;
@@ -671,7 +675,7 @@ public sealed class GarrysTorchSubmod : ISubmod
             return "Duration must be greater than 0";
 
         if (!WeldScale.IsValid(targetScale))
-            return $"Scale axes must each be between {WeldScale.Minimum} and {WeldScale.Maximum}.";
+            return "Scale axes must each be positive and finite.";
 
         var animation = new WeldAnimation(
             weld.Position, weld.Rotation, weld.Scale,

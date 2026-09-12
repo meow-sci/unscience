@@ -1236,6 +1236,9 @@ establish runtime contact filtering or physics correctness.
 
 ### Garry's Torch authored scale preservation
 
+Garry's Torch and Godzilla share scale validation; the 0.05–20 widget drag range does not restrict
+typed values, API edits, presets or animations. This changes accepted inputs without new game seams.
+
 The red **Delete All Welds** control beside **Create Weld** reuses per-weld cleanup for every
 entry (including disabled welds), restoring scales and releasing ownership; it is disabled for an
 empty list. Collision restoration keeps the existing next-snapshot behavior; no new game seam.

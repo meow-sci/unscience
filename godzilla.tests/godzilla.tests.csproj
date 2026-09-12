@@ -4,6 +4,7 @@
     <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../garrys-torch.lib/WeldScale.cs" Link="WeldScale.cs" />
     <Compile Include="../godzilla.lib/VesselScaleSnapshot.cs" Link="VesselScaleSnapshot.cs" />
     <Compile Include="../ksa-abstractions.lib/VehicleScaleOwnership.cs" Link="VehicleScaleOwnership.cs" />
   </ItemGroup>

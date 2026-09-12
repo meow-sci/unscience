@@ -85,7 +85,7 @@ public class WeldEntry
     public Part? TargetPart { get; set; }         // Anchor part on target (null = vehicle CoM fallback)
     public float3 RelativePosition { get; set; }  // Offset relative to anchor (part frame or body frame)
     public float3 RelativeRotation { get; set; }  // Pitch/Yaw/Roll relative to anchor orientation (degrees)
-    public float3 Scale { get; set; }             // XYZ factors (0.05 to 20.0 per axis)
+    public float3 Scale { get; set; }             // XYZ factors (0.05–20 drag range; typed values may exceed it)
     public bool Collisions { get; set; }          // Default false; suppress source rigid-body contacts
     public bool LockRotation { get; set; }        // Prevent relative rotation
 }
@@ -173,7 +173,8 @@ The game exposes only a scalar `ScaleFactors` value to rescalable modules (deriv
 
 ## Configuration Options
 
-All weld parameters are configured through the ImGui window:
+All weld parameters are configured through the ImGui window. Scale drag ranges are UI conveniences;
+typed scales may be any positive, finite value:
 
 | Parameter | Range | Notes |
 |-----------|-------|-------|
@@ -183,7 +184,7 @@ All weld parameters are configured through the ImGui window:
 | Pitch | -180 to +180° | Rotation around forward axis |
 | Yaw | -180 to +180° | Rotation around up axis |
 | Roll | -180 to +180° | Rotation around right axis |
-| Scale X/Y/Z | 0.05 to 20.0x each | Independent local-axis scaling |
+| Scale X/Y/Z | Drag: 0.05–20x; type outside this range | Independent local-axis scaling |
 | Lock Rotation | true/false | Freeze relative orientation |
 | Collisions | true/false (default false) | Source rigid-body collisions while Weld Enabled; changes take effect at the next physics snapshot |
 

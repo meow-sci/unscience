@@ -46,6 +46,7 @@ Vehicle welding system. Attaches one vehicle to another with support for positio
 - Position and rotation offsets expressed relative to the target part's local frame
 - Per-weld rotation offset (pitch/yaw/roll)
 - Independent per-axis multipliers of captured full-part scales; preserves authored/animated SubPart scales through inheritance and restores originals on unweld/unload, including nondefault KittenEva avatar size
+- Scale drag bounds are UI conveniences only; typed values, APIs, presets and animations can exceed 0.05–20 (also applies to Godzilla)
 - Rotation lock toggle and auto-unweld on parent mismatch
 - **Collisions** defaults off per weld, with create/edit controls, optional API arguments, and TOML preset persistence (legacy presets default off). Scoped Bepu shape suppression preserves module simulation; disabling/removing a weld restores collisions at the next snapshot.
 - Weld updates run through `GarrysTorchPatches` via shared `PhysicsFrameHook` at the `Program.PrepareFrame` simulation handoff, after completed results are applied and before cloth/vehicle/orbit workers start. Source light actuation retains committed progress; teleports use `SimStep.PreviousTime`. The patch validates the call order and is independent of HUD visibility.

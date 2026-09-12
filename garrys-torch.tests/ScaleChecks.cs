@@ -67,7 +67,13 @@ internal static class ScaleChecks
         WeldEngine.RestoreVehicleScale(source);
         Require(root.Writes == restoredWrites, "repeated restore is a no-op");
 
-        foreach (float invalid in new[] { float.NaN, float.PositiveInfinity, 0f, 21f })
+        var unrestrictedScale = new float3(1f / 128f, 32f, 128f);
+        WeldEngine.ApplyVehicleScale(source, unrestrictedScale);
+        Equal(root.Scale, new(7d / 128, 256, 1152), "accept axes below .05 and above 20 without clamping");
+        WeldEngine.RestoreVehicleScale(source);
+        Equal(root.Scale, new(7, 8, 9), "restore after unrestricted scaling");
+
+        foreach (float invalid in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity, 0f, -1f })
         {
             try { WeldEngine.ApplyVehicleScale(source, new float3(1, invalid, 1)); }
             catch (ArgumentOutOfRangeException) { continue; }
@@ -101,6 +107,12 @@ internal static class ScaleChecks
         Equal(root.Scale, new(21, 16, 4.5), "animation completion uses original scales");
         manager.Update(1);
         Equal(root.Scale, new(7, 8, 9), "queued identity animation restores original proportions");
+        manager.Enqueue(weld, new WeldAnimation(default, default, WeldScale.Identity,
+            default, default, new float3(1f / 128f, 32f, 128f), 1, EasingType.Linear));
+        manager.Update(.5);
+        Equal(root.Scale, new(7 * (1 + 1d / 128) / 2, 132, 580.5), "animation crosses former limits");
+        manager.Update(.5);
+        Equal(root.Scale, new(7d / 128, 256, 1152), "animation completes outside former limits");
         manager.Clear();
         WeldEngine.RestoreVehicleScale(source);
     }

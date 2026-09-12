@@ -53,12 +53,6 @@ namespace MeowSci.KsaAbstractions
 }
 namespace MeowSci.GarrysTorchLib
 {
-    public static class WeldScale
-    {
-        public static bool IsValid(Brutal.Numerics.float3 f) =>
-            float.IsFinite(f.X) && float.IsFinite(f.Y) && float.IsFinite(f.Z) &&
-            f.X >= .05f && f.Y >= .05f && f.Z >= .05f && f.X <= 20 && f.Y <= 20 && f.Z <= 20;
-    }
     public static class KittenScalePatches
     {
         public static void SetScale(KSA.KittenRenderable r, Brutal.Numerics.float3 f) => r.Correction=f;

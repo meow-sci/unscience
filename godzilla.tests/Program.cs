@@ -29,7 +29,20 @@ snapshot.Apply(true, new(2));
 Check(child.Scale == new double3(.3,.4,.5), "Basic-to-Smart must remove raw child overrides");
 snapshot.Restore();
 Check(first.Scale == new double3(2,3,4) && first.PositionParentAsmb == new double3(-5,2,4), "Exact original restoration");
-try { snapshot.Apply(true, new(float.NaN)); throw new Exception("Accepted NaN"); } catch (ArgumentOutOfRangeException) { }
+snapshot.Apply(true, new(32));
+Check(first.Scale == new double3(64,96,128) && first.PositionParentAsmb == new double3(-191,2,35), "Smart accepts sizes above 20 without clamping");
+snapshot.Apply(true, new(1f / 128f));
+Check(first.Scale == new double3(2d / 128,3d / 128,4d / 128), "Smart accepts sizes below .05");
+snapshot.Apply(false, new(1f / 128f, 32, 128));
+Check(first.Scale == new double3(1d / 128,32,128) && child.Scale == first.Scale, "Basic accepts unrestricted XYZ scales");
+snapshot.Restore();
+Check(first.Scale == new double3(2,3,4), "Restore unrestricted sizes");
+foreach (float invalid in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity, 0f, -1f })
+{
+    try { snapshot.Apply(false, new(1, invalid, 1)); throw new Exception("Accepted invalid scale"); }
+    catch (ArgumentOutOfRangeException) { }
+}
+Check(first.Scale == new double3(2,3,4), "Invalid scale cannot partially mutate vessel");
 snapshot.Apply(true, new(2));
 vessel.Parts.Parts.Remove(second);
 Check(!snapshot.TopologyMatches(), "Detect staging/part loss");

@@ -75,6 +75,10 @@ mutation ordering, reentrant deferral, exception isolation and stale-system queu
 
 ## Scale preservation
 
+Scale controls retain a 0.05–20 mouse-drag range, but typed values, APIs, presets and animations
+can exceed it. Any positive, finite scale is accepted. `WeldScale.Minimum`/`Maximum` describe
+widget bounds, not validation constraints.
+
 `WeldEngine.Scaling` owns a weak per-source `WeldScaleSnapshot`, captured during `CreateWeld`
 even at identity. Full-part scale edits multiply captured XYZ values; SubPart local scale,
 position and rotation stay game-owned. Descendant matrix caches are invalidated after parent

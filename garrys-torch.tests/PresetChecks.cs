@@ -19,8 +19,13 @@ internal static class PresetChecks
             Require(manager.SavePreset("enabled", new WeldPreset { Scale = WeldScale.Identity, Collisions = true }),
                 "save collision opt-in");
             Require(manager.SavePreset("disabled", new WeldPreset { Scale = WeldScale.Identity }), "save collisions off");
+            var unrestrictedScale = new Brutal.Numerics.float3(1f / 128f, 32f, 128f);
+            Require(manager.SavePreset("unrestricted", new WeldPreset { Scale = unrestrictedScale }),
+                "save scales outside former .05–20 range");
             var reloaded = new PresetManager();
             reloaded.Initialize();
+            Require(reloaded.GetPreset("unrestricted") is { } preset && WeldScale.Equals(preset.Scale, unrestrictedScale),
+                "round-trip unrestricted scale without clamping");
             Require(reloaded.GetPreset("enabled") is { Collisions: true }, "round-trip opt-in");
             Require(reloaded.GetPreset("disabled") is { Collisions: false }, "round-trip default");
             Require(reloaded.GetPreset("legacy") is { Collisions: false }, "preserve migrated default");

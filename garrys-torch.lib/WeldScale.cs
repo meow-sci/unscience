@@ -5,6 +5,7 @@ namespace MeowSci.GarrysTorchLib;
 /// <summary>Shared scale constraints and helpers for weld state, UI, presets, and RPC callers.</summary>
 public static class WeldScale
 {
+    // Drag-widget bounds only. Typed values, APIs and presets may exceed this range.
     public const float Minimum = 0.05f;
     public const float Maximum = 20f;
 
@@ -19,5 +20,5 @@ public static class WeldScale
         left.X == right.X && left.Y == right.Y && left.Z == right.Z;
 
     private static bool IsValidAxis(float value) =>
-        float.IsFinite(value) && value >= Minimum && value <= Maximum;
+        float.IsFinite(value) && value > 0f;
 }

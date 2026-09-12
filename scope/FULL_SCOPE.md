@@ -130,6 +130,9 @@ rocky-mcrock-face, skittles, sphinx, thug-life, zippo. (jplrepo is a development
 
 ## Current status against `5402` (summary)
 
+Garry's Torch and Godzilla retain scale drag ranges as UI conveniences; typed values and underlying
+edits can exceed those ranges. See [vehicle physics](vehicle-physics.md).
+
 Garry's Torch adds a red **Delete All Welds** button beside **Create Weld**, disabled when empty,
 using existing unweld cleanup. See [vehicle physics](vehicle-physics.md) for restoration behavior.
 

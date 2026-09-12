@@ -40,6 +40,9 @@ check of animated light parts, scaled compound colliders, weld chains, terrain a
 
 ## Scale preservation regression
 
+Scale application, animation and preset round-trip checks cover values below 0.05 and above 20;
+those bounds belong only to the mouse-drag widgets, not scale validation.
+
 `ScaleChecks` links production `WeldEngine.Scaling`, `WeldScaleSnapshot`, `WeldAnimation`,
 `WeldAnimationManager`, `ReflectionHelpers` and `KittenScalePatches` against managed part/avatar
 fixtures and real Brutal numerics. Checks cover custom XYZ full-part/SubPart baselines, identity

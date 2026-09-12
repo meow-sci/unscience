@@ -54,7 +54,7 @@ internal sealed class VesselScaleSnapshot
 
     public void Apply(bool smart, float3 factor)
     {
-        if (!WeldScale.IsValid(factor)) throw new ArgumentOutOfRangeException(nameof(factor), "Scale must be finite and between 0.05 and 20.");
+        if (!WeldScale.IsValid(factor)) throw new ArgumentOutOfRangeException(nameof(factor), "Scale must be positive and finite.");
         if (!TopologyMatches()) throw new InvalidOperationException("The vessel's parts changed. Restore before scaling again.");
         // Undo Basic's child scales on a mode switch, but do not reset animation-owned child
         // transforms on repeated Smart edits or Smart restore.
