@@ -115,7 +115,8 @@ Unexpected IL match counts fail installation with rollback; removed hooks restor
 Marker `iron-man:v1:` in serialized instance Id stores original Id, stock connector count and up to
 16 nodes with name, position, direction and radius. Decoder enforces version, payload bounds,
 finite vectors/radius, supported template and matching stock node count; invalid marked saves fail
-before stock index resolution. No flight activation persists. Saved files require the mod while
+before stock index resolution. Native-only saves do not preserve flight activation; Unscience scene
+sidecars restore the chosen mode disarmed. Saved files require the mod while
 connected runtime indices exist; removing a mod cannot retroactively make these files stock-safe.
 
 Unload tracks weak roots, converts owned endpoints to stock surface links transactionally and
@@ -167,8 +168,20 @@ HUD correction addresses that reported gap; live autopilot response remains to b
 - [ ] Balanced tanks/engines consume correct propellant, produce thrust/torque and obey throttle;
       attached RCS responds to vessel inputs. Main and secondary views show hardware once per frame.
 - [ ] Disable restores EVA movement and stops/disarms engines; equipment stays visible. Re-enable
-      and return through editor exit. Save/load starts flight mode off.
+      and return through editor exit. Native-only save/load starts flight mode off; scene sidecars restore the saved mode disarmed.
 - [ ] Coexistence: I Feel Seen distance override, Humble Arteest paint, Godzilla scaling and Kitten
       Animations. Observe rigid equipment vs animated body; no foot-bone attachment is provided.
 - [ ] Unload while editing/in flight with attached/disabled/loaded nodes; inspect preserved resource
       links and diagnostics. Previously saved marked files still require the mod.
+
+
+## Scene save adapter
+
+`IronManSubmod.Saves` records configured kitten IDs, saved flight mode, current flight preferences
+and original EVA preferences. `IronManEvaSettings.Saves` binds the original `ControlPart` through
+`SavedPartReference` and `Part.Connectors` index, validates ownership against the loaded kitten's
+`Parts`, and restores `KittenControlMode`. Missing control references warn and retain the original
+record instead of silently replacing its baseline. Existing constructor metadata still restores
+custom connectors before native linking; late replay never authors replacement nodes. Engines
+remain disarmed. `IronManFlightSettings.Saves` validates enum values and finite custom targets,
+deadband/rate limits. No new Harmony/reflection seam. See [saves](saves.md).

@@ -14,6 +14,8 @@ internal static class Checks
         CollisionChecks.Run();
         PresetChecks.Run();
         ScaleChecks.Run();
+        SaveChecks.Run();
+        AnimationSaveChecks.Run();
         CheckRejectedLayouts();
         var game = new KSA.Program();
 
@@ -59,6 +61,28 @@ internal static class Checks
             Require(!Universe.Events.Contains("deferred"), "defer reentrant mutations");
             game.RunFrame(0.25);
             Require(Universe.Events.Contains("deferred"), "run deferred mutation next frame");
+
+            // Late UI loads replace the world before even computing the next step. Only
+            // the latest request runs, and cleanup discards mutations against old objects.
+            Universe.Events.Clear();
+            PhysicsFrameHook.Enqueue(() => Universe.Events.Add("stale edit"));
+            PhysicsFrameHook.EnqueueWorldChange(() => throw new Exception("superseded load"));
+            PhysicsFrameHook.EnqueueWorldChange(() =>
+            {
+                Require(PhysicsFrameHook.IsReplayingWorldChange, "world replay guard is active");
+                PhysicsFrameHook.ClearPending();
+                Universe.Time = 900;
+                Universe.Events.Add("world loaded");
+            });
+            Require(!Universe.Events.Contains("world loaded"), "never replace world inside requesting UI frame");
+            SimStep loadedStep = game.RunFrame(0.25);
+            Require(loadedStep.PreviousTime.Seconds == 900, "new step computed from loaded world time");
+            Require(Universe.Events.IndexOf("world loaded") < Universe.Events.IndexOf("get step"), "world load precedes step computation");
+            Require(!Universe.Events.Contains("stale edit"), "load invalidates queued old-world edits");
+            Require(!PhysicsFrameHook.IsReplayingWorldChange, "world replay guard clears");
+            PhysicsFrameHook.EnqueueWorldChange(() => throw new InvalidOperationException("fixture native load failure"));
+            game.RunFrame(0.25);
+            Require(!PhysicsFrameHook.IsReplayingWorldChange, "failed load releases replay guard");
 
             // Weld interpolation retains player-time pacing during pause and warp.
             foreach (double speed in new[] { 0.0, 10.0 })

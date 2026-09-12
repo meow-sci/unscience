@@ -171,6 +171,12 @@ public sealed class SceneSaveCoordinator
         Status = "Future saves will capture the current setup. Original save files remain unchanged until overwritten.";
     }
 
+    public void MarkFailure(string message)
+    {
+        Status = message;
+        Report(message);
+    }
+
     public void Report(string message)
     {
         if (_messages.Count < 1024) _messages.Add(message);

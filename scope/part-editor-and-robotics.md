@@ -179,7 +179,7 @@ one shared interleaved vertex/index buffer**, and a **single reflection choke po
   so the mod also loads at the next launch (deliberately not `new ModEntry(id, count)`, which sets
   `Enabled=false, New=true` and pops the game's "confirm mods" dialog).
 - Its own settings live in `<mods>/parts-now/parts-now.toml` (`Runtime/PartsNowSettings.cs:65`).
-- `LoadedModRecord` is **session state only** — nothing about a runtime load is persisted.
+- `LoadedModRecord` is runtime ownership; scene saves record dependency IDs, while installed folders/manifest persist separately.
 
 ### Integration points
 
@@ -526,3 +526,11 @@ parts-now (all silent at runtime — see *Update-risk findings* above for the fu
   `ShaderSlot`-indexed UBO sizing from rev 5401); (2) per-axis-scale a part with dont-stifle-me, then
   attach it to a connector (exercises the new `CanConnect()` / coincident-connector path in
   `HandleConnectorConnections`).
+
+## Scene save adapters
+
+Don't Stifle Me records enabled/snap/extended editor limits and resets those settings before a new
+scene, without modifying native saved geometry. Parts Now records installed runtime mod/part IDs
+for dependency diagnostics; it never replays install/unload jobs. Native save preflight verifies
+actually used part/character templates before destruction. Installed manifests and catalogs stay
+process/global dependencies. No new reflection target. See [saves](saves.md).

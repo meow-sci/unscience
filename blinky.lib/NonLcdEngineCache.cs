@@ -66,7 +66,7 @@ public static class NonLcdEngineCache
         foreach (var part in PartHelpers.GetAllParts(vehicle))
         {
             // Skip parts that belong to any LCD pixel grid
-            if (part.Id.StartsWith("pixel_"))
+            if (BlinkyGridManager.IsPixelPart(part.FullPart))
                 continue;
 
             var controllers = part.SubtreeModules.Get<EngineController>();

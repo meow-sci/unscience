@@ -29,3 +29,11 @@ Legacy `MusicPlayer.GetPlaylist/Play` still references `ModLibrary.Get<MusicPlay
 Validation: full solution builds against 5402; managed tests cover loop/gap logic and copied catalog
 semantics. Native format decoding, stereo localization, camera changes, SFX/master gain, repeat
 transitions, target loss and unload still require an in-game audio pass.
+
+## Scene saves
+
+BYO Music records active source vehicle IDs, copied library filename, repeat/gap, gain and range.
+It recreates native `VesselSound` ownership through the existing FMOD stream API, starts paused
+at the beginning and exposes Pause/Resume. Finished one-shots are excluded; codec seek position
+and remaining gap are not saved. Missing sources/files warn and retain the feature record.
+Cleanup disposes old channels/streams before native vehicle replacement. See [saves](saves.md).

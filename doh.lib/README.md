@@ -57,3 +57,17 @@ Since KSA build 5402 the game locks the shared BepuPhysics shapes registry while
   - **Not** `CommunityToolkit.HighPerformance.dll` — the one call that needed it (`Span<float4>` → bytes)
     now uses the BCL `MemoryMarshal.AsBytes`. That DLL ships with the game but is **not** copied into
     `ksa-game-assemblies/current/dll/`, so referencing it broke any build pointed at that tree.
+
+## Scene saves
+
+The `doh` participant captures spawn controls, each tracked live kitten's native vehicle ID and
+character, and private material colors by source/name. Native KSA serialization owns the kittens:
+restore only rebinds registry ownership and cloned materials and never spawns duplicates. A runtime
+vehicle reference makes capture follow renamed kittens. Shared successful color-write tracking
+also preserves Humble Arteest edits to DOH's private material slots.
+
+Private GPU slots are cached by kitten/character across normal loads and reused when shared source
+material handles still match. This prevents repeated loading of the same setup from consuming new
+slots each time; KSA still owns the global material allocator and unique, never-before-seen setups
+can allocate new slots. Missing kittens/materials are reported rather than replaced. GPU handles and
+process-local cloned-material names are never written as durable target identities.

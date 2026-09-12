@@ -26,14 +26,22 @@ internal sealed class UnscienceSaves : IDisposable
         NativeSaveHooks.Written = Write;
         NativeSaveHooks.Loading = Load;
         NativeSaveHooks.Resetting = _coordinator.ResetWorld;
-        NativeSaveHooks.Restoring = _coordinator.RestoreWorld;
+        NativeSaveHooks.Restoring = Restore;
         NativeSaveHooks.LoadFinished = _coordinator.FinishLoad;
+        NativeSaveHooks.LoadFailed = error => _coordinator.MarkFailure($"Load failed: {error.Message}");
     }
 
     private void Capture(GameSave save)
     {
         _captures.Remove(save);
+        using var identities = SavedPartReference.BeginOperation();
         _captures.Add(save, _coordinator.Capture());
+    }
+
+    private void Restore()
+    {
+        using var identities = SavedPartReference.BeginOperation();
+        _coordinator.RestoreWorld();
     }
 
     private void Write(UncompressedSave save)
@@ -48,7 +56,7 @@ internal sealed class UnscienceSaves : IDisposable
             SaveStorage.Write(save.Directory.FullName, document);
             _coordinator.MarkWritten(save.Id);
         }
-        catch (Exception ex) { _coordinator.Report($"KSA saved '{save.Id}', but Unscience state could not be written: {ex.Message}"); }
+        catch (Exception ex) { _coordinator.MarkFailure($"KSA saved '{save.Id}', but Unscience state could not be written: {ex.Message}"); }
         finally { _captures.Remove(save); }
     }
 
@@ -99,6 +107,7 @@ internal sealed class UnscienceSaves : IDisposable
         NativeSaveHooks.Resetting = null;
         NativeSaveHooks.Restoring = null;
         NativeSaveHooks.LoadFinished = null;
+        NativeSaveHooks.LoadFailed = null;
         _coordinator.FinishLoad();
         _captures.Clear();
     }

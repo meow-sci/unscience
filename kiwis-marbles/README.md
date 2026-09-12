@@ -79,4 +79,4 @@ a no-op; unweld restores are queued and applied in the same window.
 - Stars (`StellarBody`) cannot be sources — they have no orbit and always sit at origin.
 - Source body's children (moons of the moved planet) automatically follow since their orbits are defined relative to their parent.
 - Weld chains (Moon → Earth → Mars) work correctly: the engine sorts welds topologically so Earth is moved before Moon's weld is applied.
-- Welds are not persisted across mod reloads.
+- Normal KSA saves made with Unscience restore welds and original orbital baselines. Standalone mod hot-reload is not a save/load operation; see [library details](../kiwis-marbles.lib/README.md#scene-saves).

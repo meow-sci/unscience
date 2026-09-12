@@ -34,6 +34,10 @@ internal static class StorageTests
             SaveStorage.Write(directory, doc);
             using (var stream = File.OpenWrite(Path.Combine(directory, SaveStorage.FileName))) stream.SetLength(SaveStorage.MaximumBytes + 1L);
             Throws(() => SaveStorage.Read(directory), "oversized file rejected");
+            using (var overflow = System.Text.Json.JsonDocument.Parse("1e999"))
+                Throws(() => SaveJson.FromElement<double>(overflow.RootElement), "overflow double rejected");
+            using (var overflow = System.Text.Json.JsonDocument.Parse("1e100"))
+                Throws(() => SaveJson.FromElement<float>(overflow.RootElement), "overflow float rejected");
             CoordinatorScenarios();
             Console.WriteLine($"save storage/coordinator: {_checks} checks passed");
         }

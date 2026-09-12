@@ -524,3 +524,9 @@ positive diagnosis rather than a guess.
   of every game integration point parts-now depends on
 * [`plans/done/PARTS_NOW_PLAN.md`](../plans/done/PARTS_NOW_PLAN.md) — the design document, including
   the in-game test matrix and an as-built list of where the implementation diverged from it
+
+## Scene saves
+
+Records runtime mod IDs and part-template dependencies. Installed folders and enabled manifest entries already persist through Parts Now; save loading does not duplicate, unload or execute asset bundles. Required part mods must be installed/enabled before KSA reads the native save. Template IDs unavailable at restore produce actionable dependency diagnostics; the sidecar is not a portable asset bundle.
+
+Scene persistence is registered by the Unscience host through `ISaveParticipantSource`; standalone development hosts retain their existing lifecycle. Use ordinary KSA Save/Load. See [save behavior](../unscience/README.md#scene-saves) and the [design plan](../plans/SAVES.md).

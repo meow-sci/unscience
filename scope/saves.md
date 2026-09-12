@@ -8,9 +8,9 @@ Research and ordering evidence: [native lifecycle assessment](../plans/saves-gam
 | Harmony postfix `GameSave.Populate()` | Capture detached feature state against the completed native UniverseData snapshot. Never mutate live physics for capture. |
 | Harmony postfix `UncompressedSave.Write()` | Write sidecar only after successful native file output. Failed native writes do not publish sidecar success. |
 | Harmony prefix + finalizer `UncompressedSave.Load()` | Preflight and scope the file transaction; skip editor refusal; clear context on success or exceptions without suppressing native errors. |
-| Harmony prefix + postfix `Universe.DeserializeSave(UniverseData)` | Join workers, discard stale queued edits and reset old ownership before native destruction; replay after reconstructed vehicles/camera and before next solver dispatch. Direct loads also reset baseline. |
-| Harmony prefix `Universe.LoadSystem(string)` | Validate system name via `SystemLibrary.Find` before cleanup on world replacement. No replay from previous save. |
-| `JobSystems.OrbitSolvers`, `VehicleSolver`, `ClothSolvers` / `JobScheduler.Wait()` | Explicit joins before prefix cleanup: the original's internal joins are too late for prefix mutations. Requires `Brutal.Concurrency` reference. |
+| Harmony prefix + postfix + finalizer `Universe.DeserializeSave(UniverseData)` | Join workers, discard stale queued edits and reset old ownership before native destruction; replay after reconstructed vehicles/camera and before next solver dispatch. Direct loads also reset baseline. |
+| Harmony prefix + finalizer `Universe.LoadSystem(string)` | Validate system name via `SystemLibrary.Find` before cleanup on world replacement. No replay from previous save. |
+| `JobSystems.OrbitSolvers`, `VehicleSolver`, `ClothSolvers`, `ConcurrentWorkers` / `JobScheduler.Wait()` | Explicit joins before prefix cleanup: the original's internal joins are too late for prefix mutations. Requires `Brutal.Concurrency` reference. |
 | `Program.IsEditorOpen`, `Universe.CurrentSystem` | Preserve active setup on editor-refused requests and no-world early failures. |
 | `PhysicsFrameHook.ClearPending()` | Discard queued old-world mutations both before and after cleanup callbacks. BeforePhysics subscriptions remain registered. |
 
@@ -47,3 +47,32 @@ logged by the dispatcher (the original UI callback has already returned). Produc
 checks in `garrys-torch.tests` verify loaded-time computation, latest-request replacement, old action
 invalidation and guard release on exception; `saves.tests` verifies the native transaction remains
 untouched until replay and stock startup remains immediate.
+
+## Native dependency and identity preflight
+
+`NativeSavePreflight` checks the incoming `UniverseData` against the current celestial system,
+unique vehicle IDs, existing `IParentBody` targets, required `CharacterReference` and used
+`PartTemplate` assets through `ModLibrary.Get<T>`. Bounded acyclic `PartInstance.Children` /
+`SubPartInstances` traversal runs before ownership reset. This prevents known missing native
+asset failures from destroying the current scene; it cannot predict every native reconstruction
+failure. `GameTime.IsValid`, camera reference fields/raw transforms/mode and `KittenRoster` are also
+checked before reset. `UniverseData.IsValid` is deliberately avoided: its CameraData.IsValid requires
+a nonempty Following identity, but native saves explicitly support unfollowed/free cameras.
+`LoadFailed` and `LastLoadError` surface deferred native exceptions to the toolbox. LastLoadError
+is set before LoadFinished rolls back a non-destructive failed transaction; LoadFailed then reports
+the exception. Nested native deserialization reports once through its file transaction.
+
+The early frame boundary still follows submission of `NearestOrbitPointJob`; it traverses the old
+world's vehicles and orbital state. `ConcurrentWorkers.Wait` therefore joins that work as well as
+the normal orbit/vehicle/cloth solvers. Any failed join aborts before reset or native destruction.
+
+`SavedPartReference` captures vehicle ID, tree/subpart indices, target template and a structural
+SHA-256 signature of the entire ordered vehicle tree. Capture/replay uses a transaction-local
+`PartIdentitySnapshot` cache to traverse each vehicle once even with many grid cells. Changes to
+transforms/runtime IDs do not affect identity; changed topology refuses replay. Identical-template,
+identical-topology sibling swaps are inherently indistinguishable without native persistent IDs;
+this is a save-local address, not a general cross-craft matching mechanism. `VehicleProvider.FindVehicle`
+rejects ambiguous IDs rather than selecting the first match.
+
+See [coverage and native acceptance](../plans/saves-acceptance.md) for implemented feature policies
+and the remaining live-game checks.

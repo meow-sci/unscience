@@ -22,7 +22,7 @@ namespace MeowSci.HumbleArteestLib;
 ///
 /// Pattern validated in Experiments/MaterialColorTest.cs.
 /// </summary>
-public static class KittenColor
+public static partial class KittenColor
 {
     private static bool _initialized;
     private static string? _lastError;
@@ -144,7 +144,7 @@ public static class KittenColor
         foreach (var (name, handle) in materials)
         {
             if (handle < 0) continue;
-            if (WriteAlbedoColor(handle, color))
+            if (ApplyToMaterial(handle, color))
                 successCount++;
         }
 
@@ -174,7 +174,11 @@ public static class KittenColor
     {
         _lastError = null;
         if (handle < 0) { _lastError = "Invalid material handle."; return false; }
-        return WriteAlbedoColor(handle, color);
+        var original = MeowSci.KsaAbstractions.Persistence.MaterialColorState.GetOrDefault(handle, float4.One);
+        if (!WriteAlbedoColor(handle, color)) return false;
+        TrackColor(handle, original, color);
+        MeowSci.KsaAbstractions.Persistence.MaterialColorState.Record(handle, color);
+        return true;
     }
 
     /// <summary>
@@ -228,6 +232,7 @@ public static class KittenColor
     /// <summary>Resets initialization state. Call on mod unload.</summary>
     public static void Cleanup()
     {
+        ResetOwnedColors();
         _initialized = false;
         _materialSystem = null;
         _assetMap = null;

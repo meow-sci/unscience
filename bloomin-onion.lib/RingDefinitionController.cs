@@ -27,7 +27,7 @@ public sealed class AppliedRing
 /// reference was before (null for most bodies, the stock ring for Saturn), and the asset
 /// caches that back the built references. Applying swaps the template's
 /// <c>RingsReference</c> and rebuilds the renderer; removing puts the original back.
-/// Everything is session-only — a game restart is back to stock.
+/// The save adapter captures detached definitions and reconstructs this runtime ownership.
 /// </summary>
 public sealed class RingDefinitionController : IDisposable
 {
@@ -183,6 +183,17 @@ public sealed class RingDefinitionController : IDisposable
         // Only after the rebuild above: nothing references the painted textures / mesh clones.
         TextureFactory.Dispose();
         MeshFactory.Dispose();
+    }
+
+    /// <summary>Restore reused celestial templates before native reconstruction; clear old baselines.</summary>
+    internal void ResetForSaveLoad()
+    {
+        var applied = new List<AppliedRing>(_applied.Values);
+        foreach (var entry in applied) RestoreTemplate(entry.Celestial);
+        if (applied.Count > 0 && !RingRendererRebuilder.Rebuild(out var error)) throw new InvalidOperationException(error);
+        foreach (var entry in applied) RingRendererRebuilder.SyncDistantSphereShadow(entry.Celestial);
+        _applied.Clear(); _originals.Clear();
+        PruneUnusedAssets();
     }
 
     private void RestoreTemplate(Celestial celestial)

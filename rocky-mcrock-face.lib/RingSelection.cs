@@ -33,6 +33,15 @@ public sealed class RingSelection
         || DiffuseId.Length > 0 || NormalId.Length > 0 || PbrId.Length > 0
         || BandTextureId.Length > 0;
 
+    public RingSelection Clone()
+    {
+        var copy = new RingSelection { DiffuseId = DiffuseId, NormalId = NormalId, PbrId = PbrId,
+            BandTextureId = BandTextureId, OverrideFieldSettings = OverrideFieldSettings, SizeM = SizeM,
+            DensityPerKm3 = DensityPerKm3, RenderDistanceKm = RenderDistanceKm, ThicknessKm = ThicknessKm };
+        Array.Copy(LodMeshIds, copy.LodMeshIds, MaxLods);
+        return copy;
+    }
+
     public void Clear()
     {
         Array.Fill(LodMeshIds, "");

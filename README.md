@@ -103,7 +103,7 @@ Iron Man adds opt-in editing and rocket flight for existing EVA kittens, with co
 attachment nodes, upright editor/rocket controls, native flight-computer gauges and save restoration.
 Full-width EVA/Iron Man mode buttons switch native kitten and rocket behavior; editing works in
 either mode. Surface debug teleports place Iron Man kittens upright with equipment clearance;
-every kitten starts in EVA mode. See [Iron Man](iron-man/README.md)
+newly configured kittens start in EVA mode; scene saves can restore Iron Man mode disarmed. See [Iron Man](iron-man/README.md)
 and its [source research](plans/iron-man/RESEARCH.md). Managed checks run with
 `dotnet run --project iron-man.tests`, `dotnet run --project iron-man-flight.tests` and
 `dotnet run --project iron-man-mode.tests`.
@@ -118,4 +118,5 @@ Ordinary KSA Save/Load now includes Unscience scene setups through a versioned `
 file in the native save folder. The existing toolbox shows capture/restore diagnostics. Window
 layout autosave remains separate. Keep imported asset libraries and runtime part mods alongside
 your installation; saves reference those dependencies. See [scene-save usage and limits](unscience/README.md#scene-saves),
-the [research and implementation plan](plans/SAVES.md), and [integration scope](scope/saves.md).
+the [research and implementation plan](plans/SAVES.md), [implemented coverage and acceptance](plans/saves-acceptance.md),
+and [integration scope](scope/saves.md).

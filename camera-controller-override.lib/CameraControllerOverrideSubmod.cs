@@ -10,7 +10,7 @@ using MeowSci.CameraControllerOverrideLib.UI;
 
 namespace MeowSci.CameraControllerOverrideLib;
 
-public class CameraControllerOverrideSubmod : ISubmod
+public partial class CameraControllerOverrideSubmod : ISubmod
 {
     public string Name => "Camera Animations";
     public string Tooltip => "Animates the flight camera with zoom, orbit, shake, and spiral sequences.";

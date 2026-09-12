@@ -8,7 +8,7 @@ namespace MeowSci.ZippoLib;
 /// A single animation step that interpolates a light's color and intensity from start
 /// values to end values over a specified duration using configurable easing.
 /// </summary>
-public class LightAnimation
+public partial class LightAnimation
 {
     public float3 StartColor { get; }
     public float3 EndColor { get; }

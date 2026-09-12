@@ -59,10 +59,15 @@ public static class FreeFallinPatches
     {
         int stock = CanopyMaterialController.ResolveStockHandle();
         if (stock < 0) return;
+        ReplaceObserved(stock);
+    }
+
+    internal static void ReplaceObserved(int handle)
+    {
         for (int i = Observed.Count - 1; i >= 0; i--)
         {
             if (!Observed[i].TryGetTarget(out AnimatedRenderable? renderable)) { Observed.RemoveAt(i); continue; }
-            SetHandle(renderable, stock);
+            SetHandle(renderable, handle);
         }
     }
 

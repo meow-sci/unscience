@@ -35,7 +35,8 @@ public static class SaveJson
             MaxDepth = 64,
             NumberHandling = JsonNumberHandling.Strict,
             PropertyNameCaseInsensitive = false,
-            TypeInfoResolver = resolver
+            TypeInfoResolver = resolver,
+            Converters = { new FiniteSingleConverter(), new FiniteDoubleConverter() }
         };
     }
     public static JsonElement ToElement<T>(T value) => JsonSerializer.SerializeToElement(value, Options);

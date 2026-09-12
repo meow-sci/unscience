@@ -262,3 +262,8 @@ render acceptance remain open. See [vehicle physics](vehicle-physics.md#godzilla
 **BYO Music added to Unscience:** copied shared sound catalog, nonblocking FMOD playback following
 vessels in the audio camera frame, live gain/range and repeat/gaps. Full solution and managed
 catalog/scheduler checks pass. Native listening/decoding/unload remain a live check; see [audio](audio.md).
+
+Scene save implementation covers durable setups across the 28 bundled features. Managed lifecycle,
+serialization, identity and ownership checks plus full compilation pass; native graphics/physics
+acceptance remains open in [save acceptance](../plans/saves-acceptance.md). The new save dependency
+and animation/material reflection seams are indexed in [the master index](game-integration-surface.md).

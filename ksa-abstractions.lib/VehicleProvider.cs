@@ -25,18 +25,17 @@ public static class VehicleProvider
             .Where(v => includeDebris || !v.IsDebris)
             .ToList() ?? new List<Vehicle>();
 
-    /// <summary>Finds a vehicle by id, or null if none matches. Debris is searched too, so an id
+    /// <summary>Finds a vehicle by id, or null if none or more than one matches. Debris is searched too, so an id
     /// held from before a part failure still resolves.</summary>
     public static Vehicle? FindVehicle(string vehicleId)
     {
+        Vehicle? match = null;
         foreach (var vehicle in GetAllVehicles(includeDebris: true))
         {
-            if (vehicle.Id == vehicleId)
-            {
-                return vehicle;
-            }
+            if (vehicle.Id != vehicleId) continue;
+            if (match != null) return null; // Ambiguous identities must never retarget saved edits.
+            match = vehicle;
         }
-
-        return null;
+        return match;
     }
 }

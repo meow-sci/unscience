@@ -25,6 +25,7 @@ public sealed class SpawnedKittenRegistry
         {
             KittenId = kittenId,
             CharacterId = characterId,
+            Vehicle = MeowSci.KsaAbstractions.VehicleProvider.FindVehicle(kittenId),
             MaterialSet = materialSet
         };
     }
@@ -56,6 +57,8 @@ public sealed class SpawnedKittenRegistry
 
 public sealed class SpawnedKittenEntry
 {
+    /// <summary>Runtime identity retained so a renamed kitten still captures its current native save ID.</summary>
+    public KSA.Vehicle? Vehicle { get; init; }
     public string KittenId { get; init; } = "";
     public string CharacterId { get; init; } = "";
     public KittenMaterialSet? MaterialSet { get; init; }

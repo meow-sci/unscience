@@ -446,3 +446,22 @@ The `Experiments/` directory retains the validation tests still relevant to the 
 The shader-swap-era experiments (`ShaderLoadTest`, `PaddingTest`, `ShaderHotReloadTest`, `GamePaths`)
 were removed with the mechanism they validated: the padding bytes they probed are now game-used, and
 `ShaderReference.Shader` swapping no longer affects part rendering.
+
+## Scene saves
+
+The `humble-arteest` participant persists shader activation/blend mode, global/template/instance
+paint, global and exact module engine-emissive settings, named material tints and visor visibility.
+Part addresses use vehicle IDs and validated full-part/subpart paths. Restore rebuilds shader state
+through the existing deferred renderer flag and synchronizes panel activation/entries, so opening
+the panel cannot immediately erase the loaded result.
+
+Successful Kitten Color writes now retain original colors and detached applied colors. Save reset
+restores only owned writes before native vehicle destruction, then clears paint/emissive registries.
+Shared `MaterialColorState` records known Unscience-created colors so DOH material originals and
+later tint edits survive without GPU readback. Native stock PBR materials begin white; colors written
+by unrelated mods without this tracking are outside the original-value guarantee. Private `doh_*`
+GPU names are excluded from this participant: DOH captures their effective colors under stable
+kitten/material identity. Missing material names, parts or module slots appear in Saves status.
+Material cleanup verifies the original asset still owns its GPU slot before restoring its color.
+DOH and Free Fallin private materials persist through their owning features, including Humble
+Arteest edits, so generated asset names and recycled handles cannot leak between scenes.

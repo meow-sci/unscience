@@ -4,7 +4,7 @@ using KSA;
 namespace MeowSci.IronManLib;
 
 /// <summary>Restore user control settings without rewinding burn progress or solver results.</summary>
-internal sealed class IronManFlightSettings
+internal sealed partial class IronManFlightSettings
 {
     private readonly FlightComputerAttitudeMode _attitude;
     private readonly FlightComputerBurnMode _burn;

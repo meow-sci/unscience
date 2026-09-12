@@ -20,7 +20,7 @@ public sealed partial class BloominOnionSubmod : ISubmod
         "Define new planetary rings at runtime and apply them to any celestial body.\n" +
         "Paint the ring band (stripes, gaps, ringlet noise) or pick a texture, set the\n" +
         "geometry, volumetric dust and rock field, then Apply. Definitions save as presets;\n" +
-        "which body wears a ring is session-only. Applying rebuilds the renderer (brief hitch).";
+        "body assignments persist with KSA saves. Applying rebuilds the renderer (brief hitch).";
 
     private const double RefreshIntervalSeconds = 2.0;
 

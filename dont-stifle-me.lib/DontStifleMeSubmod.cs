@@ -6,7 +6,7 @@ namespace MeowSci.DontStifleMeLib;
 /// <summary>
 /// ImGui surface for dont-stifle-me's scale and editor value-limit controls.
 /// </summary>
-public sealed class DontStifleMeSubmod : ISubmod
+public sealed partial class DontStifleMeSubmod : ISubmod
 {
     public string Name => "Don't Stifle Me - Editor Limits";
     public string Tooltip => "Removes restrictive vehicle-editor scale and configurable-value limits.";

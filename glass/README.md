@@ -176,3 +176,9 @@ This ensures compatibility across KSA versions without hard-coding field offsets
 
 - **HarmonyLib**: For Camera method patching
 - **KSA Game**: Camera class and projection system
+
+## Scene saves
+
+Saves FOV degrees and whether the override is enabled. Restores the normal lens controls and applies the saved override to the reconstructed main camera.
+
+Scene persistence is registered by the Unscience host through `ISaveParticipantSource`; standalone development hosts retain their existing lifecycle. Use ordinary KSA Save/Load. See [save behavior](../unscience/README.md#scene-saves) and the [design plan](../plans/SAVES.md).

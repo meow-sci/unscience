@@ -7,7 +7,7 @@ using MeowSci.KsaAbstractions;
 
 namespace MeowSci.SkittlesLib;
 
-public sealed class SkittlesSubmod : ISubmod
+public sealed partial class SkittlesSubmod : ISubmod
 {
     public string Name => "Skittles - UI Themes";
     public string Tooltip => "Manages and applies ImGui theme configurations for UI customization.";
@@ -33,7 +33,7 @@ public sealed class SkittlesSubmod : ISubmod
     {
         SubmodUI.BeginContentArea("##sk_content");
 
-        string active = _themeManager.ActiveThemeName ?? "Game Default";
+        string active = _sceneThemeRestored ? "Saved scene style" : _themeManager.ActiveThemeName ?? "Game Default";
         string[] themeNames = _themeManager.GetThemeNames();
         string preview = (_selectedThemeIndex >= 0 && _selectedThemeIndex < themeNames.Length)
             ? themeNames[_selectedThemeIndex]
@@ -83,6 +83,7 @@ public sealed class SkittlesSubmod : ISubmod
                     {
                         _selectedThemeIndex = i;
                         _themeManager.ApplyTheme(themeNames[i]);
+                        _sceneThemeRestored = false;
                     }
                 }
                 ImGui.EndCombo();

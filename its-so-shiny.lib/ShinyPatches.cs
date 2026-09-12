@@ -56,7 +56,7 @@ public static class ShinyPatches
     // This lets the emissive mesh appear exactly when the light is on and hide when it's off.
     private static bool ShouldRenderShinyPart(Part fullPart)
     {
-        if (!fullPart.Id.StartsWith("shiny_")) return true;
+        if (!ShinyGridManager.IsPixelPart(fullPart)) return true;
         if (ShinyPatchState.RenderShinyParts) return true;
         var ls = fullPart.LightSwitch;
         if (ls == null) return true; // no switch — can't determine state, render to be safe

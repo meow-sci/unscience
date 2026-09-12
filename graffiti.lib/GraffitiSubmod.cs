@@ -185,6 +185,8 @@ public sealed partial class GraffitiSubmod : ISubmod
             Brightness = Math.Clamp(brightness, 0.01, 8.0),
             Vehicle = pick.Vehicle,
             Part = pick.Part,
+            SaveTarget = pick.Vehicle != null && pick.Part != null
+                ? MeowSci.KsaAbstractions.Persistence.SavedPartReference.Capture(pick.Vehicle, pick.Part) : null,
             Parachute = pick.Parachute,
             Body = pick.Body,
             TextureHandle = handle.Value,
@@ -284,13 +286,15 @@ public sealed partial class GraffitiSubmod : ISubmod
     private static Part? FindPart(Vehicle vehicle, uint instanceId)
     {
         foreach (var part in vehicle.Parts.Parts)
-        {
-            if (part.InstanceId == instanceId)
-                return part;
-            foreach (var subPart in part.SubParts)
-                if (subPart.InstanceId == instanceId)
-                    return subPart;
-        }
+            if (FindSubpart(part, instanceId) is { } found) return found;
+        return null;
+    }
+
+    private static Part? FindSubpart(Part part, uint instanceId)
+    {
+        if (part.InstanceId == instanceId) return part;
+        foreach (var child in part.SubParts)
+            if (FindSubpart(child, instanceId) is { } found) return found;
         return null;
     }
 

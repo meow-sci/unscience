@@ -41,3 +41,9 @@ Core logic lives in [`dont-stifle-me.lib`](../dont-stifle-me.lib/README.md). Thi
 standalone StarMap entry: `Patcher.cs` applies `HotkeyGuard`, `EditorScalePatches`, `EditorValueLimitPatches` and
 `MenuBarPatch` (a postfix on `Program.DrawProgramMenusHook` that draws `DontStifleMeMenu`). There is
 no floating window.
+
+## Scene saves
+
+Saves the master scale-limit switch, scale snapping and extended editor-value switch. Native saves retain resulting edited geometry. Transient gizmo drags are not resumed.
+
+Scene persistence is registered by the Unscience host through `ISaveParticipantSource`; standalone development hosts retain their existing lifecycle. Use ordinary KSA Save/Load. See [save behavior](../unscience/README.md#scene-saves) and the [design plan](../plans/SAVES.md).

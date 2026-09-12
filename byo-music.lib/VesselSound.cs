@@ -20,18 +20,21 @@ public sealed class VesselSound : IDisposable
     public Vehicle Target { get; }
     public string FileName { get; }
     public bool Repeat;
+    public bool Paused;
     public float GapSeconds;
     public float Volume = 0.5f;
     public float RangeMetres = 1000;
     public bool Finished { get; private set; }
     public string Status { get; private set; } = "Loading…";
 
-    public VesselSound(Vehicle target, string fileName, bool repeat, float gap, float volume, float range)
+    public VesselSound(Vehicle target, string fileName, bool repeat, float gap, float volume, float range, bool paused = false)
     {
         if (target.IsDisposed) throw new InvalidOperationException("That vessel is no longer available.");
         string path = SoundLibrary.Files.FullPath(fileName);
         if (!SoundLibrary.Files.Supports(path) || !File.Exists(path)) throw new IOException("Choose an available OGG, WAV or MP3 file.");
         if (GameAudio.System.IsNull()) throw new InvalidOperationException("The game's audio system is not ready.");
+        Paused = paused;
+        Status = paused ? "Restored — paused; press Resume to play from the beginning." : "Loading…";
         Target = target;
         FileName = fileName;
         Repeat = repeat;
@@ -50,6 +53,8 @@ public sealed class VesselSound : IDisposable
         {
             if (Target.IsDisposed || VehicleProvider.FindVehicle(Target.Id) != Target)
             { Stop("Target no longer available"); return; }
+            if (_hasChannel) Check(_channel.TrySetPaused(Paused), "pause audio");
+            if (Paused) return;
             Volume = FiniteClamp(Volume, 0, 1, .5f);
             RangeMetres = FiniteClamp(RangeMetres, 1, 100000, 1000);
             GapSeconds = FiniteClamp(GapSeconds, 0, 3600, 0);

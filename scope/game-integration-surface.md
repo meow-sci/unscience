@@ -1273,7 +1273,21 @@ See [saves.md](saves.md) for the authoritative lifecycle and cross-feature persi
 `Universe.DeserializeSave(UniverseData)` and `Universe.LoadSystem(string)`, using the shared
 `PhysicsFrameHook` for deferred world replacement. Save-local part addresses traverse
 `Vehicle.Parts.Root`, `Part.TreeChildren`, `Part.SubParts` and verify `Part.Template.Id`.
-Reset waits `JobSystems.OrbitSolvers/VehicleSolver/ClothSolvers` and clears queued old-world edits.
+Reset waits `JobSystems.OrbitSolvers/VehicleSolver/ClothSolvers/ConcurrentWorkers` and clears queued old-world edits.
 The existing single Unscience Harmony owner installs/removes these hooks. Native constructor
 metadata reconstruction (Iron Man) remains active before late feature replay. No new shader or
 asset ID is introduced by the persistence foundation.
+
+
+### Save adapter reflection watchlist additions
+
+- Free Fallin `CanopyGpuAssets` reflects protected `KSA.AssetManager<T>.AssetMap` as
+  `ConcurrentDictionary<Core.AssetName,T>` to remove only exact-owned generated material/texture
+  slots before disposal. Shared/stock slots must never be removed. See [parachutes](parachutes.md).
+- Kitten Animations `KittenPlaybackPhase` reflects protected `AnimatedRenderable.RuntimeAnim` and
+  `BoneAnimRuntime.TimeSinceTransition` / `CurrentAnimation` for forced/frozen clip continuation;
+  `SampleCurrentAnimation()` prepares the restored pose. Revalidate field shape, clip identity and
+  clock units on game updates. See [characters](character-and-materials.md).
+- Native dependency preflight reads `UniverseData.CelestialSystems`, vehicle parent/character/root,
+  `PartInstance.InstanceOf/Children/SubPartInstances`, and resolves `ModLibrary.Get<PartTemplate>` /
+  `Get<CharacterReference>` before reset. Full lifecycle/identity rules: [saves](saves.md).

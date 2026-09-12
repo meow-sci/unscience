@@ -5,7 +5,7 @@ using MeowSci.KsaAbstractions;
 
 namespace MeowSci.IFeelSeenLib;
 
-public sealed class IFeelSeenSubmod : ISubmod
+public sealed partial class IFeelSeenSubmod : ISubmod
 {
     public string Name => "I Feel Seen - Always Visible Vehicles";
     public string Tooltip => "Makes vehicles visible from infinite distance.";

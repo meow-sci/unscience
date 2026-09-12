@@ -9,7 +9,7 @@ using MeowSci.KsaAbstractions;
 namespace MeowSci.ZippoLib;
 
 /// <summary>Core light manipulation logic for zippo — stateless, reusable from outside the mod.</summary>
-public static class LightController
+public static partial class LightController
 {
     private static readonly BindingFlags All =
         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
@@ -36,7 +36,7 @@ public static class LightController
         {
             var c = comps[i];
             if (c?.GetType().FullName == "KSA.LightModule+TemplateData")
-                result.Add(c);
+                { result.Add(c); ComponentOwners[c] = t; }
         }
         return result;
     }
@@ -68,6 +68,7 @@ public static class LightController
     {
         foreach (var light in lights)
         {
+            RememberOriginal(light);
             var intensityRef = ReflectionHelpers.GetFieldValue(light, "Intensity");
             ReflectionHelpers.SetFieldValue(intensityRef, "Value", intensity);
         }
@@ -77,6 +78,7 @@ public static class LightController
     {
         foreach (var light in lights)
         {
+            RememberOriginal(light);
             var colorRef = ReflectionHelpers.GetFieldValue(light, "ColorRgb");
             if (colorRef == null) continue;
             ReflectionHelpers.SetFieldValue(colorRef, "R", color.X);

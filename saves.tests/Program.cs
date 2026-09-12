@@ -28,11 +28,16 @@ internal static class Program
             Run("callback failures are isolated and native exceptions survive", CallbackFailures);
             Run("repeated loads have independent transactions", RepeatedLoads);
             Run("world replacement waits for frame boundary and latest request wins", DeferredLoads);
+            Run("used native template preflight preserves old scene and reports once", NativePreflight);
+            Run("worker join failure never reaches native destruction", JoinFailure);
         }
         finally { NativeSaveHooks.Remove(harmony); }
         Run("removal restores native methods", Removed);
         Console.WriteLine($"Native save lifecycle: {_passed} checks passed.");
         StorageTests.Run();
+        PartReferenceTests.Run();
+        KittenPhaseTests.Run();
+        MaterialOwnershipTests.Run();
     }
 
     private static void Run(string name, Action test)
@@ -41,7 +46,9 @@ internal static class Program
         PhysicsFrameHook.Pending.Clear();
         PhysicsFrameHook.ClearPendingWorldChange();
         KSA.Program.IsEditorOpen = false;
-        Universe.CurrentSystem = new object();
+        Universe.CurrentSystem = new CelestialSystem();
+        NativeSaveHooks.LoadFailed = null;
+        JobSystems.ConcurrentWorkers.Fail = false;
         NativeSaveHooks.Capturing = _ => Trace.Events.Add("capture");
         NativeSaveHooks.Written = _ => Trace.Events.Add("write");
         NativeSaveHooks.Loading = _ => Trace.Events.Add("preflight");
@@ -77,7 +84,7 @@ internal static class Program
         PhysicsFrameHook.Pending.Enqueue(() => throw new Exception("old action"));
         NativeSaveHooks.Resetting += () => PhysicsFrameHook.Pending.Enqueue(() => { });
         LoadNow(new UncompressedSave());
-        Equal("preflight", "native read", "join orbit", "join vehicle", "join cloth", "clear pending",
+        Equal("preflight", "native read", "join orbit", "join vehicle", "join cloth", "join concurrent", "clear pending",
             "reset", "clear pending", "join orbit", "join vehicle", "join cloth", "native destroy",
             "native reconstructed", "restore", "native menus closed", "finished");
         Check(PhysicsFrameHook.Pending.Count == 0, "old-world and reset-queued edits cleared");
@@ -128,7 +135,7 @@ internal static class Program
         Universe.LoadSystem("valid");
         Equal();
         PhysicsFrameHook.ReplayPending();
-        Equal("join orbit", "join vehicle", "join cloth", "clear pending", "reset", "clear pending", "native new system");
+        Equal("join orbit", "join vehicle", "join cloth", "join concurrent", "clear pending", "reset", "clear pending", "native new system");
     }
 
     private static void CallbackFailures()
@@ -187,6 +194,68 @@ internal static class Program
     {
         save.Load();
         PhysicsFrameHook.ReplayPending();
+    }
+
+    private static void NativePreflight()
+    {
+        var data = new UniverseData();
+        data.CelestialSystems[0].Vehicles.Add(new VehicleData
+        {
+            RootPartInstance = new PartInstance { SubPartInstances = new() { new() { InstanceOf = "missing-subpart" } } }
+        });
+        int failures = 0;
+        NativeSaveHooks.LoadFailed = ex => { Check(ex is System.IO.InvalidDataException, "controlled preflight error"); failures++; };
+        var save = new UncompressedSave { UniverseData = data };
+        bool rejected = false;
+        try { LoadNow(save); }
+        catch (System.IO.InvalidDataException ex) { rejected = ex.Message.Contains("missing-subpart"); }
+        Check(rejected && failures == 1, "file preflight reports one failure");
+        Equal("preflight", "native read", "finished");
+        Check(NativeSaveHooks.LastLoadError is System.IO.InvalidDataException, "visible failure recorded");
+        Check(!PhysicsFrameHook.IsReplayingWorldChange, "failed preflight releases guard");
+        Trace.Events.Clear();
+        data.CelestialSystems[0].Vehicles[0].RootPartInstance!.SubPartInstances![0].InstanceOf = "part";
+        LoadNow(save);
+        Check(Trace.Events.Contains("reset") && NativeSaveHooks.LastLoadError == null, "installed dependency permits normal replay");
+
+        foreach (Action<UniverseData> corrupt in new Action<UniverseData>[]
+        {
+            d => d.GameTime = null,
+            d => d.Camera = null,
+            d => d.KittenRoster = null,
+            d => d.GameTime!.Valid = false,
+            d => d.Camera!.Following = null,
+            d => d.Camera!.MapInverted = null,
+            d => d.Camera!.CameraMode = (CameraMode)999,
+            d => d.Camera!._positionRaw = new() { Valid = false },
+            d => d.CelestialSystems[0].Id.Id = "different system",
+            d => d.CelestialSystems[0].Vehicles[0].ParentBody.Id = "missing body",
+            d => d.CelestialSystems[0].Vehicles[0].Character = "missing character",
+            d => d.CelestialSystems[0].Vehicles.Add(new VehicleData { Id = "VEHICLE" }),
+            d => d.CelestialSystems[0].Vehicles.Add(d.CelestialSystems[0].Vehicles[0])
+        })
+        {
+            var invalid = new UniverseData();
+            invalid.CelestialSystems[0].Vehicles.Add(new VehicleData());
+            corrupt(invalid);
+            rejected = false;
+            try { NativeSavePreflight.Validate(invalid); }
+            catch (System.IO.InvalidDataException) { rejected = true; }
+            Check(rejected, "invalid native prerequisite rejected");
+        }
+        var freeCamera = new UniverseData();
+        Check(freeCamera.Camera!.Following!.Id == "", "fixture has an unfollowed free camera");
+        NativeSavePreflight.Validate(freeCamera);
+    }
+
+    private static void JoinFailure()
+    {
+        JobSystems.ConcurrentWorkers.Fail = true;
+        int failures = 0;
+        NativeSaveHooks.LoadFailed = _ => failures++;
+        Throws(() => LoadNow(new UncompressedSave()), "join failed");
+        Check(failures == 1 && !Trace.Events.Contains("native destroy") && !Trace.Events.Contains("reset"), "old scene preserved before unsafe reset");
+        Check(Trace.Events.Last() == "finished", "file transaction unwinds on join failure");
     }
 
     private static void Throws(Action action, string message)

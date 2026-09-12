@@ -60,18 +60,18 @@ public static class BlinkyPatches
     private static bool PartModelModulePrefix(PartModelModule __instance)
     {
         if (BlinkyPatchState.RenderPixelParts) return true;
-        return !__instance.Parent.FullPart.Id.StartsWith("pixel_");
+        return !BlinkyGridManager.IsPixelPart(__instance.Parent.FullPart);
     }
 
     private static bool PartModelDynamicModulePrefix(PartModelDynamicModule __instance)
     {
         if (BlinkyPatchState.RenderPixelParts) return true;
-        return !__instance.Parent.FullPart.Id.StartsWith("pixel_");
+        return !BlinkyGridManager.IsPixelPart(__instance.Parent.FullPart);
     }
 
     private static bool PartModelGlassModulePrefix(PartModelGlassModule __instance)
     {
         if (BlinkyPatchState.RenderPixelParts) return true;
-        return !__instance.Parent.FullPart.Id.StartsWith("pixel_");
+        return !BlinkyGridManager.IsPixelPart(__instance.Parent.FullPart);
     }
 }

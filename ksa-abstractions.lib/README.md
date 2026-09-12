@@ -40,7 +40,7 @@ Static helpers for querying vehicle state from the game.
   so they don't fill every mod's vehicle picker. Pass `includeDebris: true` when debris is a
   legitimate target — a safety gate that must see everything, or a click/raycast that should hit
   whatever is visible.
-- `GetVehicleByName(string name)` - Looks up a vehicle by its display name
+- `FindVehicle(string id)` - Resolves an exact stable ID, including debris; returns null when absent or ambiguous.
 
 **Key Pattern**: Provides safe wrappers around KSA's game state queries.
 
@@ -190,6 +190,9 @@ content tests live in `pebbles.tests`.
 `SaveParticipant<T>` typed adapter, `SaveJson`, versioned `SaveDocument`, bounded atomic
 `SaveStorage`, conservative `SavedPartReference`, `SceneSaveCoordinator`, and `NativeSaveHooks`.
 Feature libraries own detached recipes and normal reset/apply APIs; the host wires callbacks.
+`MaterialColorState` tracks successful GPU albedo writes for cooperative appearance capture.
+Allocation owners record their authored initial color and call `Forget` when releasing the
+material, because GPU buffer handles can be reused and are never persistent identities.
 
 Restore runs in ascending `RestoreOrder`; cleanup reverses it. `PrepareRestore` must validate
 without mutating native state. `SaveRestoreContext.Warn` marks a partial restore: the source feature
@@ -197,9 +200,12 @@ record is retained instead of silently dropping missing entries on the next save
 nonfailure notices. Failed capture keeps the last good record when available. Unsupported feature
 versions remain opaque. Reset and replay errors are isolated and visible in the host.
 
-Part references use vehicle IDs and full-part/subpart tree addresses with template checks, never
-runtime IDs or name fallback. Their validity is scoped to the hash-bound native save; they are not
-an arbitrary cross-craft matching API. The JSON serializer is for explicit DTOs only, not live game
+Part references use vehicle IDs and full-part/subpart tree addresses with template and whole-tree
+structural signature checks. `BeginOperation()` caches one bounded traversal per vehicle for a
+synchronous capture/rebind transaction on the game thread; never hold it across frames. They use neither
+runtime IDs nor name fallback. Their validity is scoped to the hash-bound native save; they are not
+an arbitrary cross-craft matching API. The JSON serializer retains only primitive coordinate axes for Brutal vectors, excludes recursive
+swizzles, and rejects nonfinite floating-point values including exponent overflow. It is for explicit DTOs only, not live game
 objects. Sidecars are limited to 32 MiB/depth 64 and paired to SHA-256 of universe.xml.
 
 See [save integration](../scope/saves.md), [plan](../plans/SAVES.md) and

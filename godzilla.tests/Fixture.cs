@@ -7,6 +7,7 @@ namespace KSA
     public class Part
     {
         public Part? PartParent;
+        public bool IsSubPart => PartParent != null;
         public ModuleList Modules = new();
         public doubleQuat Asmb2ParentAsmb = doubleQuat.Identity;
         public doubleQuat Asmb2VehicleAsmb => PartParent == null ? Asmb2ParentAsmb : Asmb2ParentAsmb.Concatenate(PartParent.Asmb2VehicleAsmb);

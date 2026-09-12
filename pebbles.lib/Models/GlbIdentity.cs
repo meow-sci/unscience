@@ -22,10 +22,14 @@ public sealed record GlbIdentity(string Path, string Hash, string Part)
         string path;
         try { path = new UTF8Encoding(false, true).GetString(Convert.FromBase64String(encoded.PadRight((encoded.Length + 3) / 4 * 4, '='))); }
         catch (Exception ex) when (ex is FormatException or DecoderFallbackException) { throw new InvalidDataException("Invalid GLB source path.", ex); }
-        if (!System.IO.Path.IsPathFullyQualified(path) || path.IndexOf('\0') >= 0 || !System.IO.Path.GetExtension(path).Equals(".glb", StringComparison.OrdinalIgnoreCase))
+        bool windowsAbsolute = path.Length >= 3 && char.IsAsciiLetter(path[0]) && path[1] == ':' && path[2] is '\\' or '/';
+        if ((!System.IO.Path.IsPathFullyQualified(path) && !windowsAbsolute && !path.StartsWith("\\\\", StringComparison.Ordinal))
+            || path.IndexOf('\0') >= 0 || !System.IO.Path.GetExtension(path).Equals(".glb", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("GLB sources require an absolute .glb file path.");
         return new(path, hash, id[slash..]);
     }
+    /// <summary>Portable dependency name; runtime restore resolves only inside the copied shared library.</summary>
+    public string LibraryFileName => System.IO.Path.GetFileName(Path.Replace('\\', '/'));
     public static string Label(string id)
     {
         if (!id.StartsWith(Prefix, StringComparison.Ordinal)) return id;

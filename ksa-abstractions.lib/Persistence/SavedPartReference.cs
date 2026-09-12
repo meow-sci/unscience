@@ -11,21 +11,43 @@ public sealed class SavedPartReference
     public int[] TreePath { get; set; } = Array.Empty<int>();
     public int[] SubPartPath { get; set; } = Array.Empty<int>();
     public string TemplateId { get; set; } = "";
+    public string VehicleTopology { get; set; } = "";
+    private static Dictionary<Vehicle, PartIdentitySnapshot>? _operation;
+
+    /// <summary>Use on the game thread around an immutable capture/rebind phase. Never hold across frames.</summary>
+    public static IDisposable BeginOperation()
+    {
+        var previous = _operation;
+        _operation = new();
+        return new OperationScope(previous);
+    }
+
+    private sealed class OperationScope(Dictionary<Vehicle, PartIdentitySnapshot>? previous) : IDisposable
+    {
+        public void Dispose() => _operation = previous;
+    }
+
+    private static PartIdentitySnapshot Snapshot(Vehicle vehicle)
+    {
+        if (_operation == null) return new(vehicle);
+        if (!_operation.TryGetValue(vehicle, out var snapshot)) _operation[vehicle] = snapshot = new(vehicle);
+        return snapshot;
+    }
 
     public static SavedPartReference Capture(Vehicle vehicle, Part part)
     {
-        var path = new List<int>();
-        var sub = new List<int>();
-        if (!FindTree(vehicle.Parts.Root, part, path, sub, 0))
+        var snapshot = Snapshot(vehicle);
+        if (!snapshot.Addresses.TryGetValue(part, out var path))
             throw new InvalidOperationException($"Part does not belong to {vehicle.Id}.");
-        return new() { VehicleId = vehicle.Id, TreePath = path.ToArray(), SubPartPath = sub.ToArray(), TemplateId = part.Template.Id };
+        return new() { VehicleId = vehicle.Id, TreePath = path.Tree, SubPartPath = path.Sub,
+            TemplateId = part.Template.Id, VehicleTopology = snapshot.Topology };
     }
 
     public Part? Resolve()
     {
         if (TreePath == null || SubPartPath == null || TreePath.Length > 256 || SubPartPath.Length > 64) return null;
         var vehicle = VehicleProvider.FindVehicle(VehicleId);
-        if (vehicle == null || vehicle.IsDisposed) return null;
+        if (vehicle == null || vehicle.IsDisposed || Snapshot(vehicle).Topology != VehicleTopology) return null;
         Part part = vehicle.Parts.Root;
         foreach (int index in TreePath)
         {
@@ -38,31 +60,5 @@ public sealed class SavedPartReference
             part = part.SubParts[index];
         }
         return part.Template.Id == TemplateId ? part : null;
-    }
-
-    private static bool FindTree(Part current, Part target, List<int> path, List<int> sub, int depth)
-    {
-        if (depth > 256) throw new InvalidOperationException("Part tree exceeds save depth limit.");
-        if (FindSub(current, target, sub, 0)) return true;
-        for (int i = 0; i < current.TreeChildren.Count; i++)
-        {
-            path.Add(i);
-            if (FindTree(current.TreeChildren[i], target, path, sub, depth + 1)) return true;
-            path.RemoveAt(path.Count - 1);
-        }
-        return false;
-    }
-
-    private static bool FindSub(Part current, Part target, List<int> path, int depth)
-    {
-        if (depth > 64) throw new InvalidOperationException("Subpart tree exceeds save depth limit.");
-        if (ReferenceEquals(current, target)) return true;
-        for (int i = 0; i < current.SubParts.Length; i++)
-        {
-            path.Add(i);
-            if (FindSub(current.SubParts[i], target, path, depth + 1)) return true;
-            path.RemoveAt(path.Count - 1);
-        }
-        return false;
     }
 }

@@ -8,7 +8,7 @@ using MeowSci.KsaAbstractions;
 
 namespace MeowSci.BlinkyLib;
 
-public sealed class BlinkySubmod : ISubmod
+public sealed partial class BlinkySubmod : ISubmod
 {
     public string Name => "Blinky - LCD Grids";
     public string Tooltip => "Dynamic LCD grid displays on vehicles using engines.";

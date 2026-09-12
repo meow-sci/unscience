@@ -104,13 +104,15 @@ Unknown feature versions stay retained. Original save files are unchanged until 
 
 Imported **PNG, GLB and sound libraries** and **Parts Now mod folders** must remain installed.
 When moving a save to another computer, copy these dependencies too. Runtime part templates must
-be available before native save parsing; missing dependencies cannot be recreated from the sidecar.
+be available before native reconstruction; known missing part/character dependencies reject the load
+before the current scene is destroyed. Optional missing media leaves a retained feature record.
+PNG/audio references use catalog filenames; GLB identities additionally verify content hashes.
 Named preset libraries remain global. Skittles also stores the applied style in scene saves.
 
 Camera sequences restore stopped; audio entries restore paused with **Resume** starting from the
-beginning. Iron Man modes restore with engines disarmed. One-shot weld/light/body animation
-activity and raw GPU/audio/physics execution state are not simulation checkpoints. See each
-feature's README and the [coverage assessment](../plans/saves-state-inventory.md) for details.
+beginning. Iron Man modes restore with engines disarmed. Weld/light animation queues continue from captured progress; raw GPU/audio/physics execution
+state and transient expression blends are not simulation checkpoints. See each
+feature's README and the [implemented coverage and acceptance checklist](../plans/saves-acceptance.md) for details.
 
 A sidecar copied beside a different `universe.xml`, malformed data, or a future document schema is
 reported and not applied. Native saves remain usable without the sidecar where their required

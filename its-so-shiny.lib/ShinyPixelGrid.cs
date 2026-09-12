@@ -18,6 +18,15 @@ public sealed class ShinyPixelGrid
     public int Cols { get; private set; }
     public IReadOnlyDictionary<(int row, int col), ShinyPixelCell> Cells => _cells;
 
+    /// <summary>Rebind native-loaded cells without depending on ordinary part ids, which KSA omits.</summary>
+    internal static ShinyPixelGrid FromSavedCells(IEnumerable<ShinyPixelCell> cells)
+    {
+        var grid = new ShinyPixelGrid();
+        foreach (var cell in cells) grid._cells.Add((cell.Row, cell.Col), cell);
+        grid.RecomputeSize();
+        return grid;
+    }
+
     public static ShinyPixelGrid CreateFromParts(IEnumerable<Part> parts, string gridName)
     {
         var grid = new ShinyPixelGrid();

@@ -23,6 +23,19 @@ public sealed class PlumeCycle
     }
     public void Stop() { Running = false; IsOn = true; RemainingSeconds = 0; }
 
+    /// <summary>Resume a saved cycle at the reconstructed simulation time without replaying elapsed cycles.</summary>
+    public void RestorePhase(double simulationTime, bool isOn, double remainingSeconds)
+    {
+        Sanitize();
+        if (!double.IsFinite(simulationTime) || !double.IsFinite(remainingSeconds)) return;
+        double duration = isOn ? OnSeconds : OffSeconds;
+        double phase = (isOn ? 0 : OnSeconds) + duration - Math.Clamp(remainingSeconds, 0, duration);
+        Running = true;
+        _startTime = simulationTime - phase;
+        _lastTime = simulationTime;
+        Update(simulationTime);
+    }
+
     public void Update(double simulationTime)
     {
         if (!Running || !double.IsFinite(simulationTime)) return;

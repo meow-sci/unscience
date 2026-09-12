@@ -10,6 +10,7 @@ namespace MeowSci.KsaAbstractions.Persistence;
 public static class NativeSaveHooks
 {
     private static readonly List<(MethodInfo Target, MethodInfo Patch)> Installed = new();
+    private static int _fileLoadDepth;
     public static bool IsApplied => Installed.Count != 0 && PhysicsFrameHook.IsApplied;
 
     public static Action<GameSave>? Capturing { get; set; }
@@ -18,6 +19,8 @@ public static class NativeSaveHooks
     public static Action? Resetting { get; set; }
     public static Action? Restoring { get; set; }
     public static Action? LoadFinished { get; set; }
+    public static Action<Exception>? LoadFailed { get; set; }
+    public static Exception? LastLoadError { get; private set; }
 
     public static void Apply(Harmony harmony)
     {
@@ -34,9 +37,9 @@ public static class NativeSaveHooks
             Patch(harmony, typeof(UncompressedSave), nameof(UncompressedSave.Load), Type.EmptyTypes,
                 prefix: nameof(LoadingSave), finalizer: nameof(FinishedLoading));
             Patch(harmony, typeof(Universe), nameof(Universe.DeserializeSave), new[] { typeof(UniverseData) },
-                prefix: nameof(ResetBeforeLoad), postfix: nameof(RestoreAfterLoad));
+                prefix: nameof(ResetBeforeLoad), postfix: nameof(RestoreAfterLoad), finalizer: nameof(FinishedDirectLoad));
             Patch(harmony, typeof(Universe), nameof(Universe.LoadSystem), new[] { typeof(string) },
-                prefix: nameof(ResetBeforeSystem));
+                prefix: nameof(ResetBeforeSystem), finalizer: nameof(FinishedDirectLoad));
         }
         catch
         {
@@ -91,13 +94,31 @@ public static class NativeSaveHooks
             return false;
         }
         __state = true;
+        _fileLoadDepth++;
+        LastLoadError = null;
         Invoke(Loading, __instance, "preflight");
         return true;
     }
 
     private static Exception? FinishedLoading(Exception? __exception, bool __state)
     {
-        if (__state) Invoke(LoadFinished, "finish load");
+        if (__state)
+        {
+            _fileLoadDepth--;
+            LastLoadError = __exception;
+            Invoke(LoadFinished, "finish load");
+            if (__exception != null) Invoke(LoadFailed, __exception, "load failure");
+        }
+        return __exception;
+    }
+
+    private static Exception? FinishedDirectLoad(Exception? __exception)
+    {
+        if (__exception != null && _fileLoadDepth == 0)
+        {
+            LastLoadError = __exception;
+            Invoke(LoadFailed, __exception, "direct load failure");
+        }
         return __exception;
     }
 
@@ -111,6 +132,8 @@ public static class NativeSaveHooks
             PhysicsFrameHook.EnqueueWorldChange(() => Universe.DeserializeSave(universeData));
             return false;
         }
+        if (_fileLoadDepth == 0) LastLoadError = null;
+        NativeSavePreflight.Validate(universeData);
         __state = ResetAtJoinedBoundary();
         return true;
     }
@@ -130,6 +153,7 @@ public static class NativeSaveHooks
             PhysicsFrameHook.EnqueueWorldChange(() => Universe.LoadSystem(id));
             return false;
         }
+        if (_fileLoadDepth == 0) LastLoadError = null;
         ResetAtJoinedBoundary();
         return true;
     }
@@ -148,6 +172,9 @@ public static class NativeSaveHooks
             JobSystems.OrbitSolvers.Wait();
             JobSystems.VehicleSolver.Wait();
             JobSystems.ClothSolvers.Wait();
+            // PrepareFrame queues nearest-orbit work before this handoff; it traverses
+            // the current universe and must finish before vehicle destruction as well.
+            JobSystems.ConcurrentWorkers.Wait();
             PhysicsFrameHook.ClearPending();
             Invoke(Resetting, "reset");
             // Cleanup callbacks can themselves enqueue old-world edits. They cannot survive
@@ -158,7 +185,7 @@ public static class NativeSaveHooks
         catch (Exception ex)
         {
             Console.WriteLine($"unscience saves: cannot join reset boundary: {ex}");
-            return false;
+            throw; // Never destroy a world while a worker could still own it.
         }
     }
 

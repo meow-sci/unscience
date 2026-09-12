@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><RequiresKSAAssemblies>false</RequiresKSAAssemblies></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../camera-controller-override.lib/Animation/SavedAnimation.cs" Link="SavedAnimation.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveJson.cs" Link="SaveJson.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/FiniteNumberConverters.cs" Link="FiniteNumberConverters.cs" />
+  </ItemGroup>
+</Project>

@@ -25,3 +25,13 @@ Ordinary appearance changes and queued transitions remain intentionally compatib
 - `ZippoSubmod.cs` / `ZippoSubmod.Disco.cs` — lifecycle, UI, public API, and conflict coordination.
 
 Build from the repository root with `dotnet build ksa-mod-experiments.slnx`. See [`../scope/celestial-and-lights.md`](../scope/celestial-and-lights.md) for the exact KSA integration surface and the required in-game checks.
+
+## Scene saves
+
+Unscience captures applied shared-template color/intensity changes and their original values, plus
+Disco recipes, paused/switch state, elapsed phase, random seed/channel offsets and original owned
+actuator/switch values. Restore resolves exact saved part paths and recreates private light templates;
+Stop after loading retains its original-value semantics. Native switches and module positions remain
+native save data. Active and queued transitions retain start/end values, easing and elapsed progress, resuming
+against rebound part identities; promotion still captures the preceding step's final appearance. The template mutation ledger also includes Its So Shiny's writes through LightController.
+Scene reset stops Disco and restores template baselines before another native world loads.

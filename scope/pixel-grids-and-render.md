@@ -64,10 +64,9 @@ is the shared control surface for the UI and reusable callers. Render-skip patch
 grid-name), per-grid pattern + destroy + diagnose sections, "Render engine meshes"
 checkbox, Debug menu "Scan for blinky grids". All ImGui via `Brutal.ImGuiApi`.
 
-**Persistence** — None to disk. Grids live as real parts in the vehicle's `PartTree`
-(so they survive in a saved vehicle as ordinary engine parts); the manager's in-memory
-registry is rebuilt by the **global scan** which re-parses `pixel_{grid}_{row}_{col}_{a|b}`
-part Ids. No StarMap save hooks.
+**Persistence** — Native saves retain the real engine parts, while Unscience saves named grid/cell
+associations, ownership, render flags and scrolling. Replay rebinds native-loaded part paths; scan-only
+recovery is insufficient because KSA omits ordinary `pixel_*` ids. No StarMap save hooks.
 
 **Integration points**
 
@@ -214,8 +213,9 @@ color/vehicle/grid-name), per-grid appearance + pattern + destroy sections, "Ren
 light meshes" checkbox (default off → mesh renders only while the light is active),
 Debug menu "Scan for shiny grids".
 
-**Persistence** — None to disk. Light pixels are real `LightPart`s in the vehicle's
-`PartTree`; in-memory registry rebuilt by global scan re-parsing `shiny_{grid}_{row}_{col}`.
+**Persistence** — Native saves retain real light parts and switch state; Unscience saves grid/cell
+associations, ownership, appearance and scrolling. Replay rebinds paths because native saves omit
+ordinary `shiny_*` ids.
 
 **Integration points**
 
@@ -520,3 +520,26 @@ code change.
   once (the render path is unchanged, but rev 5401 and the per-viewport render-surface rework are
   render-loop changes); a shiny grid toggled with "Render light meshes" off to confirm the mesh still
   follows `LightIsActive`.
+
+### Thug Life scene persistence
+
+`ThugLifeSubmod.Persistence` serializes stable part anchors, position/rotation, dimensions and
+visibility. Restore uses existing `ThugLifeRenderManager.Add` and shared renderer initialization;
+reset clears entries/entrance slides and stale UI part lists while retaining valid shared GPU
+resources. Entrance animation is restored at its saved position, stopped. No new render seam or
+shader dependency; native repeated-load quad rendering and missing-anchor acceptance remain open.
+
+### Blinky / Shiny scene persistence
+
+Both managers now expose typed save participants and native part-path cell rebinding. Their created
+parts already exist in native `PartInstance` trees; replay must not build another grid. KSA omits
+ordinary `Part.Id` and assigns new runtime ids, so `PixelGrid.BuildFromPartGroups` and Shiny's direct
+cell constructor rebuild the associations. Registry HashSet membership supplements `pixel_*` /
+`shiny_*` name recognition in existing render prefixes; Blinky's ordinary-engine cache uses the same
+identity check. All memberships clear on native scene reset and update on register/unregister.
+
+Saved engine/switch state stays native. Replay restores active-mask metadata without ignition side
+effects, repairs Blinky declared feed connectors and resumes scrolling via source pixels/speed/phase.
+No new render patch, asset or shader is introduced. Missing/duplicate cells fail visibly. Native
+part-count, Destroy ownership, saved power/fuel wiring and post-load render suppression require a
+live acceptance run; shared template color limitations remain unchanged.

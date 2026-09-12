@@ -9,4 +9,6 @@ public static class MaterialColorState
     private static readonly Dictionary<int, float4> Colors = new();
     public static void Record(int handle, float4 color) { if (handle >= 0) Colors[handle] = color; }
     public static float4 GetOrDefault(int handle, float4 fallback) => Colors.TryGetValue(handle, out var value) ? value : fallback;
+    /// <summary>Retire a released allocation before its buffer slot can be reused by another material.</summary>
+    public static void Forget(int handle) => Colors.Remove(handle);
 }

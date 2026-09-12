@@ -11,7 +11,7 @@ namespace MeowSci.ThugLifeLib;
 /// ImGui surface for the thug-life mod: create new anchored sunglasses entries on a
 /// selected vehicle/part/subpart and tune position, rotation, and size per entry.
 /// </summary>
-public sealed class ThugLifeSubmod : ISubmod
+public sealed partial class ThugLifeSubmod : ISubmod, MeowSci.KsaAbstractions.Persistence.ISaveParticipantSource
 {
     public string Name => "Thug Life - Sunglasses Anchor";
     public string Tooltip => "Apply the thug-life sunglasses meme as a 2D quad anchored to any part/subpart on a vehicle.";

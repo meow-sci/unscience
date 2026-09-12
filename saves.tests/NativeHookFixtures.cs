@@ -54,11 +54,62 @@ namespace KSA
     public sealed class UniverseData
     {
         public bool FailReconstruction;
+        public ValidReference? GameTime = new();
+        public CameraData? Camera = new();
+        public object? KittenRoster = new();
+        public List<CelestialSystemData> CelestialSystems = new() { new() };
+    }
+
+    public interface IParentBody { }
+    public sealed class ValidReference { public bool Valid = true; public bool IsValid() => Valid; }
+    public enum CameraMode { Fly, Orbit }
+    public sealed class CameraData
+    {
+        public SerializedReference? Following = new() { Id = "" };
+        public object? TidalLocking = new();
+        public object? MapInverted = new();
+        public SerializedReference? MapPreviouslyControlled = new() { Id = "" };
+        public ValidReference? _positionRaw, _rotationRaw, _scaleRaw;
+        public CameraMode CameraMode;
+    }
+    public sealed class FixtureBody : IParentBody { }
+    public sealed class CelestialSystem
+    {
+        public string Id = "system";
+        public object? Get(string id) => id == "body" ? new FixtureBody() : null;
+    }
+    public sealed class SerializedReference { public string Id = "system"; }
+    public sealed class CelestialSystemData
+    {
+        public SerializedReference Id = new();
+        public List<VehicleData> Vehicles = new();
+    }
+    public sealed class VehicleData
+    {
+        public string Id = "vehicle";
+        public string Character = "";
+        public SerializedReference ParentBody = new() { Id = "body" };
+        public PartInstance? RootPartInstance;
+    }
+    public sealed class PartInstance
+    {
+        public string InstanceOf = "part";
+        public List<PartInstance>? Children;
+        public List<PartInstance>? SubPartInstances;
+    }
+    public sealed class CharacterReference { }
+    public static class ModLibrary
+    {
+        public static T Get<T>(string id) where T : new()
+        {
+            if (id is not ("part" or "character")) throw new InvalidOperationException("missing template");
+            return new T();
+        }
     }
 
     public static class Universe
     {
-        public static object? CurrentSystem = new();
+        public static CelestialSystem? CurrentSystem = new();
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void DeserializeSave(UniverseData universeData)
@@ -88,7 +139,12 @@ namespace KSA
 
     public sealed class Jobs(string name)
     {
-        public void Wait() => Trace.Events.Add("join " + name);
+        public bool Fail;
+        public void Wait()
+        {
+            Trace.Events.Add("join " + name);
+            if (Fail) throw new InvalidOperationException("join failed");
+        }
     }
 
     public static class JobSystems
@@ -96,6 +152,7 @@ namespace KSA
         public static readonly Jobs OrbitSolvers = new("orbit");
         public static readonly Jobs VehicleSolver = new("vehicle");
         public static readonly Jobs ClothSolvers = new("cloth");
+        public static readonly Jobs ConcurrentWorkers = new("concurrent");
     }
 }
 

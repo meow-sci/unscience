@@ -23,5 +23,12 @@
     <Reference Include="BepuPhysics"><HintPath>$(KSAFolder)BepuPhysics.dll</HintPath></Reference>
     <Reference Include="BepuUtilities"><HintPath>$(KSAFolder)BepuUtilities.dll</HintPath></Reference>
     <Reference Include="Brutal.Core.Numerics"><HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath></Reference>
+    <Compile Include="../garrys-torch.lib/WeldScaleSnapshot.Persistence.cs" Link="WeldScaleSnapshot.Persistence.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveJson.cs" Link="SaveJson.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/FiniteNumberConverters.cs" Link="FiniteNumberConverters.cs" />
+    <Compile Include="../garrys-torch.lib/WeldAnimation.Persistence.cs" Link="WeldAnimation.Persistence.cs" />
+    <Compile Include="../zippo.lib/LightAnimation.cs" Link="LightAnimation.cs" />
+    <Compile Include="../zippo.lib/LightAnimation.Persistence.cs" Link="LightAnimation.Persistence.cs" />
+    <Compile Include="../zippo.lib/LightAnimationManager.cs" Link="LightAnimationManager.cs" />
   </ItemGroup>
 </Project>

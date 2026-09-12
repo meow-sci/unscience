@@ -52,3 +52,12 @@ spacing, detached/added parts, fresh baselines after restore, invalid inputs and
 A warmed-up kitten matrix method is patched with actual Harmony to check nondefault avatar scale,
 XYZ correction and complete restoration; failed avatar capture can be retried. The fixtures do
 not run the production UI or native KSA rendering/physics.
+
+`SaveChecks` links production baseline capture/import and `SaveJson`. It recreates native-loaded
+parts at their saved effective XYZ sizes, verifies three save/load cycles do not compound scale,
+and checks Unweld returns to the original size. A nondefault kitten avatar baseline is also
+serialized and restored. Only native part resolution is substituted by a small fixture.
+
+`AnimationSaveChecks` also links production weld/light animation classes and managers. It compares
+save-restored continuation with uninterrupted playback through active completion and queued-step
+promotion, including nonzero easing and elapsed state. Native light writes use a small fixture.

@@ -7,7 +7,7 @@ using MeowSci.KsaAbstractions;
 namespace MeowSci.GarrysTorchLib;
 
 /// <summary>One source's original scales; edits never accumulate and never own child animation.</summary>
-internal sealed class WeldScaleSnapshot
+internal sealed partial class WeldScaleSnapshot
 {
     private sealed class Original(double3 scale)
     {

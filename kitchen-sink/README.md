@@ -274,3 +274,9 @@ Check for compilation errors before continuing with implementation.
 See similar template mods:
 - [unscience](../unscience) - Minimal template without .lib
 - Other mods for inspiration on complete implementations
+
+## Scene saves
+
+Saves the Force IVA Rendering switch. Reset restores shared template flags before another scene loads. The one-shot editor refresh and experimental Flexo diagnostic activity are not replayed.
+
+Scene persistence is registered by the Unscience host through `ISaveParticipantSource`; standalone development hosts retain their existing lifecycle. Use ordinary KSA Save/Load. See [save behavior](../unscience/README.md#scene-saves) and the [design plan](../plans/SAVES.md).

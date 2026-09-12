@@ -13,7 +13,7 @@ The form does not expose placement, LOD, resource-budget or material-channel tun
 
 The collider editor retains orbit/pan/zoom, framing, grounding, fitted primitives, numeric and handle editing, duplicate/mirror/delete, snapping and undo/redo. It no longer exposes separate LOD meshes or texture channels. **Done** keeps the detached recipe; **Cancel** discards the edit. Finish the editor before changing the main mesh or applying. Neither editing nor Done changes a planet.
 
-Planet and clutter-type identities are exact. Refresh discovers targets without applying anything; missing types stay unresolved and changed target signatures block Apply until refreshed. Authoring selections, collider edits, applied overrides and loaded GPU/CPU import caches are session-only; copied GLB files persist in the shared library. Main's existing window/header visibility persistence still applies; no workspace or Live State abstraction is required.
+Planet and clutter-type identities are exact. Refresh discovers targets without applying anything; missing types stay unresolved and changed target signatures block Apply until refreshed. Authoring selections, unapplied collider edits and loaded GPU/CPU caches are session-only; applied overrides travel with native KSA saves and copied GLB files persist in the shared library. Main's existing window/header visibility persistence still applies; no workspace or Live State abstraction is required.
 
 
 ## Loading your own GLB
@@ -26,7 +26,7 @@ Core metallic/roughness materials support embedded PNG/JPEG images, base-color f
 
 Limits: 128 MiB file, 512 meshes, 4096 scene nodes, 2 million vertices/12 million indices/2048 primitives per selection, 4096 pixels per image dimension and 256 MiB retained CPU pixels per source. The import cache permits 16 file-content versions and 8 million retained vertices. Existing Apply budgets also count the copies repeated across variants and LODs: assigning a detailed model everywhere can exceed that budget.
 
-Imported selections use absolute paths and SHA-256 file identities. Cached versions remain immutable snapshots if the source file changes; importing a changed file creates a distinct version. Recipes and GLB contents are not saved across game sessions.
+Imported selections use absolute paths and SHA-256 file identities. Cached versions remain immutable snapshots if the source file changes; importing a changed file creates a distinct version. Applied recipes persist with native KSA saves; GLB contents stay in the copied shared library.
 
 Import counts and per-planet restoration controls appear under **Applied clutter**. **Restore all and release resources** first retires planet overrides and the Workshop preview, then releases imported CPU/GPU resources before GUI rendering. Hiding the feature does not purge its cache. A newly selected mesh cancels a pending cache purge; failed native body retirement retains imports for safety.
 
@@ -90,3 +90,23 @@ private command buffer/fence upload path for Pebbles previews, GLB textures and 
 `ImportedPngTexture` owns a common-library PNG color map and optional 0.5-cutoff opacity map using
 the bounded GLB decoder/upload path, with device retirement before release. Sphinx borrows
 `ClutterAssets` geometry/material conversion; each feature retains its own cache and ownership.
+
+## Native save persistence
+
+KSA saves retain each body's complete **applied** `PebblesRecipe`, including all ecotype
+variants/LODs, transforms, material identities and collision recipes. The current form,
+Workshop draft and pending unapplied commands are excluded. Before native reconstruction,
+the save adapter cancels pending work, closes/releases the Workshop preview and restores
+the original celestial templates and native clutter arrays synchronously. It applies saved
+recipes synchronously at the host's safe restoration boundary, so missing renderers,
+assets and native construction failures are reported rather than hidden in an async queue.
+
+External GLBs resolve only within the current copied shared library, using the filename
+from the saved identity and the unchanged content hash. Copy the same files when moving a
+save to another computer; saved paths are not imported. Runtime caches and native resources
+are rebuilt. Destroyed-clutter simulation history/exclusion masks are not added to this
+setup snapshot; each loaded native world's history remains authoritative. Native cleanup
+faults retain ownership and block replay with a visible warning.
+
+Scene saves rebuild applied clutter recipes; runtime destroyed-clutter/exclusion masks are not
+checkpointed, so regeneration can recreate previously removed clutter.

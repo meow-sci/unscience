@@ -6,6 +6,7 @@ using System.Numerics;
 using Brutal.Collections;
 using KSA;
 using RenderCore;
+using MeowSci.KsaAbstractions;
 
 namespace MeowSci.PebblesLib;
 
@@ -62,7 +63,9 @@ internal sealed class GlbImportLibrary : IDisposable
         var identity = GlbIdentity.Parse(id);
         if (_sources.TryGetValue(identity.SourceKey, out var source)) return source;
         // Only explicit import, preview refresh or Apply reaches this method, never draft restoration.
-        var document = GlbDocument.Load(identity.Path);
+        // Save identities may carry a different machine's original library root. Resolve the
+        // copied filename under this installation; the content hash still must match exactly.
+        var document = GlbDocument.Load(GlbLibrary.Files.FullPath(identity.LibraryFileName));
         if (!document.Hash.Equals(identity.Hash, StringComparison.Ordinal))
         {
             document.Dispose();
