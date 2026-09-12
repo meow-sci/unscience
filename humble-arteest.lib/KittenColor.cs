@@ -16,8 +16,9 @@ namespace MeowSci.HumbleArteestLib;
 /// Core logic for the Kitten Coloring feature.
 ///
 /// Uses reflection to access the GpuMaterialSystem and write AlbedoColor
-/// into the GPU material buffer. Character models (kitten fur, glass, eyes)
-/// use ModelPbr.frag which respects AlbedoColor, so modifying it tints them.
+/// into the GPU material buffer. ModelPbr.frag respects tint and alpha discard;
+/// visor glass uses ModelTranslucent.frag with fixed opacity, so hiding it
+/// requires the separate KittenVisorPatches draw gate.
 ///
 /// Pattern validated in Experiments/MaterialColorTest.cs.
 /// </summary>

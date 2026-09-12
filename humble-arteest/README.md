@@ -11,7 +11,11 @@ Standalone KSA mod providing visual customization features. Toggle with F11.
   runtime. Tick **Enable painting**, pick a brush color, then tick the parts you want. Blend modes:
   *Multiply* (keeps texture detail, can only darken), *Tint* (recolors by luminance, can brighten),
   *Replace* (flat color). Works in flight and in the vehicle editor.
-- **Kitten Color** — Character model tinting via GPU material buffer AlbedoColor writes
+- **Kitten Color** — Character model tinting via GPU material buffer AlbedoColor writes.
+  Enable **Active**, then use **Hide visor glass** / **Show visor glass** to control all kitten
+  visors, including newly spawned kittens. This works before material initialization and does
+  not affect helmet shells or vehicle windows. Turning Active off or unloading restores visor
+  drawing. The toggle is session-only and independent of the color Reset button.
 - **Engine Emissive** — Per-engine glow control via Temperature field override
 
 ## Notes on Vehicle Paint

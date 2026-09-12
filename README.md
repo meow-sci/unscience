@@ -24,6 +24,10 @@ isolated per instance and restored when the effect stops. See [Zippo](zippo/READ
 picker follows the controlled kitten by default or stays pinned to an explicitly selected kitten id.
 See [Kitten Animations](kitten-animations/README.md).
 
+`humble-arteest` includes **Hide visor glass** under Kitten Color. It hides all kitten visors
+independently of material alpha; **Show visor glass**, deactivation, or unload restores drawing.
+See [Humble Arteest](humble-arteest.lib/README.md) for the separate glass-rendering path.
+
 `garrys-torch` updates welded vehicles after simulation results are applied and before the next
 physics snapshots, preserving light-part actuation progress. Its shared frame hook also runs while
 the HUD is hidden. Weld sources default to **Collisions off**, retaining part animations while

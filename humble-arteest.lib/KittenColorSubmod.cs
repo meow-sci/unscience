@@ -14,7 +14,12 @@ namespace MeowSci.HumbleArteestLib;
 public sealed class KittenColorSubmod : ISubmod
 {
     public string Name => "Kitten Color";
-    public string Tooltip => "Tints kitten character models by modifying GPU material colors.";
+    public string Tooltip => "Tints kitten character models and can hide their visor glass.";
+    internal const string HeaderTooltip =
+        "Tints character materials through the GPU material buffer.\n" +
+        "Alpha < 0.1 hides surfaces using ModelPbr.frag.\n\n" +
+        "Visor glass ignores material alpha; use Hide visor glass.\n" +
+        "The visor toggle affects all kittens for this session.";
 
     // Active toggle
     private bool _active;
@@ -38,11 +43,7 @@ public sealed class KittenColorSubmod : ISubmod
         SubmodUI.BeginContentArea("##kc_content");
 
         bool headerOpen = ImGui.CollapsingHeader("Kitten Color (?)", ImGuiTreeNodeFlags.DefaultOpen);
-        ImGui.SetItemTooltip(
-            "Tints kitten character models by writing AlbedoColor into the\n" +
-            "GPU material buffer. Only affects models using ModelPbr.frag\n" +
-            "(fur, glass, eyes) — vehicle parts use a different shader path.\n\n" +
-            "Alpha < 0.1 triggers discard (makes parts invisible).");
+        ImGui.SetItemTooltip(HeaderTooltip);
         if (!headerOpen)
         {
             SubmodUI.EndContentArea();
@@ -60,6 +61,7 @@ public sealed class KittenColorSubmod : ISubmod
         ImGui.Checkbox("Active##kc_active", ref _active);
         if (!_active)
         {
+            KittenVisorPatches.Hidden = false;
             if (prevActive && KittenColor.IsInitialized)
             {
                 KittenColor.ResetAll();
@@ -69,18 +71,35 @@ public sealed class KittenColorSubmod : ISubmod
         }
 
         ImGui.Spacing();
+        RenderVisorControl();
         RenderInitOrControls();
         RenderStatusMessage();
     }
 
     public void Dispose()
     {
+        KittenVisorPatches.Hidden = false;
         if (KittenColor.IsInitialized)
             KittenColor.ResetAll();
         KittenColor.Cleanup();
     }
 
     // ---- Main rendering ----
+
+    private static void RenderVisorControl()
+    {
+        ImGui.BeginDisabled(!KittenVisorPatches.IsApplied);
+        if (ImGui.Button(KittenVisorPatches.Hidden ? "Show visor glass##kc_visor" : "Hide visor glass##kc_visor"))
+            KittenVisorPatches.Hidden = !KittenVisorPatches.Hidden;
+        ImGui.EndDisabled();
+        ImGui.SetItemTooltip("Hides visor glass on all kittens, including newly spawned kittens.\n" +
+            "Show restores the normal visor draw. Helmet and material colors are unchanged.");
+        ImGui.SameLine();
+        ImGui.TextDisabled(KittenVisorPatches.Hidden ? "Visors hidden" : "Visors shown");
+        if (!KittenVisorPatches.IsApplied)
+            ImGui.TextWrapped(KittenVisorPatches.LastError ?? "Visor toggle patch is not installed.");
+        ImGui.Spacing();
+    }
 
     private void RenderInitOrControls()
     {

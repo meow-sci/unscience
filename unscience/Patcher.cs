@@ -75,6 +75,7 @@ internal static class Patcher
         TryApply("i-feel-seen", () => IFeelSeenPatches.Apply(_harmony!, IFeelSeenTracker!));
         TryApply("vehicle-paint", () => VehiclePaintPatches.Apply(_harmony!));
         TryApply("engine-emissive", () => EngineEmissivePatches.Apply(_harmony!));
+        TryApply("kitten-visor", () => KittenVisorPatches.Apply(_harmony!));
         TryApply("iva-force-render", () => IvaForceRender.Patch(_harmony!));
         TryApply("dont-stifle-me", () => EditorScalePatches.Apply(_harmony!));
         TryApply("dont-stifle-me editor limits", () => EditorValueLimitPatches.Apply(_harmony!));
@@ -120,6 +121,7 @@ internal static class Patcher
                 TryRemove("glass", () => GlassPatches.Remove(_harmony!));
                 TryRemove("i-feel-seen", () => IFeelSeenPatches.Remove(_harmony!));
                 TryRemove("engine-emissive", () => EngineEmissivePatches.Remove(_harmony!));
+                TryRemove("kitten-visor", () => KittenVisorPatches.Remove(_harmony!));
                 TryRemove("dont-stifle-me editor limits", () => EditorValueLimitPatches.Remove(_harmony!));
                 TryRemove("dont-stifle-me", () => EditorScalePatches.Remove(_harmony!));
                 TryRemove("vehicle-paint", () => VehiclePaintPatches.Remove(_harmony!));

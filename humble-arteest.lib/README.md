@@ -3,7 +3,7 @@
 Humble Arteest provides three visual customization features for KSA:
 
 1. **Vehicle Paint** — Recolors vehicle parts, per part instance, via a runtime-patched part fragment shader
-2. **Kitten Color** — Tints kitten character models by modifying GPU material buffers
+2. **Kitten Color** — Tints kitten character materials and independently hides/shows visor glass
 3. **Engine Emissive** — Controls per-engine glow/heat effects via Temperature field overrides
 
 All features are accessible as `ISubmod` implementations for use in the unscience supermod or standalone.
@@ -21,7 +21,8 @@ the approach matched to its rendering path:
 |---|---|---|---|
 | Vehicle parts (static) | `MeshIndirect.{vert,frag}`, `ENABLE_EMISSIVE`+`ENABLE_THIN_FILM` variant | `PartModel.PerInstanceData` | Free bits of `StateBitFlag` + patched fragment shader |
 | Vehicle parts (dynamic) | `MeshIndirect.{vert,frag}`, `ENABLE_TEMPERATURE`+`ENABLE_THIN_FILM` variant | `PartModelDynamic.PerInstanceData` | Same, plus the game's own `Temperature` for glow |
-| Kitten characters | `ModelPbr.frag` | — (materials live in `GpuMaterialSystem`) | Write `AlbedoColor` into the GPU material buffer |
+| Kitten body/helmet | `ModelPbr.frag` | — (materials live in `GpuMaterialSystem`) | Write `AlbedoColor` into the GPU material buffer |
+| Kitten visor glass | `ModelTranslucent.frag` (transparent pass) | `StaticMeshRenderable` submissions | Gate `VisorMesh.Draw()` to hide glass independently of fixed shader opacity |
 
 > **Shader-merge note (KSA rev 4693+).** The separate `DynamicMeshIndirect` shader no longer exists —
 > it was merged into a single, feature-gated `MeshIndirect.{vert,frag}` whose behaviour is selected at
@@ -211,7 +212,10 @@ it, so windows stay clear.
 
 ### How It Works
 
-Kitten character models (fur, glass, eyes) are rendered via `ModelPbr.frag`, which reads materials from `GpuMaterialSystem`. Unlike vehicle parts, these materials include an `AlbedoColor` field (float4) that is **multiplied** with the albedo texture in the shader.
+Kitten body/helmet models use `ModelPbr.frag`, which reads materials from `GpuMaterialSystem`.
+These materials include an `AlbedoColor` field (float4) that is **multiplied** with the albedo texture.
+Fur shells use `Fur.frag`; glass and eyes use separate variants of `ModelTranslucent.frag`.
+Material tinting and alpha behavior therefore depend on the rendering path.
 
 The default `AlbedoColor` is `(1, 1, 1, 1)` (white = no tint). By writing a different color to the GPU material buffer, we tint all characters using that material.
 
@@ -242,7 +246,33 @@ Vehicle parts never register here — which is exactly why Vehicle Paint needs i
 
 ### Alpha Channel Behavior
 
-The `ModelPbr.frag` shader has a discard threshold: `if (alpha < 0.1) discard`. Setting `AlbedoColor.W` (alpha) below 0.1 makes material fragments invisible. Values 0.1–1.0 modulate opacity.
+The `ModelPbr.frag` shader discards fragments when `albedo.a < 0.1`. This does not apply to visor glass.
+
+### Visor glass visibility
+
+Enable **Active**, then click **Hide visor glass** (the button changes to **Show visor glass**).
+It affects all kittens, including new spawns, without initializing the material editor. Turning
+Active off or disposing the submod restores drawing. Color Reset only resets colors; the visor
+toggle is independent and session-only.
+
+KSA build `2026.9.7.5402` constructs `CharacterAvatar.Helmet.VisorMesh` as a separate
+`StaticMeshRenderable` with `isOpaque: false` and `CastShadows = false`
+(`CharacterAvatar.SetupAttachmentsFromRenderRef`). `CharacterRenderResources.GlassRenderer`
+uses `ModelVert` + `ModelTranslucentFrag` in the transparent pass, with alpha blending and depth
+writes enabled. The shader does **not** discard on alpha: its non-`EYE` branch hard-codes
+`opacity = 0.75`, then computes `finalAlpha = mix(opacity, 1.0, fresnel * 0.5)`. Changing
+`AlbedoColor.W` cannot make that glass invisible. The `EYE` variant hard-codes opacity to 0.3.
+
+`KittenVisorPatches` transpiles `KittenRenderable.UpdateRenderData`, replacing exactly the call
+immediately following `ldfld CharacterAvatar.Helmet.VisorMesh` with a conditional draw helper.
+Skipping `StaticMeshRenderable.Draw()` omits both transparent color and depth-prepass submissions.
+The helmet shell, eyes, other glass, animation, attachment state and mesh visibility flags are
+untouched. No shader recompilation or renderer rebuild is needed. Both hosts apply/remove the
+patch. If the expected single IL match changes, patch installation fails and the UI disables the
+button with an error instead of guessing which mesh to hide.
+
+Validation: solution compilation and managed draw-gating checks; live KSA visual acceptance remains
+required (hide/show multiple kittens, spawn while hidden, switch views, deactivate and unload).
 
 ### Critical Game Infrastructure Used
 
@@ -271,6 +301,7 @@ The `AlbedoColor` offset is determined via `Marshal.OffsetOf<MaterialData>("Albe
 
 - `KittenColor.cs` — reflection-based GPU buffer access + color writes
 - `KittenColorSubmod.cs` — ISubmod UI panel
+- `KittenVisorPatches.cs` — targeted visor draw gate, with Apply/Remove lifecycle
 
 ---
 
@@ -373,7 +404,9 @@ Unscience's `Patcher.Unload()` also calls:
 - `VehiclePaint.Cleanup()` — removes the patched shaders (requesting a rebuild) and clears paint state
 - `EngineEmissive.Cleanup()` — clears all engine overrides
 
-Kitten Color has no Harmony patches — it works purely via GPU buffer writes.
+Kitten Color's tinting uses GPU buffer writes; its independent visor toggle uses
+`KittenVisorPatches.Apply(harmony)` / `.Remove(harmony)` in both hosts. `KittenColorSubmod.Dispose`
+also clears the hide flag.
 
 ---
 

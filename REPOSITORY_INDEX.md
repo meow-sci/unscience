@@ -274,7 +274,7 @@ Programmatic kitten spawning with per-kitten GPU material customization. Spawns 
 ### [humble-arteest](humble-arteest) / [humble-arteest.lib](humble-arteest.lib)
 Part painting and visual customization mod. Three features: vehicle part painting via runtime shader patching, kitten character tinting via GPU material buffer writes, and per-engine emissive glow control.
 - **Vehicle Paint**: Recolors individual part instances at runtime. The color is quantized to 7:7:7 sRGB and packed into the **free high bits (11..31) of `PerInstanceData.StateBitFlag`** — bits KSA does not use — so no game field, struct layout, or vertex shader is touched. A Harmony prefix on `RenderCore.ShaderModuleUtils.FromFile` compiles an in-memory patched copy of `MeshIndirect.frag` / `MeshIndirectRaytraced.frag` (nothing on disk is modified) that unpacks those bits and blends them into the albedo. Installed through the game's own deferred `Program.RendererRebuildNeeded` rebuild. Targeting: per part instance, per part type, or global; blend modes Multiply / Tint / Replace; works in flight and in the vehicle editor.
-- **Kitten Color**: Tints character models (fur, glass, eyes) by writing AlbedoColor to the `GpuMaterialSystem.BigBuffer` via Vulkan staged uploads. Only affects `ModelPbr.frag` path — vehicle parts are unaffected.
+- **Kitten Color**: Tints character materials by writing AlbedoColor to `GpuMaterialSystem.BigBuffer` via Vulkan staged uploads. Alpha discard applies to the `ModelPbr.frag` path; visor glass uses `ModelTranslucent.frag` with fixed opacity. `KittenVisorPatches` adds a session-wide Hide/Show visor glass button by gating only `VisorMesh.Draw()` inside `KittenRenderable.UpdateRenderData`; deactivation/unload restores drawing.
 - **Engine Emissive**: Per-engine Temperature/TFI override via Harmony prefix on `PartModelDynamic.AddInstance()`. No shader modifications needed — uses the game's existing emissive color LUT.
 - F11 window toggle (standalone mode)
 - Unscience supermod integration via `ISubmod`: `VehiclePaintSubmod`, `KittenColorSubmod`, `EngineEmissiveSubmod` (grouped by `HumbleArteestSubmod`)
@@ -337,7 +337,7 @@ Unified supermod that consolidates the standalone feature mods into a single ImG
 - Each submod class lives in its `.lib` project (for example `BlinkySubmod` in `blinky.lib`)
 - `unscience/Submods/` directory removed — no thin UI wrapper layer; submod classes own their own ImGui rendering
 - `Update(dt)` runs every frame for all submods (even hidden) for frame-critical logic
-- Consolidated Harmony patches include blinky render-skip, camera-controller-override sequence playback, free-fallin canopy material substitution + full-canopy shader projection, glass main-camera FOV override, hot-pursuit fixed-camera pose, humble-arteest vehicle paint + engine emissive, i-feel-seen render distance, skittles hotkey blocking, pyro exhaust submission, and graffiti decal pass
+- Consolidated Harmony patches include blinky render-skip, camera-controller-override sequence playback, free-fallin canopy material substitution + full-canopy shader projection, glass main-camera FOV override, hot-pursuit fixed-camera pose, humble-arteest vehicle paint + engine emissive + kitten visor draw toggle, i-feel-seen render distance, skittles hotkey blocking, pyro exhaust submission, and graffiti decal pass
 - References all feature `.lib` projects, including `hot-pursuit.lib`, plus `ksa-abstractions.lib`
 
 ---

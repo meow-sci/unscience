@@ -196,7 +196,24 @@ Engine Emissive** (Harmony override of the per-instance `Temperature`/`TfiThickn
 `EngineEmissiveSubmod`). Harmony patches applied through the shared instance:
 `VehiclePaintPatches.Apply` (five seams — see A1–A6) and `EngineEmissivePatches.Apply`
 (on `PartModelDynamic.AddInstance`). `VehiclePaint.Cleanup()` + `EngineEmissive.Cleanup()` on
-unload. Kitten Color has **no** Harmony patch (pure GPU buffer write, same bridge as doh).
+unload. Kitten Color tinting uses GPU writes; its visor toggle adds `KittenVisorPatches.Apply/Remove`
+on `KittenRenderable.UpdateRenderData` in both hosts.
+
+### Kitten visor visibility (@5402)
+
+**Hide/Show visor glass** gates all kittens' visor submissions for the session. It works before
+material initialization and restores drawing on Kitten Color deactivation, disposal or patch removal.
+Color Reset is independent. Managed draw-gating checks cover isolation and restoration; live-game
+visual acceptance (multiple/new kittens, view changes, deactivation and unload) remains pending.
+
+| Integration | Game source (`current/decomp` or `current/Content`) | Dependency / update check |
+|---|---|---|
+| Harmony transpiler `KittenRenderable.UpdateRenderData` | `KSA/KittenRenderable.cs:310,368` | `KittenVisorPatches.Transpile` requires exactly one adjacent `ldfld CharacterAvatar.Helmet.VisorMesh` + `StaticMeshRenderable.Draw()` call, replaced with a conditional helper. Missing/duplicate match fails installation and disables the UI. |
+| Typed `CharacterAvatar.Helmet.VisorMesh` and `StaticMeshRenderable.Draw()` | `KSA/CharacterAvatar.cs:109,467`; `KSA/StaticMeshRenderable.cs:73` | Visor is a distinct non-opaque static mesh, `CastShadows=false`. Skipping Draw prevents both translucency and depth-prepass submission. Helmet/eyes/window draws and attachment state are preserved; no retained game objects or per-frame reflection. |
+| Glass pipeline + shader (research dependency, no modification) | `KSA/CharacterRenderResources.cs:49,77,189`; `Core/Shaders/Mesh/ModelTranslucent.frag` | Glass uses transparent pass, alpha blend and depth writes. Non-EYE opacity is hard-coded `0.75`; final alpha mixes toward 1 by Fresnel, ignoring material alpha. Eye variant is also translucent but stays untouched. |
+
+These current sources correct the older blanket claim that all kitten surfaces use `ModelPbr.frag`.
+The regular PBR alpha-discard path remains valid for body/helmet; it cannot hide the visor.
 
 **UI / hotkeys** — Standalone **F11** window (`humble-arteest/Mod.cs:66`); embedded in unscience.
 

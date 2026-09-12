@@ -23,7 +23,7 @@ A unified supermod that consolidates 28 KSA feature libraries into a single ImGu
 | Graffiti — PNG Decals | Click-to-place projected PNG decals on vehicle hulls, deployed parachute cloth, and terrain |
 | Free Fallin — Parachute Customizer | Applies a global stock tint, panel-tiled or cohesive full-canopy PNG, centered decal, and canopy PBR controls |
 | Hot Pursuit | Mounts live secondary cameras on vehicle parts |
-| Humble Arteest | Kitten colors, engine emissive controls, and experimental vehicle paint |
+| Humble Arteest | Kitten colors and Hide/Show visor glass, engine emissive controls, and experimental vehicle paint |
 | I Feel Seen | Forces vehicle render data updates at any distance |
 | Iron Man | EVA/Iron Man flight-mode buttons, upright editing, configurable nodes, rocket controls and upright surface teleports in Iron Man mode |
 | Its So Shiny | Builds and controls Blinky-style pixel grids from built-in light parts |

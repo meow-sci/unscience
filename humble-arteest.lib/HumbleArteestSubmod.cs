@@ -45,12 +45,7 @@ public sealed class HumbleArteestSubmod : ISubmod
         ImGui.Spacing();
         ImGui.Spacing();
         ImGui.SeparatorText("Kitten Color");
-        ImGui.SetItemTooltip(
-            "Tints kitten character models by writing AlbedoColor into the\n" +
-            "GPU material buffer. Only affects models using ModelPbr.frag\n" +
-            "(fur, glass, eyes) — vehicle parts use a different shader path.\n\n" +
-            "Alpha < 0.1 triggers discard (makes parts invisible).\n" +
-            "The material list is for reference only — color applies to all.");
+        ImGui.SetItemTooltip(KittenColorSubmod.HeaderTooltip);
         ImGui.Spacing();
         ImGui.Spacing();
         _kittenColor.RenderBody();
