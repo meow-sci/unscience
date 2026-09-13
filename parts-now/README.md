@@ -25,3 +25,9 @@ StarMap lifecycle and the floating window.
 See [`parts-now.lib/README.md`](../parts-now.lib/README.md) for features, the two workflows, the mod
 id rules, the mesh headroom setting, the validation rules, the reload safety gate and the known
 limitations.
+
+## Scene saves
+
+Records runtime mod IDs and part-template dependencies. Installed folders and enabled manifest entries already persist through Parts Now; save loading does not duplicate, unload or execute asset bundles. Required part mods must be installed/enabled before KSA reads the native save. Template IDs unavailable at restore produce actionable dependency diagnostics; the sidecar is not a portable asset bundle.
+
+Scene persistence is registered by the Unscience host through `ISaveParticipantSource`; standalone development hosts retain their existing lifecycle. Use ordinary KSA Save/Load. See [save behavior](../unscience/README.md#scene-saves) and the [design plan](../plans/SAVES.md).

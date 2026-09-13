@@ -35,7 +35,7 @@ public class GridState
 /// Static singleton that manages per-vehicle named LCD grids and exposes scroll, static display, and off operations.
 /// Shared control surface for the blinky mod UI and reusable callers.
 /// </summary>
-public static class BlinkyGridManager
+public static partial class BlinkyGridManager
 {
     private static readonly Dictionary<(string vehicleId, string gridName), GridState> _grids = new();
 
@@ -54,6 +54,7 @@ public static class BlinkyGridManager
 
         var state = new GridState(id, gridName, vehicle, grid);
         _grids[key] = state;
+        RebuildMembership();
         NonLcdEngineCache.Invalidate(id);
         Console.WriteLine($"blinky: registered grid '{gridName}' for vehicle '{id}' ({grid.Grid.Cols}x{grid.Grid.Rows})");
         return state;
@@ -67,6 +68,7 @@ public static class BlinkyGridManager
         {
             state.Scroll.Stop();
             _grids.Remove(key);
+            RebuildMembership();
             NonLcdEngineCache.Invalidate(vehicleId);
             Console.WriteLine($"blinky: unregistered grid '{gridName}' for vehicle '{vehicleId}'");
         }
@@ -93,6 +95,7 @@ public static class BlinkyGridManager
         foreach (var state in _grids.Values)
             state.Scroll.Stop();
         _grids.Clear();
+        RebuildMembership();
         NonLcdEngineCache.Clear();
     }
 

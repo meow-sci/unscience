@@ -76,7 +76,7 @@ is expected and does not stop the main thrust chamber from firing.
 
 ### Repair Feed
 
-Grids discovered by the **global scan** — after a save/load, or built by an older blinky — have no
+Grids discovered by the **global scan** — for example those built by an older blinky — can have no
 declared feed connection and stay dark. **Repair Feed** (per-grid button, or
 `POST /blinky/grids/repair`) re-wires them in place and forces the resource managers to rebuild via
 `ResourceGroupList.CalculateStages()`, without rebuilding the part tree.
@@ -154,3 +154,10 @@ blinky.lib/                   ← Core reusable logic (headless)
 - Multiple grids per vehicle are fully independent (own config, scroll state, active pixels)
 - The mod UI (`Mod.cs`) is a thin ImGui layer that delegates all logic to `BlinkyGridManager`
 - **`BlinkySubmod`** lives in `blinky.lib` and implements `ISubmod` from `ksa-abstractions.lib`; it is instantiated directly by the unscience supermod
+
+## Scene saves
+
+Normal KSA saves made with Unscience preserve grids, ownership, patterns and scrolling by rebinding
+the native-loaded parts. No extra engine parts are spawned and vehicle ignition is preserved.
+See [save details](../blinky.lib/README.md#scene-saves). Native saves omit ordinary pixel names,
+so a scan alone cannot recover older saves that lack Unscience grid metadata.

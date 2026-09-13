@@ -545,3 +545,34 @@ clean against 5402 (52 projects, 0 warnings, 0 errors). **No code change was nee
   vehicle rendered in a secondary viewport (both `AddInstance` gates + per-viewport `UpdateRenderData`
   pairing); (c) kitten-animations forced clips + expressions on screen (still outstanding from the 5348
   pass); (d) cloned materials with raytracing on (carried over from 5261→5348).
+
+### Save/load ownership and material recipes
+
+`humble-arteest.lib/HumbleArteestSubmod.Persistence` captures VehiclePaint global/template/instance
+state and exact `PartModelDynamicModule` occurrence within a validated part for Engine Emissive.
+Shader replay uses the existing deferred rebuild path. `KittenColor` now tracks successful writes
+by native material name and owns original-color restoration; native stock PBR albedo initializes
+white, and `ksa-abstractions.lib/Persistence/MaterialColorState` supplies known mod-created colors.
+No GPU readback or additional native reflection is introduced. Unknown external-mod GPU writes
+remain outside this baseline guarantee. DOH and Free Fallin private names are excluded and delegated
+to their owners. Original-color cleanup retains the native `Core.AssetName` key (not its display
+string) and validates exact current AssetMap object ownership, name,
+and Handle before upload, so disposed canopy materials cannot redirect cleanup into recycled slots.
+
+`doh.lib/DohSubmod.Persistence` restores registry/material ownership onto native-created `KittenEva`
+objects by saved vehicle ID, never spawns replacements. It calls existing cloned-material reflection
+paths and keeps private slots for reuse across A→B→A when native shared handle identity matches.
+Per-material persisted keys are source/name; GPU handles stay runtime-only. Successful native GPU
+uploads update shared color tracking so later Humble Arteest edits are included. Registry entries
+retain a runtime Vehicle reference for rename-safe snapshot capture.
+
+`kitten-animations.lib/KittenAnimationsSubmod.Persistence` resets processor ownership and rebinds
+native avatars after load. It persists exact selected clip identity/phase and reusable settings. Forced looping clips and
+frozen poses resume, as do latched expression clips; unlatched one-shot expressions stay stopped. `SavedAnimationTuning` reads/writes the 20 already exposed
+`KittenLocomotionTuning.Current` animation fields; physics fields are excluded. No new Harmony target is added. `KittenPlaybackPhase` resolves protected
+`AnimatedRenderable.RuntimeAnim`, `BoneAnimRuntime.TimeSinceTransition`, and
+`BoneAnimRuntime.CurrentAnimation`; it verifies selected-clip identity when reading the clock and
+uses `BoneAnimRuntime.SampleCurrentAnimation()` before the first frozen skinning pass. Missing
+fields produce an explicit failure instead of silently capturing another clip. It does not serialize
+native bone buffers; in-progress cross-fades restore the selected clip pose. In-game material tint/visor, private-slot reuse, rename and
+processor reset/selection acceptance remains pending.

@@ -14,7 +14,7 @@ namespace MeowSci.PartsNowLib;
 /// parts-now entry point: runtime Part / SubPart loading from pasted XML or an existing mod folder.
 /// Hosted by the unscience supermod and by the standalone <c>parts-now</c> mod.
 /// </summary>
-public sealed class PartsNowSubmod : ISubmod
+public sealed partial class PartsNowSubmod : ISubmod
 {
     private readonly List<string> _selfTestProblems = new List<string>();
 

@@ -9,7 +9,7 @@ using WeldEasingType = MeowSci.KsaAbstractions.EasingType;
 
 namespace MeowSci.GarrysTorchLib;
 
-public sealed class GarrysTorchSubmod : ISubmod
+public sealed partial class GarrysTorchSubmod : ISubmod
 {
     public string Name => "Garry's Torch - Vehicle Welding";
     public string Tooltip => "Welds vehicle parts together with adjustable position, rotation, and XYZ scale.";

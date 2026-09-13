@@ -9,7 +9,7 @@ namespace MeowSci.ZippoLib;
 /// <summary>
 /// Runs one Disco recipe against module-local light templates and restores every value it owns.
 /// </summary>
-internal sealed class DiscoLight : IDisposable
+internal sealed partial class DiscoLight : IDisposable
 {
     private readonly List<(LightModule Module, LightModule.TemplateData Original, LightModule.TemplateData Owned)> _lights = new();
     private readonly Dictionary<KeyframeAnimationModule, (float Original, float Written)> _goals = new();

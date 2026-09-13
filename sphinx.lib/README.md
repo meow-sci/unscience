@@ -61,3 +61,19 @@ hidden-HUD fallback. Native render hooks themselves are independent of HUD visib
 Both hosts wire HotkeyGuard and patches through their normal lifecycle. Only Unscience deploys.
 Shader bytes, binding assumptions and required native acceptance are recorded in
 [scope/statics.md](../scope/statics.md); a successful build is not a Vulkan runtime test.
+
+## Native save persistence
+
+KSA saves retain applied static placements: exact body and GLB content identity, body-fixed
+anchor/normal, XYZ scale/rotation/offset, slope alignment, visibility, PNG override, UV
+scale/offset and collision mode. Loading cancels pending placement/edit/removal actions,
+retires old physics/render resources, then rebuilds meshes and colliders through the
+normal bounded resource paths. Queued edits that have not applied are not part of the
+snapshot.
+
+Copied GLBs/PNGs remain shared-library dependencies. A GLB from another machine resolves
+by its copied filename in this installation's library and must match the saved SHA-256;
+no saved absolute path is imported. Missing/changed files or missing bodies warn and
+skip the affected entry while the coordinator retains the source feature payload. GPU
+handles, physics shapes, bubble handles and preview state are reconstructed, not saved.
+Native rendering/contact verification is still required.

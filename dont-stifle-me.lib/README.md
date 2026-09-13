@@ -39,3 +39,9 @@ The five scale member names and `DrawParachuteSection` are resolved as **strings
 (`AccessTools.Method`) — a rename fails at `Apply()` (logged, patches skipped, UI shows a red notice)
 rather than at compile time. `Parachute.SetDiameter(float)` is resolved with a typed signature. See
 `scope/part-editor-and-robotics.md` → dont-stifle-me.
+
+## Scene saves
+
+Saves the master scale-limit switch, scale snapping and extended editor-value switch. Native saves retain resulting edited geometry. Transient gizmo drags are not resumed.
+
+Scene persistence is registered by the Unscience host through `ISaveParticipantSource`; standalone development hosts retain their existing lifecycle. Use ordinary KSA Save/Load. See [save behavior](../unscience/README.md#scene-saves) and the [design plan](../plans/SAVES.md).

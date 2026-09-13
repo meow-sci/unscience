@@ -3,7 +3,7 @@
 Godzilla lives in the single Unscience package. Open **F11 → Godzilla**, choose a vessel
 (or use the controlled vessel), set its size, and press **Apply**. The filter also finds EVA kittens.
 
-Rendering always resizes. Two independent, session-only checkboxes control the other effects;
+Rendering always resizes. Two independent checkboxes control the other effects;
 both default **on** and changing either converts all current Godzilla sessions at the next safe
 physics handoff:
 
@@ -68,3 +68,6 @@ channel combinations, XYZ/COM centers, animation, readonly inputs, nominal bound
 flags, exceptions, restoration and reload. Native terrain/vessel contacts, bubble boundaries,
 planet-scale clipping/shadows/LOD and Iron Man equipment still need an in-game acceptance pass.
 See [integration scope](../scope/vehicle-physics.md).
+
+Normal KSA saves made with Unscience preserve active sizing and original geometry, so repeated
+loads do not compound scale and Restore remains accurate. See [save details](../godzilla.lib/README.md#scene-saves).

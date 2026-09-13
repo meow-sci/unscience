@@ -260,3 +260,9 @@ Check for compilation errors before continuing with implementation.
 See similar template mods:
 - [unscience](../unscience) - Minimal template without .lib
 - Other mods for inspiration on complete implementations
+
+## Scene saves
+
+Captures the full applied ImGui style, including edits not yet stored as a named theme. Save load validates the detached style and reapplies it; a native save without state restores the user's configured startup theme. Named themes and theme preference files remain global.
+
+Scene persistence is registered by the Unscience host through `ISaveParticipantSource`; standalone development hosts retain their existing lifecycle. Use ordinary KSA Save/Load. See [save behavior](../unscience/README.md#scene-saves) and the [design plan](../plans/SAVES.md).

@@ -8,7 +8,7 @@ using MeowSci.KsaAbstractions;
 
 namespace MeowSci.ItsSoShinyLib;
 
-public sealed class ItsSoShinySubmod : ISubmod
+public sealed partial class ItsSoShinySubmod : ISubmod
 {
     public static ItsSoShinySubmod? Instance { get; private set; }
 

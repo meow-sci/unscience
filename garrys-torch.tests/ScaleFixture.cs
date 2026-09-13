@@ -7,6 +7,7 @@ namespace KSA;
 // Mirror the relevant KSA contract: Scale invalidates only this part, and children inherit it.
 public sealed class Part
 {
+    public PartTemplate Template = new();
     private double3 _scale = new(1);
     private double3? _cachedTotal;
     public Part? PartParent;

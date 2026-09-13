@@ -164,7 +164,7 @@ foreach (var part in lightParts)
 
 - **Performance**: Light updates are reflected immediately; consider batching for many lights
 - **Live validation**: Exercise color isolation, moving-light actuation, spotlight cone spread, pause, external template replacement, craft destruction, and unload restoration after KSA updates
-- **Save/Load**: No persistence currently; could save/load light configurations
+- **Save/Load**: Unscience restores applied light settings, transition queues, Disco recipes/progress and original ownership baselines. See [library details](../zippo.lib/README.md#scene-saves).
 - **Part Naming**: Light parts are identified by KSA's part template system; no manual naming needed
 - **Asset Colors**: Could load colors from external XKCD color database instead of hardcoding
 

@@ -102,3 +102,23 @@ Harmony patch, reflection lookup, game member, shader or GPU layout. Public libr
 includes `RefreshSharedLibrary`, `ResolveSelection`, `RegistryDiscovered` and `MeshLabel`.
 Managed parser/texture/Workshop tests plus copied-catalog/identity checks pass, and the full solution
 builds. Native rendering/resource retirement retain existing live verification requirements.
+
+## Save/load adapter (feature/saves)
+
+`PebblesSubmod.Saves` captures only `ClutterController.Live` applied recipes. Its reset
+closes/releases Workshop previews, cancels pending actions and uses synchronous
+`ClutterController.ResetForSaveLoad` to restore original celestial templates and native
+clutter arrays before native world replacement. Baseline/body caches are cleared.
+`ApplyForSaveLoad` validates, joins physics/GPU work, then invokes the existing `Apply`
+transaction directly so missing renderer/asset and native failures reach the save status.
+No solver/render handles or destroyed-clutter history are serialized.
+
+`GlbImportLibrary.ResolveSource` now resolves saved imported identities by
+`GlbIdentity.LibraryFileName` within `GlbLibrary.Files`, retaining SHA-256 verification.
+Identity parsing accepts Unix, drive-absolute Windows and UNC paths as metadata for
+portable saves; it never reads or copies those stored absolute locations. Exact imported
+content and budgets remain unchanged. Test foreign library roots, changed/missing files,
+body reuse, suspended renderer ownership and failed native retirement.
+
+Scene replay regenerates the applied recipe. Runtime destroyed-clutter/exclusion masks are outside
+this adapter and may be reset by regeneration; this is not a snapshot of native clutter simulation.

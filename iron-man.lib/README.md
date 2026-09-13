@@ -57,3 +57,13 @@ Typed APIs compile against current KSA. String-resolved private methods and beha
 remain runtime risks; the complete inventory and live acceptance checklist are in
 [scope/iron-man.md](../scope/iron-man.md). Managed checks are separate projects so they can run
 without native KSA graphics/physics initialization.
+
+## Scene saves
+
+Saves configured kittens and active EVA/Iron Man mode by native vehicle ID, with original EVA preferences and current flight-computer settings. Restores active mode with engines disarmed. Native part reconstruction retains authored connector metadata and equipment; the adapter never spawns replacement kittens. Baseline control-part references use durable part paths.
+
+Scene persistence is registered by the Unscience host through `ISaveParticipantSource`; standalone development hosts retain their existing lifecycle. Use ordinary KSA Save/Load. See [save behavior](../unscience/README.md#scene-saves) and the [design plan](../plans/SAVES.md).
+
+Saved original EVA control part/connector references are validated against the loaded kitten
+before enabling its restored mode. An unavailable reference produces a retained recovery record
+instead of silently losing the original Disable baseline.

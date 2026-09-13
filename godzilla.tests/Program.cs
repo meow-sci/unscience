@@ -65,3 +65,5 @@ Console.WriteLine("PASS: Smart layout, authored scales, animation preservation, 
 
 VisualScaleChecks.Run();
 ColliderScaleChecks.Run();
+
+SaveChecks.Run();

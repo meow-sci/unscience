@@ -9,7 +9,7 @@ namespace MeowSci.GarrysTorchLib;
 /// Represents an active animation that interpolates a weld's position, rotation, and scale
 /// from start values to target values over a specified duration using configurable easing.
 /// </summary>
-public class WeldAnimation
+public partial class WeldAnimation
 {
     public float3 StartPosition { get; }
     public float3 StartRotation { get; }

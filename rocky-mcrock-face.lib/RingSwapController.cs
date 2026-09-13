@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Brutal.VulkanApi;
 using KSA;
 using KSA.Rendering.Rings.Rendering;
@@ -46,6 +47,8 @@ public sealed class RingSwapController : IDisposable
 
     private readonly Dictionary<PlanetaryRingsReference, Snapshot> _snapshots = new();
     private bool _anyApplied;
+    private readonly Dictionary<PlanetaryRingsReference, (RingedBody Body, RingSelection Selection)> _appliedSelections = new();
+    internal IEnumerable<(RingedBody Body, RingSelection Selection)> AppliedSelections => _appliedSelections.Values;
 
     public RingAssetCatalog Catalog { get; } = new();
     public RingMeshFactory MeshFactory { get; } = new();
@@ -149,6 +152,7 @@ public sealed class RingSwapController : IDisposable
         }
 
         _anyApplied = true;
+        _appliedSelections[rings] = (body, selection.Clone());
         message = $"applied ring overrides to {body.Id}";
         return true;
     }
@@ -172,6 +176,21 @@ public sealed class RingSwapController : IDisposable
         objects.Density = defaults.Density;
         objects.RenderDistance = defaults.RenderDistance;
         objects.Thickness = defaults.Thickness;
+        _appliedSelections.Remove(body.Rings);
+    }
+
+    internal void ResetForSaveLoad()
+    {
+        var applied = _appliedSelections.Values.ToArray();
+        foreach (var entry in applied) Restore(entry.Body);
+        if (applied.Length > 0 && IsRingsRendererCreated() && !RebuildRenderer(out var error))
+        {
+            foreach (var entry in applied) _appliedSelections[entry.Body.Rings] = entry;
+            throw new InvalidOperationException(error);
+        }
+        _snapshots.Clear(); Bodies.Clear(); _appliedSelections.Clear(); _anyApplied = false;
+        // A rebuilt renderer no longer borrows any private overlay meshes.
+        if (applied.Length > 0) MeshFactory.PruneExcept(new HashSet<string>(StringComparer.Ordinal));
     }
 
     /// <summary>

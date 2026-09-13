@@ -9,7 +9,7 @@ using MeowSci.KsaAbstractions;
 
 namespace MeowSci.GodzillaLib;
 
-public sealed class GodzillaSubmod : ISubmod
+public sealed partial class GodzillaSubmod : ISubmod
 {
     private const string Owner = "Godzilla";
     private sealed record Session(VesselScaleSnapshot Snapshot, bool Smart, float3 Factor, bool ScalePhysics, bool ScaleColliders);

@@ -100,3 +100,18 @@ Managed checks link these production implementations, animation queue and real k
 patch with the game numerics. Live-check Flexo nested custom scales with identity weld/unweld,
 unequal-axis edits, queued animations, automatic removal and unload; verify animated local
 transforms continue and original proportions return.
+
+## Scene saves
+
+Unscience's ordinary KSA save integration restores weld targets/part anchors, pose, XYZ factors,
+rotation lock, collision and enabled flags. Explicit original per-part and kitten-avatar baselines
+make repeated loads noncumulative and keep Unweld's original-size restoration accurate. Active and queued weld animations retain complete recipes and elapsed progress and resume
+on the normal physics cadence without offline catch-up.
+Native reconstruction precedes adapter replay; missing anchors/parent conflicts are reported.
+`GarrysTorchSubmod.Persistence.cs` owns the DTO and `WeldScaleSnapshot.Persistence.cs` imports
+baselines without recapturing already scaled native parts. Managed regression checks cover JSON
+round-trip, repeated loads and exact original/kitten restoration; native physics acceptance remains.
+
+Replay keeps native effective full-part sizes, including newly attached parts not yet scaled by an
+idle weld; only the separate kitten avatar correction is reapplied. Later scale edits continue to
+use the imported original baseline.

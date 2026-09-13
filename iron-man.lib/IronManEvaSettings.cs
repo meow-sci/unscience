@@ -3,7 +3,7 @@ using KSA;
 namespace MeowSci.IronManLib;
 
 /// <summary>Native EVA preferences to restore when a temporary rocket flight ends.</summary>
-internal sealed class IronManEvaSettings
+internal sealed partial class IronManEvaSettings
 {
     private readonly IronManFlightSettings _flight;
     private readonly Part? _controlPart;

@@ -23,3 +23,13 @@ passes bind main-camera targets/resources and are intentionally not re-injected 
 See [`../hot-pursuit/README.md`](../hot-pursuit/README.md) for features, user controls, limitations,
 and the four-slot shared-pool constraint. Game integration details and update risks are cataloged in
 [`../scope/camera.md`](../scope/camera.md).
+
+## Native save persistence
+
+KSA saves retain exact part-tree targets, mount point/normal/tangent, translation/rotation,
+FOV, resolution, visibility and whether a secondary viewport was open. Load releases old
+leases and cancels placement before native objects are replaced, resolves fresh parts,
+and reclaims requested slots. A closed camera stays closed. Slot exhaustion preserves
+the mounted camera and reports that its viewport must be reopened; other owners' slots
+are never displaced. Missing targets produce a recoverable Saves warning. Runtime
+instance IDs and viewport handles are never stored.

@@ -241,3 +241,23 @@ game's own virtual `Bind` — so the ring renderer's `Texture.Get().ImageView` /
 
 Related but **not** integration points: `RingDefinition` / `RingPresetStore` (mod-local model +
 TOML under `.unscience/bloomin-onion-rings.toml`; body assignments deliberately session-only).
+
+## Save/load adapters (feature/saves)
+
+Both ring submods implement `ISaveParticipantSource`. Bloom stores applied body IDs and
+complete detached `RingDefinition` recipes (including painted bands). Rocky adds a
+controller-owned snapshot of each successfully applied `RingSelection`; capture excludes
+overlays whose ring reference was replaced. This separates live values from unapplied UI
+selections and explicitly copies its get-only per-LOD array.
+
+Reset order is Rocky then Bloom: restore mutable ring overlays, then replace custom
+`CelestialTemplate.RingsReference` values with their captured originals. Synchronous
+controller reset methods clear reference/baseline dictionaries only after successful
+rebuild. Replay order is Bloom then Rocky, rebuilding through the existing native ring
+renderer APIs. Missing exact body/asset identities warn and retain source save payloads.
+The adapters serialize no game reference tree, asset pointer or GPU handle.
+
+Acceptance: ringless body, Saturn replacement, Bloom+Rocky overlay, remove/reapply, repeated
+A→B→vanilla→A loads, changed template/asset IDs, hidden HUD and injected rebuild failure.
+Renderer rebuilds must run outside an acquired frame and before current-frame ImGui image
+references are emitted; see save lifecycle scope for the host's queued load boundary.

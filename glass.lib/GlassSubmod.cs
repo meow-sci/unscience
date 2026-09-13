@@ -6,7 +6,7 @@ using MeowSci.KsaAbstractions;
 
 namespace MeowSci.GlassLib;
 
-public sealed class GlassSubmod : ISubmod
+public sealed partial class GlassSubmod : ISubmod
 {
     public string Name => "Glass - Camera Lens";
     public string Tooltip => "Adjusts camera field of view with preset lens options from telephoto to fisheye.";

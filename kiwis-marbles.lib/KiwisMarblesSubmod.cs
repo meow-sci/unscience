@@ -7,7 +7,7 @@ using MeowSci.KsaAbstractions;
 
 namespace MeowSci.KiwisMarblesLib;
 
-public sealed class KiwisMarblesSubmod : ISubmod
+public sealed partial class KiwisMarblesSubmod : ISubmod
 {
     public string Name => "Kiwi's Marbles - Destroyer of Worlds";
     public string Tooltip => "Weld celestials onto one another.  For science.";

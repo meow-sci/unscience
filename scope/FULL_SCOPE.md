@@ -104,6 +104,7 @@ boundaries and the Unscience lifecycle are unchanged by this packaging refactor.
 | Area file | Covers | Highlights / highest-risk seams |
 |---|---|---|
 | [`game-integration-surface.md`](game-integration-surface.md) | **Master cross-reference index** — every game type/member touched, merged across mods | Start here for "does the game still have X?"; includes the string-reflection watchlist + shader/asset table |
+| [`saves.md`](saves.md) | Native scene save/load extension across all bundled features | Ordered cleanup/replay, deferred world replacement, native save directory sidecars and stable part references |
 | [`00-architecture-and-abstractions.md`](00-architecture-and-abstractions.md) | unscience supermod shell (`Mod.cs`/`Patcher.cs`/`MenuBarPatch`/`UnscienceState`) + `ksa-abstractions.lib` | StarMap lifecycle map, consolidated-Harmony cross-ref, `HotkeyGuard`, `IvaForceRender`, providers |
 | [`vehicle-physics.md`](vehicle-physics.md) | eternal-flame, garrys-torch, godzilla, i-feel-seen | `Universe.ExecuteNextVehicleSolvers`, `Battery.Refill`, `Vehicle.Teleport`, KittenEva reflection; **Godzilla separates visual, collider and nominal physics size; garrys-torch preserves actuator results; default-off source collisions use scoped Bepu shape suppression** |
 | [`celestial-and-lights.md`](celestial-and-lights.md) | kiwis-marbles, zippo | `Celestial.SetOrbit`, `IParentBody.Children`/`UpdatePerFrameDataTree`, `Universe.ExecuteNextVehicleSolvers` prefix (kiwis-marbles sim-step timing, fixed 2026-08-23), `IOrbiter`, `LightModule`/`LightSwitch`; Zippo Disco's per-instance templates, cone angles and `KeyframeAnimationModule.TimeGoal` ownership |
@@ -129,6 +130,12 @@ rocky-mcrock-face, skittles, sphinx, thug-life, zippo. (jplrepo is a development
 ---
 
 ## Current status against `5402` (summary)
+
+Unscience now extends native save/load with versioned scene-state sidecars and explicit feature
+adapters. World replacement is scheduled before new solver work and UI drawing; cleanup restores
+old ownership and replay rebinds native objects. Managed persistence/lifecycle checks accompany
+full compilation; native round-trip/GPU acceptance remains open. See [saves](saves.md).
+
 
 Humble Arteest adds **Hide/Show visor glass** to Kitten Color. A narrowly matched
 `KittenRenderable.UpdateRenderData` transpiler gates the separate visor draw, whose translucent
@@ -255,3 +262,8 @@ render acceptance remain open. See [vehicle physics](vehicle-physics.md#godzilla
 **BYO Music added to Unscience:** copied shared sound catalog, nonblocking FMOD playback following
 vessels in the audio camera frame, live gain/range and repeat/gaps. Full solution and managed
 catalog/scheduler checks pass. Native listening/decoding/unload remain a live check; see [audio](audio.md).
+
+Scene save implementation covers durable setups across the 28 bundled features. Managed lifecycle,
+serialization, identity and ownership checks plus full compilation pass; native graphics/physics
+acceptance remains open in [save acceptance](../plans/saves-acceptance.md). The new save dependency
+and animation/material reflection seams are indexed in [the master index](game-integration-surface.md).

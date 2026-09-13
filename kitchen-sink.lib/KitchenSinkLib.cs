@@ -9,7 +9,7 @@ namespace MeowSci.KitchenSinkLib;
 /// <summary>
 /// Submod for kitchen-sink: a collection of one-off hacks and fixes for KSA.
 /// </summary>
-public sealed class KitchenSinkSubmod : ISubmod
+public sealed partial class KitchenSinkSubmod : ISubmod
 {
     public string Name => "Kitchen Sink";
     public string Tooltip => "Random collection of one-off hacks and fixes for KSA.";

@@ -63,6 +63,7 @@ public sealed partial class HotPursuitSubmod
                         PartInstanceId = pick.Part.InstanceId,
                         Vehicle = pick.Vehicle,
                         Part = pick.Part,
+                        SaveTarget = MeowSci.KsaAbstractions.Persistence.SavedPartReference.Capture(pick.Vehicle, pick.Part),
                         MountPoint = pick.Position + pick.Normal * 0.15,
                         SurfaceNormal = pick.Normal,
                         MountTangent = tangent,

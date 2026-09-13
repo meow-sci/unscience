@@ -216,3 +216,18 @@ stride for thumbnail rendering" is recorded); the source diff below is the only 
   grazing-angle test, and barycentric anchoring follows flutter without leaving the projection box.
 - ℹ Not otherwise graffiti-facing: `RayIntersections.glsl` cylinder `quadraticA` fix, new
   `Mesh/StaticObjectNormalIndirect.frag`, `PartFailure` / `ExhaustPlumeDeformation`.
+
+## Save/load adapter (feature/saves)
+
+`GraffitiSubmod.Saves` serializes explicit decal recipe/anchor fields through
+`ISaveParticipantSource`. Vehicle and canopy parent parts use shared `SavedPartReference`
+tree/subpart addresses with template checks; saved module IDs are deliberately replaced
+by newly resolved parent instance ID plus `Parachute.CanopyIndex`. `FindPart` now descends
+all nested subparts. Exact terrain IDs and geodetic anchors are retained.
+
+Reset cancels gestures, disables publication, drains `Program.GetRenderer().GraphicsAndCompute`,
+disposes the decal renderer and image cache, and clears old records before native teardown.
+Restore reconstructs native references/texture handles; cloth weights are retained but
+render matrices are recomputed on the next Update. Missing canopy/images remain dormant
+where possible and warn; the save coordinator retains the source feature record. Native
+acceptance must include changed cloth topology, nested subparts and saved stowed canopies.

@@ -91,3 +91,9 @@ small game fixtures. They do not run Vulkan/Bepu or simulate rocket flight. **In
 is still required**, especially for the new autopilot panel and physical attitude response.
 See [research](../plans/iron-man/RESEARCH.md),
 [integration scope](../scope/iron-man.md) and [library details](../iron-man.lib/README.md).
+
+## Scene saves
+
+Saves configured kittens and active EVA/Iron Man mode by native vehicle ID, with original EVA preferences and current flight-computer settings. Restores active mode with engines disarmed. Native part reconstruction retains authored connector metadata and equipment; the adapter never spawns replacement kittens. Baseline control-part references use durable part paths.
+
+Scene persistence is registered by the Unscience host through `ISaveParticipantSource`; standalone development hosts retain their existing lifecycle. Use ordinary KSA Save/Load. See [save behavior](../unscience/README.md#scene-saves) and the [design plan](../plans/SAVES.md).

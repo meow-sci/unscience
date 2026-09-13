@@ -28,7 +28,7 @@ public sealed class ShinyGridState
     }
 }
 
-public static class ShinyGridManager
+public static partial class ShinyGridManager
 {
     private static readonly Dictionary<(string vehicleId, string gridName), ShinyGridState> _grids = new();
 
@@ -39,6 +39,7 @@ public static class ShinyGridManager
         var key = (vehicle.Id, gridName);
         var state = new ShinyGridState(vehicle.Id, gridName, vehicle, grid, color, intensity);
         _grids[key] = state;
+        RebuildMembership();
         ApplyAppearance(state, color, intensity);
         Console.WriteLine($"its-so-shiny: registered grid '{gridName}' for vehicle '{vehicle.Id}' ({grid.Grid.Cols}x{grid.Grid.Rows})");
         return state;
@@ -49,6 +50,7 @@ public static class ShinyGridManager
         if (_grids.TryGetValue((vehicleId, gridName), out var state))
             state.Scroll.Stop();
         _grids.Remove((vehicleId, gridName));
+        RebuildMembership();
     }
 
     public static ShinyGridState? Get(string vehicleId, string gridName)
@@ -62,6 +64,7 @@ public static class ShinyGridManager
         foreach (var state in _grids.Values)
             state.Scroll.Stop();
         _grids.Clear();
+        RebuildMembership();
     }
 
     public static bool SetAppearance(string vehicleId, string gridName, float3 color, float intensity)

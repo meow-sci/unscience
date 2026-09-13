@@ -582,3 +582,14 @@ pebbles.lib for GLB/material conversion and shared GPU upload helpers. Patcher T
 calls `SphinxPatches.Apply/Remove` on the consolidated Harmony instance. The feature owns only its
 three StaticObjectRenderer postfixes and session resources; existing HotkeyGuard and hidden-HUD
 Update dispatch cover it. The copied standalone host remains development-only. See [statics.md](statics.md).
+
+## Scene persistence lifecycle
+
+`UnscienceSaves` discovers all bundled `ISaveParticipantSource` adapters after submod initialization
+and wires callbacks before `Patcher.Patch`. It correlates captured DTOs with their exact `GameSave`
+object using a weak table, displays save/restore diagnostics in the existing toolbox, and disconnects
+callbacks on disposal. Window-layout autosave remains separate. `SceneSaveCoordinator` performs
+reverse reset / ordered replay, preserves failed/unknown records, and offers explicit replacement
+with current setup on future saves. Kitchen Sink persists `IvaForceRender.Enabled`; one-shot editor
+refresh/debug activity is not replayed. Skittles restores the exact detached scene style and resets
+to startup configured theme between scenes. See [saves](saves.md) for new Harmony/worker seams.

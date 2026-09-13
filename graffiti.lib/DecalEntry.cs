@@ -36,6 +36,7 @@ public enum DecalTextureState
 /// </remarks>
 public sealed class DecalEntry
 {
+    internal MeowSci.KsaAbstractions.Persistence.SavedPartReference? SaveTarget;
     private static int _nextId = 1;
 
     public int Id { get; } = _nextId++;

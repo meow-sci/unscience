@@ -22,3 +22,9 @@ centers/max-axis dimensions, animated children, preserving nominal bounds and ot
 restoring the caller's shared readonly scale (also on exceptions), native refresh interception,
 worker broad-phase dirty flags, Basic/Smart switches, failure/restoration retry, collider membership
 changes, unsupported fallback rejection and unload/reload. It does not execute KSA or Bepu contacts.
+
+`SaveChecks` links the production save-baseline partial and `SaveJson`, using a small native part
+resolver fixture. It serializes Smart and Basic baselines, reconstructs already transformed native
+full parts, loads/saves three times, and checks exact original scale/layout restoration and
+missing-subpart rejection. This caught recursive Brutal vector swizzle serialization in the shared
+save serializer; native identity mapping is exercised separately by the shared save tests.

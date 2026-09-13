@@ -38,6 +38,7 @@ public sealed partial class PyroSubmod
         }
 
         bool changed = false;
+        var original = SavedPlumeTemplate.Capture(template);
         string id = $"##pyro_te_{template.Id}";
 
         if (ImGui.TreeNodeEx($"Absorption{id}_abs", ImGuiTreeNodeFlags.SpanAvailWidth))
@@ -67,7 +68,10 @@ public sealed partial class PyroSubmod
         }
 
         if (changed)
+        {
+            _originalTemplates.TryAdd(template.Id, original);
             TemplateRefresher.NotifyTemplateChanged(template, this);
+        }
     }
 
     private static bool RenderAbsorption(Absorption a, string id)

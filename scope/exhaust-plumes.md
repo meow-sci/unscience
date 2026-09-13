@@ -165,3 +165,19 @@ combines manual Enabled and cycle phase before the existing
 No new patch, reflection or shader dependency. Manual/bulk toggles cancel cycles; presets do not
 serialize them. Long frames/warp sample current phase; backward time restarts On. Managed phase tests
 and full solution build pass; live transient appearance remains unverified.
+
+### Scene persistence
+
+`PyroSubmod.Persistence` captures exact vehicle/part addresses and existing `PlumePreset` settings,
+then recreates `VolumetricExhaustInstance` through `CreatePlume` after native load. `PlumeCycle`
+restores On/Off phase relative to `Universe.GetElapsedTime().Seconds()`; no engine/native part is
+created. Render transients restart, but logical cycle timing survives. Old plume references are
+cleared at the joined save-load boundary. No new Harmony target or shader layout dependency.
+Managed cycle checks cover saved On/Off phase and its next boundary; native render acceptance open.
+
+`pyro.templates` also persists all existing shared Template Editor controls: `Absorption` scalar/
+clean-burn values, `Emission` brightness/color gradient/Mach diamonds, `Noise` subtypes,
+`LengthWeights` and `Quality`. `SavedPlumeTemplate` copies explicit values only, capturing originals
+on first edit and refreshing live nozzle settings through existing TemplateRefresher APIs. Replay
+order 30 applies shared definitions before standalone plume recreation. Reset clears old UI part
+caches and restores global templates even on vanilla loads. No additional game reflection is used.

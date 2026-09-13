@@ -1,7 +1,7 @@
 # graffiti.lib
 
 Core implementation for the standalone `graffiti` mod and the `unscience` umbrella mod. It places
-session-scoped projected PNG decals on vehicle art meshes, deployed parachute cloth, KittenEva
+save-aware projected PNG decals on vehicle art meshes, deployed parachute cloth, KittenEva
 avatars, and celestial terrain.
 
 ## Main components
@@ -37,3 +37,18 @@ Build the repository solution from the root:
 ```bash
 dotnet build ksa-mod-experiments.slnx
 ```
+
+## Native save persistence
+
+KSA saves retain every placed decal's PNG name, dimensions, depth, rotation, opacity,
+brightness and visibility. Terrain anchors retain exact body ID and geodetic position.
+Vehicle/EVA anchors use a verified saved part-tree address; canopy anchors additionally
+retain authored canopy index, cloth nodes, barycentric weights and clicked side. Runtime
+part/module IDs, ego matrices and texture handles are reconstructed. Placement gestures
+are cancelled when loading.
+
+Loading clears old decals/GPU ownership synchronously. Missing targets/images report
+Saves warnings; missing images and temporarily unavailable canopies can remain dormant.
+The coordinator preserves the original feature payload after partial restoration. PNG
+files are external shared-library dependencies, not copied into each save; rescan follows
+current shared PNG contents. Native rendering/cloth acceptance remains required.

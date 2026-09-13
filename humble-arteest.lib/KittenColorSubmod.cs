@@ -11,7 +11,7 @@ namespace MeowSci.HumbleArteestLib;
 /// Provides an ImGui panel to tint kitten character models per-material by modifying
 /// MaterialData.AlbedoColor in the GPU material buffer.
 /// </summary>
-public sealed class KittenColorSubmod : ISubmod
+public sealed partial class KittenColorSubmod : ISubmod
 {
     public string Name => "Kitten Color";
     public string Tooltip => "Tints kitten character models and can hide their visor glass.";

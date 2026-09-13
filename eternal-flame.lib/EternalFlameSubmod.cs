@@ -7,7 +7,7 @@ using MeowSci.KsaAbstractions;
 
 namespace MeowSci.EternalFlameLib;
 
-public sealed class EternalFlameSubmod : ISubmod
+public sealed partial class EternalFlameSubmod : ISubmod
 {
     public string Name => "Eternal Flame - Infinite Fuel";
     public string Tooltip => "Automatically refills fuel tanks on the selected vehicle at regular intervals.";

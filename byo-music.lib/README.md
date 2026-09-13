@@ -31,3 +31,9 @@ or global soundtrack replacement is required. See [audio integration](../scope/a
 Validation: full solution compilation and `dotnet run --project byo-music.tests` cover the managed
 repeat scheduler and shared copied-file catalog. Native decoding, 3D listening, SFX volume and
 stop/unload behavior still require an in-game audio check.
+
+## Scene saves
+
+Saves each active sound's library filename, vessel, repeat/gap, volume and range. Restored streams start paused: press Resume to play from the beginning. The exact playback cursor and wall-clock gap remainder are not saved. Missing files or vessels are reported; imported files remain in the shared sounds library.
+
+Scene persistence is registered by the Unscience host through `ISaveParticipantSource`; standalone development hosts retain their existing lifecycle. Use ordinary KSA Save/Load. See [save behavior](../unscience/README.md#scene-saves) and the [design plan](../plans/SAVES.md).

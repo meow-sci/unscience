@@ -11,14 +11,31 @@ namespace MeowSci.KsaAbstractions;
 public static class PhysicsFrameHook
 {
     private static readonly Queue<Action> Pending = new();
+    private static Action? _pendingWorldChange;
+    public static bool IsApplied { get; private set; }
+    public static bool IsReplayingWorldChange { get; private set; }
     public static event Action<double, UniverseTime>? BeforePhysics;
 
     /// <summary>Queue a main-thread mutation after worker results, before welds and new snapshots.</summary>
     public static void Enqueue(Action action) => Pending.Enqueue(action);
 
+    /// <summary>Discard mutations queued against a world that is being replaced.</summary>
+    public static void ClearPending() => Pending.Clear();
+
+    /// <summary>Replace the pending world request; replay before the next simulation step is computed.</summary>
+    public static void EnqueueWorldChange(Action action)
+    {
+        if (!IsApplied) throw new InvalidOperationException("World-change frame hook is unavailable.");
+        _pendingWorldChange = action;
+    }
+
+    public static void ClearPendingWorldChange() => _pendingWorldChange = null;
+
     public static void Apply(Harmony harmony)
     {
+        if (IsApplied) return;
         harmony.Patch(PrepareFrameMethod(), transpiler: new HarmonyMethod(TranspilerMethod()));
+        IsApplied = true;
         Console.WriteLine("unscience physics: PrepareFrame handoff hook applied");
     }
 
@@ -26,6 +43,8 @@ public static class PhysicsFrameHook
     {
         harmony.Unpatch(PrepareFrameMethod(), TranspilerMethod());
         Pending.Clear();
+        ClearPendingWorldChange();
+        IsApplied = false;
     }
 
     private static MethodInfo PrepareFrameMethod() =>
@@ -70,6 +89,18 @@ public static class PhysicsFrameHook
 
     private static SimStep GetStepAndDispatch(double dtPlayer)
     {
+        // The previous ImGui frame has finished and worker results have committed. A
+        // console load requested after ImGui.Image must never dispose its textures inline.
+        // Replay the whole transaction here, before computing any time from the old world.
+        Action? worldChange = _pendingWorldChange;
+        _pendingWorldChange = null;
+        if (worldChange != null)
+        {
+            IsReplayingWorldChange = true;
+            try { worldChange(); }
+            catch (Exception ex) { Console.WriteLine($"unscience saves: deferred world change failed: {ex}"); }
+            finally { IsReplayingWorldChange = false; }
+        }
         SimStep step = Universe.GetJobSimStep(dtPlayer);
         if (Universe.CurrentSystem == null) { Pending.Clear(); return step; }
 

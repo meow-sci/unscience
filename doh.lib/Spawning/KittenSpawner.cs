@@ -406,7 +406,8 @@ public sealed class KittenSpawner
     /// MaterialIndices entries with the cloned handles.
     /// Returns the KittenMaterialSet, or null on failure.
     /// </summary>
-    private KittenMaterialSet? ApplyClonedMaterials(KittenEva kittenEva, float4 tintColor, string characterId)
+    internal KittenMaterialSet? ApplyClonedMaterials(KittenEva kittenEva, float4 tintColor, string characterId,
+        KittenMaterialSet? reusable = null)
     {
         try
         {
@@ -462,8 +463,13 @@ public sealed class KittenSpawner
             Console.WriteLine($"doh: Found {renderables.Count} renderables, {nonFurHandles.Distinct().Count()} non-fur + {furHandleSet.Count} fur unique handles");
 
             // Clone non-fur materials via PbrMaterialReference lookup
-            var matSet = _materialFactory.CloneAllMaterials(nonFurHandles, tintColor);
+            // The global material system survives ordinary loads. Reuse our private slots
+            // when the native shared material identity still matches, avoiding allocation
+            // growth on repeated A -> B -> A loads.
+            var matSet = reusable != null && nonFurHandles.Where(h => h >= 0).All(reusable.HandleMap.ContainsKey)
+                ? reusable : _materialFactory.CloneAllMaterials(nonFurHandles, tintColor);
             if (matSet == null) return null;
+            if (ReferenceEquals(matSet, reusable)) matSet.UpdateTint(tintColor);
 
             // Clone fur materials with proper ExtraData (FurTexture, FurSampler, FurMask)
             if (furIndices != null && furIndices.Length > 0)

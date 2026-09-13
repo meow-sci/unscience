@@ -15,6 +15,7 @@ namespace MeowSci.KittenAnimationsLib;
 /// </summary>
 public sealed class KittenAnimationDriver
 {
+    private float? _savedPlaybackPhase;
     private bool _wasOverriding;
     private bool _restartRequested;
     private float? _originalEarWeight;
@@ -65,6 +66,7 @@ public sealed class KittenAnimationDriver
     /// <summary>Starts forcing an animation, restarting it from the top.</summary>
     public void Play(AnimationEntry entry)
     {
+        _savedPlaybackPhase = null;
         ForcedAnimation = entry.Animation;
         ForcedLabel = entry.Label;
         OverrideActive = true;
@@ -72,7 +74,20 @@ public sealed class KittenAnimationDriver
     }
 
     /// <summary>Restarts the current forced clip from its first frame.</summary>
-    public void Restart() => _restartRequested = true;
+    public void Restart()
+    {
+        _savedPlaybackPhase = null;
+        _restartRequested = true;
+    }
+
+    /// <summary>Rebind durable forced playback; its pose is sampled on the next normal render update.</summary>
+    public void RestorePlayback(AnimationEntry entry, bool active, bool paused, float? phase)
+    {
+        Play(entry);
+        OverrideActive = active;
+        Paused = paused;
+        _savedPlaybackPhase = phase;
+    }
 
     /// <summary>Hands the body animation back to the game, keeping the selected clip for re-enabling.</summary>
     public void Release()
@@ -84,6 +99,7 @@ public sealed class KittenAnimationDriver
     /// <summary>Forgets the selected clip as well as releasing control.</summary>
     public void ClearClip()
     {
+        _savedPlaybackPhase = null;
         Release();
         ForcedAnimation = null;
         ForcedLabel = string.Empty;
@@ -125,6 +141,7 @@ public sealed class KittenAnimationDriver
     /// <summary>Clears every override and forgets the resolved model. Called on unload / kitten change.</summary>
     public void Reset()
     {
+        _savedPlaybackPhase = null;
         UnbindTarget();
         Release();
         ForcedAnimation = null;
@@ -229,7 +246,12 @@ public sealed class KittenAnimationDriver
 
         if (_restartRequested)
         {
-            model.PlayAnimation(ForcedAnimation, BlendTime);
+            model.PlayAnimation(ForcedAnimation, _savedPlaybackPhase.HasValue ? 0 : BlendTime);
+            if (_savedPlaybackPhase.HasValue)
+            {
+                KittenPlaybackPhase.Restore(model, _savedPlaybackPhase.Value);
+                _savedPlaybackPhase = null;
+            }
             _restartRequested = false;
         }
         else

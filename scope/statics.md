@@ -161,3 +161,18 @@ invalid texture retry with transforms still usable; repeated UV drags without re
 moving camera/body rotation/pause/warp/F2; secondary viewports; graphics pipeline rebuild; body/system
 change and unload with frames in flight. Verify no phantom alpha depth, wrong texture sampling,
 stock static corruption or retained freed descriptors. No GPU/runtime claim follows from compilation.
+
+## Save/load adapter (feature/saves)
+
+`SphinxSubmod.Saves` registers exact-body, body-fixed placement DTOs with detached GLB/PNG
+identities, XYZ transforms, UV mapping, collision mode and visibility. At the host load
+boundary it clears pending old-world actions, joins vehicle/cloth work, detaches bubble
+handles and disposes private models/colliders/imports before native reconstruction. Replay
+uses `StaticModelResources`, `PlacementMath.GroundedLocal` and `BuildCollider`, retaining
+normal per-static/aggregate geometry and triangle budgets. Native buffers/shapes are not
+serialized. Missing dependencies skip individual entries with recoverable warnings.
+
+GLB IDs retain exact hashes but are resolved by copied filename in the current installation's
+shared library (see ground-clutter scope); saved absolute paths are not imported. Verify
+repeat load, world A→B, missing files, visibility/collider parity, resource release and
+restoration before the new world's first solver snapshot.

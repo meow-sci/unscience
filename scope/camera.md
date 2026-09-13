@@ -315,3 +315,20 @@ builds clean against 5402.
   so a running sequence will retarget rather than throw.
 - **Needs a live pass:** glass + Hot Pursuit with different FOVs, plus confirming a
   camera-controller-override sequence still drives the main camera after the `IViewport` retype.
+
+## Hot Pursuit save/load adapter (feature/saves)
+
+`HotPursuitSubmod.Saves` captures concrete `SavedPartReference` targets, part-local mount
+basis, offsets/rotation, FOV/resolution, visibility and whether `ViewportRegistry.TryGetOwned`
+reports an active lease. Reset disarms placement and releases all old owner leases before
+native vehicle destruction. Restore resolves exact fresh targets and invokes the existing
+`TryOpenViewport`/`ConfigureViewport` APIs. Slot exhaustion leaves a camera entry available
+for manual reopening, with a Saves warning; closed viewports are not reopened automatically.
+
+Acceptance: all four slots, another viewport owner, hidden/closed mounts, nested subparts,
+changed/missing targets and repeated load. Viewport objects/owners are never serialized.
+
+Camera Controller Override stores explicit tagged animation recipes for every built-in animation
+and nested parallel groups, including pending group authoring state and return preferences. Playback
+restores stopped. Glass reapplies enabled/degrees to the reconstructed main camera after native
+load. These adapters reuse existing camera APIs and add no reflected game member.

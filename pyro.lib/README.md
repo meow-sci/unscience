@@ -27,3 +27,18 @@ sanitized before use.
 Managed checks: `dotnet run --project pyro.tests` covers boundaries, repeated samples/pause,
 large warp, backwards time, stop and invalid inputs. Full solution compilation validates current
 KSA integration; native plume transitions retain the standing live-game validation requirement.
+
+## Scene saves
+
+The Unscience save participant captures every live plume's exact vehicle/part anchor, template,
+nozzle/look settings, offsets, enabled state and On/Off durations/phase. Native load recreates
+plume instances without changing native parts; missing anchors/templates produce save-status
+warnings. Startup/shutdown shader transients restart when the render instance is recreated, while
+the logical cycle resumes at its saved phase. Presets remain separate from scene snapshots.
+
+A separate `pyro.templates` participant captures the shared Template Editor's absorption, emission
+colors/brightness, Mach diamonds, density/shape/radial noise, length weights and quality values.
+The first edit captures original values; vanilla/new-world loads and unload restore those originals,
+while modded loads apply saved templates before recreating standalone plumes. Real engine nozzle
+instances are refreshed through the existing TemplateRefresher path. This covers shared template
+edits even when no standalone plume exists.

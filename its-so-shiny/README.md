@@ -31,3 +31,6 @@ The mod uses the built-in `LightPart` template. Light parts consume electrical p
 - New grids are registered directly from the freshly created parts, avoiding a post-build whole-vehicle rescan.
 - `ShinyGridManager` deduplicates color and intensity writes by underlying `PartTemplate`, which cuts repeated reflection work when large grids are created or recolored.
 - `ShinyGridManager` is the public control surface for registered grids and can be reused by aggregate mods or future RPC endpoints.
+Normal KSA saves made with Unscience preserve grid/cell associations, ownership, appearance and
+scrolling. Replay rebinds native-loaded light parts rather than spawning another grid.
+See [save details](../its-so-shiny.lib/README.md#scene-saves).

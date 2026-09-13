@@ -7,7 +7,7 @@ namespace MeowSci.GarrysTorchLib;
 /// Manages active and queued weld animations. At most one animation runs per weld at a time;
 /// additional animations are queued and started in order when the active one completes.
 /// </summary>
-public class WeldAnimationManager
+public partial class WeldAnimationManager
 {
     private readonly Dictionary<WeldEntry, WeldAnimation> _active = new();
     private readonly Dictionary<WeldEntry, Queue<WeldAnimation>> _queues = new();

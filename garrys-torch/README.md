@@ -265,7 +265,7 @@ the in-game checks still required.
 - **Physics**: The weld system teleports vehicles; no actual physics constraints are applied
 - **Unwelds**: Welds break automatically on parent body mismatch; implement manual unweld via UI button
 - **Animation**: Consider smooth transitions when applying presets vs. sharp position changes
-- **Save/Load**: Persistent welds would require save/load system integration
+- **Save/Load**: Unscience persists active welds, original scale baselines and animation queues through normal KSA saves. See [library details](../garrys-torch.lib/README.md#scene-saves).
 
 The caller transpiler now lives in `ksa-abstractions.lib/PhysicsFrameHook`; Garry's Torch registers
 its weld callback. Queued Godzilla edits run before this callback. Source scale ownership is exclusive:

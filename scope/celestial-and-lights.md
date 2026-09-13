@@ -17,7 +17,7 @@ Both call `_harmony.PatchAll(...)` but define **no** `[HarmonyPatch]` methods of
 is a no-op aside from HotkeyGuard. Lifecycle is StarMap attributes (`[StarMapMod]`,
 `[StarMapImmediateLoad]`, `[StarMapAllModsLoaded]`, `[StarMapBeforeGui]`, `[StarMapAfterGui]`,
 `[StarMapUnload]`) on `Mod.cs`, plus `MeowSci.KsaAbstractions.ISubmod` implemented by each `*Submod`.
-None of the three persists any state.
+Unscience hosts explicit scene-save participants for celestial welds and lights; see the persistence section below.
 
 ---
 
@@ -48,8 +48,8 @@ main thread, solvers drained, results applied, next step not yet queued, all tar
 combos, `DragFloat3` offset + unit combo (m/km/Mm/Gm), per-weld live offset editor with a surface/lat-lon mode,
 red "Unweld" button. Renders inside the Unscience toolbox via `ISubmod.RenderContent`.
 
-**Persistence** — None. `CelestialWeldEntry.OriginalOrbit` is captured in memory at weld time to restore the
-body on unweld; welds are lost on reload (README §Notes).
+**Persistence** — Unscience captures weld relationships and original orbit parent/state vectors/epoch.
+`CelestialWeldEntry.OriginalOrbit` remains the live cleanup baseline; replay reconstructs it after load.
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|------|----------------------|----------------------------------------|-------------------|---------|----------|------------|
@@ -96,8 +96,8 @@ Vehicles come from `VehicleProvider`, part-tree walking from `PartHelpers`, and 
 combos + intensity/duration/easing/power) with a progress bar, a Disco recipe editor and active-effect
 inspectors, and a Debug "Dump Parts" button.
 
-**Persistence** — None. `_originalColors`, ordinary animation queues, authored Disco settings and active
-Disco records are session-only.
+**Persistence** — Unscience saves original/applied template colors, ordinary transition queues,
+original per-part colors and Disco recipes/phase/ownership baselines. See the persistence section below.
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|------|----------------------|----------------------------------------|-------------------|---------|----------|------------|
@@ -168,3 +168,21 @@ replacement, craft destruction/debris handoff, and unload restoration require an
 - Neither mod references a game asset by hard-coded id in this area.
 
 ---
+
+## Scene persistence: celestial welds and lights
+
+Kiwi's Marbles saves stable source/target ids with target kind and original orbital parent/state
+vectors/epoch. Typed `Orbit.StateVectors.{StateTime,PositionCci,VelocityCci}`, `Orbit.Parent` and
+`Orbit.CreateFromStateCci` are now part of baseline replay. Reset restores old orbits synchronously;
+replay rebinds bodies/vehicles, checks cycles and runs existing topological updates before solvers.
+Native `CelestialSystem.SerializeSave` only enumerates vehicles and cannot restore these changes.
+
+Zippo records known light-component template changes through existing `LightController` writers,
+including Shiny calls. The ledger captures originals before mutation and resets them on scene change;
+replay resolves `ModLibrary.Get<PartTemplate>` by id and light component ordinal. Existing reflection
+fields remain the same. Disco persistence records durable part path, recipe, random seed, channel
+phase offsets, elapsed/paused/switch state and original actuator goals. Actuator ordinals are scoped
+to the saved full part's `Modules.Get<KeyframeAnimationModule>()`; changed layouts are rejected.
+Private module templates, owners and native module references are recreated, never serialized.
+Active and queued color/intensity transitions retain recipes/elapsed progress and resume on the normal update cadence. No new Harmony targets.
+Native multi-light isolation, Stop restoration and same-process save switching remain acceptance.

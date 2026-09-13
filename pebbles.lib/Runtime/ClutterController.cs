@@ -246,6 +246,18 @@ public sealed class ClutterController : IDisposable
         foreach (var id in _live.Keys) _pending[id] = null;
         Status = "Release queued for the next safe frame";
     }
+    /// <summary>Synchronously retires old-world borrowers before native save deserialization.</summary>
+    internal void ResetForSaveLoad()
+    {
+        Dispose();
+        _system = null; _bodies.Clear(); BodyIds = [];
+        if (_faults.Count != 0) throw new InvalidOperationException(string.Join("; ", _faults));
+    }
+    /// <summary>Replays at the host's idle post-deserialization boundary, with observable failures.</summary>
+    internal void ApplyForSaveLoad(string bodyId, PebblesRecipe recipe)
+    {
+        RecipeValidation.Validate(recipe); Quiesce(); Apply(bodyId, recipe);
+    }
     public void Dispose()
     {
         _pending.Clear();

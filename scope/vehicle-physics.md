@@ -187,12 +187,12 @@ header (filterable source / target / target-part / preset combos), position/rota
 `DragFloat3`, scale `DragFloat3`, lock-rotation checkbox, active-weld child panels with
 per-weld edit + Save-as-preset / Unweld, and delete/save modals.
 
-**Persistence** — Named **presets** only (not active welds). `PresetManager`
+**Persistence** — Unscience saves active welds, original size baselines and animation queues. Reusable named
+**presets** remain separate: `PresetManager`
 (`garrys-torch.lib/PresetManager.cs`) reads/writes TOML at
 `<MyDocuments>/My Games/Kitten Space Agency/.unscience/garrys-torch-presets.toml`
 (`PresetManager.cs:23-24`, dir from `ksa-abstractions.lib/KsaPaths.cs:9` via
-`Environment.SpecialFolder.MyDocuments`). Active welds are in-memory (`_welds`) and lost on
-reload. TOML via `Tomlyn`; new presets store `scale_x`/`scale_y`/`scale_z`, while the loader expands
+`Environment.SpecialFolder.MyDocuments`). Scene replay reconstructs `_welds` and owned baselines. TOML via `Tomlyn`; new presets store `scale_x`/`scale_y`/`scale_z`, while the loader expands
 the legacy scalar `scale` key uniformly for backwards compatibility.
 
 **Integration points**
@@ -608,3 +608,25 @@ scaling, not true anisotropic shapes. Managed checks verify all four modes, shap
 shared-input and nominal-bounds isolation, dirty flags, exceptions/retry/topology and patch reload.
 Native KSA contacts, terrain coverage, stationary-body broad-phase changes and huge-scale stability
 remain live acceptance items.
+
+## Scene persistence: weld and size ownership
+
+Garry's Torch and Godzilla expose explicit save participants through shared
+`MeowSci.KsaAbstractions.Persistence`. Replay runs after native vehicle construction and before
+new physics snapshots. Saved part references use structural paths with template checks; native
+`Part.InstanceId` changes and ordinary part names are absent from saves. Garry imports the original
+full-part scales/avatar baseline into its ConditionalWeakTable snapshot; Godzilla imports original
+full/subpart scales, positions, pivot and avatar baseline. Native `Part.GetReferenceWithChildren`
+already serializes effective full-part transforms but omits subpart transforms, so replay must not
+recapture the modified full parts as originals. Godzilla also restores effective child scales.
+
+No new Harmony target is added in these libraries. The existing lifecycle now receives synchronous
+ResetState before native destroys objects. Reset uses regular unweld/Restore ownership cleanup.
+Garry restores enable/collision/lock flags and preserves active/queued animation recipes and elapsed progress. Meaningful
+managed checks link production persistence partials and exercise repeated save/load + original
+restoration; native weld/scale collisions, avatar render correction and safe loading remain open.
+
+Eternal Flame and I Feel Seen register scene adapters through their existing provider/manager APIs.
+They rebind vehicle IDs (including surviving debris when already tracked), restore refill interval
+and fuel/electric or visibility flags, and clear old manager ownership/timers on reset. No new
+Harmony/reflection target; scene lifetime is owned by [the save hooks](saves.md).

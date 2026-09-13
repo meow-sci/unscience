@@ -11,6 +11,29 @@ This document serves as a comprehensive index of all mods and libraries in this 
 legacy standalone hosts compile into `bin/` but have no deployment target. Feature libraries are
 bundled only through explicit project references. See the root README for installation migration.
 
+## Scene persistence
+
+Final feature coverage and validation limits: [save acceptance](plans/saves-acceptance.md).
+
+All 28 bundled features participate in scene saving, with explicit native/global/transient policies.
+The existing Unscience host attaches `unscience.json` to native KSA saves; shared contracts, storage,
+part references and lifecycle hooks live in `ksa-abstractions.lib/Persistence`. Feature-owned
+`*.Saves.cs` / `*.Persistence.cs` files implement capture/reset/replay. Start at
+[scene-save usage](unscience/README.md#scene-saves), [implementation plan](plans/SAVES.md),
+[coverage matrix](plans/saves-state-inventory.md), and [save integration](scope/saves.md).
+
+### [saves.tests](saves.tests)
+Managed production Harmony-hook fixtures and storage/coordinator regression checks for native
+load timing, failure isolation, reset ordering, JSON integrity, bounded files and retained state.
+
+### [camera-saves.tests](camera-saves.tests)
+Managed production camera-recipe mapping/serialization checks across all ten animation types,
+nested groups and unsupported kinds, using native-independent constructor fixtures.
+
+### [world-saves.tests](world-saves.tests)
+Managed world-recipe/DTO round-trips for rings, canopy, static transforms and stable target data.
+Tests do not initialize KSA's native renderer.
+
 ## Core Libraries
 
 ### [ksa-abstractions.lib](ksa-abstractions.lib)

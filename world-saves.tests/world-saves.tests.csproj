@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><RequiresKSAAssemblies>false</RequiresKSAAssemblies></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../bloomin-onion.lib/bloomin-onion.lib.csproj" />
+    <ProjectReference Include="../free-fallin.lib/free-fallin.lib.csproj" />
+    <ProjectReference Include="../graffiti.lib/graffiti.lib.csproj" />
+    <ProjectReference Include="../hot-pursuit.lib/hot-pursuit.lib.csproj" />
+    <ProjectReference Include="../sphinx.lib/sphinx.lib.csproj" />
+    <Reference Include="KSA"><HintPath>$(KSAFolder)KSA.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="Brutal.Core.Common"><HintPath>$(KSAFolder)Brutal.Core.Common.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="Brutal.Core.Numerics"><HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath><Private>true</Private></Reference>
+  </ItemGroup>
+</Project>

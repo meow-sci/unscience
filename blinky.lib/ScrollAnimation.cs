@@ -19,6 +19,10 @@ public class ScrollAnimation
     private HashSet<(int x, int y)> _pixelSet = new();
     private PixelGrid? _grid;
 
+    internal (int x, int y)[] SavedPixels => _pixelSet.ToArray();
+    internal float SavedOffset => _scrollOffset;
+    internal void RestoreOffset(float value) { _scrollOffset = value; _lastScrollCol = -1; Update(0); }
+
     public float ScrollSpeed { get; set; } = 3f;
     public int GridRows { get; private set; }
     public int GridCols { get; private set; }

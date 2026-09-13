@@ -50,6 +50,7 @@ public sealed class KittenExpressionController
     public ExpressionType Current { get; private set; } = ExpressionType.None;
 
     public string CurrentVariant { get; private set; } = string.Empty;
+    public int CurrentVariantIndex { get; private set; } = -1;
 
     public float CurrentWeight => _processor?.ExpressionWeight ?? 0f;
 
@@ -115,6 +116,7 @@ public sealed class KittenExpressionController
         _processor.ExpressionWeight = 0f;
 
         Current = type;
+        CurrentVariantIndex = index;
         CurrentVariant = $"{type} {index + 1}/{variants.Count} ({animation.Id})";
         _elapsed = 0f;
     }
@@ -123,6 +125,7 @@ public sealed class KittenExpressionController
     public void Clear()
     {
         Current = ExpressionType.None;
+        CurrentVariantIndex = -1;
         CurrentVariant = string.Empty;
         _elapsed = 0f;
 

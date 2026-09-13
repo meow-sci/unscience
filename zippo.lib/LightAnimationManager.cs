@@ -9,7 +9,7 @@ namespace MeowSci.ZippoLib;
 /// Manages per-part animation queues. At most one animation runs per part at a time;
 /// additional animations queue up to <see cref="MaxQueueDepth"/>.
 /// </summary>
-public class LightAnimationManager
+public partial class LightAnimationManager
 {
     public const int MaxQueueDepth = 25;
 

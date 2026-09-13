@@ -45,7 +45,7 @@ The material is built through KSA's public GPU systems:
   R/G/B = AO/roughness/metallic channels through `RoughnessMetalScale`, or upload a 1×1 uniform PBR
   texture for direct 0–1 values.
 
-Settings are session-only. Imported files persist in the shared `.unscience/pngs` catalog owned by
+Applied settings are included in Unscience scene saves (see adapter below). Imported files persist in the shared `.unscience/pngs` catalog owned by
 `ksa-abstractions.lib/PngLibrary.cs` and also consumed by graffiti. Generated KSA assets are
 intentionally retained until renderer shutdown so frames in flight never reference a freed material
 or bindless handle. Restore/unload rewrites every weakly tracked renderable to the stock material
@@ -85,3 +85,29 @@ handle.
 8. Live-test stock tint, panel replacement, Full Canopy orientation while reefing/inflating, center
    decal, uniform metallic/roughness, secondary viewports, shadows, Restore Stock, and unload with a
    canopy already deployed.
+
+## Save/load adapter (feature/saves)
+
+`FreeFallinSubmod.Saves` registers `ISaveParticipantSource` with applied canopy settings.
+`CanopyMaterialController.AppliedSettings` is a detached recipe committed after successful
+material assignment; reset invokes `FreeFallinPatches.RestoreStock` before native teardown.
+`ReplaceObserved(handle)` updates the existing weakly tracked `AnimatedRenderable` material
+indices before retiring a private material or texture.
+
+New reflection seam: `CanopyGpuAssets.Own<T>` reads protected
+`KSA.AssetManager<T>.AssetMap` as `ConcurrentDictionary<Core.AssetName,T>` and removes only
+its exact owned reference before `LoadedAssetRef.Dispose()`. Current KSA
+`GpuTextureAssetRef.Destroy` uses `RetiredResourceQueue`; material disposal returns its own
+object slot. Private releases wait on `Program.GetRenderer().Device.WaitIdle()`, preserve
+failed retirement ownership and do not touch borrowed stock assets. Recheck map type,
+reference identity removal and native material/texture retirement on updates.
+
+Acceptance: repeated save/load/apply/stock cycles, both stock/custom PBR, all texture modes,
+missing PNG, hidden HUD and loaded/deployed canopies; inspect material/texture slot reuse.
+
+The adapter also stores the effective albedo tracked by `MaterialColorState`, independently
+of the authored recipe. This includes Humble Arteest writes to the private canopy material.
+New allocations register `MaterialData.AlbedoColor`; their exact allocation release callback
+forgets the runtime handle. Humble excludes `free-fallin/` generated names and guards its
+original-color resets by material identity. Acceptance must include canopy Apply → Humble
+recolor → save/load and canopy reapply → load, checking tint and recycled material slots.

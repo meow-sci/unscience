@@ -102,3 +102,9 @@ Check for compilation errors before continuing with implementation.
 See similar template mods:
 - [unscience](../unscience) - Minimal template without .lib
 - Other mods for inspiration on complete implementations
+
+## Scene saves
+
+Saves the monitored vehicle IDs, independent fuel/electricity switches and refill interval. Load resets old monitoring and starts fresh refill timers; native tank/battery quantities remain native save state.
+
+Scene persistence is registered by the Unscience host through `ISaveParticipantSource`; standalone development hosts retain their existing lifecycle. Use ordinary KSA Save/Load. See [save behavior](../unscience/README.md#scene-saves) and the [design plan](../plans/SAVES.md).

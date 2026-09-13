@@ -15,7 +15,7 @@ namespace MeowSci.DohLib;
 /// Provides kitten spawning controls and management UI.
 /// Used by unscience supermod and standalone doh mod.
 /// </summary>
-public sealed class DohSubmod : ISubmod
+public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persistence.ISaveParticipantSource
 {
     public string Name => "DOH - Clone Kittens";
     public string Tooltip => "Programmatic kitten spawning with per-kitten material customization.";

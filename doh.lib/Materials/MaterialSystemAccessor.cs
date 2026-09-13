@@ -122,6 +122,8 @@ public static class MaterialSystemAccessor
         {
             var result = _createObjectMethod.Invoke(_materialSystem, new object[] { (AssetName)assetName, data });
             bool success = result is bool b && b;
+            if (success)
+                MeowSci.KsaAbstractions.Persistence.MaterialColorState.Record(GetExistingMaterialHandle(assetName), data.AlbedoColor);
             if (!success)
                 _lastError = $"CreateObject returned false for '{assetName}' — name may already exist.";
             return success;
@@ -294,6 +296,8 @@ public static class MaterialSystemAccessor
             commandBuffer.Begin();
             VkUtils.StageAndUploadToBuffer(stagingPool, bigBuffer.VkBuffer, targetOffset, MemoryMarshal.AsBytes(span), commandBuffer);
             commandBuffer.End();
+
+            MeowSci.KsaAbstractions.Persistence.MaterialColorState.Record(handle, color);
 
             return true;
         }

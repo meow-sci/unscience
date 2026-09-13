@@ -5,7 +5,7 @@ using MeowSci.KsaAbstractions;
 
 namespace MeowSci.FreeFallinLib;
 
-public sealed class FreeFallinSubmod : ISubmod
+public sealed partial class FreeFallinSubmod : ISubmod
 {
     public string Name => "Free Fallin - Parachute Customizer";
     public string Tooltip => "Customize the texture, tint, roughness, metallicness, and AO of every parachute canopy.";

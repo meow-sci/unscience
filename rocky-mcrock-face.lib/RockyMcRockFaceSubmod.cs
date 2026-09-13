@@ -18,8 +18,8 @@ public sealed partial class RockyMcRockFaceSubmod : ISubmod
         "Swap the meshes and textures of KSA's planetary ring objects (Saturn's rock field).\n" +
         "Pick any built-in mesh — including part subpart meshes — per LOD, change the rock\n" +
         "material textures, the ring band texture, and the rock field density/size.\n" +
-        "Applying rebuilds the renderer (brief hitch). Overrides are session-only —\n" +
-        "restarting the game brings the stock ring back.";
+        "Applying rebuilds the renderer (brief hitch). Overrides persist with KSA saves.\n" +
+        "Load a saved game to restore its ring setup.";
 
     private readonly RingSwapController _controller = new();
     private readonly Dictionary<string, RingSelection> _selections = new();

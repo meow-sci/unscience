@@ -16,5 +16,8 @@
     <Compile Include="../iron-man.lib/IronManEditorOrientationPatches.cs" Link="IronManEditorOrientationPatches.cs" />
     <Compile Include="../iron-man.lib/IronManRcsOrientationPatches.cs" Link="IronManRcsOrientationPatches.cs" />
     <Compile Include="../iron-man.lib/IronManTeleportPatches.cs" Link="IronManTeleportPatches.cs" />
+    <Compile Include="../iron-man.lib/IronManFlightSettings.Saves.cs" Link="IronManFlightSettings.Saves.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveJson.cs" Link="SaveJson.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/FiniteNumberConverters.cs" Link="FiniteNumberConverters.cs" />
   </ItemGroup>
 </Project>

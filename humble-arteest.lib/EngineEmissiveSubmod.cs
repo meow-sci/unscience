@@ -10,7 +10,7 @@ namespace MeowSci.HumbleArteestLib;
 /// ISubmod implementation for the Engine Emissive feature.
 /// Provides an ImGui panel to control Temperature and TFI overrides on dynamic engine parts.
 /// </summary>
-public sealed class EngineEmissiveSubmod : ISubmod
+public sealed partial class EngineEmissiveSubmod : ISubmod
 {
     public string Name => "Engine Emissive";
     public string Tooltip => "Overrides engine emissive temperature to control part glow intensity.";

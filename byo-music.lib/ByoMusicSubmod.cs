@@ -7,7 +7,7 @@ using MeowSci.KsaAbstractions;
 
 namespace MeowSci.ByoMusicLib;
 
-public sealed class ByoMusicSubmod : ISubmod
+public sealed partial class ByoMusicSubmod : ISubmod
 {
     private readonly LibraryFileBrowser _browser = new(SoundLibrary.Files, "byo_music", "Import sound — OGG, WAV, MP3");
     private readonly ImInputString _soundFilter = new(128), _vesselFilter = new(128);
@@ -100,6 +100,8 @@ public sealed class ByoMusicSubmod : ISubmod
         ImGui.Text($"{sound.FileName} → {sound.Target.Id}");
         ImGui.TextWrapped(sound.Status);
         ImGui.BeginDisabled(sound.Finished);
+        if (ImGui.SmallButton(sound.Paused ? "Resume" : "Pause")) sound.Paused = !sound.Paused;
+        ImGui.SameLine();
         if (ImGui.SmallButton("Stop"u8)) sound.Stop();
         ImGui.SameLine();
         ImGui.Checkbox("Repeat"u8, ref sound.Repeat);

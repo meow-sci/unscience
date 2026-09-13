@@ -41,6 +41,8 @@ public class Mod
 {
     public bool ImmediateUnload => false;
 
+    private UnscienceSaves? _sceneSaves;
+
     private bool _isInitialized = false;
     private bool _isDisposed = false;
     private bool _windowVisible = false;
@@ -127,6 +129,7 @@ public class Mod
             // deliberately left out so mod windows honour the hidden HUD too.
             HiddenUiFrameHook.BeforeGui = UpdateSubmods;
 
+            _sceneSaves = new UnscienceSaves(_submods);
             Patcher.Patch();
 
             _isInitialized = true;
@@ -210,6 +213,7 @@ public class Mod
                 catch (Exception ex) { Console.WriteLine($"unscience/{submod.Name}: Dispose error: {ex.Message}"); }
             }
 
+            _sceneSaves?.Dispose();
             Patcher.Unload();
             _isDisposed = true;
         }
@@ -264,7 +268,7 @@ public class Mod
 
                 if (ImGui.BeginMenu("State"))
                 {
-                    if (ImGui.MenuItem("Auto save enabled", "", ref _autoSaveEnabled))
+                    if (ImGui.MenuItem("Auto save window layout", "", ref _autoSaveEnabled))
                         UnscienceState.AutoSaveEnabled = _autoSaveEnabled;
 
                     ImGui.PushItemWidth(120f);
@@ -283,6 +287,8 @@ public class Mod
 
                 ImGui.EndMenuBar();
             }
+
+            _sceneSaves?.RenderStatus();
 
             // Render visible submods
             foreach (var submod in _submods)
