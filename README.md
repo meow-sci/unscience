@@ -4,7 +4,8 @@ Silly Kitten Space Agency features, distributed together as the single `unscienc
 [`scope/FULL_SCOPE.md`](scope/FULL_SCOPE.md) for the game-integration map.
 
 `dent-wizard` fires any vessel or EVA kitten from the camera at a clicked vessel or terrain,
-with target-relative speed and orbital-velocity inheritance. Existing Kitchen Sink G-load protection
+with target-relative speed and orbital-velocity inheritance. **Automatic mode** stays armed to
+re-fire the same source on each click until toggled off. Existing Kitchen Sink G-load protection
 stays attached to the launched vessel; each feature retains its own save/reset policy.
 See [Dent Wizard](dent-wizard/README.md).
 

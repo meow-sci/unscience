@@ -99,7 +99,7 @@ fixes a different render-overload regression.
 See [ISSUES](../ISSUES.md) for current triage and dated records; [the old gaps plan](../plans/FIX_CURRENT_GAPS_PLAN.md)
 is historical and superseded by the current upgrade report.
 
-Dent Wizard added against 5438: source picker includes EVA/debris; camera-origin shots inherit
+Dent Wizard added against 5438: source picker includes EVA/debris; one-shot/automatic click firing inherits
 orbital/surface velocity through the shared physics handoff. Managed launch checks and solution
 build pass; native launch/picking/collision acceptance is pending.
 Combined merge evidence: [integration record](../plans/DENT_WIZARD_UPSTREAM_INTEGRATION.md). See [vehicle scope](vehicle-physics.md#dent-wizard).

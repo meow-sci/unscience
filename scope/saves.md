@@ -88,7 +88,9 @@ and the remaining live-game checks.
 ## Dent Wizard transient policy
 
 `DentWizardSubmod` registers `ISaveParticipant` ID `dent-wizard`, version 1. Capture is an empty
-object; `ResetState` clears source references, speed (back to 5), gesture, status and pending shot.
+object; `ResetState` clears source references, speed (back to 5), automatic/armed gesture, status and pending shot.
+Automatic mode only keeps the mouse gesture armed between clicks; it never generates timed shots
+or restores active input capture. The version-1 empty record remains unchanged.
 Restore replays no action. The launched vessel uses ordinary native KSA position/velocity state;
 no custom force or launch history is persisted. Selection/speed configure only the next one-shot
 action rather than an ongoing scene registration. Kitchen Sink independently owns any G-load

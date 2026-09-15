@@ -655,7 +655,7 @@ Added against KSA **2026.9.10.5438**. `dent-wizard.lib` owns a regular `ISubmod`
 | `IParentBody.GetCcf2Cci(UniverseTime)`, `GetAngularVelocityCci` | Terrain click/camera positions stored in CCF, transformed at state time. Surface velocity is angular velocity crossed with hit position in CCI. |
 | `PhysicsFrameHook.BeforePhysics`, `IsApplied`; `Program.PrepareFrame(double,double)` existing transpiler; `SimStep.PreviousTime` | One pending shot consumed after result application, before next cloth/vehicle/orbit snapshots. No render-loop teleport. Existing hook must validate ordered solver seams; missing hook disables Aim. World reset clears the request before dispatch. |
 | `Orbit.CreateFromStateCci(IParentBody,UniverseTime,double3,double3,byte4)`, `Orbit.OrbitLineColor`; `Vehicle.Teleport(Orbit?,doubleQuat?,double3?)`, `FlightPlan`, `UpdatePerFrameData` | Creates target-parent orbit at the committed state timestamp. Null attitude/rates preserve source orientation/spin. Native Teleport leaves old bubble, updates parent Children via SetFlightPlan, rewrites physics with Situation.Maneuvering. If native trajectory computation rejects the orbit, unchanged FlightPlan identity reports failure. Recheck these semantics each upgrade. |
-| `ISubmod.Initialize/Update/RenderContent/RenderFloatingWindows/Dispose`; `ISaveParticipant`, ID `dent-wizard`, v1; host `HotkeyGuard` | Standard embedding, persistent gesture while panel is collapsed, transient form/shot reset on load and unsubscribe on unload. Actual launch effects are native vessel state. |
+| `ISubmod.Initialize/Update/RenderContent/RenderFloatingWindows/Dispose`; `ISaveParticipant`, ID `dent-wizard`, v1; host `HotkeyGuard` | Standard embedding, one-shot or automatic re-fire on each click while panel is collapsed, transient form/mode/shot reset on load and unsubscribe on unload. Actual launch effects are native vessel state. |
 
 No new Harmony target, reflection lookup, shader, byte offset, game asset or collision override.
 The standalone host installs/removes shared HotkeyGuard/PhysicsFrameHook; Unscience explicitly
@@ -669,7 +669,8 @@ Native acceptance remains open:
 
 - EVA and normal source; debris and cross-parent source; orbiting target shot perpendicular to
   prograde at 10 m/s, stationary terrain and rotating/landed target.
-- UI manual 0.001 / 0.05 / >100, drag 0.1–100; mouse capture, one-shot/miss/cancel, collapsed panel,
+- UI manual 0.001 / 0.05 / >100, drag 0.1–100; mouse capture, one-shot/miss/cancel, automatic
+  repeated clicks/toggle-off with no timer firing, collapsed panel,
   main vs secondary viewports; no launch after scene load, destruction or unload.
 - Native teleport rejection, camera inside/near source, source controls/weld interference,
   paused and accelerated simulation, ordinary collisions and visible dent/structural damage.

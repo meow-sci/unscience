@@ -56,11 +56,11 @@ Shared library with common abstractions used across multiple mods. Provides util
 
 ### [dent-wizard](dent-wizard) / [dent-wizard.lib](dent-wizard.lib)
 Camera-origin vessel launcher bundled in Unscience. Filterable source dropdown includes EVA kittens
-and debris. One-shot mesh/EVA-sphere/terrain click fires at target-relative speed (default 5 m/s;
+and debris. One-shot or toggleable **Automatic mode** mesh/EVA-sphere/terrain clicks fire at target-relative speed (default 5 m/s;
 drag 0.1–100, manual finite values >=0.001 with no upper clamp). Inherits orbital and hit-point spin
 velocity, uses the safe shared physics handoff, and rejects stale targets/native teleport failure.
 Source orientation/spin are preserved; cross-parent launches use the target body. Native state saves
-normally; form, gesture and pending shot reset on load. See the README for ballistic limitations.
+normally; form, automatic/armed gesture and pending shot reset on load. See the README for ballistic limitations.
 
 ### [dent-wizard.tests](dent-wizard.tests)
 Managed production launch arithmetic and teleport-boundary checks: orbital perpendicular intercept,

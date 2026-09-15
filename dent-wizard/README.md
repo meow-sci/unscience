@@ -13,7 +13,10 @@ The standalone StarMap host is a development project; only Unscience is distribu
    silently replacing your value.
 3. Position the main camera, press **Aim and fire**, then left-click a vessel or terrain within
    **10 km**. The source's centre of mass moves to the camera and receives the launch velocity.
-4. A successful click fires once. A miss stays armed. **Esc**, **right-click**, or **Cancel**
+4. **Aim and fire** disarms after a successful click. Alternatively, toggle **Automatic mode**
+   on to keep raycast firing active: every click re-fires the same source from the current camera
+   toward the newly clicked target at the current speed. Press **Automatic mode** again to stop.
+   Its button stays highlighted and an ON message appears while active. A miss stays armed. **Esc**, **right-click**, or **Cancel**
    cancels. UI clicks and secondary viewports do not fire; collapsing the panel does not cancel.
 
 ## Velocity and physics
@@ -40,10 +43,11 @@ Separate deployed parachute cloth, imported static props and clutter are not pic
 
 ## Saves and validation
 
-The launched vessel's physical state is native KSA save data. Selection, speed, armed gesture,
-and queued shot are transient and reset on scene load. Loading never fires an old pending shot.
+The launched vessel's physical state is native KSA save data. Selection, speed, automatic/armed gesture,
+and queued shot are transient and reset on scene load. Automatic mode is a mouse gesture,
+not a repeating timer or saved launch recipe. Loading never fires an old pending shot.
 No persistent forces, custom assets, or collision modifications are added. Source selection and
-speed configure only the next one-shot action, so neither is an applied scene registration.
+speed configure subsequent clicks, so neither is an applied scene registration.
 Kitchen Sink G-load protection is independent: launching preserves an existing registration,
 and Kitchen Sink saves/restores that protection. It does not disable contacts or part damage.
 

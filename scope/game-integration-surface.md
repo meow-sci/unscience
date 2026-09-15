@@ -7,7 +7,7 @@ links its production math and launch boundary code. Full member contracts and na
 | Surface | Owner / behavior |
 |---|---|
 | `VehicleProvider` / `Universe.CurrentSystem.All`; `Vehicle`, `KittenEva`, `IsDisposed/IsEditedVehicle/IsDebris/Id` | Any live vessel source, including EVA and debris; exact object validation at execution. |
-| `Cursor.GetEgoRay(Program.MainViewport)`, `Program.GetMainCamera/EditorFlag/HoveredViewport.IsMain`, `Camera.GetPositionEgo/NearbyCelestial` | Main-camera world click and camera-relative snapshots. |
+| `Cursor.GetEgoRay(Program.MainViewport)`, `Program.GetMainCamera/EditorFlag/HoveredViewport.IsMain`, `Camera.GetPositionEgo/NearbyCelestial` | Main-camera world clicks and camera-relative snapshots; one-shot or toggleable automatic re-fire. |
 | `Vehicle.GetMatrixAsmb2Ego`, `Part.RayCastEgo`, root `PositionEgo/ScaleTotal`, `BoundingSphereRadiusBody`, `Ray.Raycast(BoundingSphere3D)` | Part triangles or EVA sphere, source excluded; 10 km range. |
 | `Celestial.GetTerrainHeightFromDirCcf(accurate:true)`, `MeanRadius`, `GetCce2Ccf`; `IParentBody.GetCce2Cci/GetCcf2Cci(time)/GetAngularVelocityCci` | Terrain picking and CCI/CCF frame/rotation compensation. |
 | `Vehicle.GetPositionCci/GetVelocityCci/GetBody2Cci/BodyRates/Parent`; `Orbit.CreateFromStateCci/OrbitLineColor` | Target orbital + hit-point spin velocity plus requested relative shot. |

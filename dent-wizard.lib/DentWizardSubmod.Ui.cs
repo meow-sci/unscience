@@ -36,8 +36,20 @@ public sealed partial class DentWizardSubmod
         bool available = _initialized && PhysicsFrameHook.IsApplied && !Program.EditorFlag && _source != null && validSpeed;
         bool disableAim = !available || _armed || _pending != null;
         if (disableAim) ImGui.BeginDisabled();
-        if (ImGui.Button(" Aim and fire ")) { _armed = true; _status = null; }
+        if (ImGui.Button(" Aim and fire ")) Arm(automatic: false);
         if (disableAim) ImGui.EndDisabled();
+        ImGui.SameLine(0, 8);
+        // An active toggle must remain usable even if the speed becomes invalid or a shot is queued.
+        bool disableAutomatic = !_automatic && (!available || _pending != null);
+        bool highlightAutomatic = _automatic;
+        if (disableAutomatic) ImGui.BeginDisabled();
+        if (highlightAutomatic) ImGui.PushStyleColor(ImGuiCol.Button, ImGui.GetColorU32(ImGuiCol.ButtonActive));
+        if (ImGui.Button(" Automatic mode ")) ToggleAutomaticMode();
+        if (highlightAutomatic) ImGui.PopStyleColor();
+        if (disableAutomatic) ImGui.EndDisabled();
+        ImGui.SetItemTooltip("Stay in click-to-fire mode. Each click re-fires the same source; press again to turn off.");
+        if (_automatic)
+            ImGui.TextColored(new float4(.4f, 1, .4f, 1), "Automatic mode ON — each world click re-fires the source.");
         ImGui.Spacing();
         if (_armed || _pending != null)
         {
@@ -84,19 +96,16 @@ public sealed partial class DentWizardSubmod
         if (ImGui.IsKeyPressed(ImGuiKey.Escape) || ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         { Cancel("Launch cancelled."); return; }
         var pos = ImGui.GetMousePos() + new float2(18, 18);
-        ImString hint = $"fire {_source.Id} at {_speed:G6} m/s — click target (Esc cancels)";
+        ImString hint = $"{(_automatic ? "automatic" : "fire")} {_source.Id} at {_speed:G6} m/s — click target (Esc cancels)";
         var draw = ImGui.GetForegroundDrawList();
         draw.AddText(pos + new float2(1, 1), ImColor8.Black, hint);
         draw.AddText(pos, ImColor8.White, hint);
-        if (ImGui.GetIO().WantCaptureMouse || !Program.HoveredViewport.IsMain()
+        if (_pending != null || ImGui.GetIO().WantCaptureMouse || !Program.HoveredViewport.IsMain()
             || !ImGui.IsMouseClicked(ImGuiMouseButton.Left)) return;
         try
         {
             if (!LaunchMath.IsValidSpeed(_speed)) throw new InvalidOperationException("Enter a finite speed >= 0.001 m/s.");
-            _pending = DentWizardPicker.Pick(_source, _speed);
-            if (_pending == null) { SetStatus("No target within 10 km. Click again or press Esc.", true); return; }
-            _armed = false;
-            SetStatus("Launch queued for the next physics handoff.", false);
+            AcceptPick(DentWizardPicker.Pick(_source, _speed));
         }
         catch (Exception ex) { SetStatus(ex.Message, true); }
     }

@@ -87,5 +87,7 @@ namespace MeowSci.DentWizardLib
     public sealed partial class DentWizardSubmod
     {
         internal float FormSpeed => _speed;
+        internal bool Armed => _armed;
+        internal bool Automatic => _automatic;
     }
 }

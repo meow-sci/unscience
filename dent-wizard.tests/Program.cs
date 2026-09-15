@@ -113,6 +113,7 @@ internal static class Entry
         PhysicsFrameHook.Dispatch(time);
         Check(PhysicsFrameHook.Subscribers == 0 && source.Teleports == launches + 1, "Dispose retained a pending shot or callback");
         Check(GLoadProtection.Contains(source), "Dent Wizard reset/unload changed another feature's protection");
+        LaunchModeChecks.Run(source, terrain, time);
         GLoadProtection.Clear();
         Console.WriteLine("Dent Wizard: speed, orbital intercept, boost, spin, handoff, parent, stale-world and terrain checks passed.");
 

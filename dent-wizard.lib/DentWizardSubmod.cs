@@ -7,7 +7,7 @@ using MeowSci.KsaAbstractions.Persistence;
 
 namespace MeowSci.DentWizardLib;
 
-/// <summary>One-shot camera launcher. Pending gestures never survive world load or disposal.</summary>
+/// <summary>Click-driven camera launcher. Pending gestures never survive world load or disposal.</summary>
 public sealed partial class DentWizardSubmod : ISubmod, ISaveParticipant
 {
     public string Name => "Dent Wizard";
@@ -16,6 +16,7 @@ public sealed partial class DentWizardSubmod : ISubmod, ISaveParticipant
     private Vehicle? _source;
     private float _speed = 5f;
     private bool _armed;
+    private bool _automatic;
     private bool _initialized;
     private bool _error;
     private string? _status;
@@ -47,6 +48,32 @@ public sealed partial class DentWizardSubmod : ISubmod, ISaveParticipant
         catch (Exception ex) { SetStatus(ex.Message, true); }
     }
 
+    internal void Arm(bool automatic)
+    {
+        _automatic = automatic;
+        _armed = true;
+        _status = null;
+    }
+
+    internal void ToggleAutomaticMode()
+    {
+        if (_automatic) Cancel("Automatic mode off.");
+        else Arm(automatic: true);
+    }
+
+    internal void AcceptPick(LaunchRequest? request)
+    {
+        if (!_armed || _pending != null) return;
+        if (request == null)
+        {
+            SetStatus("No target within 10 km. Click again or press Esc.", true);
+            return;
+        }
+        _pending = request;
+        _armed = _automatic;
+        SetStatus("Launch queued for the next physics handoff.", false);
+    }
+
     private void SetStatus(string message, bool error)
     {
         _status = message;
@@ -57,6 +84,7 @@ public sealed partial class DentWizardSubmod : ISubmod, ISaveParticipant
     private void Cancel(string message)
     {
         _armed = false;
+        _automatic = false;
         _pending = null;
         SetStatus(message, false);
     }
@@ -76,6 +104,7 @@ public sealed partial class DentWizardSubmod : ISubmod, ISaveParticipant
         _source = null;
         _pending = null;
         _armed = false;
+        _automatic = false;
         _speed = 5f;
         _status = null;
         _error = false;

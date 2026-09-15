@@ -127,7 +127,8 @@ Architecture: `UnscienceSaves` discovers library participants and wires shared `
 ## Dent Wizard integration
 
 [Dent Wizard](../dent-wizard/README.md) is a regular submod with a filterable source picker and
-Graffiti-style one-shot gesture. The host explicitly ensures the existing `PhysicsFrameHook`;
+Graffiti-style one-shot or toggleable Automatic mode gesture; automatic mode re-fires the same
+source on each new world click. The host explicitly ensures the existing `PhysicsFrameHook`;
 Dent Wizard executes pending launches through `BeforePhysics` with `SimStep.PreviousTime`.
 Its transient save participant clears selection, speed and pending/armed launches before world
 replacement. Native KSA saves retain the resulting vessel position and velocity.
