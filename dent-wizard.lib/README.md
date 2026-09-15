@@ -7,6 +7,8 @@ See [Dent Wizard usage](../dent-wizard/README.md) for controls, launch semantics
   `ISaveParticipant` (`dent-wizard`, v1). It subscribes/unsubscribes `PhysicsFrameHook.BeforePhysics`.
 - `DentWizardSubmod.Ui` renders the standard padded/filterable form and floating firing gesture. Automatic mode retains arming across clicks; toggle-off,
   Cancel/Esc/right-click, editor entry, source loss, scene reset and disposal cancel it.
+  Source entries and the combo preview read live `Vehicle.TotalMass` in kg; widget IDs stay
+  stable while mass changes. No mass value is stored in the sidecar.
 - `DentWizardPicker` mirrors Graffiti's part-mesh/EVA-sphere/terrain approach, excludes the source,
   and produces a click snapshot within 10 km. Terrain competes with vessel hits by distance.
 - `LaunchRequest` validates live identities and unchanged target parent at execution, converts

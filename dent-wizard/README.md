@@ -7,7 +7,8 @@ The standalone StarMap host is a development project; only Unscience is distribu
 ## Use
 
 1. Expand **Dent Wizard** and choose **Source** from the filterable dropdown. EVA kittens and
-   debris are labelled. You do not have to control the source.
+   debris are labelled. Each dropdown entry and the selected-source label show live total mass
+   in kilograms (including propellant). You do not have to control the source.
 2. Set **Speed (m/s)**. Default: **5**. Drag between **0.1 and 100**; Ctrl-click to type any finite
    value **0.001 or higher**, including values above 100. Invalid input disables firing without
    silently replacing your value.

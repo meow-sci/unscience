@@ -68,7 +68,8 @@ public sealed partial class DentWizardSubmod
 
     private void DrawSourcePicker()
     {
-        if (!ImGui.BeginCombo("##dent_source", _source?.Id ?? "Select a vessel...")) return;
+        string preview = _source is { IsDisposed: false } source ? SourceLabel(source) : "Select a vessel...";
+        if (!ImGui.BeginCombo("##dent_source", preview)) return;
         if (ImGui.IsWindowAppearing()) { ImGui.SetKeyboardFocusHere(); _filter.Clear(); }
         ImGui.SetNextItemWidth(-1);
         ImGui.InputTextWithHint("##dent_filter", "filter vessels...", _filter);
@@ -77,15 +78,24 @@ public sealed partial class DentWizardSubmod
         foreach (var vehicle in VehicleProvider.GetAllVehicles(includeDebris: true))
         {
             if (vehicle.IsDisposed || vehicle.IsEditedVehicle) continue;
-            string label = $"{vehicle.Id}{(vehicle is KittenEva ? " (EVA)" : vehicle.IsDebris ? " (debris)" : "")}";
+            string label = SourceLabel(vehicle);
             if (!label.Contains(filter, StringComparison.OrdinalIgnoreCase)) continue;
             bool selected = ReferenceEquals(_source, vehicle);
             ImGui.PushID(index++);
-            if (ImGui.Selectable(label, selected)) _source = vehicle;
+            // Mass changes as fuel burns; keep the widget identity independent of its live label.
+            if (ImGui.Selectable($"{label}###dent_vehicle", selected)) _source = vehicle;
             if (selected) ImGui.SetItemDefaultFocus();
             ImGui.PopID();
         }
         ImGui.EndCombo();
+    }
+
+    private static string SourceLabel(Vehicle vehicle)
+    {
+        float mass = vehicle.TotalMass;
+        string massLabel = float.IsFinite(mass) && mass >= 0 ? $"{mass:#,##0.###} kg" : "mass unavailable";
+        string kind = vehicle is KittenEva ? " (EVA)" : vehicle.IsDebris ? " (debris)" : "";
+        return $"{vehicle.Id}{kind} — {massLabel}";
     }
 
     public void RenderFloatingWindows()

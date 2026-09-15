@@ -55,7 +55,7 @@ Shared library with common abstractions used across multiple mods. Provides util
 ## Vehicle Manipulation Mods
 
 ### [dent-wizard](dent-wizard) / [dent-wizard.lib](dent-wizard.lib)
-Camera-origin vessel launcher bundled in Unscience. Filterable source dropdown includes EVA kittens
+Camera-origin vessel launcher bundled in Unscience. Filterable source dropdown shows live total mass in kg and includes EVA kittens
 and debris. One-shot or toggleable **Automatic mode** mesh/EVA-sphere/terrain clicks fire at target-relative speed (default 5 m/s;
 drag 0.1–100, manual finite values >=0.001 with no upper clamp). Inherits orbital and hit-point spin
 velocity, uses the safe shared physics handoff, and rejects stale targets/native teleport failure.

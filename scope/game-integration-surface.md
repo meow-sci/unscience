@@ -7,6 +7,7 @@ links its production math and launch boundary code. Full member contracts and na
 | Surface | Owner / behavior |
 |---|---|
 | `VehicleProvider` / `Universe.CurrentSystem.All`; `Vehicle`, `KittenEva`, `IsDisposed/IsEditedVehicle/IsDebris/Id` | Any live vessel source, including EVA and debris; exact object validation at execution. |
+| `Vehicle.TotalMass` | Live mass in kg beside every source and in the selected combo preview; read-only native telemetry. |
 | `Cursor.GetEgoRay(Program.MainViewport)`, `Program.GetMainCamera/EditorFlag/HoveredViewport.IsMain`, `Camera.GetPositionEgo/NearbyCelestial` | Main-camera world clicks and camera-relative snapshots; one-shot or toggleable automatic re-fire. |
 | `Vehicle.GetMatrixAsmb2Ego`, `Part.RayCastEgo`, root `PositionEgo/ScaleTotal`, `BoundingSphereRadiusBody`, `Ray.Raycast(BoundingSphere3D)` | Part triangles or EVA sphere, source excluded; 10 km range. |
 | `Celestial.GetTerrainHeightFromDirCcf(accurate:true)`, `MeanRadius`, `GetCce2Ccf`; `IParentBody.GetCce2Cci/GetCcf2Cci(time)/GetAngularVelocityCci` | Terrain picking and CCI/CCF frame/rotation compensation. |
