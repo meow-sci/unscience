@@ -4,7 +4,7 @@ Unscience is the only distributed mod. `dotnet build` deploys one `unscience/` f
 feature libraries remain separate projects with explicit references. Former standalone hosts are
 retained for development and are not deployed or published. See [distribution](../README.md#distribution).
 
-A unified supermod that consolidates 28 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
+A unified supermod that consolidates 29 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
 
 ## Included Submods
 
@@ -14,6 +14,7 @@ A unified supermod that consolidates 28 KSA feature libraries into a single ImGu
 | Bloomin' Onion | Creates and edits planetary ring systems at runtime |
 | BYO Music | Imported vessel-attached 3D sounds, repeat/gaps and live volume/range |
 | Camera Controller Override | 8 camera animation types (zoom, spiral, orbit, shake) with keyframe sequencing |
+| Dent Wizard | Fires vessels/EVA kittens from the camera at target-relative speed; click a vessel or terrain |
 | Doh | Spawns EVA kittens and customizes their materials |
 | Don't Stifle Me | Extends vehicle-editor scale and configurable-value limits |
 | Eternal Flame — Infinite Fuel | Monitors vehicles and periodically refills all fuel tanks |
@@ -122,3 +123,11 @@ still deletes the old save directory first. Keep normal backup copies for valuab
 Architecture: `UnscienceSaves` discovers library participants and wires shared `NativeSaveHooks`;
 `SceneSaveCoordinator` orders/reset/replays them and retains failed records. See the
 [implementation plan](../plans/SAVES.md) and [integration map](../scope/saves.md).
+
+## Dent Wizard integration
+
+[Dent Wizard](../dent-wizard/README.md) is a regular submod with a filterable source picker and
+Graffiti-style one-shot gesture. The host explicitly ensures the existing `PhysicsFrameHook`;
+Dent Wizard executes pending launches through `BeforePhysics` with `SimStep.PreviousTime`.
+Its transient save participant clears selection, speed and pending/armed launches before world
+replacement. Native KSA saves retain the resulting vessel position and velocity.

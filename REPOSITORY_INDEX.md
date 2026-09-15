@@ -15,7 +15,7 @@ bundled only through explicit project references. See the root README for instal
 
 Final feature coverage and validation limits: [save acceptance](plans/saves-acceptance.md).
 
-All 28 bundled features participate in scene saving, with explicit native/global/transient policies.
+All 29 bundled features participate in scene saving, with explicit native/global/transient policies.
 The existing Unscience host attaches `unscience.json` to native KSA saves; shared contracts, storage,
 part references and lifecycle hooks live in `ksa-abstractions.lib/Persistence`. Feature-owned
 `*.Saves.cs` / `*.Persistence.cs` files implement capture/reset/replay. Start at
@@ -53,6 +53,19 @@ Shared library with common abstractions used across multiple mods. Provides util
 ---
 
 ## Vehicle Manipulation Mods
+
+### [dent-wizard](dent-wizard) / [dent-wizard.lib](dent-wizard.lib)
+Camera-origin vessel launcher bundled in Unscience. Filterable source dropdown includes EVA kittens
+and debris. One-shot mesh/EVA-sphere/terrain click fires at target-relative speed (default 5 m/s;
+drag 0.1–100, manual finite values >=0.001 with no upper clamp). Inherits orbital and hit-point spin
+velocity, uses the safe shared physics handoff, and rejects stale targets/native teleport failure.
+Source orientation/spin are preserved; cross-parent launches use the target body. Native state saves
+normally; form, gesture and pending shot reset on load. See the README for ballistic limitations.
+
+### [dent-wizard.tests](dent-wizard.tests)
+Managed production launch arithmetic and teleport-boundary checks: orbital perpendicular intercept,
+shared velocity boost, spin, speed limits, handoff snapshot/timestamp, changed worlds/parents,
+rejection handling, rotating terrain, one-shot dispatch, scene reset and unload. No native renderer or collision simulation.
 
 ### [eternal-flame](eternal-flame) / [eternal-flame.lib](eternal-flame.lib)
 Infinite fuel and electricity hack. Monitors selected vehicles and periodically refills fuel tanks and battery charge at a configurable interval.
@@ -355,7 +368,7 @@ Define **brand-new planetary rings at runtime** and apply them to **any celestia
 ### [unscience](unscience)
 Unified supermod that consolidates the standalone feature mods into a single ImGui window with collapsible headers and a gear icon (⚙) context menu for per-submod visibility toggles. All submod logic lives directly in the respective `.lib` projects — unscience instantiates these lib submods and orchestrates them via the `ISubmod` interface from `ksa-abstractions.lib`. A single Harmony instance consolidates their patches. Standalone mods continue to work independently.
 - F11 window toggle with unified panel for all core submods
-- Submods: Blinky, Bloomin' Onion, BYO Music, Camera Controller Override, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Iron Man, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Parts Now, Pebbles, Pyro, Rocky McRock Face, Skittles, Sphinx, Thug Life, Zippo (28 total)
+- Submods: Blinky, Bloomin' Onion, BYO Music, Camera Controller Override, Dent Wizard, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Iron Man, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Parts Now, Pebbles, Pyro, Rocky McRock Face, Skittles, Sphinx, Thug Life, Zippo (29 total)
 - Uses `ISubmod` interface (from `ksa-abstractions.lib`): `Name`, `Initialize()`, `Update(dt)`, `RenderContent()`, `Dispose()`
 - Each submod class lives in its `.lib` project (for example `BlinkySubmod` in `blinky.lib`)
 - `unscience/Submods/` directory removed — no thin UI wrapper layer; submod classes own their own ImGui rendering

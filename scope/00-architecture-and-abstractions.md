@@ -34,7 +34,7 @@ Verification baseline:
   (NuGet **`StarMap.API` v0.3.6**, `PrivateAssets="all"`) is the loader seam, NOT the game — StarMap
   itself Harmony-patches the game's render loop and invokes the mod's attributed methods. So the
   shell never references the game's frame loop directly; it rides StarMap's hooks.
-- **Submod aggregation.** The host instantiates 28 `ISubmod` implementations (one per feature
+- **Submod aggregation.** The host instantiates 29 `ISubmod` implementations (one per feature
   lib), stores them in a list, and drives them uniformly: `Initialize()` once, `Update(dt)` every
   frame (even hidden), `RenderContent()` inside a `CollapsingHeader`, `RenderFloatingWindows()`
   always, `Dispose()` on unload. The same `ISubmod` classes are reused by each feature's own
@@ -601,3 +601,12 @@ reverse reset / ordered replay, preserves failed/unknown records, and offers exp
 with current setup on future saves. Kitchen Sink persists `IvaForceRender.Enabled`; one-shot editor
 refresh/debug activity is not replayed. Skittles restores the exact detached scene style and resets
 to startup configured theme between scenes. See [saves](saves.md) for new Harmony/worker seams.
+
+### Dent Wizard host integration
+
+`unscience/Mod.cs` registers `DentWizardSubmod`; `unscience.csproj` explicitly bundles its library.
+The host ensures `PhysicsFrameHook.Apply` under isolated patch application. Dent Wizard subscribes
+`BeforePhysics` at initialization, consumes at most one pending shot, and unsubscribes on disposal.
+Its standalone template-derived development host owns `HotkeyGuard` and `PhysicsFrameHook`.
+Existing StarMap BeforeGui/AfterGui/Unload and floating-window dispatch suffice. Its transient
+`ISaveParticipant` resets gestures before native replacement. See [vehicle scope](vehicle-physics.md#dent-wizard).

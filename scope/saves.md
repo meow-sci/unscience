@@ -84,3 +84,11 @@ rejects ambiguous IDs rather than selecting the first match.
 
 See [coverage and native acceptance](../plans/saves-acceptance.md) for implemented feature policies
 and the remaining live-game checks.
+
+## Dent Wizard transient policy
+
+`DentWizardSubmod` registers `ISaveParticipant` ID `dent-wizard`, version 1. Capture is an empty
+object; `ResetState` clears source references, speed (back to 5), gesture, status and pending shot.
+Restore replays no action. The launched vessel uses ordinary native KSA position/velocity state;
+no custom force or launch history is persisted. World replacement must call reset before the
+next `PhysicsFrameHook.BeforePhysics`; execution also rejects old-world source/target objects.

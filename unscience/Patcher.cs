@@ -63,6 +63,7 @@ internal static class Patcher
             MenuBarPatch.Apply(_harmony!);
         });
         TryApply("scene saves", () => NativeSaveHooks.Apply(_harmony!));
+        TryApply("dent-wizard physics handoff", () => PhysicsFrameHook.Apply(_harmony!));
         TryApply("blinky", () => BlinkyPatches.Apply(_harmony!));
         TryApply("its-so-shiny", () => ShinyPatches.Apply(_harmony!));
         TryApply("camera-controller-override", () =>

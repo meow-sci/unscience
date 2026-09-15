@@ -74,4 +74,7 @@
     <Project Path="world-saves.tests/world-saves.tests.csproj" />
     <Project Path="camera-saves.tests/camera-saves.tests.csproj" />
     <Project Path="ksa-upgrade.tests/ksa-upgrade.tests.csproj" />
+    <Project Path="dent-wizard/dent-wizard.csproj" />
+    <Project Path="dent-wizard.lib/dent-wizard.lib.csproj" />
+    <Project Path="dent-wizard.tests/dent-wizard.tests.csproj" />
 </Solution>

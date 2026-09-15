@@ -638,3 +638,39 @@ Eternal Flame and I Feel Seen register scene adapters through their existing pro
 They rebind vehicle IDs (including surviving debris when already tracked), restore refill interval
 and fuel/electric or visibility flags, and clear old manager ownership/timers on reset. No new
 Harmony/reflection target; scene lifetime is owned by [the save hooks](saves.md).
+
+## Dent Wizard
+
+Added against KSA **2026.9.10.5438**. `dent-wizard.lib` owns a regular `ISubmod` and a transient
+`ISaveParticipant`; template-derived `dent-wizard` is a development host. Only Unscience ships it.
+
+| Game/shared surface | Use and update invariant |
+|---|---|
+| `VehicleProvider.GetAllVehicles(includeDebris: true)` → `Universe.CurrentSystem.All`; `Vehicle.Id`, `IsDisposed`, `IsEditedVehicle`, `IsDebris`; `KittenEva` | Filterable source dropdown includes every live flight vehicle, EVA and debris. Retain exact object identity; reject disappeared/replaced objects at the handoff. |
+| `Program.EditorFlag`, `Program.GetMainCamera`, `Program.MainViewport`, `Program.HoveredViewport.IsMain()`; `Cursor.GetEgoRay` | Main-camera-only world click; ImGui capture suppresses UI clicks. Ray is EGO/ecliptic; source CoM goes to camera origin, not near-plane ray origin. |
+| `Vehicle.GetMatrixAsmb2Ego`; `PartTree.Parts`, `Part.RayCastEgo` | Closest visible art-mesh triangle, including nested parts. Source is excluded. Distance along the ray reconstructs the hit in EGO. No collision mesh/shader coupling. |
+| `KittenEva`, `PartTree.Root`, `Part.PositionEgo`, `Part.ScaleTotal`, `Vehicle.BoundingSphereRadiusBody`, `Double3Ex.GetAbsoluteLargestElement`, `Ray.Raycast(BoundingSphere3D)` | EVA sphere proxy matching stock/Graffiti; ordinary art-mesh picking is unavailable for the avatar. Separate canopy cloth and imported statics/clutter are not targets. |
+| `Camera.GetPositionEgo(IPosition)`, `Camera.NearbyCelestial`; `Celestial.GetCce2Ccf`, `MeanRadius`, `GetTerrainHeightFromDirCcf(accurate: true)` | Floating-origin-safe click offsets; 128 quadratic terrain samples then 24 bisections, maximum 10 km. Terrain competes by hit distance. Narrow features can be missed. |
+| `Vehicle.Parent`, `IParentBody.GetCce2Cci`, `Vehicle.GetPositionCci`, `GetVelocityCci`, `BodyRates`, `GetBody2Cci` | Vessel offsets captured in parent CCI; at handoff use target's committed translation and `v_target + omega_CCI × hitOffset + speed × direction`. Body rates must remain body-frame radians/s. |
+| `IParentBody.GetCcf2Cci(UniverseTime)`, `GetAngularVelocityCci` | Terrain click/camera positions stored in CCF, transformed at state time. Surface velocity is angular velocity crossed with hit position in CCI. |
+| `PhysicsFrameHook.BeforePhysics`, `IsApplied`; `Program.PrepareFrame(double,double)` existing transpiler; `SimStep.PreviousTime` | One pending shot consumed after result application, before next cloth/vehicle/orbit snapshots. No render-loop teleport. Existing hook must validate ordered solver seams; missing hook disables Aim. World reset clears the request before dispatch. |
+| `Orbit.CreateFromStateCci(IParentBody,UniverseTime,double3,double3,byte4)`, `Orbit.OrbitLineColor`; `Vehicle.Teleport(Orbit?,doubleQuat?,double3?)`, `FlightPlan`, `UpdatePerFrameData` | Creates target-parent orbit at the committed state timestamp. Null attitude/rates preserve source orientation/spin. Native Teleport leaves old bubble, updates parent Children via SetFlightPlan, rewrites physics with Situation.Maneuvering. If native trajectory computation rejects the orbit, unchanged FlightPlan identity reports failure. Recheck these semantics each upgrade. |
+| `ISubmod.Initialize/Update/RenderContent/RenderFloatingWindows/Dispose`; `ISaveParticipant`, ID `dent-wizard`, v1; host `HotkeyGuard` | Standard embedding, persistent gesture while panel is collapsed, transient form/shot reset on load and unsubscribe on unload. Actual launch effects are native vessel state. |
+
+No new Harmony target, reflection lookup, shader, byte offset, game asset or collision override.
+The standalone host installs/removes shared HotkeyGuard/PhysicsFrameHook; Unscience explicitly
+ensures the existing shared handoff and owns its lifetime.
+
+Validation: full solution build and `dent-wizard.tests` managed production arithmetic/launch
+boundary fixtures pass. Native acceptance remains open:
+
+- EVA and normal source; debris and cross-parent source; orbiting target shot perpendicular to
+  prograde at 10 m/s, stationary terrain and rotating/landed target.
+- UI manual 0.001 / 0.05 / >100, drag 0.1–100; mouse capture, one-shot/miss/cancel, collapsed panel,
+  main vs secondary viewports; no launch after scene load, destruction or unload.
+- Native teleport rejection, camera inside/near source, source controls/weld interference,
+  paused and accelerated simulation, ordinary collisions and visible dent/structural damage.
+
+This is ballistic initial velocity, not an accelerating-target or gravity-corrected intercept
+solver. Target spin is its instantaneous hit-point velocity; a rotating surface does not continue
+along that tangent indefinitely. Long, slow, or thrusting-target shots can miss.

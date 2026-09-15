@@ -25,6 +25,7 @@
     <ProjectReference Include="..\graffiti.lib\graffiti.lib.csproj" />
     <ProjectReference Include="..\free-fallin.lib\free-fallin.lib.csproj" />
     <ProjectReference Include="..\hot-pursuit.lib\hot-pursuit.lib.csproj" />
+    <ProjectReference Include="..\dent-wizard.lib\dent-wizard.lib.csproj" />
     <ProjectReference Include="..\pebbles.lib\pebbles.lib.csproj" />
     <ProjectReference Include="..\pyro.lib\pyro.lib.csproj" />
     <ProjectReference Include="..\glass.lib\glass.lib.csproj" />

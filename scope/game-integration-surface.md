@@ -1,3 +1,22 @@
+## Dent Wizard integration (5438)
+
+New `dent-wizard` / `dent-wizard.lib` source launcher is bundled in Unscience; `dent-wizard.tests`
+links its production math and launch boundary code. Full member contracts and native acceptance:
+[vehicle physics — Dent Wizard](vehicle-physics.md#dent-wizard).
+
+| Surface | Owner / behavior |
+|---|---|
+| `VehicleProvider` / `Universe.CurrentSystem.All`; `Vehicle`, `KittenEva`, `IsDisposed/IsEditedVehicle/IsDebris/Id` | Any live vessel source, including EVA and debris; exact object validation at execution. |
+| `Cursor.GetEgoRay(Program.MainViewport)`, `Program.GetMainCamera/EditorFlag/HoveredViewport.IsMain`, `Camera.GetPositionEgo/NearbyCelestial` | Main-camera world click and camera-relative snapshots. |
+| `Vehicle.GetMatrixAsmb2Ego`, `Part.RayCastEgo`, root `PositionEgo/ScaleTotal`, `BoundingSphereRadiusBody`, `Ray.Raycast(BoundingSphere3D)` | Part triangles or EVA sphere, source excluded; 10 km range. |
+| `Celestial.GetTerrainHeightFromDirCcf(accurate:true)`, `MeanRadius`, `GetCce2Ccf`; `IParentBody.GetCce2Cci/GetCcf2Cci(time)/GetAngularVelocityCci` | Terrain picking and CCI/CCF frame/rotation compensation. |
+| `Vehicle.GetPositionCci/GetVelocityCci/GetBody2Cci/BodyRates/Parent`; `Orbit.CreateFromStateCci/OrbitLineColor` | Target orbital + hit-point spin velocity plus requested relative shot. |
+| `Vehicle.Teleport`, `FlightPlan`, `UpdatePerFrameData`; shared `PhysicsFrameHook.BeforePhysics/IsApplied`, `SimStep.PreviousTime` | Safe one-shot native teleport and explicit failure detection; no new Harmony target. |
+| `ISubmod`, StarMap lifecycle, `ISaveParticipant` v1 `dent-wizard`, shared `HotkeyGuard` | Transient gesture/config reset; native result saved by KSA. |
+
+Solution build and managed launch checks pass. Native picking/EVA/collision acceptance remains
+pending. No new string reflection, shader, asset or byte-layout dependency.
+
 # Game Integration Surface — master index (unscience KSA mod suite)
 
 ## Current Iron Man integration (2026-09-07, 5402)

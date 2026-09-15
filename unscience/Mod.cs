@@ -29,6 +29,7 @@ using MeowSci.DontStifleMeLib;
 using MeowSci.GraffitiLib;
 using MeowSci.FreeFallinLib;
 using MeowSci.HotPursuitLib;
+using MeowSci.DentWizardLib;
 using MeowSci.PyroLib;
 using MeowSci.PebblesLib;
 using MeowSci.RockyMcRockFaceLib;
@@ -73,6 +74,7 @@ public class Mod
             _submods.Add(new BloominOnionSubmod());
             _submods.Add(new ByoMusicSubmod());
             _submods.Add(cameraOverride);
+            _submods.Add(new DentWizardSubmod());
             _submods.Add(new DohSubmod());
             _submods.Add(new DontStifleMeSubmod());
             _submods.Add(new EternalFlameSubmod());

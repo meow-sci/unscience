@@ -3,6 +3,9 @@
 Silly Kitten Space Agency features, distributed together as the single `unscience` mod. Start with [`REPOSITORY_INDEX.md`](REPOSITORY_INDEX.md) for the complete catalog and
 [`scope/FULL_SCOPE.md`](scope/FULL_SCOPE.md) for the game-integration map.
 
+`dent-wizard` fires any vessel or EVA kitten from the camera at a clicked vessel or terrain,
+with target-relative speed and orbital-velocity inheritance. See [Dent Wizard](dent-wizard/README.md).
+
 The current camera experiments include `hot-pursuit`: click a vehicle part to mount a live feed in
 one of KSA's stock secondary viewports, then tune its part-local pose, FOV, and resolution.
 
