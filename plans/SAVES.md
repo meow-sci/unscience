@@ -51,7 +51,7 @@ recipes, continuing without offline catch-up; camera sequences restore stopped a
 
 ## Implemented result and verification
 
-All 28 bundled submods expose explicit save adapters (29 records including Pyro shared templates).
+All 28 bundled submods expose explicit save adapters (30 records including Pyro shared templates and separate Kitchen Sink G-load registrations).
 Native saves carry hash-bound sidecars; loads reset/rebind at the safe frame boundary. Required
 native dependencies are checked before destructive reset; deferred failures reach the toolbox.
 Missing or incompatible feature data remains recoverable with explicit current-setup replacement.

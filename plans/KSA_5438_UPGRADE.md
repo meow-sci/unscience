@@ -1,5 +1,10 @@
 # KSA 5438 upgrade — impact, remediation and acceptance
 
+**Local follow-up:** [KSA_5438_RECONCILIATION](KSA_5438_RECONCILIATION.md) integrates the
+concurrent Kitchen Sink G-load/save work and Flexo removal. It supersedes this audit's Kitchen
+Sink solver/RecomputeStaticMass inventory and records 71 projects / 14 managed suites on Windows.
+The original upgrade evidence below remains a dated record of upstream's 70-project audit.
+
 ## Verdict and inputs
 
 The supplied update introduces compile-visible API changes and several silent render/asset

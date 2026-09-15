@@ -4,7 +4,9 @@ Silly Kitten Space Agency features, distributed together as the single `unscienc
 [`scope/FULL_SCOPE.md`](scope/FULL_SCOPE.md) for the game-integration map.
 
 `dent-wizard` fires any vessel or EVA kitten from the camera at a clicked vessel or terrain,
-with target-relative speed and orbital-velocity inheritance. See [Dent Wizard](dent-wizard/README.md).
+with target-relative speed and orbital-velocity inheritance. Existing Kitchen Sink G-load protection
+stays attached to the launched vessel; each feature retains its own save/reset policy.
+See [Dent Wizard](dent-wizard/README.md).
 
 The current camera experiments include `hot-pursuit`: click a vehicle part to mount a live feed in
 one of KSA's stock secondary viewports, then tune its part-local pose, FOV, and resolution.
@@ -135,3 +137,14 @@ paint/emissive/IVA submissions, canopy materials/restoration, final-depth decals
 diagnostics and Vulkan bindings. Parts Now rejects new explosion definitions it cannot unload.
 See [the full impact review and validation record](plans/KSA_5438_UPGRADE.md). Native flight/render
 acceptance remains pending; compilation and managed tests are recorded separately.
+
+Kitchen Sink adds a filtered vehicle picker and a scene-saved **G-load Invincibility** list with
+per-vehicle removal. Collisions and other damage checks remain active; the defunct Flexo test
+panels are removed. See [Kitchen Sink](kitchen-sink/README.md).
+These local changes are reconciled with the 5438 upgrade: the G-load decision is unchanged and
+the shared IVA rendering fix is retained. [Validation record](plans/KSA_5438_RECONCILIATION.md):
+71 projects build cleanly and all 14 managed suites pass; native acceptance remains pending.
+
+Save/restore maintenance is mandatory for feature changes in [AGENTS.md](AGENTS.md#scene-saverestore-maintenance-required-for-every-feature)
+and [CLAUDE.md](CLAUDE.md#scene-saverestore-maintenance-required-for-every-feature). Durable runtime
+registrations are saved by default; native/global/transient exclusions must be explicitly documented.

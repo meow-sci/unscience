@@ -13,6 +13,21 @@
 - MUST start from `scope/FULL_SCOPE.md` before changing anything that touches the game, and follow its game-update workflow when a new KSA build lands
 - MUST keep `scope/FULL_SCOPE.md` concise (entrypoint/ToC + high-level status); push depth into the adjacent area files
 
+# scene save/restore maintenance (required for every feature)
+
+Unscience game saves MUST account for every feature's state. A feature is not complete until
+its save/restore behavior is implemented or its genuinely transient/native/global state is
+explicitly accounted for. "Runtime state" does not mean "session-only."
+
+- MUST review `scope/saves.md`, `plans/saves-acceptance.md`, and the relevant existing `*.Saves.cs` / `*.Persistence.cs` adapter whenever implementing, modifying, or removing a feature.
+- MUST persist durable user-configured scene state by default, including per-vehicle registrations, toggles, relationships, owned objects, baselines, and reusable playback settings, through the existing `ISaveParticipantSource` / `ISaveParticipant` lifecycle and native-save `unscience.json` sidecar. Do not silently omit it or classify it as transient merely because it lives in memory.
+- MUST explicitly distinguish sidecar-owned state from state already saved by KSA, global libraries/presets, and transient UI/solver state. Document intentional exclusions and their reason; honor explicit user requests for session-only behavior.
+- MUST implement detached capture, validation, old-world cleanup/reset, and replay after native reconstruction at the existing safe lifecycle boundary. Clear stale references and pending work on vanilla saves, new scenes, repeated loads, and unload; restore through the feature's normal ownership APIs without duplicating objects or compounding transforms.
+- MUST use the shared stable vehicle/part identity resolvers. Never serialize live game objects, raw pointers, GPU handles, or reflection caches; never substitute the controlled vehicle or a similar/name-ambiguous target. Report missing targets and dependencies through the save diagnostics.
+- MUST preserve existing save IDs, versions, and payload compatibility. Add a separate record or an explicit migration when changing a payload; handle absent legacy records and unsupported/malformed data without silently losing earlier state.
+- MUST add or update meaningful persistence checks when saved behavior changes: round-trip through the real adapter, reset/rebind, repeated or cross-scene load, legacy/missing records, and invalid or unresolved targets as applicable. Run the relevant checks and full `dotnet build`; distinguish managed validation from native in-game acceptance.
+- MUST update the feature/project README, root README and `REPOSITORY_INDEX.md`, `plans/saves-acceptance.md`, and relevant `scope/` documents in the same change. Keep this section consistent in `AGENTS.md` and `CLAUDE.md`.
+
 # existing funcionality discovery
 
 Use `REPOSITORY_INDEX.md` as an initial place to discover existing mods and their functionality

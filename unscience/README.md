@@ -131,3 +131,11 @@ Graffiti-style one-shot gesture. The host explicitly ensures the existing `Physi
 Dent Wizard executes pending launches through `BeforePhysics` with `SimStep.PreviousTime`.
 Its transient save participant clears selection, speed and pending/armed launches before world
 replacement. Native KSA saves retain the resulting vessel position and velocity.
+
+## Kitchen Sink G-load protection
+
+Kitchen Sink's **G-load Invincibility** panel protects multiple selected vehicles from whole-vehicle
+G-load destruction while retaining collisions and other damage checks. Its active list is
+saved in the Unscience sidecar and rebound after native vehicle reconstruction. See [Kitchen Sink](../kitchen-sink/README.md).
+Reconciled with KSA 5438: no G-load/save migration is needed, and the consolidated host retains
+upstream's shared dent-aware IVA patch. [Build and test evidence](../plans/KSA_5438_RECONCILIATION.md).

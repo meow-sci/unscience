@@ -90,5 +90,27 @@ and the remaining live-game checks.
 `DentWizardSubmod` registers `ISaveParticipant` ID `dent-wizard`, version 1. Capture is an empty
 object; `ResetState` clears source references, speed (back to 5), gesture, status and pending shot.
 Restore replays no action. The launched vessel uses ordinary native KSA position/velocity state;
-no custom force or launch history is persisted. World replacement must call reset before the
+no custom force or launch history is persisted. Selection/speed configure only the next one-shot
+action rather than an ongoing scene registration. Kitchen Sink independently owns any G-load
+protection record; a launch preserves that vessel reference and its protection. World replacement must call reset before the
 next `PhysicsFrameHook.BeforePhysics`; execution also rejects old-world source/target objects.
+
+## Kitchen Sink G-load protection saves
+
+KitchenSinkSubmod retains its existing version-1 boolean IVA record (`kitchen-sink`) and adds
+`kitchen-sink-g-load`, a version-1 string-array record of protected vehicle IDs (restore order 20).
+Capture validates unique live identities; validation bounds the list to 10,000 nonblank unique IDs.
+Reset clears registrations and picker state before native reconstruction; replay uses the shared
+VehicleProvider.FindVehicle resolver to bind the exact reconstructed targets before solvers resume.
+Missing/disposed/ambiguous targets warn, patch unavailability fails visibly, and the coordinator
+retains the original record. Legacy/vanilla saves lacking the new record restore with no protection.
+Dispose/unpatch clears runtime references; ordinary updates prune missing/disposed objects.
+No new native save hook or changed legacy payload. Only picker state is transient.
+
+Reconciled against 5438: the detector, readonly vehicle identity and shared replay lifecycle
+remain compatible. Both version-1 records are unchanged. All 14 managed suites pass, including
+26 Kitchen Sink adapter checks; see [the reconciliation record](../plans/KSA_5438_RECONCILIATION.md).
+
+Kitchen Sink's managed checks link its real adapter, JSON helpers, vehicle resolver and coordinator
+for round-trip, A-B-A/repeated loads, legacy/vanilla cleanup, invalid targets and retained-state
+recovery. Native cart collision and save/load acceptance remain in-game.

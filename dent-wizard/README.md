@@ -42,7 +42,10 @@ Separate deployed parachute cloth, imported static props and clutter are not pic
 
 The launched vessel's physical state is native KSA save data. Selection, speed, armed gesture,
 and queued shot are transient and reset on scene load. Loading never fires an old pending shot.
-No persistent forces, custom assets, or collision modifications are added.
+No persistent forces, custom assets, or collision modifications are added. Source selection and
+speed configure only the next one-shot action, so neither is an applied scene registration.
+Kitchen Sink G-load protection is independent: launching preserves an existing registration,
+and Kitchen Sink saves/restores that protection. It does not disable contacts or part damage.
 
 Build: `dotnet build ksa-mod-experiments.slnx`.
 Managed checks: `dotnet run --project dent-wizard.tests`.

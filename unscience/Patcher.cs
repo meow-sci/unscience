@@ -12,6 +12,7 @@ using MeowSci.IFeelSeenLib;
 using MeowSci.HumbleArteestLib;
 using MeowSci.ItsSoShinyLib;
 using MeowSci.KittenAnimationsLib;
+using MeowSci.KitchenSinkLib;
 using MeowSci.KsaAbstractions;
 using MeowSci.KsaAbstractions.Persistence;
 using MeowSci.SphinxLib;
@@ -83,6 +84,7 @@ internal static class Patcher
         TryApply("engine-emissive", () => EngineEmissivePatches.Apply(_harmony!));
         TryApply("kitten-visor", () => KittenVisorPatches.Apply(_harmony!));
         TryApply("iva-force-render", () => IvaForceRender.Patch(_harmony!));
+        TryApply("kitchen-sink G-load protection", () => GLoadProtectionPatches.Apply(_harmony!));
         TryApply("dont-stifle-me", () => EditorScalePatches.Apply(_harmony!));
         TryApply("dont-stifle-me editor limits", () => EditorValueLimitPatches.Apply(_harmony!));
         TryApply("kitten-animations", () => KittenAnimationPatches.Apply(_harmony!));
@@ -136,6 +138,7 @@ internal static class Patcher
                 TryRemove("vehicle-paint", () => VehiclePaintPatches.Remove(_harmony!));
                 TryRemove("thug-life", () => ThugLifeRenderPatches.Remove(_harmony!));
                 TryRemove("iva-force-render", () => IvaForceRender.Unpatch(_harmony!));
+                TryRemove("kitchen-sink G-load protection", () => GLoadProtectionPatches.Remove(_harmony!));
                 TryRemove("kitten-animations", () => KittenAnimationPatches.Remove(_harmony!));
                 TryRemove("iron-man", () => IronManPatches.Remove(_harmony!));
                 TryRemove("sphinx", () => SphinxPatches.Remove(_harmony!));

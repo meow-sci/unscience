@@ -9,9 +9,9 @@ contracts. Update the owning area and master index in the same change as an inte
 - **Diffed from:** **2026.9.7.5402**, which matches the previous recorded baseline.
 - **Authoritative inputs:** sibling `ksa-game-assemblies/current/{dll,decomp,Content}` and
   `ksa-game-assemblies_prev/current/{dll,decomp,Content}`. The in-repo `decomp/ksa` is historical.
-- **Build references:** explicitly set `KSAFolder` to CURRENT's `dll/`; the macOS default also
-  resolves that tree. No separate native install was used or validated. Distribution redirected
-  to a temporary folder during verification.
+- **Build references:** explicitly set `KSAFolder` to CURRENT's `dll/`. The Windows reconciliation
+  also verified that the installed game reports **2026.9.10.5438**; the original upstream audit
+  ran on macOS without a separate install. Distribution was redirected during both checks.
 - **Changelog coverage:** 35 entries, revisions **5403–5437**; the window ends at **5438** without
   a separate 5438 entry. No intermediate baseline gap. Source and Content comparisons cover the
   complete supplied pair: 165 changed/43 added/5 removed KSA C# files, 25 changed/4 added Content files.
@@ -59,7 +59,7 @@ Scene-save adapters extend native saves; imported files remain external dependen
 | [`ground-clutter.md`](ground-clutter.md) | pebbles; [GLB materials](ground-clutter-glb-materials.md) | Per-body native clutter graphs, private materials, `ExecuteNextClothSolvers` transactions, collider/physics invalidation, shared copied GLB discovery, uploads and independent Workshop preview; shared Harmony ownership |
 | [`statics.md`](statics.md) | sphinx | Body-fixed GLB placement; live transforms and UV scale/offset, private vertex replacement, native static-renderer postfixes, shared GLB/PNG imports, terrain picking and automatic box/mesh colliders with per-bubble contact/lifetime hooks |
 | [`rings.md`](rings.md) | rocky-mcrock-face, bloomin-onion | planetary-ring mesh/texture swap (rocky) and **runtime ring definition on any celestial** (bloomin-onion) via the public `PlanetaryRingsReference` data tree + `Program.RebuildRenderer()`; **no Harmony patches**; `ModLibrary.AllMeshes`/`AllFiles` reflection, `MeshReference.<HostPrimitives>k__BackingField`, ctor-baking invariant in `PlanetaryRingsRenderData`; bloomin-onion adds `PlanetTransparenciesRenderer._anyRings` (load-bearing), `TextureReference.<TextureAsset>k__BackingField` (painted textures) and a cosmetic `DistantSphereRenderer._data` sync (new @5348) |
-| [`ui-customization.md`](ui-customization.md) | skittles, kitchen-sink | `ImGui` style surface, `ReinitializeDerivedValues` + IvaForceRender |
+| [`ui-customization.md`](ui-customization.md) | skittles, kitchen-sink | `ImGui` style surface, editor refresh/IVA rendering, and selected-vehicle G-load protection via `PhysicsBubble.DetectStructuralFailure`; Flexo diagnostics removed |
 | [`audio.md`](audio.md) | byo-music | Shared sound imports, FMOD stream/channel ownership, vessel-relative 3D playback and repeat/gaps |
 
 Bundled in the unscience supermod (29): blinky, bloomin-onion, byo-music, camera-controller-override, dent-wizard, doh,
@@ -77,6 +77,18 @@ Free Fallin material selection/restoration, Graffiti's final-depth resolve, and 
 explosion schema guard. See the [master index](game-integration-surface.md#5438-verification-summary)
 and [upgrade report](../plans/KSA_5438_UPGRADE.md) for evidence and validation results.
 
+Kitchen Sink replaces the defunct Flexo test panels and solver hook with a filtered vehicle
+picker and scene-saved G-load protection table. Both hosts install a guarded structural-failure
+transpiler; collisions, part damage, pressure damage and telemetry retain native behavior.
+The combined Dent Wizard/upstream integration passes all **74 projects and 15 managed suites**,
+including G-load isolation, save replay and protection preserved across launch. Its detector is unchanged from 5402; native cart/UI/load acceptance remains open.
+See [UI/customization](ui-customization.md#kitchen-sink).
+
+Unscience now extends native save/load with versioned scene-state sidecars and explicit feature
+adapters. World replacement is scheduled before new solver work and UI drawing; cleanup restores
+old ownership and replay rebinds native objects. Managed persistence/lifecycle checks accompany
+full compilation; native round-trip/GPU acceptance remains open. See [saves](saves.md).
+
 Standing native checks remain: paint/emissive with dents; plume controls and stock-engine isolation;
 canopy choices/restoration; one decal pass with MSAA/bloom; weld/scaling collisions under segmented
 physics; runtime thumbnails/clutter/statics; Iron Man modes; secondary cameras; audio; scene saves.
@@ -89,4 +101,5 @@ is historical and superseded by the current upgrade report.
 
 Dent Wizard added against 5438: source picker includes EVA/debris; camera-origin shots inherit
 orbital/surface velocity through the shared physics handoff. Managed launch checks and solution
-build pass; native launch/picking/collision acceptance is pending. See [vehicle scope](vehicle-physics.md#dent-wizard).
+build pass; native launch/picking/collision acceptance is pending.
+Combined merge evidence: [integration record](../plans/DENT_WIZARD_UPSTREAM_INTEGRATION.md). See [vehicle scope](vehicle-physics.md#dent-wizard).

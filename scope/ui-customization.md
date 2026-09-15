@@ -2,7 +2,14 @@
 
 ## Current verification — 5402 → 5438
 
-Skittles and Kitchen Sink remain source-compatible with the shipped Brutal ImGui types. GameSettings.OnKeyAll, solver callbacks and PartTree.RecomputeStaticMass (NEW :802) retain their bodies. Kitchen Sink inherits the shared IVA overload correction in ksa-abstractions.lib; no separate editor clamp or UI redesign is required. Verify typing, hidden HUD and IVA display in game.
+Skittles and Kitchen Sink remain source-compatible with the shipped Brutal ImGui types.
+Kitchen Sink's local Flexo removal retires its solver callback and RecomputeStaticMass reflection.
+Its new G-load target, `PhysicsBubble.DetectStructuralFailure` (OLD :782, NEW :873), and
+`FullPhysicsEndFrame` caller are source-identical; `StructuralLoad` and `VehicleStructuralLimits`
+are unchanged. The registry and version-1 save records require no migration. Kitchen Sink
+inherits the shared IVA common-overload/dent-list correction in ksa-abstractions.lib. Verify
+typing, hidden HUD, IVA display, G-load/pressure isolation and scene replay in game under the
+updated segmented physics scheduler. See [reconciliation](../plans/KSA_5438_RECONCILIATION.md).
 
 Verified against `2026.9.10.5438` using both supplied source/Content trees.
 See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
@@ -30,12 +37,7 @@ submod instances are also embedded in the **unscience** supermod
 (`unscience/Mod.cs` creates `SkittlesSubmod` and `KitchenSinkSubmod`). Both hosts toggle a window with **F11** and call
 `SubmodUI.BeginContentArea` / `EndContentArea` for the body.
 
-Important hosting caveat for kitchen-sink: as of Phase 4 the supermod's `unscience/Patcher.cs`
-**now calls** `IvaForceRender.Patch()` (so the IVA ctor/`AddInstance` postfixes are live in the
-supermod too), but it still does **not** dispatch the vehicle-solver prefix
-(`KitchenSinkSolverPatch`) to `KitchenSinkSubmod`. The Flexo "Update Physics" path is therefore
-still only live in the **standalone** kitchen-sink host (`kitchen-sink/Patcher.cs`). This is a
-mod-wiring detail, not a game-update risk, but it is part of the integration picture.
+Kitchen Sink installs both IvaForceRender and GLoadProtectionPatches in Unscience and the standalone development host. The defunct Flexo solver hook and diagnostic panels were removed on 2026-09-13.
 
 **Distinction — ImGui is third-party, not KSA.** skittles drives
 `Brutal.ImGuiApi` (the bundled Dear ImGui wrapper), which is shipped with the game but
@@ -56,7 +58,7 @@ the `PartModel` public API untouched. Details per mod.
 - `skittles` integrates primarily with Brutal.ImGuiApi and touches KSA only for shared color accents and
   lifecycle/hotkey handling.
 - `kitchen-sink` owns the editor refresh and IVA force-render surfaces; the Unscience host wires
-  `IvaForceRender`, while the experimental vehicle-solver patch remains standalone-only.
+  `IvaForceRender` and selected-vehicle G-load protection. The Flexo experiments are removed.
 
 **Integration-point "Kind" legend**
 
@@ -131,44 +133,37 @@ only). Editor window "Skittles — Theme Editor###sk_editor", 700x800, hosts
 
 ## kitchen-sink
 
-**Purpose** — Grab-bag of one-off editor/render fixes. Two shipped fixes plus two
-experimental transform-test panels: (a) **Fix Invisible Subparts** —
-`PartTree.ReinitializeDerivedValues` on the editor's part tree; (b) **Force IVA
-Rendering** — `IvaForceRender` (in `ksa-abstractions.lib`) flips
-`PartModelModule.Template.Internal` to false and Harmony-postfixes the `PartModel` ctor
-and `PartModel.AddInstance` so interior meshes render outside IVA camera mode and in the
-editor preview; (c/d) **Flexo Part/Subpart Test** — interactive `Part` transform nudging
-with deferred physics resync.
+**Purpose:** editor refresh, Force IVA Rendering, and selected-vehicle G-load invincibility.
+The defunct Flexo Part/Subpart Test panels, transform/bounds/mass mutations, and standalone
+`KitchenSinkSolverPatch` / `Universe.ExecuteNextVehicleSolvers` hook are removed.
 
-**Unscience integration** — `KitchenSinkSubmod : ISubmod` (`kitchen-sink.lib/KitchenSinkLib.cs:12`),
-holding a `FlexoPartTest` and `FlexoSubpartTest`. Created standalone
-(`kitchen-sink/Mod.cs:30`) and in the supermod (`unscience/Mod.cs:83`).
-`UpdateBeforeVehicleSolvers` is driven by a Harmony prefix on
-`Universe.ExecuteNextVehicleSolvers` (`kitchen-sink/Patcher.cs:52-75`, priority First).
-**Wiring (Phase 4):** the supermod now applies `IvaForceRender.Patch` (`unscience/Patcher.cs`), so
-the IVA ctor/`AddInstance` postfixes (parts spawned after toggle + editor-preview fix) are live in
-supermod mode as well as standalone. **Still standalone-only:** `KitchenSinkSolverPatch.Apply`
-(`kitchen-sink/Patcher.cs:23-24,52-75`) — so the Flexo "Update Physics" button only fires in the
-standalone kitchen-sink host. `Mod.Unload` forces `IvaForceRender.Enabled = false` to restore
-templates (`kitchen-sink/Mod.cs:72`).
+**Hosting:** `KitchenSinkSubmod : ISubmod` is shared by Unscience and the standalone development
+host. Both patchers install/remove `IvaForceRender` and `GLoadProtectionPatches`. The standalone
+F11 window defaults to 540x440; Unscience uses its existing toolbox panel.
 
-**UI/hotkeys** — Standalone window "Kitchen Sink", 420x300, **F11** toggle
-(`kitchen-sink/Mod.cs:55,85`). Sections: "Force IVA Rendering" checkbox; "Fix Invisible
-Subparts" → "Refresh Vehicle" button; "Flexo Part Test" and "Flexo Subpart Test"
-(vehicle/part[/subpart] combos + Pos/Rot drag tables + Reset / Update-Physics).
+**UI/runtime:** case-insensitive filtered vehicle dropdown, Add G-load Invincible button,
+and a table of all protected vehicles with per-row Delete. Duplicate adds are disabled.
+`GLoadProtection` uses a concurrent dictionary with reference identity for safe worker reads.
+No same-name replacement inherits protection. Updates prune missing/disposed targets; selection
+is an object reference. Protection does not depend on UI visibility.
 
-**Persistence** — None. No disk I/O, no config, no StarMap save hooks. `IvaForceRender`
-state is in-memory (`_mutatedTemplates`) and reset on toggle-off / unload.
+**Persistence:** the existing version-1 `kitchen-sink` boolean record still stores IVA visibility.
+A separate version-1 `kitchen-sink-g-load` string-array record stores stable vehicle IDs. Its reset
+clears the registry/picker before reconstruction, then replay uses VehicleProvider.FindVehicle
+for exact, unambiguous rebinding. Missing/disposed targets warn and retain the original record;
+patch unavailability fails restoration visibly. Legacy/vanilla saves without the new record leave
+protection empty. Dispose/unpatch clears live references. No new native lifecycle hook.
 
-**Integration points**
+**Historical editor/IVA integration points** (game baseline 5402; the 5438 common-overload and
+paired dent-list correction above supersedes rows 7–9):
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
-|---|------|----------------------|----------------------------------------|-------------------|---------|----------|------------|
-| 1 | 3 | `KitchenSinkLib.cs:56` | `Program.Editor : static VehicleEditor?` | `KSA/Program.cs:226` | Yes | None (OLD:207) | null-guarded |
-| 2 | 3 | `KitchenSinkLib.cs:57` | `VehicleEditor.EditingSpace : VehicleEditingSpace` (field) | `KSA/VehicleEditor.cs:545` | Yes | None (OLD:545) | |
-| 3 | 3 | `KitchenSinkLib.cs:57,59` | `VehicleEditingSpace.Parts : PartTree?` (field) | `KSA/VehicleEditingSpace.cs:16` | Yes | None (OLD:16; file diff is 3 `Viewport`→`IViewport` draw signatures) | null-guarded |
-| 4 | 3 | `KitchenSinkLib.cs:59` | `PartTree.States : ModuleStateList` (field) | `KSA/PartTree.cs:39` | Yes | None (OLD:39) | passed as `oldStates` |
-| 5 | 3 | `KitchenSinkLib.cs:60` | `PartTree.ReinitializeDerivedValues(ModuleStateList oldStates) : void` | `KSA/PartTree.cs:308` | Yes | None (OLD:308; 0-arg overload `:302`) | `ModuleStateList.cs` byte-identical |
+|---|---|---|---|---|---|---|---|
+| 1 | 3 | `KitchenSinkLib.cs (editor refresh)` | `Program.Editor : static VehicleEditor?` | `KSA/Program.cs:226` | Yes | None (OLD:207) | null-guarded |
+| 2 | 3 | `KitchenSinkLib.cs (editor refresh)` | `VehicleEditor.EditingSpace : VehicleEditingSpace` (field) | `KSA/VehicleEditor.cs:545` | Yes | None (OLD:545) | |
+| 3 | 3 | `KitchenSinkLib.cs (editor refresh)` | `VehicleEditingSpace.Parts : PartTree?` (field) | `KSA/VehicleEditingSpace.cs:16` | Yes | None (OLD:16; file diff is 3 `Viewport`→`IViewport` draw signatures) | null-guarded |
+| 4 | 3 | `KitchenSinkLib.cs (editor refresh)` | `PartTree.States : ModuleStateList` (field) | `KSA/PartTree.cs:39` | Yes | None (OLD:39) | passed as `oldStates` |
+| 5 | 3 | `KitchenSinkLib.cs (editor refresh)` | `PartTree.ReinitializeDerivedValues(ModuleStateList oldStates) : void` | `KSA/PartTree.cs:308` | Yes | None (OLD:308; 0-arg overload `:302`) | `ModuleStateList.cs` byte-identical |
 | 6 | 1 | `ksa-abstractions.lib/IvaForceRender.cs:42` | `PartModel..ctor(PartModelModule.Template)` **protected** (Harmony postfix via `AccessTools.Constructor`) | `KSA/PartModel.cs:384` | Yes | None (OLD:383; body identical, only ctor) | catches parts built after toggle |
 | 7 | 1 | `IvaForceRender.cs:46` (lookup), `:98` (postfix sig) | `PartModel.AddInstance(PerInstanceData, IViewport, int frameIndex) : void` (Harmony postfix; captures `__0`,`__1` only) | `KSA/PartModel.cs:408` | Yes | **RETYPED @5402** `Viewport`→`IViewport` (OLD:407) — postfix `__1` updated; **NEW GATE @5402** `:410-413` early-returns unless `viewport.HasAny(ViewportOptionFlags.RenderPartModels)`; IVA/raytracing gate `:415` now per-viewport | method is **3-arg**; postfix ignores `frameIndex` (`__2`). ⚠ postfix does not yet mirror the new gate — see 5348→5402 summary |
 | 8 | 3 | `IvaForceRender.cs:98,105` | `PartModel.PerInstanceData` (struct) | `KSA/PartModel.cs:332` | Yes | None (OLD:331) | postfix param `__0` |
@@ -179,40 +174,32 @@ state is in-memory (`_mutatedTemplates`) and reset on toggle-off / unload.
 | 13 | 3 | `IvaForceRender.cs:103` | `PartModelModule.Template.RayTracing : RaytracingMode` + `RaytracingMode.ShadowProxy` | `KSA/PartModelModule.cs:32,15` | Yes | None (OLD:32/15) | shadow-proxy skip in editor postfix |
 | 14 | 3 | `IvaForceRender.cs:100` | `Program.Editor` (null check, editor-preview gate) | `KSA/Program.cs:226` | Yes | None | |
 | 15 | 3 | `IvaForceRender.cs:102` | `Program.MainViewport : IGameViewport` `.Mode : CameraMode { get; }` `== CameraMode.IVA` | `KSA/Program.cs:485`; `IViewport.cs:29` (impl `ViewportBase.cs:36`); `CameraMode.cs:14` | Yes | **RETYPED @5402** — `MainViewport` was `Viewport` (OLD Program:468), `Mode` was a public field (OLD `Viewport.cs:14`); `CameraMode.cs` identical | compile-bound read; no code change |
-| 16 | 1 | `kitchen-sink/Patcher.cs:56` | `Universe.ExecuteNextVehicleSolvers(double dtPlayer, SimStep simStep) : static void` (Harmony prefix; captures `dtPlayer` by name) | `KSA/Universe.cs:1834` | Yes | None (OLD:1767; body identical) | method is **2-arg**; prefix declares only `dtPlayer` — valid; single overload so `AccessTools.Method` is unambiguous |
-| 17 | 3 | `FlexoPartTest.cs:184`; `FlexoSubpartTest.cs:193` (via `VehicleProvider.cs:15`) | `Universe.CurrentSystem : static CelestialSystem?` `.All : LookupCollection<Astronomical>` `.UnsafeAsList()` | `KSA/Universe.cs:94`; `CelestialSystem.cs:64` | Yes | None (OLD:94/57) | Flexo vehicle enumeration |
-| 18 | 3 | `FlexoPartTest.cs:84,91`; `VehicleProvider.cs:22` | `Vehicle.Id : string` (inherited `Astronomical.Id { get; protected set; }`) | `KSA/Astronomical.cs:104` | Yes | None (OLD:104) | read-only to mod |
-| 19 | 3 | `FlexoPartTest.cs:201`; `FlexoSubpartTest.cs:214` | `Vehicle.Parts : PartTree { get; set; }` → `PartTree.Parts : ReadOnlySpan<Part>` | `KSA/Vehicle.cs:604`; `PartTree.cs:95` | Yes | None (OLD:598/95; `Parts` is a property, not a field) | |
-| 20 | 3 | `FlexoPartTest.cs:108,115` | `Part.Template : PartTemplate` `.Id` | `KSA/Part.cs:576` | Yes | None (OLD:568) | combo labels |
-| 21 | 3 | `FlexoPartTest.cs:216,250,263` | `Part.PositionParentAsmb : double3 { get; set; }` | `KSA/Part.cs:752` | Yes | None (OLD:744; property body diffed identical) | written by Flexo |
-| 22 | 3 | `FlexoPartTest.cs:217,251,264` | `Part.Asmb2ParentAsmb : doubleQuat { get; set; }` | `KSA/Part.cs:766` | Yes | None (OLD:758; property body diffed identical) | written by Flexo |
-| 23 | 3 | `FlexoPartTest.cs:227` | `Part.TreeChildren : List<Part>` (field) | `KSA/Part.cs:666` | Yes | None (OLD:658) | descendant snapshot |
-| 24 | 3 | `FlexoPartTest.cs:302`; `FlexoSubpartTest.cs:230` | `Part.SubParts : ReadOnlySpan<Part>` | `KSA/Part.cs:1079` | Yes | None (OLD:1052) | cache invalidation walk |
-| 25 | 3 | `FlexoPartTest.cs:253,266,279,286,306` | `Part.BoundingBoxVehicleAsmb : (double3,double3) { get; set; }` + `ComputeBoundingBoxVehicleAsmb() : (double3 Min, double3 Max)` | `KSA/Part.cs:831,1464` | Yes | Property none (OLD:823). Method **body refactored @5402** (OLD:1424): now `ComputeSubPartBoundingBox(inVehicleAsmb: true)` (`:1484`) accumulating **all** `MeshViewModule`s per sub-part via `AccumulateMeshBounds` (`:1504`) instead of only `span[0]`; signature unchanged | recompute after move; bounds may grow slightly for multi-mesh subparts |
-| 26 | 3 | `FlexoPartTest.cs:320`; `FlexoSubpartTest.cs:291` | `Vehicle.UpdateAfterPartTreeModification() : void` | `KSA/Vehicle.cs:1881` | Yes | None (OLD:1727; body identical) | deferred to solver prefix |
-| 27 | 2 | `FlexoPartTest.cs:319`; `FlexoSubpartTest.cs:290` | `PartTree.RecomputeStaticMass() : void` **private** (HarmonyLib `Traverse.Method("RecomputeStaticMass")`) | `KSA/PartTree.cs:778` | Yes | None (OLD:778; public `RefreshStaticMass()` wrapper at `:773`) | **string-based reflection** — silently caught if renamed |
-| 28 | 1 | `kitchen-sink/Patcher.cs:22` | `HotkeyGuard.Patch` (abstraction) | `ksa-abstractions.lib/HotkeyGuard.cs` | n/a | None | shared guard |
 
-**Game assets referenced** — None (operates on already-loaded `PartModel`/`PartTree`
-instances; no `Content/` paths).
+**G-load integration points (added 2026-09-13):**
 
-**Update-risk findings (4680 -> 4750)**
+| Kind | Mod code | Game target | Decompiled source @5438 | Contract |
+|---|---|---|---|---|
+| Harmony transpiler / string method lookup | `GLoadProtectionPatches.Apply/Remove/Transpile` | private static `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState) : void` | `KSA/PhysicsBubble.cs:873` | Unchanged from 5402:782. Exact parameter signature, static/void validation, exactly one GLoadFraction getter required; installation fails explicitly on missing/ambiguous layouts. |
+| Typed getter / IL injection point | `GLoadProtectionPatches.Transpile` | `StructuralLoad.GLoadFraction : double` | `KSA/StructuralLoad.cs:15`; detector `PhysicsBubble.cs:890` | Unchanged from 5402:799. Inject `(fraction, vehicleState) -> fraction or 0` after the getter. Only the destruction comparison sees the filtered value; stored telemetry is not modified. |
+| Typed identity | `GLoadProtectionPatches.FilterGLoadFraction` | `VehicleUpdateState.ReadOnlyVehicle : Vehicle` | `KSA/VehicleUpdateState.cs:14` | Look up exact vehicle reference in concurrent registry on solver worker. |
+| Typed liveness / labels | `GLoadProtection`, `KitchenSinkSubmod.GLoadProtection.cs` | `Vehicle.IsDisposed`; inherited `Vehicle.Id`; `VehicleProvider.GetAllVehicles` | `KSA/Vehicle.cs:617`; `KSA/Astronomical.cs:104`; `ksa-abstractions.lib/VehicleProvider.cs` | Picker excludes debris; pruning includes live debris and never retargets by name. |
+| Shared host / reset | both `Patcher.cs` hosts; `KitchenSinkSubmod.Saves.cs` | shared Harmony instance; `ISaveParticipantSource`, `ISubmod.Update/Dispose` | local abstraction contracts | Add disabled if patch unavailable. Reset/unload discard live registrations; save replay rebinds recorded IDs after reconstruction. HotkeyGuard stays installed. |
 
-- No breaking deltas detected. `KSA/PartModel.cs` and `KSA/PartModelModule.cs` are
-  byte-identical between revs (same members, same line numbers), so the IVA force-render
-  feature (#6-#15) is fully intact despite the rev-4693/4745-era mesh/shader churn —
-  that churn (MeshIndirect merge, ModelGlass/ModelEye combine, IVA AO/raytracing fixes)
-  touched shaders and GPU paths, not the `PartModel` C# API or `Template.Internal` gate.
-- `PartTree.ReinitializeDerivedValues(ModuleStateList)` and the private
-  `RecomputeStaticMass()` are unchanged; `ModuleStateList` still exists. Fix-Invisible-
-  Subparts (#4-#5) and the Flexo physics resync (#26-#27) are safe.
-- `Universe.ExecuteNextVehicleSolvers` is still the single 2-arg
-  `(double dtPlayer, SimStep simStep)` overload in both revs — the by-name `dtPlayer`
-  prefix and the name-only `AccessTools.Method` resolution remain unambiguous.
-- Watch items (version-independent): the protected `PartModel..ctor` resolved by
-  parameter-type array (#6) breaks if a `PartModelModule.Template` overload is added or
-  the param type changes; `Traverse.Method("RecomputeStaticMass")` (#27) is the only
-  string-named member in this mod and fails *silently* (caught, logged) if renamed.
-```
+The protected vehicle's G-failure boolean stays false for every contact situation, including
+terrain/ocean impacts. The native dynamic-pressure branch still runs and assigns its normal
+cause when both loads would exceed limits. PartFailure.Detect, contact solving, measured peaks,
+StructuralLoad values, and VehicleStructuralLimits/FlightComputer limits are untouched.
+The detector's existing pending-event early return remains intact.
 
----
+**Update risk:** recheck the detector's getter/comparison relationship and that its single static
+argument still identifies the evaluated vehicle. An extra GLoadFraction read rejects installation.
+Check native contact/part-failure precedence and pressure cause selection on game updates.
+No game assets, shader dependencies, or new Bepu mutations are added.
+
+**Validation:** full solution compilation and `kitchen-sink.tests` exercise the production
+registry/transpiler against managed 5438 decision fixtures (unchanged from 5402): multiple targets, same-name isolation,
+G/pressure thresholds, contact causes, telemetry, pending events, removal/pruning/reset,
+concurrent reads, unpatch restoration and missing/duplicate getter rejection. Another 26 checks
+exercise the real save adapter/resolver/coordinator for JSON round-trip, legacy/vanilla loads,
+A-B-A/repeated rebind, invalid targets and retained-record recovery. Native picker,
+HUD-hidden behavior and actual Bepu cart collisions remain in-game acceptance checks.

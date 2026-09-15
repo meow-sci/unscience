@@ -11,7 +11,9 @@ boundary fixtures and the game-shipped `Brutal.Core.Numerics`/`BepuUtilities` as
 - deferred click geometry, committed state timestamp, cross-parent launch and preserved source spin;
 - native teleport rejection, disposed/reparented targets, editor use and stale world identities;
 - terrain CCF-to-CCI conversion and surface rotation;
-- one-shot dispatch, repeated initialization, scene-reset cancellation and unload cleanup.
+- one-shot dispatch, repeated initialization, scene-reset cancellation and unload cleanup;
+- the production Kitchen Sink G-load registry retains exact source protection across launch,
+  rejection and Dent Wizard reset/unload without protecting an unregistered target.
 
 Fixtures verify our boundary calls and arithmetic, not KSA's native flight-plan solver, physics
 handoff implementation, ImGui interaction or collision behavior. The shared handoff has separate

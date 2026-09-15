@@ -662,7 +662,10 @@ The standalone host installs/removes shared HotkeyGuard/PhysicsFrameHook; Unscie
 ensures the existing shared handoff and owns its lifetime.
 
 Validation: full solution build and `dent-wizard.tests` managed production arithmetic/launch
-boundary fixtures pass. Native acceptance remains open:
+boundary fixtures pass. The combined upstream check also links the real Kitchen Sink registry:
+protected sources remain protected after launch/rejection and Dent Wizard reset/unload, while
+unregistered targets remain unprotected. See [merge validation](../plans/DENT_WIZARD_UPSTREAM_INTEGRATION.md).
+Native acceptance remains open:
 
 - EVA and normal source; debris and cross-parent source; orbiting target shot perpendicular to
   prograde at 10 m/s, stationary terrain and rotating/landed target.
@@ -674,3 +677,11 @@ boundary fixtures pass. Native acceptance remains open:
 This is ballistic initial velocity, not an accelerating-target or gravity-corrected intercept
 solver. Target spin is its instantaneous hit-point velocity; a rotating surface does not continue
 along that tangent indefinitely. Long, slow, or thrusting-target shots can miss.
+
+## Kitchen Sink selective G-load protection
+
+Kitchen Sink adds an opt-in, scene-saved vehicle registry and a guarded transpiler on
+`PhysicsBubble.DetectStructuralFailure(VehicleUpdateState)` (5438:873, unchanged from 5402:782).
+It gates only the GLoadFraction comparison (5438:890, previously 5402:799), preserving contacts, part damage, pressure damage and real
+load telemetry. Both hosts install it. Full surface/lifecycle map and native acceptance limits:
+[UI/customization](ui-customization.md#kitchen-sink).

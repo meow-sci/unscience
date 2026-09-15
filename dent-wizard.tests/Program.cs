@@ -3,6 +3,7 @@ using Brutal.Numerics;
 using KSA;
 using MeowSci.DentWizardLib;
 using MeowSci.KsaAbstractions;
+using MeowSci.KitchenSinkLib;
 
 namespace MeowSci.DentWizardTests;
 
@@ -49,12 +50,16 @@ internal static class Entry
         var source = new Vehicle(new Body()) { BodyRates = new double3(1, 2, 3) };
         var target = new Vehicle(body);
         VehicleProvider.Vehicles.AddRange(new[] { source, target });
+        GLoadProtection.Add(source);
         var request = new LaunchRequest(source, target, body, new double3(-100, 0, 0), double3.Zero, 10);
         Check(source.Teleports == 0, "Capturing a request moved the source");
         // Target advanced between UI and physics handoff. Retain relative click geometry.
         target.Orbit = target.Orbit with { Position = new double3(7000000, 125, 0) };
         var time = new UniverseTime(42);
         request.Execute(time);
+        GLoadProtection.Prune(VehicleProvider.Vehicles);
+        Check(GLoadProtection.Contains(source) && !GLoadProtection.Contains(target),
+            "Launching a protected source lost its registration or protected the target");
         Near(source.Orbit.Position, new double3(6999900, 125, 0), "Click drifted between UI and handoff");
         Near(source.Orbit.Velocity, shot, "Production request lost orbital speed");
         Near(source.BodyRates, new double3(1, 2, 3), "Source spin was modified");
@@ -62,6 +67,7 @@ internal static class Entry
         int launches = source.Teleports;
         source.RejectTeleport = true;
         Reject(() => request.Execute(time), "Native teleport rejection reported success");
+        Check(GLoadProtection.Contains(source), "Rejected launch changed G-load protection");
         source.RejectTeleport = false;
         target.IsDisposed = true;
         Reject(() => request.Execute(time), "Disposed target launched");
@@ -106,6 +112,8 @@ internal static class Entry
         submod.Dispose();
         PhysicsFrameHook.Dispatch(time);
         Check(PhysicsFrameHook.Subscribers == 0 && source.Teleports == launches + 1, "Dispose retained a pending shot or callback");
+        Check(GLoadProtection.Contains(source), "Dent Wizard reset/unload changed another feature's protection");
+        GLoadProtection.Clear();
         Console.WriteLine("Dent Wizard: speed, orbital intercept, boost, spin, handoff, parent, stale-world and terrain checks passed.");
 
     }
