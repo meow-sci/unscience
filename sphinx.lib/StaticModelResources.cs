@@ -162,7 +162,7 @@ internal sealed unsafe partial class StaticModelResources : IDisposable
             VkDescriptorSet[] sets = [draw.Set, _instanceSets[slot]];
             command.BindDescriptorSets(VkPipelineBindPoint.Graphics, layout, 2, sets, default(Span<ByteSize32>));
             command.BindVertexBuffer(0, draw.Vertices!.Value.VkBuffer, draw.Vertices.Value.BindOffset);
-            VkDeviceExtensions.BindIndexBuffer(command, draw.Indices!.Value.VkBuffer, draw.Indices.Value.BindOffset, VkIndexType.Uint32);
+            VkDeviceExtensions.BindIndexBuffer(command, draw.Indices!.Value.VkBuffer, draw.Indices.Value.BindOffset, VkIndexType.UInt32);
             // Direct draw => gl_DrawID == 0; each descriptor points at exactly one PerDrawData.
             command.DrawIndexed(draw.Count, 1, 0, 0, 0);
         }

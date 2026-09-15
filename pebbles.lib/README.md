@@ -110,3 +110,7 @@ faults retain ownership and block replay with a visible warning.
 
 Scene saves rebuild applied clutter recipes; runtime destroyed-clutter/exclusion masks are not
 checkpointed, so regeneration can recreate previously removed clutter.
+
+## KSA 5438 compatibility
+
+The preview index binding uses KSA 5438’s renamed UInt32 enum member. Native clutter shaders, material layouts and reflection hooks remain compatible; live apply/restore, GPU retirement and collision acceptance are still required.

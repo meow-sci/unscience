@@ -452,8 +452,9 @@ with isolated filesystem data, including duplicate handling, PNG compatibility a
 
 ### [pyro.tests](pyro.tests)
 
-Managed executable linking production on/off cycle logic; validates boundaries, pause, warp,
-backward clocks, stop/restart and non-finite input without loading native KSA.
+Managed executable linking production on/off cycle and plume migration helpers; validates boundaries,
+pause, warp, backward clocks, stop/restart, throttle pressure, refraction scaling and legacy template
+aliases without loading native KSA.
 
 **Shared GLB discovery:** `ksa-abstractions.lib/GlbLibrary` supplies the copied `.unscience/glbs`
 catalog and lazy file choices. Pebbles' `ClutterAssets.ResolveSelection` freezes selected files to
@@ -516,3 +517,25 @@ Managed checks linking the production submod and EVA/flight-settings snapshots a
 fixtures. Covers deferred mode changes, manual/disarmed entry, native settings/control restoration,
 editor access in either mode, guards, repeated cycles, per-kitten isolation and disposal/pruning.
 No native physics or GUI initialization; see [test details](iron-man-mode.tests/README.md).
+
+## KSA 5438 upgrade
+
+The current integration baseline is KSA **2026.9.10.5438**, compared with **2026.9.7.5402**.
+[Upgrade evidence and native acceptance](plans/KSA_5438_UPGRADE.md) covers the full suite.
+
+- `ksa-abstractions.lib`: native hash assembly reference and exact IVA render submission/dent alignment.
+- `blinky.lib`: selected native flow-order traversal counts actual reachable tank entries.
+- `pyro.lib`: renderer-owned plume physics/submission, per-plume appearance and legacy template migration.
+- `humble-arteest.lib`: explicit static/dynamic part submission targets preserve paint/emissive with dents.
+- `free-fallin.lib`: current canopy baseline and per-renderable native material restoration.
+- `graffiti.lib`: decals draw after final depth resolve; Vulkan index enum migration.
+- `parts-now.lib`: V8 rejects untracked top-level Explosion/ExplosionVolume registries.
+- `pebbles.lib`, `sphinx.lib`, `thug-life.lib`: current Vulkan index enum bindings.
+
+### [ksa-upgrade.tests](ksa-upgrade.tests)
+
+Managed executable linking production Blinky feed diagnostics, Free Fallin material restoration and
+Parts Now V8 validation. Covers empty/selected drain views, per-canopy originals and re-enable behavior,
+external material changes, rejected top-level explosion definitions, retained legacy exclusions,
+permitted nested references and source diagnostics. Managed Harmony fixtures avoid native game
+initialization; see [README](ksa-upgrade.tests/README.md).

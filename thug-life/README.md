@@ -129,3 +129,7 @@ Detailed approach lives in the project's [ksa/quad.md skill doc](../.claude/skil
 - If rendering ever throws (e.g. shaders missing), the manager disables itself and
   the error appears in the UI; it never spams the render loop. A GPU-init failure
   surfaces on the **Add Sunglasses** button, since that is what brings the pipeline up.
+
+## KSA 5438 compatibility
+
+Updated the quad index binding for KSA 5438. The native unlit shader interface and render hook remain compatible; verify the quad in game after upgrading.

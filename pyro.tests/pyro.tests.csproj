@@ -1,4 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><RequiresKSAAssemblies>false</RequiresKSAAssemblies></PropertyGroup>
-  <ItemGroup><Compile Include="../pyro.lib/PlumeCycle.cs" Link="PlumeCycle.cs" /></ItemGroup>
+  <ItemGroup>
+    <Compile Include="../pyro.lib/PlumeCycle.cs" Link="PlumeCycle.cs" />
+    <Compile Include="../pyro.lib/PlumeMigrationMath.cs" Link="PlumeMigrationMath.cs" />
+    <Compile Include="../pyro.lib/PlumeTemplateIds.cs" Link="PlumeTemplateIds.cs" />
+  </ItemGroup>
 </Project>

@@ -10,7 +10,7 @@ public static class PlumeTemplates
 {
     // Fallback list (the game's shipped ExhaustAssets.xml) used only if the reflection lookup fails.
     private static readonly string[] KnownIds =
-        { "EngineALarge", "EngineAMed", "EngineACompact", "EngineAVernier", "EngineATurbine", "RCS", "MmuRcsVac" };
+        { "EngineALarge", "EngineAMed", "EngineACompact", PlumeTemplateIds.Auxiliary, "RCS", "MmuRcsVac" };
 
     private static string[]? _cachedIds;
 
@@ -50,10 +50,23 @@ public static class PlumeTemplates
 
     public static VolumetricExhaustTemplate? Get(string id) => VolumetricExhaustTemplate.Get(id);
 
+    /// <summary>Normalizes data saved against KSA builds that still shipped Vernier/Turbine templates.</summary>
+    public static string NormalizeId(string? id)
+    {
+        return PlumeTemplateIds.Normalize(id, IsAvailable);
+    }
+
+    private static bool IsAvailable(string id)
+    {
+        try { return Get(id) != null; }
+        catch { return false; }
+    }
+
     /// <summary>Creates a fresh game-side instance bound to the template. Returns null if the id is unknown.</summary>
     public static VolumetricExhaustInstance? CreateInstance(string templateId)
     {
-        var reference = new VolumetricExhaustReference { Id = templateId };
+        string resolvedId = NormalizeId(templateId);
+        var reference = new VolumetricExhaustReference { Id = resolvedId };
         reference.Load();
         if (reference.Template == null) return null;
         return new VolumetricExhaustInstance(reference);

@@ -1,3 +1,32 @@
+## Current triage — KSA 2026.9.10.5438
+
+See [upgrade review](plans/KSA_5438_UPGRADE.md). Confirmed code migrations are implemented in the
+working tree; native rendering/flight acceptance remains pending.
+
+- **Vehicle Paint:** historical “dead since 4693” statements below are obsolete; the feature was
+  rebuilt for 5018. This update added overloaded render targets, breaking patch selection. Paint,
+  engine emissive and shared IVA targets now bind the common submission overloads explicitly.
+- **Free Fallin:** new native canopy choices removed the old default ID. Custom material creation
+  now uses a current baseline and restores each canopy's original material.
+- **Graffiti:** skip the new early color-only resolve to prevent stale-depth/double compositing.
+- **Pyro:** new renderer lifecycle and template aliases migrated; appearance controls are applied
+  to final submitted data. The native renderer still never sets `_hasRefractionInstances` true in the supplied
+  sources; the existing refraction-pass defect remains a separate limitation.
+- **Blinky:** typed resource-order migration completed; feed diagnosis counts actual reachable
+  tanks. The earlier propellant repair remains. Dense-grid ignition/rendering needs live acceptance.
+- **Eternal Flame refill during burns:** still open; refill APIs and solver ordering are unchanged.
+  Fuel remains UI-timed, unlike the solver-timed electrical refill. Do not attribute the old report
+  to 5438 without reproducing it.
+- **Garry's Torch errors:** prior actuator/collision fixes remain. New segmented bubble stepping,
+  contact-local deformation and crash budgets require native reproduction; no new broken hook found.
+- **Kitten animation repetition:** existing processor/clip fixes remain; reflection chain unchanged.
+- **Zippo electricity:** remains a feature request, not a detected upgrade regression.
+
+The dated notes below retain historical reports and hypotheses; this section supersedes their
+current-status claims.
+
+---
+
 - blinky broken — **root-caused and fixed 2026-08-23 (propellant feed), needs a live pass** (see triage note below)
 - eternal flame broken (seems like refill not working while engines are lit.. maybe race condition on data mutations since DMZ changes?)
 - garry's torch - works but throws errors

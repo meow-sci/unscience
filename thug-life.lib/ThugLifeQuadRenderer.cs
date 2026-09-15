@@ -269,7 +269,7 @@ public sealed unsafe class ThugLifeQuadRenderer : IDisposable
         cmd.BindVertexBuffers(0,
             new ReadOnlySpan<VkBuffer>(ref vbHandle),
             new ReadOnlySpan<ByteSize64>(ref vbOff));
-        cmd.BindIndexBuffer(_ib.VkBuffer, (ByteSize64)_ib.BindOffset, VkIndexType.Uint16);
+        cmd.BindIndexBuffer(_ib.VkBuffer, (ByteSize64)_ib.BindOffset, VkIndexType.UInt16);
         cmd.DrawIndexed(_indexCount, 1, 0, 0, 0);
     }
 

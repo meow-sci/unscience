@@ -20,3 +20,7 @@ with actual fuel wiring and Vulkan rendering still requires an in-game acceptanc
 Pending grid removals are saved as intent and restarted against restored parts; old-world deferred
 callbacks are cleared during scene reset. Removal delays restart rather than running against stale
 vehicle references.
+
+## KSA 5438 compatibility
+
+KSA 5438 uses FlowOrder<Tank> views for resource drainage. Feed diagnostics count actual tank entries in each selected level, respecting same-stage/reversed views; empty distance levels no longer count as reachable propellant. Fuel wiring and engine control remain native.

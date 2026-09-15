@@ -25,7 +25,10 @@ public static class GraffitiPatches
     private static bool _loggedFault;
 
     private static MethodBase? Target() =>
-        AccessTools.Method(typeof(RenderTarget), nameof(RenderTarget.ResolveAttachments));
+        AccessTools.Method(typeof(RenderTarget), nameof(RenderTarget.ResolveAttachments), new[]
+        {
+            typeof(CommandBuffer), typeof(bool)
+        });
 
     private static MethodInfo Postfix() =>
         AccessTools.Method(typeof(GraffitiPatches), nameof(AfterResolveAttachments))!;
@@ -45,7 +48,18 @@ public static class GraffitiPatches
         if (original != null) harmony.Unpatch(original, Postfix());
     }
 
-    private static void AfterResolveAttachments(RenderTarget __instance, CommandBuffer inCmdBuffer)
+    private static void AfterResolveAttachments(RenderTarget __instance, CommandBuffer inCmdBuffer,
+        bool inResolveDepth)
+    {
+        // KSA 5438 resolves color before underwater composition with depth resolution disabled.
+        // The decal pass needs the final depth and therefore belongs only after the normal resolve,
+        // immediately before the game's GridPass.
+        if (!inResolveDepth)
+            return;
+        RecordPass(__instance, inCmdBuffer);
+    }
+
+    private static void RecordPass(RenderTarget __instance, CommandBuffer inCmdBuffer)
     {
         if (!GraffitiSubmod.RenderActive)
             return;

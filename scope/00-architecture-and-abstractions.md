@@ -1,5 +1,13 @@
 # 00 — Unscience supermod shell + `ksa-abstractions.lib` game-integration scope
 
+## Current verification — 5402 → 5438
+
+`KeyHash` moved from KSA.dll to Planet.Render.Core.dll (rev 5412); the shared library now explicitly references the latter with `Private=false` for native save identity lookups. `IvaForceRender` must bind the common explicit `PartModel.AddInstance` overload because stock dent-aware wrappers were added. Its postfix now forwards the native `PerInstanceDent` into `DentInstanceList` alongside the duplicate `InstanceList` entry. `GameSettings.OnKeyAll` (NEW :3465), `Program.OnDrawUiConsole`, providers, and the seven ordered `PrepareFrame` solver seams retain their contracts. Input polling moved before `ApplyInputEvents`, still before the handoff; the new render pool does not move the solver boundary. `unscience/Patcher.cs:84` already wires IVA force render.
+
+Verified against `2026.9.10.5438` using both supplied source/Content trees.
+See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
+Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+
 Distribution is Unscience-only: feature and legacy-host projects still compile, but only
 `unscience.csproj` has a deployment target and is publishable. No game hook changed for this
 packaging refactor. Legacy standalone lifecycle references below describe development hosts.
@@ -12,9 +20,9 @@ cross-reference table.
 
 Verification baseline:
 
-- **NEW decomp (current, build 2026.9.7.5402):** `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
-- **OLD decomp (previous, build 2026.8.22.5348):** `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
-- Decomp line numbers in the tables below are **@5402** unless a row says otherwise (older passes' lines are kept only inside the dated area summaries).
+- **NEW decomp (current, build 2026.9.10.5438):** `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
+- **OLD decomp (previous, build 2026.9.7.5402):** `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
+- Decomp line numbers in the tables below are **@5438** unless a row says otherwise (older passes' lines are kept only inside the dated area summaries).
 - Decomp paths below are **relative to the decomp root** (e.g. `KSA/Universe.cs`). KSA game types live under `KSA/`; ImGui/console types under `Brutal.ImGuiApi*`.
 - Every game target was grepped in BOTH decomps; "Δ vs OLD" records the delta (line moves are not deltas).
 
@@ -294,7 +302,7 @@ Re-verified @5402 with the same shape: `OnFrame` (`:2164`) → `if (DrawUI) {…
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|---|---|---|---|---|---|---|
 | 1 | Harmony postfix (ctor) | `IvaForceRender.cs:42` (lookup), `:44` (patch) | `PartModel..ctor(PartModelModule.Template)` — `protected PartModel(PartModelModule.Template template)` | `KSA/PartModel.cs:384` | Yes | None (OLD `:383`; body identical, still the only ctor) | `AccessTools.Constructor` finds the **protected** ctor; explicit param-type array. |
-| 2 | Harmony postfix (method) | `:46` (lookup), `:48` (patch), `:98` (postfix sig) | `PartModel.AddInstance(PerInstanceData, IViewport, int)` — `public void` | `KSA/PartModel.cs:408` | Yes | **RETYPED @5402** — param 2 `Viewport`→`IViewport` (OLD `:407`); postfix param `__1` updated to `IViewport` (compile break otherwise). **NEW GATE @5402** `:410-413`: `if (!viewport.HasAny(ViewportOptionFlags.RenderPartModels)) return;` before any work; IVA/raytracing gate `:415` now per-viewport (`viewport.HasAll(UseRaytracing) && viewport.Mode == IVA`) instead of `viewport == Program.MainViewport && MainViewport.Mode == IVA` | Postfix captures `__instance`, `__0`(PerInstanceData), `__1`(IViewport); ignores the `int frameIndex`. ✅ The postfix mirrors both gates as of this pass (`IvaForceRender.cs:107-108`) — see 5348→5402 summary. |
+| 2 | Harmony postfix (method) | `:46` (lookup), `:48` (patch), `:109-128` (postfix sig) | **Private** `PartModel.AddInstance(PerInstanceData, KSA.Deformation.PerInstanceDent, IViewport, int)` — shared sink for both public wrappers | `KSA/PartModel.cs:459-490` | Yes | **NEW @5438** — dent-aware public overload added; old by-name lookup was ambiguous | Exact four-type lookup binds the private sink once. Postfix mirrors stock editor gates and appends both `InstanceList` and `DentInstanceList`, preserving per-instance/dent alignment. |
 | 3 | Direct API (nested struct) | `:98` | `PartModel.PerInstanceData` — `public struct PerInstanceData` | `KSA/PartModel.cs:332` | Yes | None (OLD `:331`) | postfix param type. |
 | 4 | Direct API (field) | `:87,89,101,113,116,125` | `PartModelModule.Template.Internal` — `public bool Internal = false;` | `KSA/PartModelModule.cs:40` | Yes | None (OLD `:40`) | mutated to force interior render. |
 | 5 | Direct API (field) | `:103` | `PartModelModule.Template.RayTracing` — `public RaytracingMode RayTracing` | `KSA/PartModelModule.cs:32` | Yes | None (OLD `:32`) | |

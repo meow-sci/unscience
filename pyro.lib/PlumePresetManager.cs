@@ -65,7 +65,9 @@ public sealed class PlumePresetManager
         if (string.IsNullOrWhiteSpace(name))
             return false;
 
-        _presets[name] = preset.Clone();
+        var normalized = preset.Clone();
+        normalized.TemplateId = PlumeTemplates.NormalizeId(normalized.TemplateId);
+        _presets[name] = normalized;
         _cacheValid = false;
         Save();
         Console.WriteLine($"pyro: Saved preset '{name}'");
@@ -138,7 +140,7 @@ public sealed class PlumePresetManager
         var nozzleDefaults = new NozzleSettings();
         return new PlumePreset
         {
-            TemplateId = GetString(entry, "template", "EngineALarge"),
+            TemplateId = PlumeTemplates.NormalizeId(GetString(entry, "template", "EngineALarge")),
             Position = new float3(
                 GetFloat(entry, "position_x"),
                 GetFloat(entry, "position_y"),
@@ -164,7 +166,7 @@ public sealed class PlumePresetManager
 
     private static TomlTable WritePreset(PlumePreset preset) => new()
     {
-        ["template"] = preset.TemplateId,
+        ["template"] = PlumeTemplates.NormalizeId(preset.TemplateId),
         ["position_x"] = (double)preset.Position.X,
         ["position_y"] = (double)preset.Position.Y,
         ["position_z"] = (double)preset.Position.Z,

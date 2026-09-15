@@ -103,7 +103,7 @@ internal sealed unsafe class PreviewScene : IDisposable
             command.BindDescriptorSets(VkPipelineBindPoint.Graphics, pipeline.Layout, 0,
                 new ReadOnlySpan<VkDescriptorSet>(ref set), default(Span<ByteSize32>));
             command.BindVertexBuffer(0, draw.Vertices!.Value.VkBuffer, draw.Vertices.Value.BindOffset);
-            VkDeviceExtensions.BindIndexBuffer(command, draw.Indices!.Value.VkBuffer, draw.Indices.Value.BindOffset, VkIndexType.Uint32);
+            VkDeviceExtensions.BindIndexBuffer(command, draw.Indices!.Value.VkBuffer, draw.Indices.Value.BindOffset, VkIndexType.UInt32);
             command.DrawIndexed(draw.Count, 1, 0, 0, 0);
         }
     }

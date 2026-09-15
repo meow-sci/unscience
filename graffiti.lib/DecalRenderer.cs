@@ -419,7 +419,7 @@ internal sealed unsafe class DecalRenderer : IDisposable
                 new ReadOnlySpan<VkBuffer>(ref vertexHandle),
                 new ReadOnlySpan<ByteSize64>(ref vertexOffset));
             commandBuffer.BindIndexBuffer(_indexBuffer.VkBuffer, (ByteSize64)_indexBuffer.BindOffset,
-                VkIndexType.Uint16);
+                VkIndexType.UInt16);
 
             foreach (var entry in entries)
             {

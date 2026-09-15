@@ -1,5 +1,13 @@
 # Camera / View Mods — Game Integration Scope
 
+## Current verification — 5402 → 5438
+
+No code migration required. Camera `_fovRadians` (:53), ChangeFieldOfView and UpdateProjection (:466) are unchanged. Orbit/Fly/Fixed OnFrame bodies only rename decompiler temporaries; public Controller.Camera and override argument names remain correct. ViewportRegistry interfaces, slot allocation and part raycasts retain their contracts. Secondary-viewport rendering omissions remain a native watch item; the new frame abandon/swapchain fixes do not move camera ownership.
+
+Verified against `2026.9.10.5438` using both supplied source/Content trees.
+See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
+Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+
 Permanent reference for detecting when KSA game updates break the camera/view mods
 (`camera-controller-override`, `glass`, `hot-pursuit`). Every game-facing member these mods touch is
 enumerated and verified against decompiled sources.

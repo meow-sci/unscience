@@ -43,8 +43,7 @@ public static class EngineEmissivePatches
 
     public static void Apply(Harmony harmony)
     {
-        _addInstanceOriginal = AccessTools.Method(
-            typeof(PartModelDynamic), nameof(PartModelDynamic.AddInstance));
+        _addInstanceOriginal = ResolveAddInstance();
         _addInstancePrefix = typeof(EngineEmissivePatches).GetMethod(
             nameof(AddInstancePrefix), BindingFlags.NonPublic | BindingFlags.Static);
 
@@ -67,6 +66,22 @@ public static class EngineEmissivePatches
         _addInstancePrefix = null;
 
         Console.WriteLine("humble-arteest: EngineEmissive patches removed");
+    }
+
+    /// <summary>
+    /// KSA 5438 routes both the no-dent and dent-aware public wrappers through this private
+    /// submission overload. Bind all four parameter types explicitly so Harmony does not select
+    /// an arbitrary public overload.
+    /// </summary>
+    private static MethodInfo? ResolveAddInstance()
+    {
+        MethodBase? submission = AccessTools.Method(typeof(PartModelDynamic),
+            nameof(PartModelDynamic.AddInstance), new[]
+        {
+            typeof(PartModelDynamic.PerInstanceData), typeof(KSA.Deformation.PerInstanceDent),
+            typeof(IViewport), typeof(int)
+        });
+        return submission?.IsPrivate == true ? (MethodInfo)submission : null;
     }
 
     /// <summary>

@@ -1,5 +1,13 @@
 # UI / Customization Mods — Game Integration Scope
 
+## Current verification — 5402 → 5438
+
+Skittles and Kitchen Sink remain source-compatible with the shipped Brutal ImGui types. GameSettings.OnKeyAll, solver callbacks and PartTree.RecomputeStaticMass (NEW :802) retain their bodies. Kitchen Sink inherits the shared IVA overload correction in ksa-abstractions.lib; no separate editor clamp or UI redesign is required. Verify typing, hidden HUD and IVA display in game.
+
+Verified against `2026.9.10.5438` using both supplied source/Content trees.
+See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
+Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+
 Permanent reference for detecting when KSA game updates break the UI/customization
 mods (`skittles`, `kitchen-sink`). Every game-facing member these mods
 touch is enumerated and verified against decompiled sources.

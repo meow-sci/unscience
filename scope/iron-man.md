@@ -1,5 +1,13 @@
 # Iron Man — EVA editor, connectors and vessel physics
 
+## Current verification — 5402 → 5438
+
+No migration required in the opt-in flight/editor hooks. KittenEva, GaugeCanvas, GaugeButtonFlightComputer, VehicleSaveData, KittenRenderable and VehicleEditingSpace are byte-identical. Constructor/serializer, two EVA gauge checks, one generic gauge-policy call, one teleport-helper call, camera pan and single ManualControlMap read invariants remain. PartModelRenderer retains UpdateRenderData and supplies its new deformation descriptors internally. Native connector recomputation now also invalidates FlowTopology. Rocket/EVA mode, crashes, RCS/gauges and save reconstruction require native acceptance.
+
+Verified against `2026.9.10.5438` using both supplied source/Content trees.
+See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
+Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+
 Baseline: **KSA 2026.9.7.5402**, `ksa-game-assemblies/current/decomp`. Added 2026-09-07.
 [Research evidence](../plans/iron-man/RESEARCH.md) explains the design;
 [player instructions](../iron-man/README.md) describe activation and save dependencies.

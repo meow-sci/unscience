@@ -95,7 +95,8 @@ public sealed partial class PyroSubmod : ISubmod, MeowSci.KsaAbstractions.Persis
         float3 position, float3 rotation, NozzleSettings? nozzle = null,
         float throttle = 1f, float absorptionDensityScale = 1f, float refractionIntensity = 1f)
     {
-        var instance = PlumeTemplates.CreateInstance(templateId);
+        string resolvedTemplateId = PlumeTemplates.NormalizeId(templateId);
+        var instance = PlumeTemplates.CreateInstance(resolvedTemplateId);
         if (instance == null)
             return (null, $"Unknown exhaust template '{templateId}'.");
 
@@ -103,7 +104,7 @@ public sealed partial class PyroSubmod : ISubmod, MeowSci.KsaAbstractions.Persis
         {
             Vehicle = vehicle,
             Part = part,
-            TemplateId = templateId,
+            TemplateId = resolvedTemplateId,
             Position = position,
             Rotation = rotation,
             Throttle = throttle,
@@ -120,9 +121,10 @@ public sealed partial class PyroSubmod : ISubmod, MeowSci.KsaAbstractions.Persis
     /// <summary>Switches a plume to a different exhaust template (restarts its startup transient).</summary>
     public bool SetTemplate(PlumeEntry plume, string templateId)
     {
-        var instance = PlumeTemplates.CreateInstance(templateId);
+        string resolvedTemplateId = PlumeTemplates.NormalizeId(templateId);
+        var instance = PlumeTemplates.CreateInstance(resolvedTemplateId);
         if (instance == null) return false;
-        plume.TemplateId = templateId;
+        plume.TemplateId = resolvedTemplateId;
         plume.Instance = instance;
         return true;
     }
@@ -164,8 +166,10 @@ public sealed partial class PyroSubmod : ISubmod, MeowSci.KsaAbstractions.Persis
     /// template doesn't exist; a template change restarts the plume's startup transient.</summary>
     public bool ApplyPreset(PlumeEntry plume, PlumePreset preset)
     {
-        if (preset.TemplateId != plume.TemplateId && !SetTemplate(plume, preset.TemplateId))
+        string templateId = PlumeTemplates.NormalizeId(preset.TemplateId);
+        if (templateId != plume.TemplateId && !SetTemplate(plume, templateId))
             return false;
+        plume.TemplateId = templateId;
         plume.Position = preset.Position;
         plume.Rotation = preset.Rotation;
         plume.Throttle = preset.Throttle;

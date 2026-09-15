@@ -1,5 +1,13 @@
 # Part Editor & Robotics — Game Integration Scope
 
+## Current verification — 5402 → 5438
+
+Parts Now V8 now rejects top-level `<Explosion>` and `<ExplosionVolume>` definitions introduced by AssetBundle (NEW :70–71). Their registries (`ModLibrary.AllExplosions` and `ExplosionVolumeTemplate.References`) are absent from loader snapshot/rollback/unload ownership; nested references remain allowed. This is a new schema hazard, prevented before registration. Existing registry fields/private collection, editor tags, mesh headroom and LoadAll-before-Bind ordering remain. Native ThumbnailRenderResources gained deformation bindings and is already used directly, so it supplies the required descriptor update. Don't Stifle Me scale/diameter targets retain their bodies. Native runtime thumbnails and scale/parachute editing remain acceptance items.
+
+Verified against `2026.9.10.5438` using both supplied source/Content trees.
+See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
+Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+
 Permanent reference for how the **parts-now** (runtime Part/SubPart loading) and **dont-stifle-me**
 (editor scale un-limiter) mods bind to the Kitten Space Agency (KSA) game, so that future game updates
 that break them can be detected and root-caused quickly.

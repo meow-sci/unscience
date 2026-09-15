@@ -15,7 +15,9 @@ avatars, and celestial terrain.
 - `DecalTextures` manages Graffiti's GPU residency. PNG catalog/import behavior comes from the
   shared `ksa-abstractions.lib` `PngLibrary` and `PngFileBrowser`: every import is copied into
   `.unscience/pngs`, and the catalog is scanned at startup and via the Rescan button.
-- `GraffitiPatches` installs the `RenderTarget.ResolveAttachments` postfix used by both hosts.
+- `GraffitiPatches` installs the `RenderTarget.ResolveAttachments` postfix used by both hosts. On
+  KSA 5438 it receives `inResolveDepth` and skips the early color-only resolve, preserving the
+  final post-resolve window immediately before `GridPass`.
 
 ## Parachute behavior
 

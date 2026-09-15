@@ -628,8 +628,7 @@ public static class LcdGridBuilder
 
                 if (desiredMix == "?") desiredMix = combustor.DesiredMix?.Name ?? "?";
 
-                var order = combustor.ResourceManager?.ConsumptionOrder;
-                if (order != null && order.Length > 0)
+                if (PropellantFeedDiagnostics.CountTanks(combustor.ResourceManager) > 0)
                     anyFed = true;
                 else
                     starvedCores[combustor.TemplateId] = starvedCores.GetValueOrDefault(combustor.TemplateId) + 1;

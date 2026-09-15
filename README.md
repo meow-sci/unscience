@@ -124,3 +124,11 @@ layout autosave remains separate. Keep imported asset libraries and runtime part
 your installation; saves reference those dependencies. See [scene-save usage and limits](unscience/README.md#scene-saves),
 the [research and implementation plan](plans/SAVES.md), [implemented coverage and acceptance](plans/saves-acceptance.md),
 and [integration scope](scope/saves.md).
+
+## KSA 5438 compatibility
+
+This branch targets **2026.9.10.5438**. The upgrade migrates plume rendering and saved template IDs,
+paint/emissive/IVA submissions, canopy materials/restoration, final-depth decals, resource-order
+diagnostics and Vulkan bindings. Parts Now rejects new explosion definitions it cannot unload.
+See [the full impact review and validation record](plans/KSA_5438_UPGRADE.md). Native flight/render
+acceptance remains pending; compilation and managed tests are recorded separately.

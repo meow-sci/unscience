@@ -1,5 +1,13 @@
 # Vehicle Manipulation / Physics Mods — Game Integration Scope
 
+## Current verification — 5402 → 5438
+
+No new code change required in eternal-flame, Garry's Torch, Godzilla or i-feel-seen. `Universe.ExecuteNextVehicleSolvers` (NEW :2033), result-application methods, `Vehicle.GetWorldMatrix`, `UpdateRenderData`, `UpdateCollisionGeometry` (:1937), `RefillConsumables` (:3175), and `ColliderModule.SetScale` are body-identical; Teleport differs only in a log source line. The avatar scale field chain is unchanged. Rev 5420 permits mid-step bubble merge/split, and new contact-local deformation/crash limits require live collision and weld checks. Rev 5434 reapplies non-root scales on native load; existing snapshot/restoration logic remains. The old fuel-during-burn report is still open: fuel is dispatched from the UI update, electricity from the solver prefix; no new regression is established by this span.
+
+Verified against `2026.9.10.5438` using both supplied source/Content trees.
+See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
+Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+
 Permanent reference for detecting when KSA game updates break the vehicle-manipulation /
 physics mods (`eternal-flame`, `garrys-torch`, `i-feel-seen`). Every game-facing member
 these mods touch is enumerated and verified against decompiled sources.

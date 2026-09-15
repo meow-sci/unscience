@@ -46,6 +46,7 @@ The setting is session-only; imported PNG files remain in the library for later 
 
 ## Compatibility
 
-Cataloged against KSA `2026.9.7.5402`. The mod depends on the dedicated
-`ParachuteCanopy_Material`, `ChuteRenderable.Draw`, its private `_renderable` field, and
+Cataloged against KSA `2026.9.10.5438`. The mod depends on the native canopy material ids
+(with `ParachuteCanopy_Material_CheckerLongOrange` as the stable source for custom materials),
+`ChuteRenderable.Draw`, its private `_renderable` field, and
 `AnimatedRenderable.MaterialIndices`. See [`../scope/parachutes.md`](../scope/parachutes.md).

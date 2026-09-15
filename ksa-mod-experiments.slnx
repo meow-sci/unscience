@@ -73,4 +73,5 @@
     <Project Path="saves.tests/saves.tests.csproj" />
     <Project Path="world-saves.tests/world-saves.tests.csproj" />
     <Project Path="camera-saves.tests/camera-saves.tests.csproj" />
+    <Project Path="ksa-upgrade.tests/ksa-upgrade.tests.csproj" />
 </Solution>

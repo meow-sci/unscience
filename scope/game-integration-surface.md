@@ -42,15 +42,13 @@ Single consolidated lookup of every game-side touchpoint (KSA.* types + risk-bea
 Brutal.*/RenderCore.* members) across all unscience mods, aggregated from the per-area `scope/`
 files. Use it on every KSA update to find which mods a changed game member puts at risk.
 
-**Verification baseline:** cataloged against KSA build **2026.9.7.5402**
-(`~/repos/meow-sci/ksa-game-assemblies/current/decomp`), diffed from the previously verified baseline
-**2026.8.22.5348**, which is also what sits on disk as `ksa-game-assemblies_prev`. **Baseline == OLD**,
-a single hop — but ⚠ **the changelog gap is 52 revisions**: NEW's `version.json` covers only
-`5400 → 5402` (one logged commit, rev 5401), so revisions **5349–5400** were reviewed from the **source
-diff only** (197 `KSA/*.cs` changed, 66 added, 2 removed). Full record:
-[`../plans/KSA_5402_UPGRADE.md`](../plans/KSA_5402_UPGRADE.md).
-Decomp paths are relative to the decomp root (`KSA/…`); Content paths relative to `…/current/Content`.
-Per-row detail and the exact 5261↔5348 diff live in the linked area scope files.
+**Verification baseline:** KSA **2026.9.10.5438**, compared with **2026.9.7.5402**
+(the previous cataloged build and the supplied OLD tree). CURRENT/OLD are the sibling
+`ksa-game-assemblies/current` and `ksa-game-assemblies_prev/current` trees. The current window
+contains revisions 5403–5437; revision 5438 has no individual log entry. The whole source pair
+was compared. Full evidence and exact build/test results: [KSA_5438_UPGRADE](../plans/KSA_5438_UPGRADE.md).
+Native game acceptance remains pending. Dated historical rows retain their original line citations;
+the current summary and owning area updates below supersede their compatibility status.
 
 ---
 
@@ -136,6 +134,30 @@ vertex/push/descriptor layouts must agree. Registry meshes/textures are selected
 external GLBs use absolute paths plus SHA-256 content identities and are not globally registered.
 
 ---
+
+## 5438 verification summary
+
+| Game surface | Current consumers/status | Change in 5402 → 5438 |
+|---|---|---|
+| `KeyHash` assembly ownership | ksa-abstractions save preflight/hooks; direct dependent libraries | Explicit compile-only Planet.Render.Core reference; namespace remains KSA. |
+| `ResourceManager.ConsumptionOrder : FlowOrder<Tank>` | Blinky feed verification/diagnose | Iterate LevelCount/indexed spans; count actual tanks rather than nonempty distance-level arrays. |
+| `VkIndexType.UInt16/UInt32` | Graffiti, Thug Life, Pebbles preview, Sphinx | Shipped Vulkan enum spellings changed; numeric index types are unchanged. |
+| `PartModel` / `PartModelDynamic.AddInstance` | Humble Arteest paint/emissive; shared IVA force render | Exact common submission overloads replace ambiguous name-only lookups; dent-aware stock callers are covered. |
+| `RenderTarget.ResolveAttachments(CommandBuffer,bool)` | Graffiti | Skip color-only resolve; draw once after the final depth resolve before GridPass. |
+| `Parachute.CanopyMaterial`, canopy material IDs | Free Fallin | Old default ID removed; use current authored baseline for custom material, restore each renderable's own original handle. |
+| Plume UpdateState/PlumeData/renderer submission | Pyro | Native gas/transient lifecycle and final submitted appearance overrides; old `_shaderData` writes alone would be overwritten. |
+| `EngineAVernier` / `EngineATurbine` | Pyro presets and scene data | Merged into EngineAAuxiliary; legacy IDs migrate through central resolution. |
+| `AssetBundle.Explosion/ExplosionVolume` | Parts Now V8 | Reject new top-level definitions before untracked registration; nested references remain allowed. |
+| `Program.PrepareFrame`, HotkeyGuard, native save hooks | Whole suite | Ordered solver seams and hotkey body retained; input polling moved earlier without moving ownership boundary. |
+| MaterialData, static/dynamic PerInstanceData, paint flag bits | DOH, Humble Arteest, Free Fallin | Layouts unchanged; paint bits 11–31 remain free. New dents use separate buffers. |
+| Native clutter/statics/rings/character contracts | Pebbles, Sphinx, ring mods, DOH, kitten animations, Iron Man | Source-compatible; full reflection and shader details in the upgrade report. |
+
+All current string-watchlist entries were checked in both supplied trees, including the supplemental
+Iron Man, Godzilla, Pebbles, Sphinx and save-adapter entries. Overloaded AddInstance and Pyro's
+semantically ineffective private shader write are the new silent patch/reflection failures.
+Retired Controller.Transform and LightModule.Color lookups remain retired. The old blinky graph-field
+row is historical: diagnostics now use the typed FlowOrder API. Shader anchors and asset checks
+are recorded separately from native visual acceptance.
 
 ## 3. Master table — by game type
 
@@ -632,11 +654,11 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 ### KSA.PartModel (+ nested PerInstanceData, ViewportData)
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `AddInstance(PerInstanceData, Viewport, int frameIndex) : void` | Harmony pre (humble vehicle-paint) + post (IvaForceRender) | `KSA/PartModel.cs:375` | humble-arteest (VehiclePaint), IvaForceRender (kitchen-sink) | `VehiclePaintPatches.cs` (`AddInstancePrefix`); `IvaForceRender.cs:46` | OK | `PartModel.cs` byte-identical; 3-arg single overload. humble binds by param name `instanceData` and ORs paint into `StateBitFlag` |
+| `AddInstance(PerInstanceData, PerInstanceDent, IViewport, int) : private void` | Harmony pre + post | `KSA/PartModel.cs:470` | humble-arteest (VehiclePaint), IvaForceRender (kitchen-sink) | `VehiclePaintPatches.cs:116`; `IvaForceRender.cs:76` | Fixed @5438 | Exact common sink covers both dent-aware and undented wrappers; static argument `instanceData`. |
 | `..ctor(PartModelModule.Template) : protected` | Harmony post (ctor, `AccessTools.Constructor`) | `KSA/PartModel.cs:351` | IvaForceRender (kitchen-sink) | `IvaForceRender.cs:42` | OK | explicit param-type array |
 | `PerInstanceData` (struct: `ModelMatrix`@0 · `StateBitFlag`@64 · `EmissiveColor`@68 · `packing1`@72 · `Wetness`@76; 80 B) | direct API | `KSA/PartModel.cs:299-310` | IvaForceRender, humble-arteest (VehiclePaint) | `IvaForceRender.cs:98`; `VehiclePaintPatches.cs` (`AddInstancePrefix`) | OK | humble writes **only `StateBitFlag` bits 11..31** (no struct reinterpret and no game field clobbering) |
 | `PerInstanceData.StateBitFlag` **bits 11..31** | free-bit reuse (per-instance mod payload) | writers `KSA/PartModelModule.cs:82-133`, `KSA/PartModelDynamicModule.cs:81-107`; readers `MeshIndirect.frag:308-353` | humble-arteest (VehiclePaint) | `VehiclePaint.cs` (`EncodeBits`, `PaintBitShift`) | OK | 🔶 **audit every game update.** Game uses bits 0..10 only; 21 free bits carry a 7:7:7 sRGB paint color. `RayTraceInstance.StateFlags` is `int`, so the bits survive the RT path |
-| `ViewportData.Get(PartModel, Viewport) : ViewportData` → `.InstanceList.Add(...)` | direct API | `KSA/PartModel.cs:281,277` | IvaForceRender (kitchen-sink) | `IvaForceRender.cs:105` | OK | re-add internal instance to per-viewport draw list (editor) |
+| `ViewportData.Get(PartModel, IViewport)` → `InstanceList.Add` + `DentInstanceList.Add` | direct API | `KSA/PartModel.cs:356-379` | IvaForceRender (kitchen-sink) | `IvaForceRender.cs:115` | Fixed @5438 | Both lists must receive the same editor-only extra instance, preserving native index alignment. |
 | `Instances : static List<PartModel>` | direct API | `KSA/PartModel.cs:325` | IvaForceRender (kitchen-sink), parts-now | `IvaForceRender.cs:111`; `parts-now.lib/Runtime/RuntimeModPurgeSteps.cs:109` | OK | enumerated by `Enabled` setter. parts-now `RemoveAll`s its own templates' entries on purge — **KSA never prunes this list** |
 | `InstancesRayTrace : static List<PartModel>` | direct API | `KSA/PartModel.cs:327` | parts-now | `RuntimeModPurgeSteps.cs:110` | OK | same purge pruning; `PartModelDynamic` has **no** such list (dynamic models are never ray traced) |
 | `Get(PartModelModule.Template) : static PartModel` | direct API | `KSA/PartModel.cs:333` | parts-now | `Runtime/RuntimeModLoaderGpuStates.cs:297` | OK | model "warming" turns an unresolvable `<Mesh Id>` into a catchable load-time exception. Resolves by scanning `Instances` for a matching `Template.Id`, which is exactly why the purge must prune those lists |
@@ -646,7 +668,7 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 ### KSA.PartModelDynamic (+ nested PerInstanceData)
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `AddInstance(PerInstanceData inInstanceData, Viewport, int) : void` | Harmony pre | `KSA/PartModelDynamic.cs:379` | humble-arteest (EngineEmissive) | `EngineEmissivePatches.cs:40,51` | OK | file byte-identical; param name `inInstanceData` matches |
+| `AddInstance(PerInstanceData, PerInstanceDent, IViewport, int) : private void` | Harmony pre | `KSA/PartModelDynamic.cs:474` | humble-arteest (EngineEmissive, VehiclePaint) | `EngineEmissivePatches.cs:75`; `VehiclePaintPatches.cs:116` | Fixed @5438 | Exact common sink; dynamic argument `inInstanceData`; preserves dent payload. |
 | `PerInstanceData` (struct: `ModelMatrix`@0 · `StateBitFlag`@64 · `Temperature`@68 · `TfiThickness`@72 · `Wetness`@76; 80 B) | direct API (struct reinterpret for EngineEmissive) | `KSA/PartModelDynamic.cs:309-320` | humble-arteest (EngineEmissive, VehiclePaint) | `EngineEmissivePatches.cs:29-36`; `VehiclePaintPatches.cs` (`AddInstanceDynamicPrefix`) | OK | mirror struct matches exactly (`Temperature`@68, `TfiThickness`@72). VehiclePaint touches only `StateBitFlag` bits 11..31, so the two features compose |
 
 ### KSA.PartModelDynamicModule
@@ -816,7 +838,7 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 | `Parts : PartTree` (field) | direct API | `KSA/Vehicle.cs:264` | PartHelpers (→ many), eternal-flame, blinky, its-so-shiny, kitchen-sink | `PartHelpers.cs:13`; `EternalFlameLib.cs:128`; `LcdGridBuilder.cs:37` | OK | get+set (blinky swaps tree) |
 | `Id` (inherited Astronomical.Id) | direct API | `KSA/Astronomical.cs:85` | (see KSA.Astronomical) | — | OK | |
 | `RefillConsumables() : void` | direct API | `KSA/Vehicle.cs:2300` | eternal-flame | `EternalFlameLib.cs:80` | OK | fuel/resource refill |
-| `AddVolumetricExhaustInstances(Camera, Viewport, VolumetricExhaustRenderer, double frameDeltaTime) : void` | **Harmony postfix** `(Vehicle __instance, Camera camera, VolumetricExhaustRenderer renderer, double frameDeltaTime)` | `KSA/Vehicle.cs:5303` | pyro | `pyro.lib/PyroPatches.cs:16,35` | OK @5348 | per-visible-vehicle exhaust submission (`Program.OnPreRender`); pyro adds its plumes to the same batch. Resolved via `nameof` (typed) |
+| `AddVolumetricExhaustInstances(Camera, VolumetricExhaustRenderer, double frameDeltaTime) : void` | **Harmony postfix** `(Vehicle __instance, Camera camera, VolumetricExhaustRenderer renderer, double frameDeltaTime)` | `KSA/Vehicle.cs:5518` | pyro | `pyro.lib/PyroPatches.cs` | Migrated @5438 | Exact three-parameter binding. Pyro directly submits standalone plumes while native engine plumes retain their pending hierarchy grouping. |
 | `PosAsmbToBody(double3) : double3` · `Body2Cce : doubleQuat` | direct API | `KSA/Vehicle.cs:1218,374` | pyro | `pyro.lib/PlumeEmitter.cs:73-74` | OK @5348 | same chain as `RocketNozzleState.AddExhaustInstance` |
 | `GetMatrixAsmb2Ego(Camera) : double4x4` · `BoundingSphereRadiusBody : double` · `static ComputeEnu2Cce(double3, doubleQuat) : doubleQuat?` | direct API | `KSA/Vehicle.cs` | graffiti, hot-pursuit | `graffiti.lib/DecalPicker.cs`, `DecalAnchors.cs`; `hot-pursuit.lib/HotPursuitPicker.cs`, `HotPursuitPose.cs` | OK @5402 | raycast broad-phase + sub-part transform root; ENU helper is graffiti-only |
 | `Teleport(Orbit?, doubleQuat?, double3?) : void` | direct API | `KSA/Vehicle.cs:2209` | garrys-torch, doh (KittenEva) | `WeldEngine.cs`; `KittenSpawner.cs` | OK @5402 | Removes source from physics bubble; garrys-torch must run after completed module-state results commit and before next-step snapshots. |
@@ -903,14 +925,15 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
 | `Get(string id) : static VolumetricExhaustTemplate?` | direct API (read-only) | `KSA/VolumetricExhaustTemplate.cs:50` | parts-now, pyro | `Runtime/BundleValidatorRulesReferences.cs:213`; `pyro.lib/PlumeTemplates.cs:38,51` | OK | validation rule V10 — `<VolumetricExhaust Id>` must already resolve |
-| `References : internal static SerializedCollection<VolumetricExhaustTemplate>` → `.GetList()` | **reflection-field (INTERNAL, string)** | `KSA/VolumetricExhaustTemplate.cs:38` | pyro | `pyro.lib/PlumeTemplates.cs:46` | OK @5348 | lists template ids for the combos; **falls back to the 7 stock ids** if missing |
+| `References : internal static SerializedCollection<VolumetricExhaustTemplate>` → `.GetList()` | **reflection-field (INTERNAL, string)** | `KSA/VolumetricExhaustTemplate.cs:38` | pyro | `pyro.lib/PlumeTemplates.cs:46` | OK @5348 | lists template ids for the combos; **falls back to the current stock ids** if missing |
 | `Absorption` / `Emission` / `Noise` / `LengthWeights` / `Quality` (fields) + their `DoubleReference.Value`, `BoolReference.Value`, `ColorGradient.Color0..3 : ColorRgbReference`, `Flow.MachDiamonds.*`, `Quality.VolumetricVesselShadows` | direct API (read **and write**) | `KSA/VolumetricExhaustTemplate.cs:12-27`; `KSA/Absorption.cs`, `Emission.cs`, `Noise.cs`, `LengthWeights.cs`, `Quality.cs`, `MachDiamonds.cs`, `ColorGradient.cs` | pyro | `pyro.lib/PyroSubmod.TemplateUi.cs`; `PlumeEmitter.cs:85`; `PlumePhysics.cs:102-105` | OK @5348 | shared-template editor (same writes as the game's `VolumetricExhaustRenderer.OnDrawUi`); GPU `ExhaustTemplateData` buffer is rebuilt from these **every frame** in `Render()` (`VolumetricExhaustRenderer.cs:1236-1243`) |
 
 ### KSA.VolumetricExhaustRenderer
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
 | `VolumetricExhaustRenderer` (type; Harmony arg) | Harmony arg type | `KSA/VolumetricExhaustRenderer.cs:20` | pyro | `PyroPatches.cs:36` | OK @5348 | lib references `Brutal.Vulkan*` + `BepuUtilities` so the type resolves |
-| `AddInstance(float3 emitterPosition, float3 axis, VolumetricExhaustInstance, float throttle, float3 airVelocity, float airDensity) : float` | direct API | `KSA/VolumetricExhaustRenderer.cs:710` | pyro | `pyro.lib/PlumeEmitter.cs:76-78` (+ `ComputeAirState` `:87-98`) | **CHANGED @5402** (fixed) | **gained `airVelocity`/`airDensity` @5402** for atmospheric plume bend/fold (`ExhaustPlumeDeformation`, `:809-811`); pyro mirrors `Vehicle.AddVolumetricExhaustInstances` (`Vehicle.cs:5518-5525`). ⚠ **refraction regression @5402:** nothing sets `_hasRefractionInstances` any more (OLD `:960`), so the refraction pass never runs — game-side, needs live confirmation. Previous note: the game's own nozzle submission entry; reads `instance.ShaderData` + `LastPlumeData`, derives all plume geometry. **5348 delta already handled:** reads `PlumeData.ApparentExhaustVelocity`, `ThroatRadius`, `ThroatDensity` |
+| `AddInstance(VolumetricExhaustInstance, in ExhaustBendTarget, in ExhaustAxialFade, in ExhaustDiamondFade) : ExhaustSubmission` | direct API | `KSA/VolumetricExhaustRenderer.cs:806` | pyro | `PlumeEmitter.cs` | Migrated @5438 | Native final geometry/fade initialization; independent direct submission preserves stock grouping. |
+| `AddInstance(ExhaustInstance, int) : int` | scoped Harmony prefix | `KSA/VolumetricExhaustRenderer.cs:759` | pyro | `PyroPatches.cs` | Added @5438 | Final appearance adjustment only within Pyro submission scope; no shared-template writes. |
 | `Disabled : bool` | direct API | `KSA/VolumetricExhaustRenderer.cs:352` | pyro | `pyro.lib/PyroSubmod.cs:75` | OK @5348 | `_maxInstanceCount == 0` (exhausts off in settings) |
 
 ### KSA.VolumetricExhaustInstance / KSA.VolumetricExhaustReference / KSA.ExhaustInstance
@@ -918,11 +941,11 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 |---|---|---|---|---|---|---|
 | `VolumetricExhaustReference { Id }` + `Load() : void` + `Template` | direct API | `KSA/VolumetricExhaustReference.cs` | pyro | `pyro.lib/PlumeTemplates.cs:55-59` | OK @5348 | `Load()` resolves `_template` via `VolumetricExhaustTemplate.Get(Id)` — no reflection needed |
 | `new VolumetricExhaustInstance(VolumetricExhaustReference)` · `Template` · `LastPlumeData` (public field) | direct API | `KSA/VolumetricExhaustInstance.cs:75` | pyro | `PlumeTemplates.cs:59`; `PlumeEmitter.cs:43` | OK @5348 | one per plume — owns the 4-slot startup/shutdown pulse tracker |
-| `UpdateState(double simulationTime, bool isActive, double simulationDeltaTime, PlumeData) : bool` | direct API | `KSA/VolumetricExhaustInstance.cs:91` | pyro | `pyro.lib/PlumeEmitter.cs:56` | OK @5348 | false ⇒ fully shut down, skip submit. `isActive` = Enabled && Throttle>0 |
+| `UpdateState(double,bool,double,in GasProperties,in GasConditions,float,float3,float3,float3,float3,float,float3,float) : void`; `IsLive` | direct API | `KSA/VolumetricExhaustInstance.cs:111` | pyro | `PlumeEmitter.cs` | Migrated @5438 | Complete gas/emitter/rest/air inputs; retain LastPlumeData while inactive for shutdown tails. |
 | `OnSettingsChanged() : void` | direct API | `KSA/VolumetricExhaustInstance.cs` | pyro | `pyro.lib/TemplateRefresher.cs:20,42` | OK @5348 | re-reads template into `_shaderData` after a Template Editor edit |
-| `_shaderData : private ExhaustInstance` | **reflection-field (PRIVATE, string; `AccessTools.FieldRefAccess`)** | `KSA/VolumetricExhaustInstance.cs:48` | pyro | `pyro.lib/PlumeEmitter.cs:25,84-87` | OK @5348 | per-plume `absorptionDensity` / `refractionIntensity` overrides written before `AddInstance` copies the struct. **Gracefully disabled** (UI says so) if the field is gone |
+| `_shaderData : private ExhaustInstance` | retired reflection | `KSA/VolumetricExhaustInstance.cs` | none (formerly pyro) | `PlumeEmitter.cs` | Retired @5438 | Field survives but native AddInstanceCore overwrites appearance; use scoped final-submission seam. |
 | `ExhaustInstance.absorptionDensity` / `.refractionIntensity` (fields) | direct API (struct layout) | `KSA/ExhaustInstance.cs` | pyro | `PlumeEmitter.cs:86-87` | OK @5348 | ⚠ **layout drift** @5348: colours/noise/brightness moved OUT of this struct into `ExhaustTemplateData` (per-template buffer indexed by `templateIndex`) — that is why per-plume colour is not offered |
-| `PlumeData` (struct, all `required` fields incl. **`ApparentExhaustVelocity`, `ThroatRadius`, `ThroatDensity`, `InletTemperature` — new @5348**) | direct API (object initializer) | `KSA/PlumeData.cs` | pyro | `pyro.lib/PlumePhysics.cs:70-92` | OK @5348 | a renamed/added `required` member is a **compile** break here (good — loud) |
+| `PlumeData.Compute(in GasProperties,in GasConditions,float,float,float,float,float,float,float,float,float)` | direct API | `KSA/PlumeData.cs:80` | pyro | `PlumePhysics.cs` | Migrated @5438 | Native computation fills StagnationPressure/CoreVelocity/MassFlow; removed InletTemperature no longer initialized. |
 
 ### KSA.GasProperties / KSA.GasConditions / KSA.RocketDesign (plume maths)
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -942,7 +965,7 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 ### KSA.Rendering (RenderTarget resolve seam — graffiti)
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `RenderTarget.ResolveAttachments(CommandBuffer inCmdBuffer) : void` | **Harmony postfix** `(RenderTarget __instance, CommandBuffer inCmdBuffer)` | `KSA.Rendering/RenderTarget.cs:315` | graffiti | `graffiti.lib/GraffitiPatches.cs` | OK @5348 | 🔶 graffiti's keystone seam: called unconditionally per viewport from `Program.RenderGame` (body MSAA-gated, postfix fires regardless) — the post-resolve window `GridPass` draws in. Resolved via `nameof`; param name `inCmdBuffer` is load-bearing for Harmony binding |
+| `RenderTarget.ResolveAttachments(CommandBuffer inCmdBuffer, bool inResolveDepth) : void` | **Harmony postfix** `(RenderTarget __instance, CommandBuffer inCmdBuffer, bool inResolveDepth)` | `KSA.Rendering/RenderTarget.cs` | graffiti | `graffiti.lib/GraffitiPatches.cs` | Migrated @5438 | Exact two-parameter binding. Skip the early color-only resolve; draw after final depth resolve before GridPass, retaining flight/main-viewport gates. Both argument names are Harmony-bound. |
 | `RenderTarget.{DepthImage, ColorImage : RenderImage?, Extent}` | direct API (render) | `KSA.Rendering/RenderTarget.cs:36,38,48` | graffiti | `graffiti.lib/DecalRenderer.cs` (`RecordPass`) | OK @5348 | resolved single-sample scene depth (reverse-Z, sampled per fragment) + the colour attachment the pass draws into |
 | `BarrierBatch` (span ctor, `Add`, `SubmitAndFlush`) · `ImageBarrierInfo.Presets.{DepthSampledReadF, ColorAttachmentReadWrite}` | direct API (render) | `KSA.Rendering/BarrierBatch.cs`; `KSA.Rendering/ImageBarrierInfo.cs` | graffiti | `graffiti.lib/DecalRenderer.cs` | OK @5348 | depth is moved to sampled-read and LEFT there, exactly as `GridPass` leaves it — the engine's tracked-state barriers tolerate that |
 | `RenderingPresets.{ReverseZDepthStencil.NoDepthTest, BlendState.BlendColorAlphaOver}` | direct API (render) | `KSA/RenderingPresets.cs` | graffiti | `graffiti.lib/DecalRenderer.cs` | OK @5348 | no depth attachment at all — occlusion is per-fragment from the sampled depth; alpha-over composite |
@@ -1036,7 +1059,7 @@ mutable initial state fields and native queued application; eligibility is activ
 NOT compile-checked — a game rename breaks these at runtime with no build error. Re-verify each name
 on every game update FIRST.
 
-| Type.Member (string) | Mod(s) | Why string-based | 5348 |
+| Type.Member (string) | Mod(s) | Why string-based | Historical status (see 5438 summary above) |
 |---|---|---|---|
 | `KSA.NarrowPhaseCallbacks.AllowContactGeneration(int,CollidableReference,CollidableReference,ref float)` / `Sim` | sphinx | Internal callback type/method + field lookup; transpiler requires exactly one `BepuHandles.IsGroundSurface` call. [Physics contract](statics.md#physics--collider-contract) | Added @5402; source inspected, native acceptance open |
 | `Camera.OnFrame` (`OrbitController`/`FlyController.OnFrame`) | camera-controller-override | `AccessTools.Method(…, "OnFrame")` | OK |
@@ -1045,7 +1068,7 @@ on every game update FIRST.
 | `Camera.ChangeFieldOfView` / `Camera.UpdateProjection` | glass | `AccessTools.Method` by name | OK |
 | `Vehicle.GetWorldMatrix` / `Vehicle.UpdateRenderData` | i-feel-seen | `AccessTools.Method(typeof(Vehicle), "…")` | OK |
 | `VolumetricExhaustTemplate.References` (internal static field) | pyro | `AccessTools.Field(…, "References")` → `SerializedCollection<T>.GetList()` (`PlumeTemplates.cs:46`) | OK @5348 — soft: falls back to the stock 7 ids via public `Get(id)` |
-| `VolumetricExhaustInstance._shaderData` (private struct field) | pyro | `AccessTools.FieldRefAccess<…, ExhaustInstance>("_shaderData")` (`PlumeEmitter.cs:25`) | OK @5348 — soft: per-plume look overrides disable with a UI notice |
+| ~~`VolumetricExhaustInstance._shaderData`~~ | pyro | retired private field write | **RETIRED @5438** — field exists but native renderer overwrites appearance; scoped final AddInstance prefix replaces this lookup. |
 | `Vehicle.UpdateCollisionGeometry()` | godzilla | private method; open delegate and prefix/finalizer preserve nominal bounds during independent collider rebuilds | Added @5402; managed checks, native contacts pending |
 | `KittenRenderable.ModelToBodyMatrix` / `KittenRenderable._characterAvatar` → `CharacterAvatar.Core` → `CharacterCore.Scale` | garrys-torch, doh, kitten-animations | private method Harmony target + private avatar field; garrys uses typed `KittenEva.Renderable` and `CharacterAvatar.Core.Scale` | OK @5402 |
 | `ChuteRenderable._renderable` → `AnimatedRenderable.MaterialIndices` | free-fallin | private/protected field chain used immediately before `ChuteRenderable.Draw`; writes material slot zero and weakly tracks the renderable for restore | OK @5402 — new game surface and new consumer; both exact names are load-bearing |
@@ -1076,7 +1099,7 @@ on every game update FIRST.
 | `VehicleEditor.DrawParachuteSection` | dont-stifle-me | `AccessTools.Method(typeof(VehicleEditor), "DrawParachuteSection")` — `EditorValueLimitPatches.cs:15,29`; a miss throws at `Apply()` and disables only the configurable editor-limit patch group in unscience | OK @5402 |
 | ~~`Part._matrixAsmb` / `Part._matrixAsmb2Parent`~~ |  | ~~private fields by name (cache safety)~~ | **RETIRED @5117** — replaced by the public `Part.ResetCachedPosMatrixValues()`. Rev 5112 changed the uncached sentinel from identity to NaN, which turned the old identity-write from a no-op into a transform-corrupting write. **Removing a watchlist entry is the best outcome available here** — this row can no longer break silently |
 | `PartTree.RecomputeStaticMass` | kitchen-sink | HarmonyLib `Traverse.Method("RecomputeStaticMass")` | OK |
-| `ResourceManagerBase.NearestToFurtherestNode(SameStage)` | blinky (diagnose-only) | base-type private field by name | OK (field names intact) — but the **owner moved**: `ResourceManager` is no longer on `RocketCore`, it is on the `Combustor` subclass (`SolidMotor` cores have none). Reached via a `core is Combustor` test since 5018 |
+| ~~`ResourceManagerBase.NearestToFurtherestNode(SameStage)`~~ | blinky | retired diagnostics reflection | Typed `ConsumptionOrder : FlowOrder<Tank>` is current; 5438 removed array traversal assumptions. |
 | `GameSettings.OnKeyAll` | all mods (HotkeyGuard) | `AccessTools.Method(…, nameof(OnKeyAll))` | OK |
 | `Program.OnDrawUiConsole` (private) | unscience (HiddenUiFrameHook) | `AccessTools.Method(typeof(Program), "OnDrawUiConsole")` — `HiddenUiFrameHook.cs:44`. Miss throws at `Patch()` → logged/skipped; symptom is mods freezing on F2 again. Must remain an every-frame call *after* the `if (DrawUI)` block and *before* `ImGui.Render()` (`Program.cs:2103` @5348) | OK |
 | `Program.PrepareFrame(double,double)` → seven ordered Universe call seams | garrys-torch | private method + transpiler call matching | OK @5402; installation rejects missing, duplicate or reordered calls; see vehicle-physics standing timing invariant |
@@ -1093,10 +1116,10 @@ on every game update FIRST.
 | `MeshIndirect.frag` + `MeshIndirectRaytraced.frag` (paint injection) | shader text-edit (in memory, via the `FromFile` prefix) | matched by **file name**; anchor = first `vec3 sampledColor …;` line; requires `inStateFlags` varying and `gammaToLinear` (`Common/Shared.glsl:203`) | `Content/Core/Shaders/Mesh/MeshIndirect.frag:114`; `MeshIndirectRaytraced.frag:156` | humble-arteest (VehiclePaint) | OK (rebuilt for 5018) — if the anchor moves, `Enable` fails with a UI message and rendering stays stock |
 | `MeshIndirect.frag` (Temperature LUT, `#ifdef ENABLE_TEMPERATURE`) | shader (read-only, no edit) | — | `Content/Core/Shaders/Mesh/MeshIndirect.frag:214-219` | humble-arteest (EngineEmissive) | OK (MOVED from `DynamicMeshIndirect.frag` rev 4693; feature still works) |
 | `Model.vert` + `Model_Skinned.vert` + `ModelPbr.frag` → `TextureSet.glsl` / `MaterialSet.glsl` | shader text-edit (in memory, via the `FromFile` prefix) | exact declaration/assignment/call anchors; added location-3 `vec2`; Full Canopy marker in `Material.extraData.w` | `Content/Core/Shaders/Mesh/Model{,_Skinned}.vert`; `Mesh/ModelPbr.frag`; `Common/{TextureSet,MaterialSet}.glsl` | free-fallin; existing read-only albedo effect also used by doh and humble-arteest (KittenColor) | OK @5402 — transformed shaders compile to valid SPIR-V; static vertex supplies pass-through varying, skinned vertex derives bind-pose X/Z projection, fragment substitutes only marked albedo sampling |
-| `ParachuteCanopyGlb` + `ParachuteCanopy_Material` (`Diffuse`, `Normal`, `AoRoughMetal`) | skinned GLTF + PBR material/texture assets | exact ids from `ChuteRenderable` / `ModLibrary.Get<PbrMaterialReference>` | `Content/Core/ParachuteAssets.xml:4,23-27`; `Core/Textures/ParachuteCanopy_{Diffuse,Normal,PBR}.ktx2` | free-fallin | OK @5402 — runtime albedo is BC7; center-decal mode reopens `TextureReference.ModPath` and explicitly transcodes the source KTX2 to RGBA8 |
+| `ParachuteCanopyGlb` + `ParachuteCanopy_Material_CheckerLongOrange` | skinned GLTF + baseline PBR assets | verified native orange-checker source | `Core/ParachuteAssets.xml`; `Core/CoreUtilityAGameData.xml` | free-fallin | Migrated @5438: old ParachuteCanopy_Material removed; restore each canopy's own selected native handle. |
 | `ModelTranslucent.frag` + `CharacterRenderResources.GlassRenderer` | shader/pipeline research (no edits) | `ModelTranslucentFrag` + `ModelVert` in stock glass pipeline | `Content/Core/Shaders/Mesh/ModelTranslucent.frag:81,182`; `KSA/CharacterRenderResources.cs:77,189` | humble-arteest (visor visibility) | @5402 — fixed opacity 0.75 plus Fresnel ignores material alpha; transparent pass with depth writes. The visor draw gate avoids both this color pass and its prepass. |
 | `DynamicMeshIndirect.vert/.frag`, `ModelEye.frag`, `ModelGlass.frag` | shader (removed) | (design assumption only) | — | humble-arteest (narrative), blinky/its-so-shiny GlassModule (C# only) | n/a (removed 4693/4745; `ModelTranslucent.frag` new 4747 — not referenced by id) |
-| Exhaust templates `EngineALarge`, `EngineAMed`, `EngineACompact`, `EngineAVernier`, `EngineATurbine`, `RCS`, `MmuRcsVac` | `VolumetricExhaustTemplate` ids | `VolumetricExhaustTemplate.Get(id)` — **fallback list only** (`PlumeTemplates.cs:13`); normally enumerated live from `References` | `Core/ExhaustAssets.xml:3,307,650,993,1331,1670,2009` | pyro | OK @5348 (`EngineALarge` is the create-form default) |
+| Exhaust templates `EngineALarge`, `EngineAMed`, `EngineACompact`, `EngineAAuxiliary`, `RCS`, `MmuRcsVac` | template IDs | live catalog + fallback; exact legacy Vernier/Turbine aliases | `Core/ExhaustAssets.xml`; `Core/CorePropulsionAGameData.xml` | pyro | Migrated @5438: two old templates merged into Auxiliary; preserve explicit legacy IDs if another content mod provides them. |
 | Engine part templates `CorePropulsionA_Prefab_EngineA2..A6` | part template | `ModLibrary.Get<PartTemplate>(id)` (default A3 everywhere) | `Core/CorePropulsionAAssets.xml`; `Core/CorePropulsionAGameData.xml:118,182,246,291,373` | blinky | OK — **`EngineA1` is gone from Content entirely** and has been removed from blinky's presets and config default (2026-08-23) |
 | Engine feed connector `_connector3` (`<Capabilities>BulkFluid</Capabilities>`) + `<ConsumerFeedWiring>/<FeedsFrom>` on A2–A6 | part-template wiring | reached via `RocketCore.FeedConnectors`, not by id | `Core/CorePropulsionAGameData.xml:189-193` (A3; A2/A4/A5/A6 alike) | blinky | OK — **load-bearing**: the pixel engines only receive propellant because blinky connects *this* connector to a tank part. If the game drops `BulkFluid` or the `FeedsFrom` wiring, every grid goes dark again |
 | `LightPart` template (`<PowerConsumer LightSwitch="true">`) | part template | `ModLibrary.Get<PartTemplate>("LightPart")` | `Core/PartAssets.xml:19`; `Core/CoreElectricalAGameData.xml:221` | its-so-shiny | OK |
@@ -1110,15 +1133,18 @@ on every game update FIRST.
 > a mod folder (`mod.toml` + `<modId>-{assets,part,gamedata}.xml`) under
 > `ModLibrary.LocalModsFolderPath` plus a `ModEntry` in `<user>/manifest.toml`. The only XML names it
 > hard-codes are the ones its validation rules match by string: `<Substance>`, `<MixtureReaction>`,
-> `<FixedReaction>`, `<ThermalReaction>`, `<GrainGeometry>`, `<Situation>`, `<EditorTagDef>` (V8,
+> `<FixedReaction>`, `<ThermalReaction>`, `<GrainGeometry>`, `<Situation>`, `<EditorTagDef>`, `<Explosion>`, `<ExplosionVolume>` (V8,
 > rejected as out of scope) and `<Reaction Id>`, `<Grain Id>`, `<VolumetricExhaust Id>`,
 > `<SoundEvent SoundId>`, `<Mesh Id>`, `<EditorTag Value>`, `Path=` (V6/V7/V10/V11 reference checks).
 
 ---
 
-## 6. Confirmed-broken / changed summary (vs 5402)
+## 6. Confirmed-broken / changed summary
 
-### 5348 → 5402 (current span — 54 revisions, 5349–5402; only rev 5401 logged)
+Current 5402 → 5438 findings and completed migrations are in the [5438 summary](#5438-verification-summary)
+and [upgrade report](../plans/KSA_5438_UPGRADE.md). The following subsection is historical.
+
+### 5348 → 5402 (historical span — 54 revisions, 5349–5402; only rev 5401 logged)
 
 Reconstructed from the source diff: a **viewport registry rework** (`Viewport` class → `IViewport`/
 `IGameViewport`/`ViewportRegistry`, `Index` → `ShaderSlot`, per-viewport GPU arrays fixed at 8 slots —

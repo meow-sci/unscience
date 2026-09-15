@@ -20,6 +20,7 @@ public sealed partial class PyroSubmod
 
     private void RenderPlumeSection(PlumeEntry plume, int index, ref PlumeEntry? toRemove)
     {
+        plume.TemplateId = PlumeTemplates.NormalizeId(plume.TemplateId);
         string state = plume.EffectiveEnabled ? "ON" : "off";
         if (plume.Cycle.Running) state += " / cycling";
         string header = $"Plume #{plume.Id} [{state}]: {plume.Vehicle.Id} / {plume.Part.Id}  ({plume.TemplateId})##pyro_plume_{plume.Id}";
@@ -112,6 +113,7 @@ public sealed partial class PyroSubmod
 
     private void RenderTemplateAndThrottle(PlumeEntry plume, string id)
     {
+        plume.TemplateId = PlumeTemplates.NormalizeId(plume.TemplateId);
         var templateIds = PlumeTemplates.GetTemplateIds();
         int templateIndex = Array.IndexOf(templateIds, plume.TemplateId);
 

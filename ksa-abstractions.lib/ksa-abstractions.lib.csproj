@@ -14,6 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="Planet.Render.Core" Condition="Exists('$(KSAFolder)Planet.Render.Core.dll')">
+      <HintPath>$(KSAFolder)Planet.Render.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Brutal.Concurrency" Condition="Exists('$(KSAFolder)Brutal.Concurrency.dll')">
       <HintPath>$(KSAFolder)Brutal.Concurrency.dll</HintPath>
       <Private>false</Private>

@@ -40,7 +40,7 @@ public static class TemplateRefresher
             var instance = current.FxState.VolumetricExhaust;
             if (instance == null || instance.Template != template) continue;
             instance.OnSettingsChanged();
-            current.Module.RecomputeGasVisibilityDensity(in instance);
+            current.Module.RecomputeVolumetricExhaustLimits(in instance);
         }
     }
 }

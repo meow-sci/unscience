@@ -709,8 +709,7 @@ public sealed partial class BlinkySubmod : ISubmod
         for (int i = 0; i < cores.Length; i++)
         {
             if (cores[i] is not Combustor combustor) continue;
-            var order = combustor.ResourceManager?.ConsumptionOrder;
-            if (order != null && order.Length > 0)
+            if (PropellantFeedDiagnostics.CountTanks(combustor.ResourceManager) > 0)
                 return true;
         }
         return false;
@@ -751,13 +750,8 @@ public sealed partial class BlinkySubmod : ISubmod
                 }
 
                 var order = rm.ConsumptionOrder;
-                int tanks = 0;
-                if (order != null)
-                {
-                    foreach (var level in order)
-                        tanks += level?.Length ?? 0;
-                }
-                Console.WriteLine($"blinky:     core[{i}] '{combustor.TemplateId}': FlowRule={rm.FlowRule}, levels={order?.Length ?? 0}, tanks={tanks}, feedConnectors={combustor.FeedConnectors.Length}");
+                int tanks = PropellantFeedDiagnostics.CountTanks(rm);
+                Console.WriteLine($"blinky:     core[{i}] '{combustor.TemplateId}': FlowRule={rm.FlowRule}, levels={order.LevelCount}, tanks={tanks}, feedConnectors={combustor.FeedConnectors.Length}");
 
                 var feeds = combustor.FeedConnectors;
                 for (int f = 0; f < feeds.Length; f++)

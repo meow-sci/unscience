@@ -88,3 +88,7 @@ for vehicle and cloth solvers before mutating shapes. Collider state is session-
 [Managed tests](../sphinx.tests/README.md) check grounding, transforms, UV mapping, conservative box detection and collider/render alignment. Full solution
 compilation checks typed APIs against KSA 2026.9.7.5402. Native rendering, terrain interaction and
 GPU lifetime acceptance still require an in-game run; see [integration scope](../scope/statics.md).
+
+## KSA 5438 compatibility
+
+Updated for the KSA 5438 Vulkan index-binding API. Native static rendering and collision hooks were compared with 5402; live placement, collisions and bubble transitions remain acceptance checks.

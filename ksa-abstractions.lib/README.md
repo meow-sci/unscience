@@ -210,3 +210,7 @@ objects. Sidecars are limited to 32 MiB/depth 64 and paired to SHA-256 of univer
 
 See [save integration](../scope/saves.md), [plan](../plans/SAVES.md) and
 [managed checks](../saves.tests/README.md). GPU/native acceptance is separate from managed tests.
+
+## KSA 5438 compatibility
+
+The KSA 5438 build adds an explicit compile-only Planet.Render.Core reference for native save identity hashes. IVA rendering binds the common dent-aware part submission overload. Shared hotkey, hidden-HUD and physics handoff contracts were checked against both game builds.

@@ -1,7 +1,7 @@
 # Parachutes (free-fallin) — Game Integration Scope
 
 Permanent reference for detecting when KSA game updates break **free-fallin**, the global parachute
-texture/tint/PBR customizer. Cataloged against KSA build **2026.9.7.5402** at
+texture/tint/PBR customizer. Cataloged against KSA build **2026.9.10.5438** at
 `../ksa-game-assemblies/current/decomp` and `../ksa-game-assemblies/current/Content`.
 
 All logic is in `free-fallin.lib` (`FreeFallinSubmod : ISubmod`,
@@ -10,8 +10,8 @@ All logic is in `free-fallin.lib` (`FreeFallinSubmod : ISubmod`,
 
 ## Integration model
 
-KSA creates one `ChuteRenderable` per live canopy and hard-wires material slot zero to
-`ParachuteCanopy_Material`. Its `Draw` method updates the cloth pose and calls a private
+KSA creates one `ChuteRenderable` per live canopy and selects material slot zero from
+`Parachute.CanopyMaterial?.Id`. Its `Draw` method updates the cloth pose and calls a private
 `AnimatedRenderable`. Free-fallin prefixes that draw, reflects `_renderable`, then swaps element
 zero of its protected `MaterialIndices` array to a mod-created material handle. The array is read
 by `AnimatedRenderable.Draw` for the main, pre-pass, and shadow submissions, so one substitution
@@ -48,20 +48,22 @@ The material is built through KSA's public GPU systems:
 Applied settings are included in Unscience scene saves (see adapter below). Imported files persist in the shared `.unscience/pngs` catalog owned by
 `ksa-abstractions.lib/PngLibrary.cs` and also consumed by graffiti. Generated KSA assets are
 intentionally retained until renderer shutdown so frames in flight never reference a freed material
-or bindless handle. Restore/unload rewrites every weakly tracked renderable to the stock material
-handle.
+or bindless handle. Before the first replacement, Restore/unload records each renderable's native
+slot-zero handle and restores that exact value only while the slot still contains free-fallin's
+handle; the weak tracking table is then cleared so recreated canopies capture their new native
+selections afresh.
 
 ## Touchpoints
 
-| # | Kind | Mod code | Game member / asset | Decomp/content path (5402) | Risk / invariant |
+| # | Kind | Mod code | Game member / asset | Decomp/content path (5438) | Risk / invariant |
 |---|---|---|---|---|---|
 | 1 | **Harmony prefix** | `FreeFallinPatches.cs` | `ChuteRenderable.Draw(float3[], float[]?, floatQuat[]?, ref readonly double4x4, float, double)` | `KSA/ChuteRenderable.cs:32` | Single overload today. Rename/signature change is loud at patch setup/build. Prefix must run before the nested `_renderable.Draw()`. |
 | 2 | **Private reflection** | `FreeFallinPatches.cs` | `ChuteRenderable._renderable : AnimatedRenderable` | `KSA/ChuteRenderable.cs:13` | String-named private field; rename is a silent-compile/runtime-patch failure. Add to every update's reflection watchlist. |
 | 3 | **Protected reflection** | `FreeFallinPatches.cs` | `AnimatedRenderable.MaterialIndices : int[]` | `KSA/AnimatedRenderable.cs:34` | Slot zero must remain the canopy mesh's material. Rename or material-slot reordering breaks customization/restoration. |
 | 4 | Direct GPU API | `CanopyMaterialController.cs` | `GpuObjectSystem<MaterialData>.CreateObject`; `GpuMaterialSystem.GetOrLoad` | `KSA/GpuObjectSystem.cs:45`; `KSA/GpuMaterialSystem.cs` | Allocates one immutable material per Apply. `MaterialData` field order is shader ABI. |
 | 5 | Direct GPU API | `CanopyMaterialController.cs` | `GpuTextureSystem.TryAddTexture/GetOrLoad`, sampler/default handles | `KSA/GpuTextureSystem.cs:85` | Adds replacement/composited albedo and optional uniform PBR textures to KSA's bindless table. |
-| 6 | Direct asset API | `CanopyMaterialController.cs` | `ModLibrary.Get<PbrMaterialReference>("ParachuteCanopy_Material")`; diffuse/normal/PBR references | `KSA/ModLibrary.cs`; `KSA/PbrMaterialReference.cs` | Asset id and three-map shape are hard dependencies. |
-| 7 | Asset + CPU transcode | `CanopyMaterialController.cs` | `ParachuteCanopy_Material`, `TextureReference.ModPath`, `ParachuteCanopy_Diffuse.ktx2`, normal and PBR textures | `Content/Core/ParachuteAssets.xml:23-27`; `Brutal.TextureApi.Ktx/Loader.cs` | Runtime diffuse is BC7 at 5402. Center-decal mode reopens the source KTX2 and requests `KtxTranscodeFmt.Rgba32`; native/non-transcodable BC7 falls back to a flat tintable base. Stock/Replace do not depend on this. |
+| 6 | Direct asset API | `CanopyMaterialController.cs` | `ModLibrary.Get<PbrMaterialReference>("ParachuteCanopy_Material_CheckerLongOrange")`; diffuse/normal/PBR references | `KSA/ModLibrary.cs`; `KSA/PbrMaterialReference.cs` | The old `ParachuteCanopy_Material` id was removed in 5438. CheckerLongOrange is an authored native entry and the stable source for the custom material's maps. |
+| 7 | Asset + CPU transcode | `CanopyMaterialController.cs` | Native `ParachuteCanopy_Material_*` set, `TextureReference.ModPath`, selected diffuse/normal/PBR textures | `Content/Core/ParachuteAssets.xml:23-57`; `Brutal.TextureApi.Ktx/Loader.cs` | 5438 ships CheckerLongOrange, CheckerExtraLongOrange, CheckerLongRed, StripesRed, Tricolor and White. Center-decal mode reopens the selected source KTX2 and requests `KtxTranscodeFmt.Rgba32`; native/non-transcodable BC7 falls back to a flat tintable base. |
 | 8 | Shader ABI | `CanopyMaterialController.cs` | `MaterialData.{AlbedoTexture,Sampler,AlbedoColor,NormalTexture,RoughMetallicAOTexture,RoughnessMetalScale,ExtraData,EmissiveTexture}` | `KSA/MaterialData.cs`; `Content/Core/Shaders/Common/MaterialSet.glsl:28-41` | Shader defines albedo multiplication and PBR channel order R=AO, G=roughness, B=metallic. Full Canopy owns `ExtraData = (projection scale, cos rotation, sin rotation, 31415 marker)`. Recheck layout and ownership together. |
 | 9 | **Harmony prefix** | `CanopyProjectionShaders.cs` | `ShaderModuleUtils.FromFile(Device, string, out VkShaderStageFlags, CompileOptions?)` | `RenderCore/ShaderModuleUtils.cs:117` | Intercepts only three exact shader filenames, preserves compile options and original path as debug/include root, and falls back to stock compilation on failure. Parameter names/types are Harmony-binding dependencies. |
 | 10 | **Harmony prefix** | `CanopyProjectionShaders.cs` | `KSA.Rendering.Utils.SetShaderFromMod(SimpleShaderStages, Device, string modId, bool useCustomOptions)` | `KSA.Rendering/Utils.cs:589` | Changes `useCustomOptions` to true only for the three projection shader ids. Without this seam, ordinary model pipelines reuse cached stock modules and Full Canopy renders identically to Replace. Parameter name `useCustomOptions` is load-bearing. |
@@ -85,6 +87,21 @@ handle.
 8. Live-test stock tint, panel replacement, Full Canopy orientation while reefing/inflating, center
    decal, uniform metallic/roughness, secondary viewports, shadows, Restore Stock, and unload with a
    canopy already deployed.
+
+## Area summary — Update-risk findings (5402 → 5438)
+
+KSA 5438 removed the former global `ParachuteCanopy_Material` asset and authored a native set of
+selected canopy materials. `CanopyMaterialController` now uses
+`ParachuteCanopy_Material_CheckerLongOrange` as its stable source for normal/PBR maps and texture
+metadata. Runtime canopies still choose their own native material through
+`Parachute.CanopyMaterial?.Id`; free-fallin captures each renderable's slot-zero handle before the
+first replacement, restores that handle only when the slot still contains the mod's handle, and
+clears tracking after restoration. This preserves native choices across disable, scene reload and
+unload, including canopies that selected a different authored style.
+
+**Residual live check:** deploy canopies using multiple native styles, apply and remove a custom
+material, then reload the scene and verify every canopy returns to the style it originally selected.
+The 5438 XML ids and source contract are verified; final build and managed test results are recorded in the upgrade report.
 
 ## Save/load adapter (feature/saves)
 

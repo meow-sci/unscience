@@ -13,13 +13,24 @@ public static class FreeFallinPatches
         ?? throw new MissingFieldException(typeof(ChuteRenderable).FullName, "_renderable");
     private static readonly FieldInfo MaterialIndicesField = AccessTools.Field(typeof(AnimatedRenderable), "MaterialIndices")
         ?? throw new MissingFieldException(typeof(AnimatedRenderable).FullName, "MaterialIndices");
-    private static readonly List<WeakReference<AnimatedRenderable>> Observed = new();
-    private static readonly ConditionalWeakTable<AnimatedRenderable, SeenMarker> Seen = new();
+    private static readonly List<ObservedCanopy> Observed = new();
+    private static ConditionalWeakTable<AnimatedRenderable, ObservedCanopy> Seen = new();
     private static readonly MethodInfo Target = AccessTools.Method(typeof(ChuteRenderable), nameof(ChuteRenderable.Draw))
         ?? throw new MissingMethodException(typeof(ChuteRenderable).FullName, nameof(ChuteRenderable.Draw));
     private static readonly MethodInfo Prefix = AccessTools.Method(typeof(FreeFallinPatches), nameof(BeforeDraw))!;
 
-    private sealed class SeenMarker { }
+    private sealed class ObservedCanopy
+    {
+        public readonly WeakReference<AnimatedRenderable> Renderable;
+        public readonly int OriginalHandle;
+        public int LastAppliedHandle = -1;
+
+        public ObservedCanopy(AnimatedRenderable renderable, int originalHandle)
+        {
+            Renderable = new WeakReference<AnimatedRenderable>(renderable);
+            OriginalHandle = originalHandle;
+        }
+    }
 
     public static void Apply(Harmony harmony)
     {
@@ -51,28 +62,51 @@ public static class FreeFallinPatches
     private static void Track(AnimatedRenderable renderable)
     {
         if (Seen.TryGetValue(renderable, out _)) return;
-        Seen.Add(renderable, new SeenMarker());
-        Observed.Add(new WeakReference<AnimatedRenderable>(renderable));
+        if (MaterialIndicesField.GetValue(renderable) is not int[] indices || indices.Length == 0) return;
+        var observed = new ObservedCanopy(renderable, indices[0]);
+        Seen.Add(renderable, observed);
+        Observed.Add(observed);
     }
 
     private static void RestoreObserved()
     {
-        int stock = CanopyMaterialController.ResolveStockHandle();
-        if (stock < 0) return;
-        ReplaceObserved(stock);
+        for (int i = Observed.Count - 1; i >= 0; i--)
+        {
+            ObservedCanopy observed = Observed[i];
+            if (observed.Renderable.TryGetTarget(out AnimatedRenderable? renderable)
+                && MaterialIndicesField.GetValue(renderable) is int[] indices
+                && indices.Length > 0
+                && observed.LastAppliedHandle >= 0
+                && indices[0] == observed.LastAppliedHandle)
+            {
+                indices[0] = observed.OriginalHandle;
+            }
+        }
+
+        // Drop both weak references and identity markers. A later Apply must capture each native
+        // material afresh, including after KSA recreates a canopy with a different selected style.
+        Observed.Clear();
+        Seen = new ConditionalWeakTable<AnimatedRenderable, ObservedCanopy>();
     }
 
     internal static void ReplaceObserved(int handle)
     {
         for (int i = Observed.Count - 1; i >= 0; i--)
         {
-            if (!Observed[i].TryGetTarget(out AnimatedRenderable? renderable)) { Observed.RemoveAt(i); continue; }
+            if (!Observed[i].Renderable.TryGetTarget(out AnimatedRenderable? renderable))
+            {
+                Observed.RemoveAt(i);
+                continue;
+            }
             SetHandle(renderable, handle);
         }
     }
 
     private static void SetHandle(AnimatedRenderable renderable, int handle)
     {
-        if (MaterialIndicesField.GetValue(renderable) is int[] indices && indices.Length > 0) indices[0] = handle;
+        if (MaterialIndicesField.GetValue(renderable) is not int[] indices || indices.Length == 0) return;
+        indices[0] = handle;
+        if (Seen.TryGetValue(renderable, out ObservedCanopy? observed))
+            observed.LastAppliedHandle = handle;
     }
 }

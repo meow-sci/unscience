@@ -1,5 +1,13 @@
 # Save/load lifecycle integration
 
+## Current verification — 5402 → 5438
+
+Native GameSave.Populate, UncompressedSave.Write/Load and Universe.DeserializeSave/LoadSystem hook contracts remain compatible; all seven PhysicsFrameHook seams retain order. The shared library now references Planet.Render.Core for KeyHash. Native vehicle serialization now preserves IsDebris and reapplies non-root part scales, which existing adapters inherit. Pyro migrates the two retired template IDs; Free Fallin restores per-canopy native material ownership during cleanup. Managed persistence tests cover transaction logic, while native scene/GPU round trips remain open.
+
+Verified against `2026.9.10.5438` using both supplied source/Content trees.
+See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
+Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+
 The suite extends native directory saves through `ksa-abstractions.lib/Persistence/NativeSaveHooks`.
 Research and ordering evidence: [native lifecycle assessment](../plans/saves-game-lifecycle.md).
 

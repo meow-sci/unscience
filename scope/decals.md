@@ -6,9 +6,9 @@ enumerated with its decompiled-source path.
 
 **Verified game versions**
 
-- NEW decomp `2026.9.7.5402` root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
+- NEW decomp `2026.9.10.5438` root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
   (Content: `~/repos/meow-sci/ksa-game-assemblies/current/Content`)
-- OLD decomp `2026.8.22.5348` root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
+- OLD decomp `2026.9.7.5402` root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
   (Content: `~/repos/meow-sci/ksa-game-assemblies_prev/current/Content`)
 
 Decomp paths are namespace-foldered and relative to the NEW root. First written against 5348; the
@@ -27,11 +27,14 @@ against that build.
 
 ## Integration model
 
-1. **One Harmony postfix** on `KSA.Rendering.RenderTarget.ResolveAttachments(CommandBuffer)`
+1. **One Harmony postfix** on `KSA.Rendering.RenderTarget.ResolveAttachments(CommandBuffer, bool)`
    (`KSA.Rendering/RenderTarget.cs:315`). `Program.RenderGame` calls it unconditionally per
    viewport; the method body is MSAA-gated but a postfix fires either way — a reliable seam at
    every MSAA setting, the same post-resolve window the game's own `GridPass` draws in (resolved
-   single-sample depth + colour both current and unbound). The postfix (`GraffitiPatches.cs`)
+   single-sample depth + colour both current and unbound). KSA 5438 also calls this method early
+   with `inResolveDepth:false`; the postfix returns for that color-only resolve and records the
+   decal pass only for the final normal resolve immediately before `GridPass`. The postfix
+   (`GraffitiPatches.cs`)
    gates on: `GraffitiSubmod.RenderActive` (static volatile, false when nothing live),
    `!Program.EditorFlag` (the editor resolves the SAME target through the main viewport),
    `__instance == Program.OffscreenTarget` and `Program.RenderedViewport == Program.MainViewport`
@@ -97,9 +100,9 @@ or polling loop. These are mod-authored files, not game assets.
 
 ## Touchpoints
 
-| # | Kind | Mod code | Game member | Decomp path (5402) | Status | Notes |
+| # | Kind | Mod code | Game member | Decomp path (5438) | Status | Notes |
 |---|---|---|---|---|---|---|
-| 1 | **Harmony postfix** | `GraffitiPatches.cs:31,60` | `RenderTarget.ResolveAttachments(CommandBuffer inCmdBuffer)` | `KSA.Rendering/RenderTarget.cs:315` | ✅ (file byte-identical 5348→5402) | resolved with `nameof` — rename = compile break. Param name `inCmdBuffer` bound by Harmony: a rename silently unbinds → `Apply` throws → `TryApply` skips graffiti |
+| 1 | **Harmony postfix** | `GraffitiPatches.cs:27-34,51-59` | `RenderTarget.ResolveAttachments(CommandBuffer inCmdBuffer, bool inResolveDepth = true)` | `KSA.Rendering/RenderTarget.cs:315` | ✅ fixed @5438 | Explicit `(CommandBuffer, bool)` lookup binds the single 5438 method. Param names `inCmdBuffer` and `inResolveDepth` are Harmony dependencies; the postfix returns on the early `false` call and preserves the final normal resolve before `GridPass`. |
 | 2 | Direct API | `GraffitiPatches.cs:54-60`; `DecalRenderer.cs:360,400,402` | `Program.{EditorFlag, OffscreenTarget, RenderedViewport : IViewport, MainViewport : IGameViewport, SetViewport(CommandBuffer), PointClampedSampler, Instance.ResourceFrameIndex, Instance.ColorFormat, Instance.BindlessTextures, GetRenderer(), GetMainCamera()}` | `KSA/Program.cs:224,457,491,485,4293,469,218,222,110,558,632` | ✅ retyped @5402 | `RenderedViewport`/`MainViewport` were `Viewport` (class, removed @5402); `ReferenceEquals` on the same `GameViewport` object still holds. Main-viewport `OffscreenTarget` == `Program.OffscreenTarget` (`:1526`). Viewport identity checks are load-bearing (editor + portrait/secondary exclusion) |
 | 3 | Direct API | `DecalRenderer.cs:362-390` | `RenderTarget.{DepthImage, ColorImage, Extent}`; `BarrierBatch`; `ImageBarrierInfo.Presets.{DepthSampledReadF, ColorAttachmentReadWrite}` | `KSA.Rendering/RenderTarget.cs:38,36,48`; `KSA.Rendering/BarrierBatch.cs`; `KSA.Rendering/ImageBarrierInfo.cs` | ✅ (all three files byte-identical 5348→5402) | near-verbatim GridPass.Run port; depth left in sampled-read state as the game's own pass does. @5402 `GridPass` itself went per-viewport (`SceneDepthDescriptorSets[8]` indexed by `ShaderSlot`, `UpdateDescriptorSet(IViewport)`, `Run` reads `inViewport.OffscreenTarget` — `KSA/GridPass.cs:43,128,455,486`); graffiti rebuilds its own depth set from `Program.OffscreenTarget.DepthImage` per frame ring, main-only, so nothing changes |
 | 4 | Direct API | `DecalRenderer.cs:402-404` | `GlobalShaderBindings.{DescriptorSetLayout, DescriptorSet, DynamicOffset(int) : ByteSize}` + `IViewport.ShaderSlot` | `KSA/GlobalShaderBindings.cs:55,57,64`; `KSA/IViewport.cs:14` | ✅ (mod-side `Viewport.Index` → `ShaderSlot` @5402) | set 0 — the game-wide Camera/Lighting UBO block; set order is baked into the GLSL. UBO stride/order unchanged; the buffer is now sized for a fixed 8 shader slots (`ViewportRegistry.MAX_VIEWPORTS`) instead of `Program.ViewportCount` (6) — slots are pool-allocated, so always look up `MainViewport.ShaderSlot`, never assume 0 |
@@ -216,6 +219,20 @@ stride for thumbnail rendering" is recorded); the source diff below is the only 
   grazing-angle test, and barycentric anchoring follows flutter without leaving the projection box.
 - ℹ Not otherwise graffiti-facing: `RayIntersections.glsl` cylinder `quadraticA` fix, new
   `Mesh/StaticObjectNormalIndirect.frag`, `PartFailure` / `ExhaustPlumeDeformation`.
+
+## Area summary — Update-risk findings (5402 → 5438)
+
+KSA 5438 added the `inResolveDepth` argument to `RenderTarget.ResolveAttachments` and invokes the
+method once with `false` during its early color-only resolve (`KSA/Program.cs:4737`), then again
+normally immediately before `GridPass` (`:4765-4768`). Graffiti now binds the explicit
+`(CommandBuffer, bool)` method and its postfix returns on `inResolveDepth:false`, so the decal pass
+uses the final depth-resolved target exactly once. This removes the silent duplicate/stale-depth
+render from the old no-argument postfix. `VkIndexType.Uint16` was also renamed to
+`VkIndexType.UInt16` in the decal index-buffer submission; this is a direct 5438 enum spelling fix.
+
+**Residual live check:** verify a flight-scene decal appears once after the final resolve and still
+tracks depth with underwater/secondary viewport rendering. The 5438 metadata contract is verified;
+final build and managed test results are recorded in the upgrade report.
 
 ## Save/load adapter (feature/saves)
 

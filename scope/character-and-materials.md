@@ -8,8 +8,8 @@ sources **and** the Content shader tree, in both game builds.
 
 **Verified game versions**
 
-- NEW decomp `2026.9.7.5402` root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
-- OLD decomp `2026.8.22.5348` root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
+- NEW decomp `2026.9.10.5438` root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
+- OLD decomp `2026.9.7.5402` root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
 - NEW Content root: `~/repos/meow-sci/ksa-game-assemblies/current/Content`
 - OLD Content root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/Content`
 
@@ -18,7 +18,7 @@ Paths in the **Decomp/Content path (NEW)** column are relative to the NEW decomp
 (e.g. `Core/Shaders/Mesh/MeshIndirect.vert`). **Mod code** paths are relative to the repo
 root `~/repos/meow-sci/unscience`. Every game target was grepped/read in BOTH
 decomps and (for shaders) BOTH Content trees; "Δ vs OLD" records the real delta (line moves
-are not deltas). Line numbers in the tables were last refreshed against **5402**; earlier
+are not deltas). Line numbers in the tables were last refreshed against **5438**; earlier
 per-pass sections keep the line numbers of the build they were written against.
 
 **How these mods are hosted (all three)**
@@ -239,8 +239,8 @@ rebuild, which is what recompiles the part pipelines.
 | A2 | Typed call | VehiclePaintPatches.cs `FromFilePrefix` | `ShaderModuleUtils.FromString(Device, ReadOnlySpan<byte>, VkShaderStageFlags, CompileOptions?, ReadOnlySpan<byte> debugName)`; `ShaderStageFromFileExtension(string)` | RenderCore/ShaderModuleUtils.cs:77,198 | ✅ | n/a (new) | `debugName` = the original file path (NUL-terminated) so relative `#include`s resolve exactly as stock; `options` passed through unmodified |
 | A3 | Harmony PREFIX | VehiclePaintPatches.cs:49-50,160-164 `PartModelModulePrefix` | `PartModelModule.UpdateRenderData(in double4x4, bool, IViewport viewport, int) : void`; reads `Module<T>.Parent : Part` | KSA/PartModelModule.cs:87; KSA/Module.cs:419 | ✅ | 5402: `Viewport`→`IViewport` (single overload, resolved by name → no impact); light-switch test collapsed to `Parent.FullPart.IsLightSwitchedOff()` (`:106-108`, still bit 6) | Records which `Part` is about to submit. Callers of `PartModel.AddInstance`: this (`:155`) **and** `KSA.Rendering.Thumbnails/ThumbnailPart.cs:226` (thumbnails, `StateBitFlag = 0`, no `UpdateRenderData` → `_pendingPart` is null → unpainted, harmless) |
 | A4 | Harmony PREFIX | VehiclePaintPatches.cs:51-52,166-170 `PartModelDynamicModulePrefix` | `PartModelDynamicModule.UpdateRenderData(in double4x4, bool, IViewport viewport, int) : void` | KSA/PartModelDynamicModule.cs:55 | ✅ | 5402: `Viewport`→`IViewport`; same `IsLightSwitchedOff()` collapse (`:97-99`) | Same hand-off for dynamic parts; callers of `PartModelDynamic.AddInstance`: this (`:127`) and `ThumbnailPart.cs:231` (same null-slot guard) |
-| A5 | Harmony PREFIX | VehiclePaintPatches.cs:53-54,174-178 `AddInstancePrefix` | `PartModel.AddInstance(PerInstanceData instanceData, IViewport viewport, int frameIndex) : void` — ORs paint into `instanceData.StateBitFlag` | KSA/PartModel.cs:408 (struct :332-343) | ✅ | 5402: `Viewport`→`IViewport`; new early-return `if (!viewport.HasAny(ViewportOptionFlags.RenderPartModels)) return;` (`:410`) runs **after** the prefix — the pending slot is still consumed, nothing leaks | Binds by param name `instanceData` (unchanged); **no** `Unsafe.As` mirror struct any more — writes the public field directly |
-| A6 | Harmony PREFIX | VehiclePaintPatches.cs:55-56,180-184 `AddInstanceDynamicPrefix` | `PartModelDynamic.AddInstance(PerInstanceData inInstanceData, IViewport viewport, int inFrameIndex) : void` | KSA/PartModelDynamic.cs:412 (struct :342-353) | ✅ | 5402: `Viewport`→`IViewport`; same `RenderPartModels` gate (`:414`) | Param name `inInstanceData` (unchanged) |
+| A5 | Harmony PREFIX | VehiclePaintPatches.cs:53-54,189-193 `AddInstancePrefix` | **Private** `PartModel.AddInstance(PerInstanceData instanceData, KSA.Deformation.PerInstanceDent dentInstance, IViewport viewport, int frameIndex) : void` — ORs paint into `instanceData.StateBitFlag` | KSA/PartModel.cs:459-490 (struct :383-394) | ✅ | 5438 added a dent-aware public wrapper and routes both public overloads through this private sink; the old by-name lookup was ambiguous and could patch only one wrapper | Explicit four-type lookup binds the shared private sink once; `instanceData` remains the correct Harmony name and the native `dentInstance` is untouched |
+| A6 | Harmony PREFIX | VehiclePaintPatches.cs:55-56,195-199 `AddInstanceDynamicPrefix` | **Private** `PartModelDynamic.AddInstance(PerInstanceData inInstanceData, KSA.Deformation.PerInstanceDent dentInstance, IViewport viewport, int inFrameIndex) : void` | KSA/PartModelDynamic.cs:463-481 (struct :393-404) | ✅ | 5438 added the matching dent-aware wrapper; both public overloads converge on this private sink | Explicit four-type lookup binds the sink once; `inInstanceData` remains the correct Harmony name |
 | A7 | Typed | VehiclePaintShaders.cs:108 `RequestRendererRebuild` | `Program.RendererRebuildNeeded : bool` (public static) | KSA/Program.cs:431 (consumed at :2097 `PrepareFrame`) | ✅ | none (line moves) | The game's own deferred-rebuild flag — the same path a Frost/Water graphics-setting change takes, so pipelines are destroyed at a frame boundary, not mid-record |
 | A8 | Typed | VehiclePaintShaders.cs:256-257 `TryResolveShaderPath` | `ModLibrary.Get<ShaderReference>("MeshIndirectFrag")` → `FileReference.ModPath : string` | KSA/PartModelRenderer.cs:110,195; KSA/FileReference.cs:23 | ✅ | none | Pre-flight check only, so a shader change fails visibly at "Enable" instead of silently |
 | A9 | **Shader text edit** (in memory) | VehiclePaintShaders.cs `Inject`/`BuildSnippet` | `MeshIndirect.frag` **and** `MeshIndirectRaytraced.frag` — anchor = first line starting `vec3 sampledColor` and ending `;`; also requires the `inStateFlags` varying | Content/Core/Shaders/Mesh/MeshIndirect.frag:114; MeshIndirectRaytraced.frag:156 | ✅ | n/a (new anchors) | Anchored on the albedo *declaration*, not an exact line, so incidental upstream edits do not break it. Snippet appends after the sample so paint flows through thin film / frost / PBR. Uses `gammaToLinear` (Common/Shared.glsl:203) |
@@ -249,7 +249,7 @@ rebuild, which is what recompiles the part pipelines.
 | B1 | Reflection | KittenColor.cs:58-73 | `Program.Instance`→`MaterialSystem`→`AssetMap`/`BigBuffer`/`DeviceCtx` (same chain as doh #1-5) | KSA/Program.cs:453,118; GpuObjectSystem.cs:16,18; AssetManager.cs:11 | ✅ | none | |
 | B2 | GPU write (Vulkan) | KittenColor.cs:204-214 | `BigBuffer.VkBuffer` + `VkUtils.StageAndUploadToBuffer` at `handle*ByteSize.Of<MaterialData>() + OffsetOf(AlbedoColor=16)` | KSA/MaterialData.cs:17 | ✅ | none (file byte-identical) | tints fur/body/eyes; span→bytes via BCL `MemoryMarshal.AsBytes` (no `CommunityToolkit.HighPerformance` reference) |
 | B3 | Shader path (read-only) | (effect) KittenColor.cs concept | `ModelPbr.frag` → `MaterialSet.glsl`: `albedo = mat.albedoColor * texture(...)` (`:31`); alpha `discard` (`ModelPbr.frag:67`) | Content/Core/Shaders/Mesh/ModelPbr.frag:65-75; Common/MaterialSet.glsl:31 | ✅ | MaterialSet.glsl **identical**; ModelPbr.frag @5402 adds only `faceNorm = gl_FrontFacing ? inNormal : -inNormal` (`:70-73`, two-sided parachute canopy) — albedo path untouched | tint path intact |
-| C1 | Harmony PREFIX | EngineEmissivePatches.cs:46-47,57,76-78 | `PartModelDynamic.AddInstance(PerInstanceData inInstanceData, IViewport viewport, int inFrameIndex) : void` (prefix `ref … inInstanceData`) | KSA/PartModelDynamic.cs:412 | ✅ | 5402: `Viewport`→`IViewport` + `RenderPartModels` gate (`:414`, after the prefix) — resolved by name, single overload → no impact | param name `inInstanceData` matches |
+| C1 | Harmony PREFIX | EngineEmissivePatches.cs:46-47,76-84 | **Private** `PartModelDynamic.AddInstance(PerInstanceData inInstanceData, KSA.Deformation.PerInstanceDent dentInstance, IViewport viewport, int inFrameIndex) : void` (prefix `ref … inInstanceData`) | KSA/PartModelDynamic.cs:463-481 | ✅ | 5438 added a dent-aware public wrapper; the old by-name lookup was ambiguous and could patch only one wrapper | Explicit four-type lookup binds the shared private sink once; `inInstanceData` matches and `dentInstance` is preserved by stock code |
 | C2 | Struct reinterpret (`Unsafe.As`) | EngineEmissivePatches.cs:34-42,83-86 | `PartModelDynamic.PerInstanceData` — writes `Temperature`@**68**, `TfiThickness`@**72** | KSA/PartModelDynamic.cs:342-353 | ✅ | **none** (struct byte-identical; game use of bytes 68–79 unchanged: `MeshIndirect.vert:82 outTemperature = instanceData.Temperature`) | ✅ mirror struct matches **exactly** |
 | C3 | Typed | EngineEmissive.cs:123,129,159 | `Part.Modules.Get<PartModelDynamicModule>()`; `PartModelDynamicModule.PartModelDynamic` (`required`) | KSA/PartModelDynamicModule.cs:32 | ✅ | none | engine discovery via `PartHelpers.GetAllParts` |
 | C4 | Shader path (read-only) | (effect) — no mod edit | Temperature→emissive LUT logic, formerly `DynamicMeshIndirect.frag`, now `MeshIndirect.frag` under `#ifdef ENABLE_TEMPERATURE` | Content/Core/Shaders/Mesh/MeshIndirect.frag:46-48 (decl: `inTemperature`@loc7, `temperatureLut` binding 9), :297-304 (LUT sample); vert:46-47,81-82 | ✅ | **MOVED** (4693): `DynamicMeshIndirect.frag/.vert` files **removed**; dynamic pipeline now compiles `MeshIndirectVert/Frag` with `ENABLE_TEMPERATURE` (PartModelRenderer.cs:197,209). Both shader files byte-identical 5348↔5402 | ✅ feature still works — game still reads `PerInstanceData.Temperature` |
@@ -544,7 +544,27 @@ clean against 5402 (52 projects, 0 warnings, 0 errors). **No code change was nee
   seated kitten whose head is hidden in its own seat cam; (b) Vehicle Paint / Engine Emissive on a
   vehicle rendered in a secondary viewport (both `AddInstance` gates + per-viewport `UpdateRenderData`
   pairing); (c) kitten-animations forced clips + expressions on screen (still outstanding from the 5348
-  pass); (d) cloned materials with raytracing on (carried over from 5261→5348).
+pass); (d) cloned materials with raytracing on (carried over from 5261→5348).
+
+## Area summary — Update-risk findings (5402 → 5438)
+
+KSA 5438 added dent-aware public `AddInstance` wrappers to both `PartModel` and
+`PartModelDynamic`. Each wrapper computes a `KSA.Deformation.PerInstanceDent` and forwards to one
+private four-argument submission sink (`KSA/PartModel.cs:459-490`,
+`KSA/PartModelDynamic.cs:463-481`). The previous by-name Harmony lookups were therefore ambiguous:
+depending on reflection ordering, a prefix could miss one wrapper or run on a wrapper that does
+not own the final list append. Vehicle Paint and Engine Emissive now resolve the exact private
+tuple once; both stock paths pass through that sink, so their prefixes run once per submission and
+leave the dent value intact.
+
+`IvaForceRender` uses the same exact `PartModel` sink. Its postfix now mirrors the stock editor
+gates and appends both `InstanceList` **and** `DentInstanceList`, preserving the one-to-one buffer
+alignment required by the new dent-aware renderer. The per-instance `StateBitFlag` layout and free
+paint bits 11..31 remain unchanged; the new dent data lives in its separate list.
+
+**Residual live check:** render a dented part with Vehicle Paint, Engine Emissive and Force IVA
+enabled in the editor, then confirm instance and dent-list lengths remain equal in a secondary
+viewport. Source and binary metadata agree; see the upgrade report for final build/test results.
 
 ### Save/load ownership and material recipes
 

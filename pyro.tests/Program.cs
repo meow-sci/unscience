@@ -1,6 +1,11 @@
 using System;
+using System.Collections.Generic;
 using MeowSci.PyroLib;
 static void Check(bool condition, string text) { if(!condition) throw new Exception(text); }
+static void Near(float actual, float expected, string text)
+{
+    if (MathF.Abs(actual - expected) > 0.0001f) throw new Exception($"{text}: {actual} != {expected}");
+}
 var cycle = new PlumeCycle { OnSeconds=2, OffSeconds=3 };
 cycle.Restart(100);
 Check(cycle.Running && cycle.IsOn && cycle.RemainingSeconds==2,"Start On");
@@ -29,4 +34,23 @@ cycle.Update(501.25);
 Check(cycle.IsOn && cycle.RemainingSeconds==2,"Restored cycle crosses next boundary once");
 cycle.RestorePhase(10, true, .5);
 Check(cycle.IsOn && cycle.RemainingSeconds==.5,"Save restores On phase without restarting it");
-Console.WriteLine("PASS: cycle boundaries, pause, repeat, time warp, restart, stop and invalid inputs");
+
+Near(PlumeMigrationMath.SyntheticChamberPressurePa(49f, 1f), 4_900_000f, "Full throttle pressure");
+Near(PlumeMigrationMath.SyntheticChamberPressurePa(49f, .5f), 2_450_000f, "Half throttle pressure");
+Near(PlumeMigrationMath.SyntheticChamberPressurePa(49f, 0f), 4_900f, "Zero throttle shutdown pressure");
+Near(PlumeMigrationMath.RefractionFallback(506.625f, 2000f, 1f), .5f, "Half-atmosphere refraction ramp");
+Near(PlumeMigrationMath.RefractionFallback(1013.25f, 2000f, 1f), 1f, "Full refraction ramp");
+Check(float.IsNaN(PlumeMigrationMath.RefractionScale(0f, 1f)), "Zero template refraction uses fallback");
+Near(PlumeMigrationMath.RefractionScale(2f, 3f), 1.5f, "Relative refraction scale");
+
+var currentIds = new HashSet<string>(StringComparer.Ordinal) { PlumeTemplateIds.Auxiliary };
+Check(PlumeTemplateIds.Normalize("EngineAVernier", currentIds.Contains) == PlumeTemplateIds.Auxiliary,
+    "Vernier alias migrates");
+Check(PlumeTemplateIds.Normalize("EngineATurbine", currentIds.Contains) == PlumeTemplateIds.Auxiliary,
+    "Turbine alias migrates");
+currentIds.Add("EngineAVernier");
+Check(PlumeTemplateIds.Normalize("EngineAVernier", currentIds.Contains) == "EngineAVernier",
+    "Installed legacy ID wins");
+Check(PlumeTemplateIds.Normalize("UserDefined", currentIds.Contains) == "UserDefined",
+    "Unknown ID remains explicit");
+Console.WriteLine("PASS: cycle state, throttle pressure, refraction scaling and template ID migration");

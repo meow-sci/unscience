@@ -1,5 +1,13 @@
 # Audio — BYO Music integration
 
+## Current verification — 5402 → 5438
+
+The FMOD wrapper package changed, but BYO Music's named sound/channel APIs and lifecycle still compile against the current DLLs. GameAudio.Update only adds ExplosionSoundSystem.UpdateAudio; stream ownership, listener registration and vehicle-relative positioning contracts remain. No new reflection or audio asset dependency. Codec playback, spatial gain, repeat/target-loss and native unload still require a live audio pass.
+
+Verified against `2026.9.10.5438` using both supplied source/Content trees.
+See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
+Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+
 Cataloged against KSA 2026.9.7.5402, `../ksa-game-assemblies/current/decomp`. BYO Music is now an
 Unscience `ISubmod`; its standalone host remains a compile-only development reference.
 

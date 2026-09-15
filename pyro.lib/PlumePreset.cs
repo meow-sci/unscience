@@ -27,7 +27,7 @@ public sealed class PlumePreset
     /// <summary>Captures a plume's current settings as a preset.</summary>
     public static PlumePreset FromPlume(PlumeEntry plume) => new()
     {
-        TemplateId = plume.TemplateId,
+        TemplateId = PlumeTemplates.NormalizeId(plume.TemplateId),
         Position = plume.Position,
         Rotation = plume.Rotation,
         Throttle = plume.Throttle,

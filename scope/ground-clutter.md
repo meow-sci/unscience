@@ -1,5 +1,13 @@
 # Ground clutter: Pebbles
 
+## Current verification — 5402 → 5438
+
+Pebbles preview uses renamed `VkIndexType.UInt32` with unchanged index width/value. The 19 ground-clutter shaders and five XML graphs are byte-identical. All constructor/material/transpiler/reflection contracts remain; StagingPool still retains `_submitted` and `_commandBufferIndex`, so cancellation discards only unsubmitted work despite new fence recycling. Segmented physics retains the drained cloth/vehicle edit window; native apply/restore, faults and bubble merge/split acceptance remain open.
+
+Verified against `2026.9.10.5438` using both supplied source/Content trees.
+See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
+Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+
 Current owner: `pebbles.lib`. Runtime code is in `Runtime/` and asset/geometry ownership in `Assets/`; main authoring and Workshop UI belong to the same feature. Reference baseline: KSA **2026.9.7.5402**, sibling `ksa-game-assemblies/current`. Compilation and offline shader validation do not establish native GPU or gameplay behavior.
 
 ## Simple authoring behavior

@@ -31,3 +31,7 @@ limitations.
 Records runtime mod IDs and part-template dependencies. Installed folders and enabled manifest entries already persist through Parts Now; save loading does not duplicate, unload or execute asset bundles. Required part mods must be installed/enabled before KSA reads the native save. Template IDs unavailable at restore produce actionable dependency diagnostics; the sidecar is not a portable asset bundle.
 
 Scene persistence is registered by the Unscience host through `ISaveParticipantSource`; standalone development hosts retain their existing lifecycle. Use ordinary KSA Save/Load. See [save behavior](../unscience/README.md#scene-saves) and the [design plan](../plans/SAVES.md).
+
+## KSA 5438 compatibility
+
+KSA 5438 explosion definitions (Explosion and ExplosionVolume) are rejected by runtime validation. Install them as a regular mod and restart; nested references to existing definitions remain supported.

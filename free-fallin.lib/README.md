@@ -13,7 +13,9 @@ Reusable core for [`../free-fallin`](../free-fallin) and the unscience umbrella 
 
 The lib owns generated KSA texture/material registrations and retires the previous allocation
 after switching observed canopies and waiting for the GPU. Allocations happen on Apply, not
-per UI change or frame.
+per UI change or frame. KSA 5438 supplies a native material id to each `ChuteRenderable`; the
+controller uses `ParachuteCanopy_Material_CheckerLongOrange` as its stable authored source for
+normal/PBR data while preserving each canopy's own original slot for restoration.
 
 Full Canopy stores projection scale, rotation, and a mode marker in `MaterialData.ExtraData`. The
 patched skinned vertex shader derives a second UV from the canopy's bind-pose X/Z coordinates. The
@@ -36,3 +38,6 @@ repeated loads retire prior resources. Observed canopy material indices are swit
 GPU retirement, with an idle-device wait. Shader hooks remain under the existing host.
 The shared `MaterialColorState` tracker records each allocation's actual initial albedo and
 forgets it on release, preventing a reused GPU slot from inheriting another material's color.
+Each observed canopy records its native slot-zero handle before the first replacement; Restore
+Stock, save/load reset, and unload restore that exact handle and clear tracking so a later apply
+captures fresh native choices.

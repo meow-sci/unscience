@@ -1,5 +1,13 @@
 # Sphinx — body-fixed imported GLB statics
 
+## Current verification — 5402 → 5438
+
+Sphinx uses renamed `VkIndexType.UInt32` with unchanged index representation. StaticObjectRenderer, its three shaders, BepuHandles and NarrowPhaseCallbacks are byte-identical. Exact render overloads, `Sim` field, single IsGroundSurface transpiler match, origin-snap and reset/dispose hooks remain. New contact-point deformation and segmented bubble stepping do not change per-simulation ownership, but collision, origin shifts, mid-step merges and resource retirement need native acceptance.
+
+Verified against `2026.9.10.5438` using both supplied source/Content trees.
+See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
+Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+
 Baseline: KSA **2026.9.7.5402**; source paths below are relative to
 `../ksa-game-assemblies/current/decomp`, shaders to its sibling `Content` directory.
 Implementation: `sphinx.lib`; hosts: Unscience (distributed), Sphinx (development only).

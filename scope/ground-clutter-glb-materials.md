@@ -1,5 +1,13 @@
 # Ground clutter: imported GLB materials
 
+## Current verification — 5402 → 5438
+
+Material shader anchors, flags, vertex/index layouts and private resource ownership are unchanged. TextureLoader extends formats and changes enum numbering, but imports use named Png/Jpg values and retain decoded-source lifetime through upload. No GLB conversion change required. See ground-clutter.md for Vulkan spelling and staging/physics checks; native texture/alpha/normal rendering remains unverified here.
+
+Verified against `2026.9.10.5438` using both supplied source/Content trees.
+See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
+Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+
 Current owner: `pebbles.lib/Assets/GlbImportLibrary.cs`, `GlbMaterials.cs`, `GlbTextures.cs`, pure `Models/Glb*` and `Import/GlbFileBrowser.cs`. Baseline: KSA **2026.9.7.5402**. See [ground clutter](ground-clutter.md) for graph, renderer, and lifecycle ownership.
 
 ## Geometry, identity and authoring

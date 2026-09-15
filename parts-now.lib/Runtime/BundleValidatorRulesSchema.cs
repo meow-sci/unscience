@@ -18,15 +18,15 @@ namespace MeowSci.PartsNowLib;
 public static partial class BundleValidator
 {
     /// <summary>
-    /// Element names parts-now refuses to load. Each of these feeds a library that is populated once
-    /// at boot with <c>Dictionary.Add</c> (<c>SubstanceLibrary.LoadAll</c>,
-    /// <c>GrainGeometryLibrary.LoadAll</c>) or a list that <c>VehicleEditor</c> locks after boot, so
-    /// none of them can be extended at runtime.
+    /// Element names whose registries parts-now cannot safely extend and roll back. This includes
+    /// startup-only libraries and the explosion registries introduced in KSA 5438, which are not
+    /// included in this loader's registration snapshots or unload cleanup.
     /// </summary>
     private static readonly string[] UnsupportedElements =
     {
         "Substance", "MixtureReaction", "FixedReaction", "ThermalReaction",
         "GrainGeometry", "Situation", "EditorTagDef",
+        "Explosion", "ExplosionVolume",
     };
 
     /// <summary>
@@ -57,8 +57,8 @@ public static partial class BundleValidator
                 AddError(context, "V8", bundle.SourceName,
                     element.Attribute("Id")?.Value ?? string.Empty,
                     "<" + name + "> (line " + BundleParser.LineNumber(element)
-                    + ") is out of scope for parts-now: the library it feeds is built once at startup "
-                    + "and cannot take new entries at runtime. Reference an existing id instead, or "
+                    + ") is out of scope for parts-now: its registry is not managed by this runtime loader. "
+                    + "Reference an existing id instead, or "
                     + "ship this file as a normal mod and restart the game.");
             }
         }

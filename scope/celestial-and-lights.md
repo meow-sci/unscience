@@ -1,5 +1,13 @@
 # Scope: Celestial Welding & Lights (kiwis-marbles, zippo)
 
+## Current verification — 5402 → 5438
+
+No code migration required. `Celestial.SetOrbit` (NEW :149), `UpdatePerFrameData`, `IOrbiter`/`IParentBody`, and the solver-prefix ordering retain their contracts. Orbit cache retirement was added for flight plans without changing weld creation/reparenting. `LightModule.TemplateData`, its `ColorRgb`/intensity/cone fields, `FloatReference`, `KeyframeAnimationModule`, and power-switch ownership are unchanged; `ColorRgbReference` only adds XML formatting. Rev 5411 adds authored light/battery mass, so dense light-grid physics deserves a live pass. Disco isolation, actuation and restoration still need native acceptance.
+
+Verified against `2026.9.10.5438` using both supplied source/Content trees.
+See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
+Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+
 Permanent reference cataloging how two unscience mods integrate with the KSA game,
 for detecting when a game update breaks them.
 

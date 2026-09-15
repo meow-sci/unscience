@@ -1,5 +1,16 @@
 # Planetary rings — rocky-mcrock-face
 
+## Current verification — 5402 → 5438
+
+Both ring mods retain their catalog fields, mesh/texture backing fields and private renderer gates.
+PlanetTransparenciesRenderer, StaticCelestial and DistantSphereRenderer are byte-identical; ring
+renderer/data diffs only rename numeric temporaries. MeshReference retains HostPrimitives and adds
+mesh-deformation bounds independently of ring strip conversion; its Z-radius fix is inherited.
+No code migration required. Painted textures, ringless-system creation, rebuild/LOD/shadow behavior
+and save/load still require native acceptance.
+
+See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md). Older tables retain their dated line citations.
+
 Scope for **rocky-mcrock-face** (`rocky-mcrock-face.lib`, bundled in the unscience supermod), which
 swaps the meshes and textures of KSA's planetary ring system (Saturn's rock field + 2D band) at
 runtime. Written against KSA build **2026.8.22.5348**; re-verified against **2026.9.7.5402**.

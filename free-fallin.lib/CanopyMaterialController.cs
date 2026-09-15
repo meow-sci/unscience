@@ -14,7 +14,10 @@ namespace MeowSci.FreeFallinLib;
 
 internal static class CanopyMaterialController
 {
-    private const string StockMaterialId = "ParachuteCanopy_Material";
+    // KSA 5438 replaced the single canopy material with the authored native material set. This is
+    // the first/default entry used by the stock drogue and is also a stable source for normal/PBR
+    // maps when the custom material is built.
+    private const string StockMaterialId = "ParachuteCanopy_Material_CheckerLongOrange";
     private const string CanopyGlbId = "ParachuteCanopyGlb";
     private static int _revision;
     private static CanopyGpuAssets? _owned;
@@ -98,12 +101,6 @@ internal static class CanopyMaterialController
         tint.Z *= settings.Brightness;
         tint.W = 1f;
         return tint;
-    }
-
-    internal static int ResolveStockHandle()
-    {
-        try { return Program.Instance?.SuperMeshRenderSystem?.MaterialSystem.GetOrLoad(StockMaterialId).Handle ?? -1; }
-        catch { return -1; }
     }
 
     internal static void Disable()

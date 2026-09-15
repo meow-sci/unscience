@@ -77,3 +77,7 @@ no saved absolute path is imported. Missing/changed files or missing bodies warn
 skip the affected entry while the coordinator retains the source feature payload. GPU
 handles, physics shapes, bubble handles and preview state are reconstructed, not saved.
 Native rendering/contact verification is still required.
+
+## KSA 5438 compatibility
+
+The index binding uses KSA 5438’s renamed UInt32 enum member. Native render layouts and collision hooks remain compatible; mid-step bubble merges and live collision/resource lifetime still need an in-game pass.

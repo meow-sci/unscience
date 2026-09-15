@@ -161,3 +161,7 @@ Normal KSA saves made with Unscience preserve grids, ownership, patterns and scr
 the native-loaded parts. No extra engine parts are spawned and vehicle ignition is preserved.
 See [save details](../blinky.lib/README.md#scene-saves). Native saves omit ordinary pixel names,
 so a scan alone cannot recover older saves that lack Unscience grid metadata.
+
+## KSA 5438 compatibility
+
+On KSA 5438, feed verification and Diagnose read the new native drain-order view and count reachable tanks, including empty levels and stage filtering. Pixel ignition still requires real fuel, active engines and throttle.

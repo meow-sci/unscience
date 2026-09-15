@@ -93,6 +93,7 @@ public sealed partial class PyroSubmod
         var preset = _presetManager.GetPreset(name);
         if (preset == null) return;
 
+        preset.TemplateId = PlumeTemplates.NormalizeId(preset.TemplateId);
         _pendingPreset = preset;
         _pendingPosition = preset.Position;
         _pendingRotation = preset.Rotation;

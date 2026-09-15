@@ -103,7 +103,8 @@ compile error, unexpected exception) returns control to the original method, so 
 PartModelModule.UpdateRenderData(...)          ← HARMONY PREFIX: remember which Part this is
     │   builds PerInstanceData { ModelMatrix, StateBitFlag, EmissiveColor, Wetness }
     ▼
-PartModel.AddInstance(instanceData, ...)       ← HARMONY PREFIX: instanceData.StateBitFlag |= paintBits
+PartModel.AddInstance(instanceData, ...)       ← public wrappers converge on a private submission;
+                                                  HARMONY PREFIX: instanceData.StateBitFlag |= paintBits
     ▼
 PartModel.WriteInstancesToGpu()                 (unmodified)
     ▼
@@ -114,9 +115,11 @@ MeshIndirect.vert                               (unmodified — forwards outStat
 MeshIndirect.frag                              ← PATCHED: unpack bits 11..31, blend into sampledColor
 ```
 
-`PartModelModule.UpdateRenderData` is the **only** caller of `PartModel.AddInstance`
-(and `PartModelDynamicModule.UpdateRenderData` the only caller of `PartModelDynamic.AddInstance`),
-so the "remember the part, then consume it" hand-off is exact rather than heuristic.
+`PartModelModule.UpdateRenderData` and `PartModelDynamicModule.UpdateRenderData` call the public
+wrappers, including KSA's dent-aware wrappers. Those wrappers converge on a private submission
+overload, which is the method patched by Vehicle Paint and Engine Emissive. This keeps the
+"remember the part, then consume it" hand-off exact and applies each override once while the
+native `PerInstanceDent` record continues through unchanged.
 
 ### The injected GLSL
 
@@ -182,7 +185,8 @@ it, so windows stay clear.
 - **`ShaderModuleUtils.FromString(...)`** / **`ShaderStageFromFileExtension(...)`** — used to compile the patched source
 - **`Brutal.ShaderCApi.CompileOptions`** — only to declare the prefix signature; passed through untouched
 - **`PartModelModule.UpdateRenderData` / `PartModelDynamicModule.UpdateRenderData`** — part identity (`Module<T>.Parent`)
-- **`PartModel.AddInstance` / `PartModelDynamic.AddInstance`** — where the paint bits are ORed in
+- **`PartModel.AddInstance` / `PartModelDynamic.AddInstance`** — the shared private submission
+  overload is where the paint bits are ORed in; the dent-aware public wrappers feed it
 - **`Program.RendererRebuildNeeded`** — deferred renderer rebuild
 - **`ModLibrary.Get<ShaderReference>("MeshIndirectFrag").ModPath`** — pre-flight anchor check only
 - **`Program.Editor`**, **`VehicleEditor.EditingSpace.Parts` / `.UnattachedPartTrees`**, **`PartTree.Parts`** — editor paint targets
@@ -315,7 +319,7 @@ We simply override the Temperature value before it reaches the GPU, giving expli
 
 ### Step-by-Step Data Flow
 
-1. **Harmony Prefix on `PartModelDynamic.AddInstance()`** (`EngineEmissivePatches.cs`)
+1. **Harmony Prefix on the shared `PartModelDynamic.AddInstance()` submission** (`EngineEmissivePatches.cs`)
    - Checks `EngineEmissive.TryGetEffective()` for per-engine or global overrides
    - Uses `Unsafe.As<>` to reinterpret the struct and write `Temperature` and `TfiThickness`
    - No shader modifications needed — Temperature is already wired end-to-end
@@ -350,7 +354,7 @@ interference effects (rainbow sheen).
 | Breakage | Symptom | Fix |
 |----------|---------|-----|
 | `PartModelDynamic.PerInstanceData` layout changes | Wrong field overridden | Update the mirror struct `WritablePerInstanceData` to match |
-| `PartModelDynamic.AddInstance` signature changes | Harmony patch fails | Update the patch target method and parameter types |
+| `PartModelDynamic.AddInstance` overloads or signature changes | Harmony patch fails or applies twice | Resolve the shared private `(PerInstanceData, PerInstanceDent, IViewport, int)` submission and update its parameter names/types |
 | Temperature field renamed | Compiler error in mirror struct | Rename in `WritablePerInstanceData` |
 | `PartModelDynamicModule` removed/renamed | Part scanning fails | Find the new module type for dynamic parts |
 
@@ -417,8 +421,8 @@ under `ksa-game-assemblies/current/decomp` and `.../current/Content`.
 
 | File | What to Check |
 |------|---------------|
-| `KSA/PartModel.cs` | `PerInstanceData` layout (:299-310), `AddInstance()` (:375) |
-| `KSA/PartModelDynamic.cs` | Dynamic `PerInstanceData` (:309-320), `AddInstance()` (:379) |
+| `KSA/PartModel.cs` | `PerInstanceData` layout (:383-394), public wrappers and private submission (:459-490) |
+| `KSA/PartModelDynamic.cs` | Dynamic `PerInstanceData` (:393-404), public wrappers and private submission (:463-481) |
 | `KSA/PartModelModule.cs` | `UpdateRenderData()` (:79) — **the `StateBitFlag` bit map lives here** (:82-133) |
 | `KSA/PartModelDynamicModule.cs` | Dynamic variant with Temperature/TFI (:55) |
 | `KSA/PartModelRenderer.cs` | `ColorData.BuildPipelineModel/Dynamic` — which `ENABLE_*` defines each pipeline uses |

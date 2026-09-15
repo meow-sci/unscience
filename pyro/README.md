@@ -19,8 +19,9 @@ Two projects, following the repo's submod pattern:
 **Create Plume**
 1. Pick a **Vehicle**, a top-level **Part**, and optionally a **Sub-part** (or "(part itself)").
 2. Pick an exhaust **Template** (the game's registered `VolumetricExhaustTemplate`s: `EngineALarge`,
-   `EngineAMed`, `EngineACompact`, `EngineAVernier`, `EngineATurbine`, `RCS`, `MmuRcsVac`, plus any a
-   content mod adds).
+   `EngineAMed`, `EngineACompact`, `EngineAAuxiliary`, `RCS`, `MmuRcsVac`, plus any content mod adds).
+   Saves from builds that used `EngineAVernier` or `EngineATurbine` migrate to `EngineAAuxiliary` when
+   those old IDs are unavailable.
 3. Optionally pick a **Preset** (filterable combo). Selecting one loads its template and offsets into
    the form and carries its throttle, nozzle physics and look settings into the plume you're about to
    create; the **del** button (with confirmation) deletes the selected preset.
@@ -32,16 +33,18 @@ Two projects, following the repo's submod pattern:
 **Active Plumes** — one bordered section per plume, each fully independent:
 - **Enabled** checkbox + **On / Off** button (quick toggle; Off plays the template's shutdown transient
   then stops rendering). **All On / All Off** at the top of the list.
-- **Template** (switching restarts the startup transient) and **Throttle** (feeds the template's
-  throttle-modifier curves, same as a real engine at partial throttle).
+- **Template** (switching restarts the startup transient) and **Throttle** (scales synthetic chamber
+  pressure, retaining the partial-throttle effect after KSA removed throttle modifier curves).
 - **Position / Rotation** offsets, live.
 - **Nozzle physics** — the per-plume knobs that drive plume *size and shape*: exit radius, throat
   radius (together = area ratio → exit Mach and expansion), chamber pressure (bar), chamber temperature
   (K), gamma and gas constant. These are converted to the same `PlumeData` a live engine produces
   (isentropic chamber → throat → exit; see `PlumePhysics.cs`), so under-/over-expansion, shock cells and
   Mach diamonds respond to altitude just like stock plumes.
-- **Look** — per-plume **absorption density ×** and **refraction** (heat haze). These are written into
-  the plume's own per-instance shader struct, so they never touch the shared template.
+- **Look** — per-plume **absorption density ×** and **refraction** (heat haze). They are applied at the
+  final `ExhaustInstance` submission seam, so they never touch the shared template or stock engine instances.
+  KSA 5438 currently never enables its refraction pass (`_hasRefractionInstances` remains false), so
+  the refraction control has no visible effect until that native defect is fixed.
 - **Save settings as preset...** — modal popup that saves the plume's current settings (template,
   offsets, throttle, nozzle physics, look) under a name, with required-name and duplicate-name
   validation. **Remove** deletes the plume.
@@ -64,24 +67,25 @@ automatically.
 
 ## How it works
 
-- **Render hook** — Harmony **postfix** on `Vehicle.AddVolumetricExhaustInstances(Camera, IViewport,
+- **Render hook** — Harmony **postfix** on `Vehicle.AddVolumetricExhaustInstances(Camera,
   VolumetricExhaustRenderer, double)`, the per-frame, per-visible-vehicle call where the game submits its
   own engine plumes. pyro submits the plumes welded to that vehicle to the same renderer with the same
   camera and frame delta, so they land in the same batch, same pass, same transient LUT slices.
 - **Per plume** the lib owns a real `VolumetricExhaustInstance` (built from a
-  `VolumetricExhaustReference { Id }.Load()`), calls `UpdateState(simTime, isActive, dt, plumeData)` to
-  drive the 4-slot startup/shutdown pulse tracker, then `renderer.AddInstance(posEgo, axis, instance,
-  throttle)` — a 1:1 copy of `RocketNozzleState.AddExhaustInstance`.
+  `VolumetricExhaustReference { Id }.Load()`), supplies gas, exhaust, transforms and air state to the new
+  `UpdateState(...)` API, stores `LastPlumeData` only while active, and submits with
+  `renderer.AddInstance(instance, bendTarget, fade, diamondFade)`. `IsLive` gates the submission so KSA's
+  startup/shutdown pulse tracker controls the tail.
 - **Positioning** — offset in part frame → `Part.MatrixAsmb2VehicleAsmb` → `Vehicle.PosAsmbToBody` →
   `Body2Cce` → camera-ego (`Camera.GetPositionEgo(vehicle)`). Axis goes through
   `Part.Asmb2VehicleAsmb` and `Body2Cce`. Sub-parts and scaled parts are handled because the
   part matrix chain already includes them.
-- **Plume data** — `PlumePhysics.TryCompute` mirrors `RocketNozzle.UpdatePlumeData` (and
-  `RecomputeGasVisibilityDensity` for the visibility threshold) using pascals internally and the camera's
-  ambient pressure from `PhysicalAtmosphereReference.GetAtmosphericPressure`.
-- **Reflection** — two string lookups: `VolumetricExhaustTemplate.References` (internal collection, to
-  list template ids; falls back to the stock id list) and `VolumetricExhaustInstance._shaderData`
-  (private struct, for the per-plume look overrides; gracefully disabled if missing).
+- **Plume data** — `PlumePhysics.TryCompute` preserves the isentropic nozzle model, scales synthetic
+  chamber pressure by throttle, and calls KSA's public `PlumeData.Compute` and
+  `RocketNozzle.ComputeMinGasVisibilityDensity` using pascals internally.
+- **Reflection** — one string lookup remains: `VolumetricExhaustTemplate.References` (internal collection,
+  to list template IDs; falls back to the current stock IDs). Per-plume look overrides use the typed public
+  `AddInstance(ExhaustInstance, int)` Harmony seam; no private `_shaderData` mutation remains.
 
 ## Public API (`MeowSci.PyroLib`)
 
@@ -92,7 +96,7 @@ automatically.
 - Presets: `GetPresetNames()`, `GetPreset(name)`, `PresetExists(name)`, `SavePreset(name, preset)`,
   `DeletePreset(name)`, `ApplyPreset(plume, preset)`; `PlumePreset.FromPlume(plume)` snapshots a live
   plume, `PlumePreset.Clone()` deep-copies
-- `PlumeTemplates.GetTemplateIds()` / `CreateInstance(id)`; `PlumePhysics.TryCompute(...)`
+- `PlumeTemplates.GetTemplateIds()` / `CreateInstance(id)` / `NormalizeId(id)`; `PlumePhysics.TryCompute(...)`
 
 ## Game integration scope
 
@@ -106,9 +110,10 @@ plume on immediately; editing either duration restarts at On. Durations use **si
 so game pause freezes the phase and warp advances it. Disabling the cycle returns to the plume's
 Enabled setting. Manual Enabled/On/Off and All On/All Off cancel cycles, so All Off stays off.
 
-Cycles are runtime only and are deliberately excluded from presets. The existing game
-`VolumetricExhaustInstance.UpdateState` still receives the effective active flag, preserving stock
-startup/shutdown tails; an Off interval is not a hard cut of a still-fading transient. Absolute-time
+Cycles are runtime only and are deliberately excluded from presets. The new game
+`VolumetricExhaustInstance.UpdateState` receives the effective active flag plus physical gas and transform
+state, preserving stock startup/shutdown tails; `LastPlumeData` is updated only while active, so an Off
+interval is not a hard cut of a still-fading transient. Absolute-time
 sampling avoids advancing twice for repeated renderer submissions and skips straight to the current
 phase after a long frame/warp. A backward time jump restarts at On. Invalid typed durations are
 sanitized before use.

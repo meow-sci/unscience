@@ -19,8 +19,8 @@ namespace MeowSci.HumbleArteestLib;
 ///    consult <c>ShaderReference.Shader</c>.
 ///
 /// 2. <c>PartModelModule/PartModelDynamicModule.UpdateRenderData</c> — records which
-///    <c>Part</c> is about to submit an instance. These are the only callers of the matching
-///    <c>AddInstance</c>, so a single hand-off slot is exact.
+///    <c>Part</c> is about to submit an instance. The normal render-data paths consume this
+///    hand-off immediately; thumbnail calls have no pending part and remain unpainted.
 ///
 /// 3. <c>PartModel/PartModelDynamic.AddInstance</c> — ORs the packed paint color into the free
 ///    high bits of <c>StateBitFlag</c> on its way to the GPU.
@@ -50,9 +50,9 @@ public static class VehiclePaintPatches
             nameof(PartModelModulePrefix), "PartModelModule.UpdateRenderData");
         Patch(harmony, AccessTools.Method(typeof(PartModelDynamicModule), nameof(PartModelDynamicModule.UpdateRenderData)),
             nameof(PartModelDynamicModulePrefix), "PartModelDynamicModule.UpdateRenderData");
-        Patch(harmony, AccessTools.Method(typeof(PartModel), nameof(PartModel.AddInstance)),
+        Patch(harmony, ResolveAddInstance(typeof(PartModel), typeof(PartModel.PerInstanceData)),
             nameof(AddInstancePrefix), "PartModel.AddInstance");
-        Patch(harmony, AccessTools.Method(typeof(PartModelDynamic), nameof(PartModelDynamic.AddInstance)),
+        Patch(harmony, ResolveAddInstance(typeof(PartModelDynamic), typeof(PartModelDynamic.PerInstanceData)),
             nameof(AddInstanceDynamicPrefix), "PartModelDynamic.AddInstance");
 
         Console.WriteLine($"humble-arteest: VehiclePaint patches applied ({_recordCount}/{RequiredPatchCount})");
@@ -105,6 +105,21 @@ public static class VehiclePaintPatches
             typeof(VkShaderStageFlags).MakeByRefType(),
             typeof(CompileOptions?),
         });
+
+    /// <summary>
+    /// Resolves the method that actually appends an instance to the per-viewport lists. Since KSA
+    /// 5438 added a dent-aware public wrapper, resolving by name would be ambiguous and could patch
+    /// only one wrapper. Both wrappers call this private four-argument method, so one prefix sees
+    /// each submission exactly once and the native <c>PerInstanceDent</c> remains untouched.
+    /// </summary>
+    private static MethodBase? ResolveAddInstance(Type modelType, Type instanceDataType)
+    {
+        MethodBase? submission = AccessTools.Method(modelType, nameof(PartModel.AddInstance), new[]
+        {
+            instanceDataType, typeof(KSA.Deformation.PerInstanceDent), typeof(IViewport), typeof(int)
+        });
+        return submission?.IsPrivate == true ? submission : null;
+    }
 
     // ---- (1) Shader compilation ----
 
