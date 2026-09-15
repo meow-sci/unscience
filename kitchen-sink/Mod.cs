@@ -82,11 +82,9 @@ public class Mod
 
   private void RenderWindow()
   {
-    ImGui.SetNextWindowSize(new float2(420, 300), ImGuiCond.FirstUseEver);
+    ImGui.SetNextWindowSize(new float2(540, 440), ImGuiCond.FirstUseEver);
     if (ImGui.Begin("Kitchen Sink", ref _windowVisible))
       _submod.RenderContent();
     ImGui.End();
   }
 }
-
-

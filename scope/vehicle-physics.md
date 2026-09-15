@@ -638,3 +638,11 @@ Eternal Flame and I Feel Seen register scene adapters through their existing pro
 They rebind vehicle IDs (including surviving debris when already tracked), restore refill interval
 and fuel/electric or visibility flags, and clear old manager ownership/timers on reset. No new
 Harmony/reflection target; scene lifetime is owned by [the save hooks](saves.md).
+
+## Kitchen Sink selective G-load protection
+
+Kitchen Sink adds an opt-in, scene-saved vehicle registry and a guarded transpiler on
+`PhysicsBubble.DetectStructuralFailure(VehicleUpdateState)` (5438:873, unchanged from 5402:782).
+It gates only the GLoadFraction comparison (5438:890, previously 5402:799), preserving contacts, part damage, pressure damage and real
+load telemetry. Both hosts install it. Full surface/lifecycle map and native acceptance limits:
+[UI/customization](ui-customization.md#kitchen-sink).

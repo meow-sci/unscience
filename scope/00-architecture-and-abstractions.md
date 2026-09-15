@@ -599,5 +599,15 @@ object using a weak table, displays save/restore diagnostics in the existing too
 callbacks on disposal. Window-layout autosave remains separate. `SceneSaveCoordinator` performs
 reverse reset / ordered replay, preserves failed/unknown records, and offers explicit replacement
 with current setup on future saves. Kitchen Sink persists `IvaForceRender.Enabled`; one-shot editor
-refresh/debug activity is not replayed. Skittles restores the exact detached scene style and resets
+refresh activity is not replayed; G-load protection saves vehicle IDs in a separate record and rebinds after reset/reconstruction.
+Skittles restores the exact detached scene style and resets
 to startup configured theme between scenes. See [saves](saves.md) for new Harmony/worker seams.
+
+### Kitchen Sink G-load patch lifecycle (2026-09-13)
+
+Unscience and the standalone Kitchen Sink host install/remove `GLoadProtectionPatches` through
+their own Harmony instance. The new private `PhysicsBubble.DetectStructuralFailure` transpiler
+only gates the selected vehicle's G-load decision; see [UI/customization](ui-customization.md#kitchen-sink).
+The defunct KitchenSinkSolverPatch/Flexo part-transform diagnostic integration is removed.
+Reverified on 5438: the detector and end-frame caller retain their exact bodies; both hosts
+also retain upstream's shared IVA common-overload/dent-list fix. No new save lifecycle hook.

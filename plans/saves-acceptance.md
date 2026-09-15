@@ -1,6 +1,10 @@
 # Scene save implementation coverage and native acceptance
 
 Implementation baseline: `feature/saves`, KSA 5402 reference assemblies, September 2026.
+Current compatibility: **5438**, including the reconciled Kitchen Sink G-load records.
+All **71 solution projects build and 14 managed suites pass** on Windows against CURRENT's DLLs;
+Kitchen Sink contributes 54 damage/lifecycle checks and 26 real-adapter save/restore checks.
+Both version-1 records remain unchanged. See [reconciliation evidence](KSA_5438_RECONCILIATION.md).
 This report describes the implemented adapters and their limits. The earlier
 [state inventory](saves-state-inventory.md) is a research assessment of desired coverage,
 not the final implementation specification. See [SAVES.md](SAVES.md) for architecture and
@@ -8,8 +12,9 @@ not the final implementation specification. See [SAVES.md](SAVES.md) for archite
 
 **Native acceptance is pending.** Managed builds and fixture tests cannot establish that
 Vulkan rendering, FMOD playback, native physics, cloth, or actual KSA loading behaves correctly.
-The development host is macOS ARM; the reference native binaries are x64. Run the checklist
-below in a compatible KSA installation before describing scene restoration as accepted.
+The original implementation checks ran on macOS ARM; the 5438 reconciliation ran managed checks
+on Windows with a matching installed game, without launching it. Run the checklist below in KSA
+before describing scene restoration as accepted.
 
 ## What a save represents
 
@@ -18,8 +23,9 @@ the native `universe.xml`, bound to that file's SHA-256. The native save owns ve
 full-part geometry, native module records, camera pose and game time. The sidecar supplies
 Unscience recipes, target ownership, original baselines and the continuation state listed below.
 The integration is wired by [UnscienceSaves](../unscience/UnscienceSaves.cs) for the
-[28 registered submods](../unscience/Mod.cs). There are **29 feature records**, because Pyro
-separates shared template edits from plume instances. Standalone mod entrypoints do not acquire
+[28 registered submods](../unscience/Mod.cs). There are **30 feature records**: Pyro separates
+shared template edits from plume instances, and Kitchen Sink keeps G-load registrations in a
+separate backward-compatible record alongside its original IVA boolean. Standalone mod entrypoints do not acquire
 this host workflow merely because their shared library exposes a participant.
 
 This is durable scene setup restoration, not a complete simulation checkpoint. Native objects
@@ -58,7 +64,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [I Feel Seen](../i-feel-seen.lib/IFeelSeenSubmod.Saves.cs) | Tracked vehicle identities and each force-visibility flag. | Rebuilds tracking on native-restored vehicles. Deleted/missing vehicles warn. |
 | [Iron Man](../iron-man.lib/IronManSubmod.Saves.cs) | Configured kittens, enabled mode, original EVA/control settings needed to disable the mode, current flight-computer preferences. | Mode restores with engines **disarmed**. Existing connectors are configured/reused through the normal code path. Runtime thrust/burn continuation is not promised; the player deliberately arms engines again. |
 | [It's So Shiny](../its-so-shiny.lib/ItsSoShinySubmod.Persistence.cs) | Existing host/light cell addresses, grid ownership/appearance, sparse mask, render flag, scroll recipe/offset and pending deletion. | Rebinds native cells without spawning or forcing ignition/switch state; scrolling resumes. Pending deletion restarts its delay. Shared light-template appearance retains the feature's existing shared-template semantics, with Zippo's template ledger restoring originals. |
-| [Kitchen Sink](../kitchen-sink.lib/KitchenSinkSubmod.Saves.cs) | Global IVA force-render flag. | No separate scene objects or playback state. |
+| [Kitchen Sink](../kitchen-sink.lib/KitchenSinkSubmod.Saves.cs) | Global IVA force-render flag plus G-load-protected vehicle IDs in separate version-1 records. | Clears old references before reconstruction and rebinds exact IDs; missing/ambiguous targets warn and retain state. Legacy boolean-only saves remain valid; picker/filter are transient. |
 | [Kitten Animations](../kitten-animations.lib/KittenAnimationsSubmod.Persistence.cs) | Selected kitten; forced clip by source/label, active/paused state and native clip phase; driver controls/global tuning; expression settings and latched expression clip identity. | Forced looping clips and frozen poses resume, and latched expressions return at their held weight. Unlatched one-shot expressions stay stopped; intermediate expression easing is not checkpointed. Missing/ambiguous clip identity or unavailable native phase fields warn/fail the block. |
 | [Kiwi's Marbles](../kiwis-marbles.lib/KiwisMarblesSubmod.Persistence.cs) | Celestial source/vehicle-or-celestial target/offset and original orbital parent, epoch and state vectors. | Restores ordered welds and their future Unweld baseline. Cycles through both target dependencies and actual parent ancestry are rejected. This is a weld/orbit recipe, not all possible arbitrary celestial-system mutations. |
 | [Parts Now](../parts-now.lib/PartsNowSubmod.Saves.cs) | Runtime mod IDs and declared part-template IDs as dependency records. | Does **not** install, embed, unload or automatically replay arbitrary runtime mods. Required native templates/characters are preflighted before world destruction; install/enable missing dependencies before retrying. |
@@ -71,6 +77,11 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [Zippo](../zippo.lib/ZippoSubmod.Persistence.cs) | Edited shared light component originals/current values; per-part default color baselines; Disco draft and active recipes, paused state, phase/seed, switch and actuator originals; active/queued light transitions. | Disco and queued transitions continue from saved phase/elapsed values. Restores actuator ownership using current module ordinals; conflicts/layout changes warn. Shared-template edits retain their original shared scope. GPU light/material objects and live queue keys are never serialized. |
 
 ## Recovery and portability limits
+
+Kitchen Sink persistence follow-up (2026-09-13): `kitchen-sink.tests` passes 26 additional
+real-adapter/coordinator checks covering G-load registrations, alongside its 54 damage checks.
+The shared `saves.tests` suite and full solution build also pass. Native cart/save/load acceptance
+remains open; the earlier baseline suite run below is not a claim of a new full-suite rerun.
 
 - Copy the **whole native save directory**, including its matching sidecar. PNG, GLB, audio,
   character and runtime part-mod libraries remain external dependencies. Saves do not bundle their

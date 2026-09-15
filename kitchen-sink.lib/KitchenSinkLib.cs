@@ -16,32 +16,16 @@ public sealed partial class KitchenSinkSubmod : ISubmod
 
     public static KitchenSinkSubmod? Instance { get; private set; }
 
-    private readonly FlexoSubpartTest _flexoSubpartTest = new();
-    private readonly FlexoPartTest _flexoPartTest = new();
-
     public void Initialize() { Instance = this; }
 
-    public void Update(double dt) { }
-
-    /// <summary>
-    /// Called from a Harmony prefix on Universe.ExecuteNextVehicleSolvers.
-    /// This is the only safe phase to mutate vehicle part trees and call
-    /// UpdateAfterPartTreeModification() — it runs before the solver task
-    /// is prepared, so kinematic and analytic state timestamps stay coherent.
-    /// </summary>
-    public void UpdateBeforeVehicleSolvers(double dt)
-    {
-        _flexoSubpartTest.UpdateBeforeVehicleSolvers(dt);
-        _flexoPartTest.UpdateBeforeVehicleSolvers(dt);
-    }
+    public void Update(double dt) => GLoadProtection.Prune(VehicleProvider.GetAllVehicles(includeDebris: true));
 
     public void RenderContent()
     {
         SubmodUI.BeginContentArea("##ks_content");
         RenderIvaForceRender();
         RenderFixInvisibleSubparts();
-        _flexoSubpartTest.RenderContent();
-        _flexoPartTest.RenderContent();
+        RenderGLoadProtection();
         SubmodUI.EndContentArea();
     }
 
@@ -80,6 +64,7 @@ public sealed partial class KitchenSinkSubmod : ISubmod
 
     public void Dispose()
     {
+        ResetGLoadProtection();
         if (Instance == this) Instance = null;
     }
 }

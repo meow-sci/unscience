@@ -1,13 +1,10 @@
 using System;
 using HarmonyLib;
-using Brutal.Numerics;
-using KSA;
 using MeowSci.KitchenSinkLib;
 using MeowSci.KsaAbstractions;
 
 namespace MeowSci.KitchenSink;
 
-[HarmonyPatch]
 internal static class Patcher
 {
     private static Harmony? _harmony = new Harmony("kitchen-sink");
@@ -16,12 +13,11 @@ internal static class Patcher
     {
         try
         {
-            _harmony?.PatchAll(typeof(Patcher).Assembly);
             if (_harmony != null)
             {
                 HotkeyGuard.Patch(_harmony);
                 IvaForceRender.Patch(_harmony);
-                KitchenSinkSolverPatch.Apply(_harmony);
+                GLoadProtectionPatches.Apply(_harmony);
             }
         }
         catch (Exception ex)
@@ -36,8 +32,9 @@ internal static class Patcher
         {
             if (_harmony != null)
             {
-                IvaForceRender.Unpatch(_harmony);
                 HotkeyGuard.Unpatch(_harmony);
+                GLoadProtectionPatches.Remove(_harmony);
+                IvaForceRender.Unpatch(_harmony);
             }
             _harmony?.UnpatchAll("kitchen-sink");
             _harmony = null;
@@ -45,31 +42,6 @@ internal static class Patcher
         catch (Exception ex)
         {
             Console.WriteLine($"kitchen-sink: Error removing patches: {ex.Message}");
-        }
-    }
-}
-
-internal static class KitchenSinkSolverPatch
-{
-    public static void Apply(Harmony harmony)
-    {
-        var original = AccessTools.Method(typeof(Universe), nameof(Universe.ExecuteNextVehicleSolvers));
-        var prefix = new HarmonyMethod(typeof(KitchenSinkSolverPatch), nameof(BeforeVehicleSolvers))
-        {
-            priority = Priority.First
-        };
-        harmony.Patch(original, prefix: prefix);
-    }
-
-    private static void BeforeVehicleSolvers(double dtPlayer)
-    {
-        try
-        {
-            KitchenSinkSubmod.Instance?.UpdateBeforeVehicleSolvers(dtPlayer);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"kitchen-sink: Error in solver prefix: {ex.Message}");
         }
     }
 }

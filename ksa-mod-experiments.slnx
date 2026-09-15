@@ -45,6 +45,7 @@
     <Project Path="doh.lib/doh.lib.csproj" />
     <Project Path="kitchen-sink/kitchen-sink.csproj" />
     <Project Path="kitchen-sink.lib/kitchen-sink.lib.csproj" />
+    <Project Path="kitchen-sink.tests/kitchen-sink.tests.csproj" />
     <Project Path="thug-life/thug-life.csproj" />
     <Project Path="thug-life.lib/thug-life.lib.csproj" />
     <Project Path="parts-now/parts-now.csproj" />

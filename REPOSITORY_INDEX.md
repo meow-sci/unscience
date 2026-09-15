@@ -173,7 +173,15 @@ Camera FOV control. Provides 8 lens presets (from super telephoto at 15° to fis
 Random collection of one-off hacks and fixes for KSA. F11 window toggle.
 - **Fix Invisible Subparts**: button that calls `ReinitializeDerivedValues` on `Program.Editor.EditingSpace.Parts` to restore visibility of invisible subparts in the vehicle editor (workaround for a KSA bug)
 - **Force IVA Rendering**: toggle that directly mutates `Template.Internal` on all `PartModel` instances to force interior parts to render outside IVA camera mode; includes a Harmony constructor patch to catch newly created parts and a `PartModel.AddInstance` editor override so IVA SubParts remain visible in the vehicle editor
-- **kitchen-sink.lib**: `KitchenSinkSubmod` (ISubmod — renders fix panels), `IvaForceRender` (static API — template mutation + tracking for IVA force rendering)
+- **G-load Invincibility**: filtered per-vehicle picker, add button, and multi-vehicle active table with per-row Delete. Exact-instance protection bypasses only whole-vehicle G-load destruction; collisions, part crash tolerance and dynamic-pressure damage stay native. Saves stable vehicle IDs and rebinds protection after native reconstruction; legacy/vanilla loads clear it, and missing targets produce diagnostics.
+- Removed the defunct Flexo Part/Subpart Test panels and their standalone solver hook.
+- **KSA 5438**: G-load decision/identity contracts are unchanged; both version-1 save records remain compatible. Retains upstream's shared dent-aware IVA fix; see [reconciliation](plans/KSA_5438_RECONCILIATION.md).
+- **kitchen-sink.lib**: `KitchenSinkSubmod`, `GLoadProtection` (concurrent identity registry), `GLoadProtectionPatches` (guarded structural-failure transpiler installed by both hosts); shared `IvaForceRender` remains in ksa-abstractions.lib.
+
+### [kitchen-sink.tests](kitchen-sink.tests)
+Managed fixtures exercise the production G-load patch and registry: target isolation, thresholds,
+contact/pressure causes, telemetry, pending events, cleanup, concurrent access, unpatching and real-adapter save round-trips/legacy/rebind failure cases.
+Native cart/ImGui acceptance remains in-game; see its [README](kitchen-sink.tests/README.md).
 
 ## Animation & Visual Effects Mods
 
