@@ -78,4 +78,6 @@
     <Project Path="dent-wizard/dent-wizard.csproj" />
     <Project Path="dent-wizard.lib/dent-wizard.lib.csproj" />
     <Project Path="dent-wizard.tests/dent-wizard.tests.csproj" />
+    <Project Path="rabbit-ears/rabbit-ears.csproj" />
+    <Project Path="rabbit-ears.tests/rabbit-ears.tests.csproj" />
 </Solution>

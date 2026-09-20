@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Stand-alone console tool: no KSA references, no NuGet dependencies, never deployed to the mod folder. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>RabbitEars</AssemblyName>
+    <RootNamespace>RabbitEars</RootNamespace>
+    <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Optimize>true</Optimize>
+    <TieredPGO>true</TieredPGO>
+    <ServerGarbageCollector>false</ServerGarbageCollector>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Web/page.html" LogicalName="RabbitEars.Web.page.html" />
+  </ItemGroup>
+</Project>

@@ -5,6 +5,33 @@ This document serves as a comprehensive index of all mods and libraries in this 
 
 > **Game integration scope:** for how each feature plugs into KSA (Harmony patches, reflection, game types, shaders, assets) and how to check what a game update breaks, start at [`scope/FULL_SCOPE.md`](scope/FULL_SCOPE.md) and its master index [`scope/game-integration-surface.md`](scope/game-integration-surface.md). Keeping `scope/` current is mandatory — see [`AGENTS.md`](AGENTS.md).
 
+## Research proposals
+
+- [PALindrome CRT screens in KSA](plans/PALINDROME_KSA_FEASIBILITY.md): source-backed feasibility,
+  native C ABI experiment, Windows/Linux build strategy, PAL input/generation, Vulkan texture and
+  quad integration, CPU/GPU tradeoffs, and save/restore design. Includes sender-generated PAL
+  and six-channel RF aggregation without server video decoding. Research only; no feature added.
+
+## Tools (not part of the mod)
+
+### [rabbit-ears](rabbit-ears) / [rabbit-ears.tests](rabbit-ears.tests)
+Console tool, no KSA references, never deployed with the mod. Frequency-division-multiplexes up to
+six (nine at K=8) independent PAL composite signals into ONE real wideband sample stream using only
+filtering, frequency shifting and addition (negative AM, 96-tap vestigial-sideband filter, polyphase
+interpolation onto an 8 MHz channel raster; 120 MS/s for six channels), and a continuously tunable
+software tuner that hands a 40 MS/s IF to the native PALindrome TV decoder (separate, unlicensed,
+never bundled; built from the user's checkout by `plans/palindrome-crt/prototype/native/build_cli.sh`).
+Commands: `plan`, `mux` (sources → wideband u8/s16 file), `tune` (file → IF SigMF), `play` (file →
+tuner → decoder → web UI), `live` (real-time mux of in-process sources and TCP senders + tuner +
+decoder + web UI with channel buttons, tuning dial, clickable spectrum, receiver noise, PALindrome
+knob groups with seamless decoder swaps), `send` (a sender process streaming PAL composite over
+TCP), `bench`. Pure C# SIMD, no NuGet dependencies; six channels ≈ 2.3× real time on an M4 Pro.
+`rabbit-ears/demo.sh` runs the whole demo. Design and results:
+[`plans/palindrome-crt/RF_MUX_DESIGN.md`](plans/palindrome-crt/RF_MUX_DESIGN.md).
+`rabbit-ears.tests`: 250 game-independent checks (encoder levels/timing, spectrum masks via its own
+FFT, tuner recovery per slot, block-size invariance, file round trips, TCP sender loopback with
+starve/resume continuity, live pipeline smoke test).
+
 ## Distribution policy
 
 `unscience` is the only shipped/publishable mod. Individual `.csproj` files remain code boundaries;

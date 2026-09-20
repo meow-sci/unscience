@@ -3,6 +3,15 @@
 Silly Kitten Space Agency features, distributed together as the single `unscience` mod. Start with [`REPOSITORY_INDEX.md`](REPOSITORY_INDEX.md) for the complete catalog and
 [`scope/FULL_SCOPE.md`](scope/FULL_SCOPE.md) for the game-integration map.
 
+Research: [PALindrome CRT screens in KSA](plans/PALINDROME_KSA_FEASIBILITY.md) evaluates native
+Windows/Linux integration, PAL signal sources, six-channel RF aggregation, in-world textures,
+performance, and persistence.
+It includes a successful native pixel-output probe; the feature is not implemented.
+
+Tool (not part of the mod): [`rabbit-ears`](rabbit-ears/README.md) multiplexes several PAL video signals into one
+wideband RF-style sample stream with pure maths and tunes between them through the PALindrome TV
+decoder; see [the design](plans/palindrome-crt/RF_MUX_DESIGN.md). Run `rabbit-ears/demo.sh`.
+
 `dent-wizard` shows live vessel mass in its source picker and fires any vessel or EVA kitten
 from the camera at a clicked vessel or terrain,
 with target-relative speed and orbital-velocity inheritance. **Automatic mode** stays armed to

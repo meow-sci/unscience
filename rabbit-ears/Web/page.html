@@ -1,0 +1,171 @@
+<!doctype html><meta charset=utf-8><title>Rabbit Ears</title>
+<style>
+ body{background:#15161a;color:#ddd;font:13px -apple-system,Helvetica,sans-serif;margin:0;display:flex;gap:22px;padding:22px;align-items:flex-start}
+ #left{position:sticky;top:12px;width:816px} #set{background:#2a2622;padding:24px 24px 30px;border-radius:26px;box-shadow:0 12px 40px #000a}
+ #tube{width:768px;aspect-ratio:4/3;background:#000;border-radius:38px/30px;overflow:hidden;box-shadow:inset 0 0 40px #000}
+ #tube canvas{width:100%;height:100%;display:block}
+ #panel{flex:1;min-width:380px;max-width:580px} h3{margin:14px 0 6px;color:#f0c060;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+ details{background:#1d1f25;border-radius:8px;margin:6px 0;padding:4px 10px} summary{cursor:pointer;color:#f0c060;padding:4px 0;font-weight:600}
+ summary small{font-weight:400}
+ .row{display:grid;grid-template-columns:190px 1fr 74px;align-items:center;gap:8px;margin:3px 0}
+ .row label{cursor:help;border-bottom:1px dotted #555;justify-self:start} .row span{text-align:right;font-variant-numeric:tabular-nums;color:#9ab}
+ .row.changed label{color:#ffd27a}
+ button,select{background:#3a3d46;color:#eee;border:0;border-radius:6px;padding:6px 10px;margin:2px 3px 2px 0;font:inherit;cursor:pointer}
+ button.on{background:#b5452d} button.dead{opacity:.45}
+ pre{background:#0d0e11;padding:10px;border-radius:8px;font-size:11.5px;white-space:pre-wrap;margin:6px 0}
+ #msg{color:#ff9a7a;min-height:1.2em} small{color:#889} input[type=range]{width:100%}
+ #tuning{background:#1d1f25;border-radius:12px;padding:10px 14px;margin-top:12px}
+ #freq{font:600 22px ui-monospace,Menlo,monospace;color:#ffd27a;margin-right:12px} #spectrum{width:100%;height:190px;display:block;border-radius:6px;cursor:crosshair;margin-top:6px}
+</style>
+<div id=left><div id=set><div id=tube><canvas id=screen width=720 height=576></canvas></div></div>
+ <div id=tuning>
+  <div><span id=freq>--.-- MHz</span><span id=where></span></div>
+  <div id=chans></div>
+  <input type=range id=dial min=0 max=60 step=0.01 value=6 title="Tuning dial: the vision carrier frequency the receiver listens on">
+  <div><button data-step=-1>&laquo; 1 MHz</button><button data-step=-0.25>&lsaquo; 250 kHz</button><button data-step=-0.05>&minus; 50 kHz</button>
+   <button data-step=0.05>+ 50 kHz</button><button data-step=0.25>250 kHz &rsaquo;</button><button data-step=1>1 MHz &raquo;</button>
+   <small>&larr; &rarr; fine tune (shift = coarse, alt = 10 kHz) &nbsp; &uarr; &darr; channel</small></div>
+  <canvas id=spectrum width=1536 height=380 title="Click to tune there; double-click snaps to the nearest channel"></canvas>
+ </div>
+ <pre id=stats>...</pre><div id=msg></div></div>
+<div id=panel>
+ <h3>Receiver &mdash; the aerial socket and the tuner (changes instantly)</h3>
+ <div id=rx></div>
+ <h3>Channels &mdash; what each transmitter puts out (changes instantly)</h3>
+ <div id=channels></div>
+ <h3>The set &mdash; PALindrome's own knobs (each change = a new decoder)</h3>
+ <button id=power>Power cycle</button><button id=reset>Reset set to defaults</button>
+ <label style="margin-left:8px"><input type=checkbox id=seamless checked> seamless (warm up the new set, then swap)</label>
+ <div id=looks></div><div id=setknobs></div>
+ <small>Hover a label for what it does. Orange = moved from its default. With "seamless" off you see the honest behaviour:
+ every knob change re-locks the set, because the decoder's configuration is fixed when it starts.</small>
+</div>
+<script>
+const $=id=>document.getElementById(id), api=(path,o)=>fetch('/api/'+path+(o?'?'+new URLSearchParams(o):'')).then(r=>r.json());
+const fmt=(k,v)=>k.choices||k.boolean?'':(Math.abs(v)>=1e5?(v/1e6).toFixed(2)+'M':String(parseFloat((+v).toPrecision(4))));
+const seamless=()=>$('seamless').checked?1:0;
+let S=null, KN=null, spec=[], tunedMHz=6, nyquist=60, channelKey='';
+
+// ---- video: one binary WebSocket message per frame = 16-byte header (w, h, channels, seq; u32 LE) + pixels
+const cv=$('screen'), ctx=cv.getContext('2d'); let img=null;
+function draw(buf){const h=new DataView(buf), w=h.getUint32(0,true), ht=h.getUint32(4,true), c=h.getUint32(8,true);
+  if(!img||cv.width!=w||cv.height!=ht){cv.width=w;cv.height=ht;img=ctx.createImageData(w,ht);img.data.fill(255)}
+  const s=new Uint8Array(buf,16), d=img.data, n=w*ht;
+  if(c==3)for(let i=0,j=0,p=0;p<n;p++,i+=3,j+=4){d[j]=s[i];d[j+1]=s[i+1];d[j+2]=s[i+2]}
+  else for(let p=0,j=0;p<n;p++,j+=4){d[j]=d[j+1]=d[j+2]=s[p]}
+  ctx.putImageData(img,0,0)}
+function connect(){const ws=new WebSocket('ws://'+location.host+'/ws/video');ws.binaryType='arraybuffer';
+  ws.onmessage=e=>draw(e.data);ws.onclose=()=>setTimeout(connect,1000)}
+connect();
+
+// ---- knob rows (shared by the set, the channels and the receiver)
+function row(k,value,onLive,onCommit){
+  const r=document.createElement('div');r.className='row';
+  const l=document.createElement('label');l.textContent=k.label;l.title=k.help;r.appendChild(l);
+  let e;const s=document.createElement('span');
+  if(k.boolean){e=document.createElement('input');e.type='checkbox';e.checked=!!value;e.style.justifySelf='start'}
+  else if(k.choices){e=document.createElement('select');for(const c of k.choices){const o=document.createElement('option');o.textContent=c;e.appendChild(o)}e.value=value}
+  else{e=document.createElement('input');e.type='range';e.min=k.min;e.max=k.max;e.step=k.step;e.value=value}
+  const val=()=>k.boolean?(e.checked?1:0):e.value;
+  const show=()=>{s.textContent=(k.format||fmt)(k,val());r.classList.toggle('changed',String(val())!=String(k.default))};
+  show();e.oninput=()=>{show();if(onLive)onLive(val())};if(onCommit)e.onchange=()=>{show();onCommit(val())};
+  e._show=show;e._set=v=>{if(document.activeElement===e)return;if(k.boolean)e.checked=!!v;else e.value=v;show()};
+  r.appendChild(e);r.appendChild(s);r._input=e;return r}
+function grouped(host,list,makeRow,openGroups){const groups={};
+  for(const k of list)(groups[k.group]=groups[k.group]||[]).push(k);
+  for(const g in groups){const d=document.createElement('details');if(openGroups.includes(g))d.open=true;
+    const m=document.createElement('summary');m.textContent=g;d.appendChild(m);for(const k of groups[g])d.appendChild(makeRow(k));host.appendChild(d)}}
+// one request in flight per key; the newest value wins
+const latest={},busy={};
+function throttled(key,path,o){latest[key]=[path,o];if(busy[key])return;busy[key]=true;
+  const go=()=>{const[p,q]=latest[key];delete latest[key];api(p,q).catch(()=>{}).then(()=>{if(latest[key])go();else busy[key]=false})};go()}
+
+// ---- the set
+const setInputs={};
+function reflectSet(values){for(const n in values)if(setInputs[n])setInputs[n]._set(values[n])}
+api('knobs').then(k=>{KN=k;
+  grouped($('setknobs'),k.set,kn=>{const r=row(kn,k.set_values[kn.name],null,v=>api('set',{[kn.name]:v,seamless:seamless()}).then(reflectSet));setInputs[kn.name]=r._input;return r},k.set_open_groups);
+  for(const name of k.looks){const b=document.createElement('button');b.textContent=name;
+    b.onclick=()=>api('look',{name,seamless:seamless()}).then(reflectSet);$('looks').appendChild(b)}
+  poll()});
+$('power').onclick=()=>api('power');
+$('reset').onclick=()=>api('look',{name:'__reset__',seamless:seamless()}).then(reflectSet);
+
+// ---- receiver
+const dbFormat=(k,v)=>v+' dB';
+const rxAtten=row({label:'Aerial attenuator',help:'Attenuates the whole band before the receiver. The receiver noise stays put, so weak signals sink into snow.',min:0,max:60,step:1,default:0,format:dbFormat},0,v=>throttled('rxa','rx',{atten_db:v}));
+const rxNoiseOn=row({label:'Receiver noise',help:'A real front end adds noise. Off = a noiseless receiver: no snow anywhere, even between channels.',boolean:true,default:1},1,()=>sendNoise());
+const rxNoise=row({label:'Noise below carrier',help:'Receiver noise rms over the 20 MHz IF, in dB below the sync-tip carrier of a 0 dB channel. Smaller = noisier.',min:6,max:60,step:1,default:38,format:dbFormat},38,()=>sendNoise());
+function sendNoise(){throttled('rxn','rx',{noise_db:rxNoiseOn._input.checked?rxNoise._input.value:'off'})}
+for(const r of[rxAtten,rxNoiseOn,rxNoise])$('rx').appendChild(r);
+
+// ---- tuning
+function showTune(){const mhz=tunedMHz;$('freq').textContent=mhz.toFixed(2)+' MHz';
+  if(document.activeElement!==$('dial'))$('dial').value=mhz;
+  let where='between channels';
+  if(S){let best=null;for(const s of S.plan.slots){const off=mhz-s.carrier_hz/1e6;if(best===null||Math.abs(off)<Math.abs(best.off))best={slot:s.slot,off}}
+    if(best&&Math.abs(best.off)<4){const ch=S.channels.find(c=>c.slot==best.slot);
+      where='CH'+(best.slot+1)+(ch?' '+ch.name:' (no carrier)')+(Math.abs(best.off)<0.005?'':' '+(best.off>0?'+':'')+(best.off*1000).toFixed(0)+' kHz')}
+    for(const b of $('chans').children)b.classList.toggle('on',best&&Math.abs(best.off)<0.005&&+b.dataset.slot==best.slot)}
+  $('where').textContent=where;drawSpectrum()}
+function tuneTo(mhz){tunedMHz=Math.max(0,Math.min(nyquist,Math.round(mhz*1000)/1000));showTune();throttled('tune','tune',{freq:tunedMHz})}
+$('dial').oninput=()=>tuneTo(+$('dial').value);
+for(const b of document.querySelectorAll('button[data-step]'))b.onclick=()=>tuneTo(tunedMHz+ +b.dataset.step);
+document.addEventListener('keydown',e=>{const t=e.target;if(t.tagName=='SELECT'||(t.tagName=='INPUT'&&t.id!='dial'))return;
+  const step=e.shiftKey?0.5:e.altKey?0.01:0.05;
+  if(e.key=='ArrowLeft'){tuneTo(tunedMHz-step)}else if(e.key=='ArrowRight'){tuneTo(tunedMHz+step)}
+  else if((e.key=='ArrowUp'||e.key=='ArrowDown')&&S){const n=S.plan.slots.length,near=Math.round((tunedMHz-6)/8),next=Math.max(0,Math.min(n-1,near+(e.key=='ArrowUp'?1:-1)));tuneTo(S.plan.slots[next].carrier_hz/1e6)}
+  else return;e.preventDefault()});
+function channelButtons(){$('chans').innerHTML='';for(const s of S.plan.slots){const ch=S.channels.find(c=>c.slot==s.slot);
+  const b=document.createElement('button');b.dataset.slot=s.slot;b.textContent='CH'+(s.slot+1)+(ch?' '+ch.name:'');if(!ch)b.classList.add('dead');
+  b.title=(s.carrier_hz/1e6).toFixed(2)+' MHz'+(ch?' - '+ch.source:' - no transmitter');b.onclick=()=>tuneTo(s.carrier_hz/1e6);$('chans').appendChild(b)}}
+
+// ---- spectrum
+const sp=$('spectrum'),sx=sp.getContext('2d'),TOP=-5,BOTTOM=-105;
+function drawSpectrum(){const W=sp.width,H=sp.height,x=f=>f/nyquist*W,y=db=>(TOP-db)/(TOP-BOTTOM)*H;
+  sx.fillStyle='#0d0e11';sx.fillRect(0,0,W,H);sx.font='20px -apple-system,Helvetica,sans-serif';
+  if(S)for(const s of S.plan.slots){const ch=S.channels.find(c=>c.slot==s.slot);sx.fillStyle=s.slot%2?'#1b2230':'#182028';
+    sx.fillRect(x(s.low_hz/1e6),0,x(s.high_hz/1e6)-x(s.low_hz/1e6),H);sx.fillStyle=ch?'#9ab':'#556';
+    sx.fillText('CH'+(s.slot+1)+(ch?' '+ch.name:''),x(s.low_hz/1e6)+6,24,x(8)-10)}
+  sx.strokeStyle='#2a2d36';sx.fillStyle='#667';sx.lineWidth=1;
+  for(let db=-20;db>BOTTOM;db-=20){sx.beginPath();sx.moveTo(0,y(db));sx.lineTo(W,y(db));sx.stroke();sx.fillText(db+' dB',4,y(db)-4)}
+  for(let f=10;f<nyquist;f+=10){sx.beginPath();sx.moveTo(x(f),H-14);sx.lineTo(x(f),H);sx.stroke();sx.fillText(f+' MHz',x(f)+4,H-6)}
+  sx.fillStyle='#ffd27a22';sx.fillRect(x(tunedMHz-1.25),0,x(8),H);                       // what the television's IF will pass
+  if(spec.length){sx.strokeStyle='#7fd4a0';sx.lineWidth=2;sx.beginPath();
+    for(let i=0;i<spec.length;i++){const px=i/(spec.length-1)*W,py=y(Math.max(BOTTOM,spec[i]));i?sx.lineTo(px,py):sx.moveTo(px,py)}sx.stroke()}
+  sx.strokeStyle='#ffd27a';sx.lineWidth=2;sx.beginPath();sx.moveTo(x(tunedMHz),0);sx.lineTo(x(tunedMHz),H);sx.stroke()}
+const clickMHz=e=>{const r=sp.getBoundingClientRect();return (e.clientX-r.left)/r.width*nyquist};
+sp.onclick=e=>tuneTo(clickMHz(e));
+sp.ondblclick=e=>{if(!S)return;const n=S.plan.slots.length,slot=Math.max(0,Math.min(n-1,Math.round((clickMHz(e)-6)/8)));tuneTo(S.plan.slots[slot].carrier_hz/1e6)};
+setInterval(()=>api('spectrum').then(a=>{spec=a;drawSpectrum()}).catch(()=>{}),250);
+
+// ---- channels
+const levelKnob={label:'Transmitter level',help:'Carrier level of this channel relative to the band reference. A strong neighbour beside a weak channel is what the IF filter has to cope with.',min:-40,max:6,step:1,default:0,format:dbFormat};
+function buildChannels(){const host=$('channels');host.innerHTML='';
+  for(const ch of S.channels){const d=document.createElement('details'),m=document.createElement('summary');m.id='chsum'+ch.slot;d.appendChild(m);
+    if(ch.level_adjustable)d.appendChild(row(levelKnob,ch.level_db,v=>throttled('lvl'+ch.slot,'channel',{slot:ch.slot,level_db:v})));
+    if(ch.signal&&KN)for(const k of KN.signal)d.appendChild(row(k,ch.signal[k.name],v=>throttled('sig'+ch.slot+k.name,'channel',{slot:ch.slot,[k.name]:v})));
+    if(!ch.level_adjustable){const s=document.createElement('small');s.textContent='recorded band: this channel is baked into the file';d.appendChild(s)}
+    host.appendChild(d)}}
+function channelSummaries(){for(const ch of S.channels){const m=$('chsum'+ch.slot);if(!m)continue;
+  let t='CH'+(ch.slot+1)+' '+ch.name+' ';const s=document.createElement('small');
+  s.textContent=(ch.carrier_hz/1e6).toFixed(2)+' MHz, '+ch.level_db+' dB, '+(ch.sender?('network sender '+(ch.sender.connected?'connected':'GONE: no programme')+', fifo '+ch.sender.fifo_ms.toFixed(0)+' ms, underruns '+ch.sender.underruns):ch.source);
+  m.textContent=t;m.appendChild(s)}}
+
+// ---- state + stats
+function poll(){api('state').then(s=>{const first=!S;S=s;nyquist=s.plan.nyquist_hz/1e6;$('dial').max=nyquist;
+  const key=s.channels.map(c=>c.slot+c.name+(c.sender?'s':'l')).join('|');
+  if(key!=channelKey){channelKey=key;channelButtons();buildChannels()}
+  channelSummaries();
+  if(first||!busy.tune){tunedMHz=s.tuner.frequency_hz/1e6}
+  if(!busy.rxa&&!busy.rxn){rxAtten._input._set(s.tuner.atten_db);rxNoiseOn._input._set(s.tuner.noise_db===null?0:1);if(s.tuner.noise_db!==null)rxNoise._input._set(s.tuner.noise_db)}
+  reflectSet(s.set_values);showTune();
+  const t=s.stats,d=s.decoder;$('msg').textContent=(t.pipeline_error?'PIPELINE STOPPED: '+t.pipeline_error+'  ':'')+d.message;
+  const behind=t.resyncs>0||t.late_ms>50?'  ** NOT KEEPING UP **':'';
+  $('stats').textContent=
+   `${s.mode} | ${s.mode=='play'?'file reader':'mux'} ${t.mux_rtf.toFixed(2)}x real time (${t.mux_ms_per_block.toFixed(1)} of ${t.block_ms} ms) | tuner ${t.tuner_rtf.toFixed(1)}x | clock ${t.clock_rate.toFixed(3)} | late ${t.late_ms.toFixed(0)} ms | resyncs ${t.resyncs} (${t.lost_seconds} s lost)${behind}\n`+
+   `decoded ${t.fields_per_s.toFixed(1)} fields/s, shown ${t.frames_per_s.toFixed(1)} frames/s | decoder CPU ${t.decoder_cpu_percent.toFixed(0)} % | rabbit-ears CPU ${t.process_cpu_percent.toFixed(0)} % (of one core) | queues ${t.queue_blocks}+${t.decoder_queue_blocks} blocks | AFC ${s.tuner.afc} | up ${t.uptime_s.toFixed(0)} s${d.warming?' | WARMING NEW SET':''}\n`+
+   s.channels.filter(c=>c.sender).map(c=>`sender CH${c.slot+1} '${c.name}' ${c.sender.connected?'connected':'gone'} | ${c.sender.on_programme?'on programme':'NO PROGRAMME'} | fifo ${c.sender.fifo_ms.toFixed(0)} ms | underruns ${c.sender.underruns}\n`).join('')+
+   `\n${d.command}`}).catch(()=>{$('msg').textContent='rabbit-ears is not answering'})}
+setInterval(poll,1000);
+</script>

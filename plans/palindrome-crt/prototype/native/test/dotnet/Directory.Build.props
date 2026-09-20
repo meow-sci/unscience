@@ -1,0 +1,3 @@
+<Project>
+  <!-- Isolates this throwaway probe from the repository-wide Directory.Build.props. -->
+</Project>

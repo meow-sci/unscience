@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>RabbitEars.Tests</AssemblyName>
+    <RootNamespace>RabbitEars.Tests</RootNamespace>
+    <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../rabbit-ears/rabbit-ears.csproj" />
+  </ItemGroup>
+</Project>

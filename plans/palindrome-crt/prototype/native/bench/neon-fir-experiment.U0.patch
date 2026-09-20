@@ -1,0 +1,144 @@
+--- a/lib/fir.cpp
++++ b/lib/fir.cpp
+@@ -11,0 +12,7 @@
++#elif defined(__ARM_NEON) && defined(__aarch64__)
++// EXPERIMENT(neon): the same strip structure on AArch64 NEON. vfmaq_f32 is a
++// single-rounded fused multiply-add, and every lane still sums its taps in
++// natural order, so these tiers are bit-identical to the scalar convolve().
++#include <arm_neon.h>
++#include <array>
++#define PALINDROME_NEON_STRIP 1
+@@ -18,0 +26,9 @@
++#if defined(PALINDROME_NEON_STRIP)
++// Accumulator vectors per strip. AArch64 has 32 vector registers: 8 lanes of
++// accumulators + 8 loads + the tap broadcast for the single filter; the pair
++// carries 2x8 accumulators off 8 shared loads.
++constexpr std::size_t kNeonAcc = 8;
++constexpr std::size_t kNeonStrip = kNeonAcc * 4; // outputs per strip
++using NeonAcc = std::array<float32x4_t, kNeonAcc>;
++#endif
++
+@@ -132,0 +149,47 @@
++#elif defined(PALINDROME_NEON_STRIP)
++  if (d == 1) {
++    for (; k + kNeonStrip <= outputs; k += kNeonStrip) {
++      NeonAcc a;
++      a.fill(vdupq_n_f32(0.0f));
++      const float *wb = window + k;
++      for (std::size_t t = 0; t < n; ++t) {
++        const float32x4_t tap = vld1q_dup_f32(taps + t);
++        for (std::size_t v = 0; v < kNeonAcc; ++v)
++          a[v] = vfmaq_f32(a[v], tap, vld1q_f32(wb + t + 4 * v));
++      }
++      for (std::size_t v = 0; v < kNeonAcc; ++v)
++        vst1q_f32(y + k + 4 * v, a[v]);
++    }
++    for (; k + 4 <= outputs; k += 4) {
++      float32x4_t a = vdupq_n_f32(0.0f);
++      const float *wb = window + k;
++      for (std::size_t t = 0; t < n; ++t)
++        a = vfmaq_f32(a, vld1q_dup_f32(taps + t), vld1q_f32(wb + t));
++      vst1q_f32(y + k, a);
++    }
++  }
++  else if (d == 2) {
++    // vld2q_f32 deinterleaves 8 samples into even/odd lanes; lane L of the even
++    // half is window[2k + t + 2L], exactly what output k+L wants. The odd half is
++    // discarded. Each load reads one sample past the last one needed, so guard
++    // the strip on the window length as the AVX2 shuffle tier does.
++    for (; k + kNeonStrip <= outputs && 2 * k + 8 * (kNeonAcc - 1) + n + 7 <= win_len; k += kNeonStrip) {
++      NeonAcc a;
++      a.fill(vdupq_n_f32(0.0f));
++      const float *wb = window + 2 * k;
++      for (std::size_t t = 0; t < n; ++t) {
++        const float32x4_t tap = vld1q_dup_f32(taps + t);
++        for (std::size_t v = 0; v < kNeonAcc; ++v)
++          a[v] = vfmaq_f32(a[v], tap, vld2q_f32(wb + t + 8 * v).val[0]);
++      }
++      for (std::size_t v = 0; v < kNeonAcc; ++v)
++        vst1q_f32(y + k + 4 * v, a[v]);
++    }
++    for (; k + 4 <= outputs && 2 * k + n + 7 <= win_len; k += 4) {
++      float32x4_t a = vdupq_n_f32(0.0f);
++      const float *wb = window + 2 * k;
++      for (std::size_t t = 0; t < n; ++t)
++        a = vfmaq_f32(a, vld1q_dup_f32(taps + t), vld2q_f32(wb + t).val[0]);
++      vst1q_f32(y + k, a);
++    }
++  }
+@@ -214,0 +278,23 @@
++    }
++  }
++#elif defined(PALINDROME_NEON_STRIP)
++  if (d == 1) {
++    for (; k + kNeonStrip <= outputs; k += kNeonStrip) {
++      NeonAcc a;
++      NeonAcc b;
++      a.fill(vdupq_n_f32(0.0f));
++      b.fill(vdupq_n_f32(0.0f));
++      const float *wb = window + k;
++      for (std::size_t t = 0; t < n; ++t) {
++        const float32x4_t tr = vld1q_dup_f32(rtaps + t);
++        const float32x4_t ti = vld1q_dup_f32(itaps + t);
++        for (std::size_t v = 0; v < kNeonAcc; ++v) {
++          const float32x4_t l = vld1q_f32(wb + t + 4 * v);
++          a[v] = vfmaq_f32(a[v], tr, l);
++          b[v] = vfmaq_f32(b[v], ti, l);
++        }
++      }
++      for (std::size_t v = 0; v < kNeonAcc; ++v) {
++        vst1q_f32(yr + k + 4 * v, a[v]);
++        vst1q_f32(yi + k + 4 * v, b[v]);
++      }
+@@ -215,0 +302,12 @@
++    for (; k + 4 <= outputs; k += 4) {
++      float32x4_t a = vdupq_n_f32(0.0f);
++      float32x4_t b = vdupq_n_f32(0.0f);
++      const float *wb = window + k;
++      for (std::size_t t = 0; t < n; ++t) {
++        const float32x4_t l = vld1q_f32(wb + t);
++        a = vfmaq_f32(a, vld1q_dup_f32(rtaps + t), l);
++        b = vfmaq_f32(b, vld1q_dup_f32(itaps + t), l);
++      }
++      vst1q_f32(yr + k, a);
++      vst1q_f32(yi + k, b);
++    }
+@@ -331,0 +430,38 @@
++#elif defined(PALINDROME_NEON_STRIP)
++  // Same polyphase walk as the AVX2 tier: output k's tap t is
++  // (t even ? even_plane : odd_plane)[k + t/2], taps taken in natural t order.
++  for (; k + kNeonStrip <= outputs; k += kNeonStrip) {
++    NeonAcc a;
++    NeonAcc b;
++    a.fill(vdupq_n_f32(0.0f));
++    b.fill(vdupq_n_f32(0.0f));
++    const float *eb = even_plane + k;
++    const float *ob = odd_plane + k;
++    for (std::size_t t = 0; t < n; ++t) {
++      const float *plane = (t % 2 == 0 ? eb : ob) + t / 2;
++      const float32x4_t tr = vld1q_dup_f32(rtaps + t);
++      const float32x4_t ti = vld1q_dup_f32(itaps + t);
++      for (std::size_t v = 0; v < kNeonAcc; ++v) {
++        const float32x4_t l = vld1q_f32(plane + 4 * v);
++        a[v] = vfmaq_f32(a[v], tr, l);
++        b[v] = vfmaq_f32(b[v], ti, l);
++      }
++    }
++    for (std::size_t v = 0; v < kNeonAcc; ++v) {
++      vst1q_f32(yr + k + 4 * v, a[v]);
++      vst1q_f32(yi + k + 4 * v, b[v]);
++    }
++  }
++  for (; k + 4 <= outputs; k += 4) {
++    float32x4_t a = vdupq_n_f32(0.0f);
++    float32x4_t b = vdupq_n_f32(0.0f);
++    const float *eb = even_plane + k;
++    const float *ob = odd_plane + k;
++    for (std::size_t t = 0; t < n; ++t) {
++      const float32x4_t l = vld1q_f32((t % 2 == 0 ? eb : ob) + t / 2);
++      a = vfmaq_f32(a, vld1q_dup_f32(rtaps + t), l);
++      b = vfmaq_f32(b, vld1q_dup_f32(itaps + t), l);
++    }
++    vst1q_f32(yr + k, a);
++    vst1q_f32(yi + k, b);
++  }
