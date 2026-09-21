@@ -8,15 +8,15 @@ I describe it as a *supermod* that includes a suite of *submods*, each one has a
 
 # media
 
-![thug-life](docs/media/thug-life_01.png_sm.webp)
+![thug-life](docs/media/thug-life_01_sm.webp)
 
 ![garrys-torch](docs/media/garrys-torch_01_sm.webp)
 
-![zippo](docs/media/zippo_01.png_sm.webp)
+![zippo](docs/media/zippo_01_sm.webp)
 
-![godzilla 01](docs/media/godzilla_01.png_sm.webp)
+![godzilla 01](docs/media/godzilla_01_sm.webp)
 
-![godzilla 02](docs/media/godzilla_02.png_sm.webp)
+![godzilla 02](docs/media/godzilla_02_sm.webp)
 
 ![free-fallin](docs/media/free-fallin_01_sm.webp)
 
