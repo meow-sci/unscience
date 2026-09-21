@@ -10,7 +10,7 @@ I describe it as a *supermod* that includes a suite of *submods*, each one has a
 
 ![thug-life](docs/media/thug-life_01.png_sm.webp)
 
-![garrys-torch](docs/media/garrys-torch_01.webp)
+![garrys-torch](docs/media/garrys-torch_01_sm.webp)
 
 ![zippo](docs/media/zippo_01.png_sm.webp)
 
