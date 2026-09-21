@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Offline checks for the actual metadata script and rolling release selection."""
 import importlib.util
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -16,11 +17,12 @@ spec.loader.exec_module(retention)
 
 
 class ReleasePolicyTests(unittest.TestCase):
-    def metadata(self, ref, event='push', attempt='1', success=True):
+    def metadata(self, ref, event='push', attempt='1', run_number='123', success=True):
         with tempfile.TemporaryDirectory() as folder:
             output = Path(folder) / 'output'
             env = dict(os.environ, GITHUB_REF=ref, GITHUB_EVENT_NAME=event,
                        GITHUB_RUN_ID='12345', GITHUB_RUN_ATTEMPT=attempt,
+                       GITHUB_RUN_NUMBER=run_number,
                        GITHUB_OUTPUT=str(output))
             result = subprocess.run(['bash', 'scripts/release-metadata.sh'], cwd=ROOT,
                                     env=env, text=True, capture_output=True)
@@ -38,9 +40,24 @@ class ReleasePolicyTests(unittest.TestCase):
         rerun = self.metadata('refs/heads/feature/new-ux', attempt='2')
         self.assertTrue(rerun['tag'].endswith('-12345-2'))
 
-    def test_tip_and_stable(self):
-        tip = self.metadata('refs/heads/main')
-        self.assertEqual(tip['channel'], 'tip')
+    def test_main_is_permanent_dated_stable_release(self):
+        for event in ('push', 'workflow_dispatch'):
+            data = self.metadata('refs/heads/main', event)
+            self.assertEqual(data['publish'], 'true')
+            self.assertEqual(data['channel'], '')
+            self.assertEqual(data['prerelease'], 'false')
+            self.assertRegex(data['version'], r'^\d{4}\.\d{2}\.\d{2}\.123$')
+            self.assertEqual(data['modversion'], data['version'])
+            self.assertEqual(data['tag'], 'v' + data['version'])
+            self.assertEqual(data['title'], 'unscience ' + data['version'])
+        next_run = self.metadata('refs/heads/main', run_number='124')
+        self.assertTrue(next_run['version'].endswith('.124'))
+        rerun = self.metadata('refs/heads/main', attempt='2')
+        self.assertTrue(rerun['version'].endswith('.123'))
+        for invalid in ('', '0', '-1', '1.2', '$(echo-untrusted)'):
+            self.metadata('refs/heads/main', run_number=invalid, success=False)
+
+    def test_named_release(self):
         stable = self.metadata('refs/heads/release/1.2.3')
         self.assertEqual(stable['tag'], 'v1.2.3')
         self.assertEqual(stable['prerelease'], 'false')
@@ -59,13 +76,16 @@ class ReleasePolicyTests(unittest.TestCase):
             return dict(id=number, tag_name=tag or f'feature-{number}',
                         published_at='2026-09-05T00:00:00Z', prerelease=True, draft=False) | flags
         pages = [[release(n) for n in range(1, 151)], [release(n) for n in range(151, 251)]]
-        pages[1] += [release(999, 'tip-999'), release(998, 'v1.2.3', prerelease=False),
+        pages[1] += [release(1000, 'v2026.09.21.123', prerelease=False),
+                     release(1001, 'v2026.09.21.124'),
+                     release(999, 'tip-999'), release(998, 'v1.2.3', prerelease=False),
                      release(997, 'feature-draft', draft=True), release(996, 'feature-stable', prerelease=False)]
         stale = retention.stale_tags(pages, 'feature', 5)
         self.assertEqual(len(stale), 245)
         self.assertEqual(stale[0], 'feature-245')
         self.assertNotIn('tip-999', stale)
-        self.assertEqual(retention.stale_tags(pages, 'tip', 5), [])
+        self.assertTrue(all(tag.startswith('feature-') for tag in stale))
+        with self.assertRaises(ValueError): retention.stale_tags(pages, 'tip', 5)
         self.assertEqual(retention.stale_tags(pages, 'feature', 300), [])
         with self.assertRaises(ValueError): retention.stale_tags(pages, 'feature', 0)
 
@@ -75,6 +95,47 @@ class ReleasePolicyTests(unittest.TestCase):
                          published_at=f'2026-09-0{7-n}T00:00:00Z')
                     for n in range(1, 7)]
         self.assertEqual(retention.stale_tags([releases], 'feature', 5), ['feature-6'])
+
+    def publish(self, ref, tag, exists, prerelease='false'):
+        # Exercise the real publisher with a recording CLI; never contact GitHub.
+        with tempfile.TemporaryDirectory() as folder:
+            folder = Path(folder)
+            gh = folder / 'gh'
+            gh.write_text('#!/usr/bin/env python3\n'
+                          'import json, os, sys\n'
+                          'with open(os.environ["GH_CALLS"], "a") as log:\n'
+                          '    log.write(json.dumps(sys.argv[1:]) + "\\n")\n'
+                          'if sys.argv[1:3] == ["release", "view"]:\n'
+                          '    sys.exit(0 if os.environ["GH_EXISTS"] == "true" else 1)\n')
+            gh.chmod(0o755)
+            log = folder / 'calls.jsonl'
+            env = dict(os.environ, PATH=str(folder) + os.pathsep + os.environ['PATH'],
+                       GH_CALLS=str(log), GH_EXISTS=str(exists).lower(), GITHUB_REF=ref,
+                       GITHUB_REPOSITORY='example/repo', GITHUB_SHA='abc123',
+                       UNSCIENCE_DIST_DIR=str(folder), VERSION=tag, TAG=tag,
+                       TITLE='unscience ' + tag, PRERELEASE=prerelease)
+            result = subprocess.run(['bash', 'scripts/publish-release.sh'], cwd=ROOT,
+                                    env=env, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            return [json.loads(line) for line in log.read_text().splitlines()]
+
+    def test_main_publish_and_rerun_never_delete(self):
+        tag = 'v2026.09.21.123'
+        calls = self.publish('refs/heads/main', tag, exists=False)
+        self.assertEqual([call[1] for call in calls], ['view', 'create'])
+        self.assertNotIn('--prerelease', calls[-1])
+        for ref in ('refs/heads/main', 'refs/heads/release/2026.09.21.123'):
+            calls = self.publish(ref, tag, exists=True)
+            self.assertEqual([call[1] for call in calls], ['view'])
+
+    def test_named_and_feature_publish(self):
+        calls = self.publish('refs/heads/release/1.2.3', 'v1.2.3', exists=True)
+        self.assertEqual([call[1] for call in calls], ['view', 'delete', 'create'])
+        calls = self.publish('refs/heads/feature/test', 'feature-test',
+                             exists=False, prerelease='true')
+        self.assertEqual([call[1] for call in calls], ['view', 'create'])
+        self.assertIn('--prerelease', calls[-1])
+        self.assertIn('--latest=false', calls[-1])
 
 
 if __name__ == '__main__':

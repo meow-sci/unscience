@@ -29,9 +29,25 @@ if [[ "$BRANCH" == release/* ]]; then
     echo 'prerelease=false'
     echo 'channel='
   } >> "$GITHUB_OUTPUT"
-elif [[ "$BRANCH" == main || "$BRANCH" == feature/* ]]; then
-  CHANNEL=tip
-  [[ "$BRANCH" == feature/* ]] && CHANNEL=feature
+elif [[ "$BRANCH" == main ]]; then
+  # GitHub increments this workflow-wide counter for every new run, across refs.
+  # Reruns keep their number; publishing preserves any existing dated release.
+  if [[ ! "${GITHUB_RUN_NUMBER:-}" =~ ^[1-9][0-9]*$ ]]; then
+    echo '::error::Invalid workflow run number' >&2
+    exit 1
+  fi
+  NAME="$(date -u +%Y.%m.%d).$GITHUB_RUN_NUMBER"
+  {
+    echo 'publish=true'
+    echo "version=$NAME"
+    echo "modversion=$NAME"
+    echo "tag=v$NAME"
+    echo "title=unscience $NAME"
+    echo 'prerelease=false'
+    echo 'channel='
+  } >> "$GITHUB_OUTPUT"
+elif [[ "$BRANCH" == feature/* ]]; then
+  CHANNEL=feature
   # IDs distinguish simultaneous branches and reruns within the same UTC second.
   if [[ ! "$GITHUB_RUN_ID" =~ ^[0-9]+$ || ! "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]; then
     echo '::error::Invalid workflow run identity' >&2

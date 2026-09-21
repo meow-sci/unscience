@@ -3,7 +3,7 @@ name: Build mod dist
 # Builds the whole unscience solution (every submod + the unscience umbrella
 # mod) and publishes ONLY the unscience mod folder as a GitHub release:
 #
-#   push to main        → prerelease  "unscience tip <UTC timestamp>"  (tag tip-<stamp>)
+#   push to main        → release "unscience YYYY.MM.DD.<run number>" (kept forever)
 #   push to release/<v> → release     "unscience <v>"                  (tag v<v>)
 #   push to feature/*   → prerelease  "unscience feature <UTC stamp>" (tag feature-<stamp>)
 #                         all feature branches share the 5 newest releases
@@ -114,27 +114,11 @@ jobs:
           TITLE: ${{ steps.meta.outputs.title }}
           PRERELEASE: ${{ steps.meta.outputs.prerelease }}
           VERSION: ${{ steps.meta.outputs.version }}
-        run: |
-          ZIP="$UNSCIENCE_DIST_DIR/unscience-$VERSION.zip"
-          # Re-pushing a release/<v> branch rebuilds that release: drop the old
-          # release + tag so the tag moves to the new commit. Rolling tags
-          # include run IDs and attempts to avoid collisions.
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
-          fi
-          EXTRA=()
-          [[ "$PRERELEASE" == "true" ]] && EXTRA+=(--prerelease --latest=false)
-          gh release create "$TAG" "$ZIP" \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "$TITLE" \
-            --notes "**Installing over an existing install:** delete the old \`unscience/\` folder from your mods directory before unzipping — files removed from the mod are not removed by unzipping over it." \
-            --generate-notes \
-            "${EXTRA[@]}"
+        run: bash scripts/publish-release.sh
 
   prune:
     needs: build
-    if: needs.build.outputs.prerelease == 'true'
+    if: needs.build.outputs.prerelease == 'true' && needs.build.outputs.channel == 'feature'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Cleanup is shared across feature branches, while builds remain concurrent.
@@ -145,7 +129,7 @@ jobs:
       - name: Checkout retention policy
         uses: actions/checkout@v6
 
-      # Feature branches share one pool; named releases and the other channel
+      # Feature branches share one pool; stable releases and legacy tip releases
       # are excluded. Fetch every page so retention is not capped at 200 entries.
       - name: Prune rolling prereleases
         env:

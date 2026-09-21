@@ -81,13 +81,17 @@ replace the old `unscience` folder. Builds deliberately do not delete existing u
 `.github/workflows/release.yml` builds the whole solution and publishes ONLY the
 `unscience` umbrella mod (which bundles every submod `.lib`) as a zip:
 
-- push to `main` → prerelease `tip-<UTC stamp>-<run ID>-<attempt>`; the 5 newest tip builds are kept, older ones pruned
-- push to `feature/*` (including nested branch names) → prerelease `feature-<UTC stamp>-<run ID>-<attempt>` with an `unscience-feature-…zip` asset; all feature branches share one pool of 5 builds, separate from tip builds
-- push to `release/<version>` → release `v<version>` (re-pushing the branch rebuilds/moves it)
+- push to `main` → stable release `YYYY.MM.DD.BUILD_NUM` (UTC), tag `vYYYY.MM.DD.BUILD_NUM`, and asset `unscience-YYYY.MM.DD.BUILD_NUM.zip`; these releases and tags are kept permanently
+- push to `feature/*` (including nested branch names) → prerelease `feature-<UTC stamp>-<run ID>-<attempt>` with an `unscience-feature-…zip` asset; all feature branches share one pool of 5 builds
+- push to `release/<version>` → release `v<version>` (re-pushing the branch rebuilds/moves it, except protected dated release tags)
 - `fix/**`, `chore/**` branches and PRs into `main` → build only
 
-Manual workflow runs on branches follow the same policy. Rolling prerelease cleanup removes
-older releases and their tags within that channel; stable releases are preserved.
+`BUILD_NUM` is GitHub's `GITHUB_RUN_NUMBER`: an increasing counter shared by all branches
+running this workflow, so main release numbers may have gaps. The version in `mod.toml`
+matches the release. Reruns keep their run number and preserve an existing release with the
+same tag; a rerun on a later UTC date can create a new dated release with that same number.
+Manual workflow runs on branches follow the same policy. Cleanup removes only older feature
+prereleases and their tags; stable releases and legacy tip releases are preserved.
 
 The private assemblies come from `meow-sci/ksa-game-assemblies` via the
 `KSA_GAME_ASSEMBLIES_PAT` repo secret (fine-grained PAT, read-only Contents on

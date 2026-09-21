@@ -6,8 +6,8 @@ import sys
 
 
 def stale_tags(pages, channel, keep):
-    if channel not in ('tip', 'feature') or keep < 1:
-        raise ValueError('Channel must be tip/feature and retention must be positive')
+    if channel != 'feature' or keep < 1:
+        raise ValueError('Channel must be feature and retention must be positive')
     releases = [release for page in pages for release in page
                 if release.get('prerelease') and not release.get('draft')
                 and release['tag_name'].startswith(channel + '-')]
@@ -18,7 +18,7 @@ def stale_tags(pages, channel, keep):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--channel', choices=['tip', 'feature'], required=True)
+    parser.add_argument('--channel', choices=['feature'], required=True)
     parser.add_argument('--keep', type=int, required=True)
     args = parser.parse_args()
     for tag in stale_tags(json.load(sys.stdin), args.channel, args.keep):
