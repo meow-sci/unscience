@@ -43,7 +43,7 @@ class ReleasePolicyTests(unittest.TestCase):
                             'publish': 'true', 'version': version, 'modversion': version,
                             'tag': 'v' + version, 'title': 'unscience ' + version,
                             'prerelease': str(feature).lower(),
-                            'channel': 'feature' if feature else '',
+                            'channel': 'feature' if feature else 'main',
                         })
 
     def test_invalid_run_numbers(self):
@@ -83,11 +83,35 @@ class ReleasePolicyTests(unittest.TestCase):
         with self.assertRaises(ValueError): retention.stale_tags(pages, 'feature', 0)
 
     def test_retention_uses_publication_time(self):
-        releases = [dict(id=n, tag_name=f'v1.{n}.0-beta', prerelease=True, draft=False,
-                         created_at=f'2026-09-0{n}T00:00:00Z',
-                         published_at=f'2026-09-0{7-n}T00:00:00Z')
-                    for n in range(1, 7)]
-        self.assertEqual(retention.stale_tags([releases], 'feature', 5), ['v1.6.0-beta'])
+        for channel, keep, suffix in (('main', 10, ''), ('feature', 5, '-beta')):
+            releases = [dict(id=n, tag_name=f'v1.{n}.0{suffix}',
+                             prerelease=channel == 'feature', draft=False,
+                             created_at=f'2026-09-{n:02}T00:00:00Z',
+                             published_at=f'2026-09-{keep+2-n:02}T00:00:00Z')
+                        for n in range(1, keep + 2)]
+            self.assertEqual(retention.stale_tags([releases], channel, keep),
+                             [f'v1.{keep+1}.0{suffix}'])
+
+    def test_main_retention_keeps_ten_and_isolates_channels(self):
+        def release(number, tag=None, **flags):
+            return dict(id=number, tag_name=tag or f'v1.{number}.0',
+                        published_at='2026-09-05T00:00:00Z',
+                        prerelease=False, draft=False) | flags
+        pages = [[release(n) for n in range(1, 151)],
+                 [release(n) for n in range(151, 251)]]
+        pages[0].append(release(0, 'v2026.09.01.100'))
+        pages[1] += [release(1000, draft=True), release(1001, prerelease=True),
+                     release(1002, 'v1.1002.0-beta', prerelease=True),
+                     release(1003, 'feature-legacy', prerelease=True),
+                     release(1004, 'tip-legacy', prerelease=True),
+                     release(1005, 'v1.2.3'), release(1006, 'v2026.09.21.123', prerelease=True)]
+        stale = retention.stale_tags(pages, 'main', 10)
+        self.assertEqual(stale, [f'v1.{n}.0' for n in range(240, 0, -1)]
+                         + ['v2026.09.01.100'])
+        self.assertEqual(retention.stale_tags([pages[0][:10]], 'main', 10), [])
+        self.assertEqual(retention.stale_tags([pages[0][:9]], 'main', 10), [])
+        self.assertEqual(retention.stale_tags([], 'main', 10), [])
+        with self.assertRaises(ValueError): retention.stale_tags(pages, 'main', 0)
 
     def publish(self, ref, tag, exists, prerelease='false'):
         # Exercise the real publisher with a recording CLI; never contact GitHub.

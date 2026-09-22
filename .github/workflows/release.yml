@@ -3,7 +3,7 @@ name: Build mod dist
 # Builds the whole unscience solution (every submod + the unscience umbrella
 # mod) and publishes ONLY the unscience mod folder as a GitHub release:
 #
-#   push to main        → release    "unscience 1.<run number>.0" (kept forever)
+#   push to main        → release    "unscience 1.<run number>.0" (keep newest 10)
 #   push to feature/*   → prerelease "unscience 1.<run number>.0-beta"
 #                         tags are v<version>; major is fixed at 1, patch at 0
 #                         all feature branches share the 5 newest releases
@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
-      prerelease: ${{ steps.meta.outputs.prerelease }}
+      publish: ${{ steps.meta.outputs.publish }}
       channel: ${{ steps.meta.outputs.channel }}
     env:
       # Directory.Build.props resolves these before any per-OS defaults.
@@ -116,10 +116,10 @@ jobs:
 
   prune:
     needs: build
-    if: needs.build.outputs.prerelease == 'true' && needs.build.outputs.channel == 'feature'
+    if: needs.build.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Cleanup is shared across feature branches, while builds remain concurrent.
+    # Cleanup is serialized per channel; beta branches share one retention pool.
     concurrency:
       group: rolling-release-cleanup-${{ needs.build.outputs.channel }}
       cancel-in-progress: false
@@ -127,15 +127,20 @@ jobs:
       - name: Checkout retention policy
         uses: actions/checkout@v6
 
-      # Feature branches share one pool; stable releases and legacy tip releases
-      # are excluded. Fetch every page so retention is not capped at 200 entries.
-      - name: Prune rolling prereleases
+      # Keep 10 main releases and 5 beta releases, including their legacy formats.
+      # Fetch every page so retention is not capped at 200 entries.
+      - name: Prune old releases
         env:
           GH_TOKEN: ${{ github.token }}
           CHANNEL: ${{ needs.build.outputs.channel }}
         run: |
+          case "$CHANNEL" in
+            main) KEEP=10 ;;
+            feature) KEEP=5 ;;
+            *) echo "Unknown release channel: $CHANNEL" >&2; exit 1 ;;
+          esac
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
-            | python3 scripts/release-retention.py --channel "$CHANNEL" --keep 5 \
+            | python3 scripts/release-retention.py --channel "$CHANNEL" --keep "$KEEP" \
             > "$RUNNER_TEMP/unscience-stale-releases.txt"
           while IFS= read -r tag; do
             echo "Pruning $tag"

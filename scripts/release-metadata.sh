@@ -9,7 +9,7 @@ if [[ "$GITHUB_EVENT_NAME" != push && "$GITHUB_EVENT_NAME" != workflow_dispatch 
 fi
 BRANCH="${GITHUB_REF#refs/heads/}"
 PRERELEASE=false
-CHANNEL=
+CHANNEL=main
 case "$BRANCH" in
   main) ;;
   feature/*) PRERELEASE=true; CHANNEL=feature ;;
