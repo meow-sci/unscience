@@ -2,6 +2,7 @@
 """Select older published prerelease tags from paginated GitHub API JSON."""
 import argparse
 import json
+import re
 import sys
 
 
@@ -10,7 +11,9 @@ def stale_tags(pages, channel, keep):
         raise ValueError('Channel must be feature and retention must be positive')
     releases = [release for page in pages for release in page
                 if release.get('prerelease') and not release.get('draft')
-                and release['tag_name'].startswith(channel + '-')]
+                # Include legacy feature tags in the same rolling pool.
+                and (release['tag_name'].startswith('feature-')
+                     or re.fullmatch(r'v[1-9][0-9]*\.[1-9][0-9]*\.0-beta', release['tag_name']))]
     # Retain the newest published builds, even when a branch targets an old commit.
     releases.sort(key=lambda release: (release['published_at'], release['id']), reverse=True)
     return [release['tag_name'] for release in releases[keep:]]

@@ -3,11 +3,11 @@ name: Build mod dist
 # Builds the whole unscience solution (every submod + the unscience umbrella
 # mod) and publishes ONLY the unscience mod folder as a GitHub release:
 #
-#   push to main        → release "unscience YYYY.MM.DD.<run number>" (kept forever)
-#   push to release/<v> → release     "unscience <v>"                  (tag v<v>)
-#   push to feature/*   → prerelease  "unscience feature <UTC stamp>" (tag feature-<stamp>)
+#   push to main        → release    "unscience 1.<run number>.0" (kept forever)
+#   push to feature/*   → prerelease "unscience 1.<run number>.0-beta"
+#                         tags are v<version>; major is fixed at 1, patch at 0
 #                         all feature branches share the 5 newest releases
-#   any other ref (fix/chore branches, PRs into main)
+#   any other ref (release/fix/chore branches, PRs into main)
 #                       → build only (no release, no version stamp)
 #
 # The KSA reference assemblies are licensed game files and live in the private
@@ -32,12 +32,10 @@ on:
 permissions:
   contents: write
 
-# One in-flight build per ref; a newer push supersedes an older run — except on
-# release/* refs: cancelling a publish between `gh release delete` and
-# `gh release create` would leave the release missing until the next push.
+# One in-flight build per ref; a newer push supersedes an older run.
 concurrency:
   group: dist-${{ github.ref }}
-  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/heads/release/') }}
+  cancel-in-progress: true
 
 jobs:
   build:

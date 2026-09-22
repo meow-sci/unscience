@@ -29,72 +29,65 @@ class ReleasePolicyTests(unittest.TestCase):
             self.assertEqual(result.returncode == 0, success, result.stderr)
             return dict(line.split('=', 1) for line in output.read_text().splitlines()) if output.exists() else {}
 
-    def test_feature_channel_is_shared_and_unique(self):
-        for branch in ('feature/new-ux', 'feature/nested/some-work', 'feature/$(echo-untrusted)'):
-            data = self.metadata('refs/heads/' + branch)
-            self.assertEqual(data['channel'], 'feature')
-            self.assertEqual(data['prerelease'], 'true')
-            self.assertRegex(data['tag'], r'^feature-\d{8}-\d{6}-12345-1$')
-            self.assertIn('-feature.', data['modversion'])
-            self.assertNotIn(branch, data['title'])
-        rerun = self.metadata('refs/heads/feature/new-ux', attempt='2')
-        self.assertTrue(rerun['tag'].endswith('-12345-2'))
+    def test_exact_versions_for_publishing_branches(self):
+        for branch in ('main', 'feature/new-ux', 'feature/nested/some-work',
+                       'feature/$(echo-untrusted)'):
+            feature = branch.startswith('feature/')
+            for event in ('push', 'workflow_dispatch'):
+                for run_number, attempt in (('123', '1'), ('124', '1'), ('123', '2')):
+                    with self.subTest(branch=branch, event=event, run=run_number, attempt=attempt):
+                        version = f'1.{run_number}.0' + ('-beta' if feature else '')
+                        data = self.metadata('refs/heads/' + branch, event,
+                                             attempt=attempt, run_number=run_number)
+                        self.assertEqual(data, {
+                            'publish': 'true', 'version': version, 'modversion': version,
+                            'tag': 'v' + version, 'title': 'unscience ' + version,
+                            'prerelease': str(feature).lower(),
+                            'channel': 'feature' if feature else '',
+                        })
 
-    def test_main_is_permanent_dated_stable_release(self):
-        for event in ('push', 'workflow_dispatch'):
-            data = self.metadata('refs/heads/main', event)
-            self.assertEqual(data['publish'], 'true')
-            self.assertEqual(data['channel'], '')
-            self.assertEqual(data['prerelease'], 'false')
-            self.assertRegex(data['version'], r'^\d{4}\.\d{2}\.\d{2}\.123$')
-            self.assertEqual(data['modversion'], data['version'])
-            self.assertEqual(data['tag'], 'v' + data['version'])
-            self.assertEqual(data['title'], 'unscience ' + data['version'])
-        next_run = self.metadata('refs/heads/main', run_number='124')
-        self.assertTrue(next_run['version'].endswith('.124'))
-        rerun = self.metadata('refs/heads/main', attempt='2')
-        self.assertTrue(rerun['version'].endswith('.123'))
-        for invalid in ('', '0', '-1', '1.2', '$(echo-untrusted)'):
-            self.metadata('refs/heads/main', run_number=invalid, success=False)
-
-    def test_named_release(self):
-        stable = self.metadata('refs/heads/release/1.2.3')
-        self.assertEqual(stable['tag'], 'v1.2.3')
-        self.assertEqual(stable['prerelease'], 'false')
-        self.metadata('refs/heads/release/nested/invalid', success=False)
+    def test_invalid_run_numbers(self):
+        for branch in ('main', 'feature/test'):
+            for invalid in ('', '0', '01', '-1', '1.2', '$(echo-untrusted)'):
+                self.metadata('refs/heads/' + branch, run_number=invalid, success=False)
 
     def test_only_branch_push_or_dispatch_can_publish(self):
         for ref, event in [('refs/pull/42/merge', 'pull_request'),
                            ('refs/heads/feature/test', 'pull_request'),
                            ('refs/tags/main', 'workflow_dispatch'),
-                           ('refs/heads/fix/test', 'push'), ('refs/heads/chore/test', 'push')]:
+                           ('refs/heads/fix/test', 'push'), ('refs/heads/chore/test', 'push'),
+                           ('refs/heads/release/2.3.4', 'push'),
+                           ('refs/heads/release/2.3.4', 'workflow_dispatch')]:
             self.assertEqual(self.metadata(ref, event), {'publish': 'false'})
         self.assertEqual(self.metadata('refs/heads/feature/test', 'workflow_dispatch')['publish'], 'true')
 
     def test_retention_all_pages_and_protected_releases(self):
         def release(number, tag=None, **flags):
-            return dict(id=number, tag_name=tag or f'feature-{number}',
+            return dict(id=number, tag_name=tag or (f'feature-{number}' if number <= 100 else f'v1.{number}.0-beta'),
                         published_at='2026-09-05T00:00:00Z', prerelease=True, draft=False) | flags
         pages = [[release(n) for n in range(1, 151)], [release(n) for n in range(151, 251)]]
         pages[1] += [release(1000, 'v2026.09.21.123', prerelease=False),
                      release(1001, 'v2026.09.21.124'),
                      release(999, 'tip-999'), release(998, 'v1.2.3', prerelease=False),
-                     release(997, 'feature-draft', draft=True), release(996, 'feature-stable', prerelease=False)]
+                     release(997, 'v1.997.0-beta', draft=True),
+                     release(996, 'v1.996.0-beta', prerelease=False),
+                     release(995, 'v1.995.0'), release(994, 'v1.994.0-beta.1')]
         stale = retention.stale_tags(pages, 'feature', 5)
         self.assertEqual(len(stale), 245)
-        self.assertEqual(stale[0], 'feature-245')
+        self.assertEqual(stale[0], 'v1.245.0-beta')
         self.assertNotIn('tip-999', stale)
-        self.assertTrue(all(tag.startswith('feature-') for tag in stale))
+        self.assertEqual(set(stale), {f'feature-{n}' for n in range(1, 101)}
+                         | {f'v1.{n}.0-beta' for n in range(101, 246)})
         with self.assertRaises(ValueError): retention.stale_tags(pages, 'tip', 5)
         self.assertEqual(retention.stale_tags(pages, 'feature', 300), [])
         with self.assertRaises(ValueError): retention.stale_tags(pages, 'feature', 0)
 
     def test_retention_uses_publication_time(self):
-        releases = [dict(id=n, tag_name=f'feature-{n}', prerelease=True, draft=False,
+        releases = [dict(id=n, tag_name=f'v1.{n}.0-beta', prerelease=True, draft=False,
                          created_at=f'2026-09-0{n}T00:00:00Z',
                          published_at=f'2026-09-0{7-n}T00:00:00Z')
                     for n in range(1, 7)]
-        self.assertEqual(retention.stale_tags([releases], 'feature', 5), ['feature-6'])
+        self.assertEqual(retention.stale_tags([releases], 'feature', 5), ['v1.6.0-beta'])
 
     def publish(self, ref, tag, exists, prerelease='false'):
         # Exercise the real publisher with a recording CLI; never contact GitHub.
@@ -120,22 +113,23 @@ class ReleasePolicyTests(unittest.TestCase):
             return [json.loads(line) for line in log.read_text().splitlines()]
 
     def test_main_publish_and_rerun_never_delete(self):
-        tag = 'v2026.09.21.123'
+        tag = 'v1.123.0'
         calls = self.publish('refs/heads/main', tag, exists=False)
         self.assertEqual([call[1] for call in calls], ['view', 'create'])
         self.assertNotIn('--prerelease', calls[-1])
-        for ref in ('refs/heads/main', 'refs/heads/release/2026.09.21.123'):
-            calls = self.publish(ref, tag, exists=True)
-            self.assertEqual([call[1] for call in calls], ['view'])
+        calls = self.publish('refs/heads/main', tag, exists=True)
+        self.assertEqual([call[1] for call in calls], ['view'])
 
-    def test_named_and_feature_publish(self):
-        calls = self.publish('refs/heads/release/1.2.3', 'v1.2.3', exists=True)
-        self.assertEqual([call[1] for call in calls], ['view', 'delete', 'create'])
-        calls = self.publish('refs/heads/feature/test', 'feature-test',
+    def test_feature_publish_and_rerun(self):
+        tag = 'v1.123.0-beta'
+        calls = self.publish('refs/heads/feature/test', tag,
                              exists=False, prerelease='true')
         self.assertEqual([call[1] for call in calls], ['view', 'create'])
         self.assertIn('--prerelease', calls[-1])
         self.assertIn('--latest=false', calls[-1])
+        calls = self.publish('refs/heads/feature/test', tag,
+                             exists=True, prerelease='true')
+        self.assertEqual([call[1] for call in calls], ['view'])
 
 
 if __name__ == '__main__':
