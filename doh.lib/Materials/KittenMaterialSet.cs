@@ -60,6 +60,15 @@ public sealed class KittenMaterialSet
     /// <summary>Individual material entries for per-material color editing.</summary>
     public List<MaterialEntry> Materials { get; } = new();
 
+    /// <summary>
+    /// GPU material asset names this set owns in the game's fixed-size material pool.
+    /// MaterialFactory.Release frees exactly these.
+    /// </summary>
+    public List<string> AssetNames { get; } = new();
+
+    /// <summary>True once the GPU slots were returned to the pool; a released set must never be reused.</summary>
+    public bool IsReleased { get; internal set; }
+
     public KittenMaterialSet(string id, float4 tintColor)
     {
         Id = id;

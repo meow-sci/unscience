@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../doh.lib/DohSubmod.Persistence.cs" Link="DohSubmod.Persistence.cs" />
+    <Compile Include="../doh.lib/Materials/KittenMaterialSet.cs" Link="KittenMaterialSet.cs" />
+    <Compile Include="../doh.lib/Materials/MaterialFactory.Lifetime.cs" Link="MaterialFactory.Lifetime.cs" />
+    <Compile Include="../doh.lib/Spawning/SpawnedKittenRegistry.cs" Link="SpawnedKittenRegistry.cs" />
+    <Compile Include="../ksa-abstractions.lib/VehicleProvider.cs" Link="VehicleProvider.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/ISaveParticipant.cs" Link="ISaveParticipant.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/MaterialColorState.cs" Link="MaterialColorState.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveJson.cs" Link="SaveJson.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/FiniteNumberConverters.cs" Link="FiniteNumberConverters.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveDocument.cs" Link="SaveDocument.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveStorage.cs" Link="SaveStorage.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SceneSaveCoordinator.cs" Link="SceneSaveCoordinator.cs" />
+  </ItemGroup>
+</Project>

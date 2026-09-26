@@ -43,6 +43,7 @@
     <Project Path="humble-arteest.lib/humble-arteest.lib.csproj" />
     <Project Path="doh/doh.csproj" />
     <Project Path="doh.lib/doh.lib.csproj" />
+    <Project Path="doh.tests/doh.tests.csproj" />
     <Project Path="kitchen-sink/kitchen-sink.csproj" />
     <Project Path="kitchen-sink.lib/kitchen-sink.lib.csproj" />
     <Project Path="kitchen-sink.tests/kitchen-sink.tests.csproj" />

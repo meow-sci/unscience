@@ -17,8 +17,9 @@ namespace MeowSci.DohLib.Materials;
 /// Reflection bridge to the game's GpuMaterialSystem and GpuTextureSystem.
 /// Enables runtime creation of materials and direct GPU buffer writes.
 /// Pattern based on humble-arteest.lib/KittenColor.cs.
+/// Pool capacity, reserve and release live in MaterialSystemAccessor.Pool.cs.
 /// </summary>
-public static class MaterialSystemAccessor
+public static partial class MaterialSystemAccessor
 {
     private static bool _initialized;
     private static string? _lastError;
@@ -80,6 +81,9 @@ public static class MaterialSystemAccessor
             // Step 7: Get GetOrLoad method
             _getOrLoadMethod = FindMethodInHierarchy(_materialSystem.GetType(), "GetOrLoad");
 
+            // Step 7b: Get the fixed-size GPU slot allocator (for capacity/budget checks)
+            _bigBufferAllocatorField = FindFieldInfoInHierarchy(_materialSystem.GetType(), "BigBufferAllocator");
+
             // Step 8: Get TextureSystem
             var superMeshRenderSystem = GetFieldOrProp(programType, programInstance, "SuperMeshRenderSystem");
             if (superMeshRenderSystem != null)
@@ -95,7 +99,7 @@ public static class MaterialSystemAccessor
             int materialCount = _assetMap.Count;
             Console.WriteLine($"doh: MaterialSystemAccessor initialized — {materialCount} materials, " +
                 $"CreateObject={_createObjectMethod != null}, GetOrLoad={_getOrLoadMethod != null}, " +
-                $"TextureSystem={_textureSystem != null}");
+                $"TextureSystem={_textureSystem != null}, slots free {GetFreeSlotCount()}/{GetCapacity()}");
             return true;
         }
         catch (Exception ex)
@@ -115,6 +119,17 @@ public static class MaterialSystemAccessor
         if (_materialSystem == null || _createObjectMethod == null)
         {
             _lastError = "MaterialSystem or CreateObject not available.";
+            return false;
+        }
+
+        // Never let doh consume the slots the game itself needs. The pool is fixed-size and an
+        // exhausted pool makes the game's own allocations (e.g. every KittenEva's fur material) throw.
+        int freeSlots = GetFreeSlotCount();
+        if (freeSlots >= 0 && freeSlots <= ReservedSlots)
+        {
+            _lastError = $"GPU material pool nearly full ({freeSlots} of {GetCapacity()} slots free, " +
+                $"{ReservedSlots} reserved for the game); not creating '{assetName}'.";
+            Console.WriteLine($"doh: {_lastError}");
             return false;
         }
 
@@ -319,6 +334,7 @@ public static class MaterialSystemAccessor
         _deviceCtxField = null;
         _createObjectMethod = null;
         _getOrLoadMethod = null;
+        _bigBufferAllocatorField = null;
         _textureSystem = null;
         _textureGetOrLoadMethod = null;
         _lastError = null;

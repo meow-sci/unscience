@@ -11,8 +11,16 @@ public sealed class SpawnRequest
     // ---- Positioning Mode 1: Relative to vehicle ----
 
     /// <summary>
+    /// Reference vehicle object. Preferred over <see cref="ReferenceVehicleId"/> when the caller
+    /// holds the vehicle (e.g. the UI selection), so the target can never be re-resolved to a
+    /// different vehicle by name.
+    /// </summary>
+    public KSA.Vehicle? ReferenceVehicle { get; init; }
+
+    /// <summary>
     /// Reference vehicle ID. The kitten will be spawned near this vehicle.
-    /// If null, PositionCci/VelocityCci/ParentBodyName must be provided.
+    /// Used when <see cref="ReferenceVehicle"/> is null; an ambiguous ID is rejected.
+    /// If both are null, PositionCci/VelocityCci/ParentBodyName must be provided.
     /// </summary>
     public string? ReferenceVehicleId { get; init; }
 
@@ -58,7 +66,8 @@ public sealed class SpawnRequest
 
     /// <summary>
     /// When spawning multiple kittens (Count > 1), whether each gets unique materials.
-    /// If false, they share one custom material set.
+    /// If false (and no PerKittenColors), they share one custom material set, which uses one
+    /// set of GPU material slots instead of one per kitten.
     /// </summary>
     public bool UniqueMaterialsPerKitten { get; init; }
 

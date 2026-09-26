@@ -14,6 +14,21 @@ precedence.
   `ExecuteNextVehicleSolvers` prefix, before the snapshot. KSA 5482's `RefillConsumables` also sets
   the tank-contents flag (rev 5478), so dry engines should relight. Live check: a monitored vessel
   keeps its fuel at full throttle, and an engine that ran dry relights after a refill.
+- **DOH spawns at the wrong vehicle/offset, then crashes after many spawns:** both root-caused and
+  fixed in code; live confirmation is pending. Neither is new in 5482.
+  (1) The spawn target was stored as an index into `VehicleProvider.GetAllVehicles()`. KSA's
+  `LookupCollection.Deregister` swap-removes, and debris is filtered out, so removing any vehicle or
+  debris moved the index onto another vehicle, often a spawned kitten. Spawns then followed that
+  vehicle and its body frame. The UI now holds the `Vehicle` object and clears a removed selection.
+  The spawn epoch also uses the reference state's own `StateTime`, as `EVADoor` does.
+  (2) KSA's GPU material pool is a fixed 512 slots. Each tinted kitten cloned about 10 materials and
+  never freed them. Once the pool filled, the `KittenEva` constructor's own fur material threw
+  `Failed to allocate handle for GPU object.` after the kitten had already registered itself, which
+  crashed the game. doh now keeps 64 slots for the game, preflights tinted spawns, shares one set per
+  non-unique batch, releases sets on despawn, prune, unload and stale restore, and removes a
+  half-built kitten if construction still fails. Live check: spawn tinted kittens until the budget
+  message appears; the game keeps running and Despawn All returns the slot counter to its baseline.
+  Also remove debris or a craft after selecting a target; spawns stay on the selected vehicle.
 - **Garry's Torch errors:** candidate cause found and mitigated; live confirmation is pending.
   `PrepareFrame` queues the nearest-orbit job, which reads flight plans and cached orbit points, just
   before the weld handoff. `Vehicle.Teleport` → `Orbit.ReleaseCachedPoints` can dispose points while

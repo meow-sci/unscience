@@ -13,8 +13,9 @@ namespace MeowSci.DohLib.Materials;
 /// Each material is a clone of the base character material with a custom
 /// AlbedoColor tint. Materials are registered in the GpuMaterialSystem
 /// with unique names to prevent conflicts.
+/// Slot release lives in MaterialFactory.Lifetime.cs.
 /// </summary>
-public sealed class MaterialFactory
+public sealed partial class MaterialFactory
 {
     private int _nextMaterialId;
     private readonly List<KittenMaterialSet> _createdSets = new();
@@ -36,7 +37,7 @@ public sealed class MaterialFactory
 
         try
         {
-            string prefix = $"doh_{_nextMaterialId++:D4}";
+            string prefix = NextPrefix();
 
             // Resolve character textures
             var charTextures = ResolveCharacterTextures(characterId);
@@ -81,6 +82,10 @@ public sealed class MaterialFactory
                 FurMaterialHandle = furHandle
             };
 
+            matSet.AssetNames.Add($"{prefix}_body");
+            matSet.AssetNames.Add($"{prefix}_head");
+            if (furHandle >= 0) matSet.AssetNames.Add(FurAssetName(prefix));
+
             _createdSets.Add(matSet);
             Console.WriteLine($"doh: Created material set '{prefix}' — body={bodyHandle}, head={headHandle}, eye={eyeHandle}, fur={furHandle}");
             return matSet;
@@ -107,12 +112,6 @@ public sealed class MaterialFactory
         return CreateFurMaterial(namePrefix, charTextures.Value, samplerHandle, defaultBlackHandle, tintColor);
     }
 
-    /// <summary>Disposes all material sets created by this factory.</summary>
-    public void Cleanup()
-    {
-        _createdSets.Clear();
-        _nextMaterialId = 0;
-    }
 
     /// <summary>
     /// Clones every unique material handle in the given array, creating per-kitten
@@ -130,7 +129,7 @@ public sealed class MaterialFactory
 
         try
         {
-            string prefix = $"doh_{_nextMaterialId++:D4}";
+            string prefix = NextPrefix();
 
             // Build handle→name reverse lookup from AssetMap
             var handleToName = BuildHandleToNameMap();
@@ -144,6 +143,7 @@ public sealed class MaterialFactory
             var uniqueHandles = materialIndices.Distinct().ToArray();
             var handleMap = new Dictionary<int, int>(); // old handle → new handle
             var allNewHandles = new List<int>();
+            var assetNames = new List<string>();
 
             for (int idx = 0; idx < uniqueHandles.Length; idx++)
             {
@@ -158,6 +158,7 @@ public sealed class MaterialFactory
                 {
                     handleMap[oldHandle] = newHandle;
                     allNewHandles.Add(newHandle);
+                    assetNames.Add(cloneName);
                 }
                 else
                 {
@@ -174,6 +175,7 @@ public sealed class MaterialFactory
             var matSet = new KittenMaterialSet(prefix, tintColor);
             matSet.HandleMap = handleMap;
             matSet.AllMaterialHandles.AddRange(allNewHandles);
+            matSet.AssetNames.AddRange(assetNames);
 
             // Populate per-material entries for individual color editing
             foreach (var (oldHandle, newHandle) in handleMap)
@@ -348,7 +350,7 @@ public sealed class MaterialFactory
         if (textures.FurTextureHandle < 0 || textures.FurSamplerHandle < 0)
             return -1;
 
-        string name = $"{prefix}_fur";
+        string name = FurAssetName(prefix);
 
         var furData = new MaterialData
         {

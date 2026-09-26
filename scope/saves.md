@@ -213,3 +213,32 @@ remain compatible. Both version-1 records are unchanged. All 14 managed suites p
 Kitchen Sink's managed checks link its real adapter, JSON helpers, vehicle resolver and coordinator
 for round-trip, A-B-A/repeated loads, legacy/vanilla cleanup, invalid targets and retained-state
 recovery. Native cart collision and save/load acceptance remain in-game.
+
+## DOH kitten and material-slot saves
+
+`DohSubmod` keeps its version-1 `doh` record (restore order 60). Native KSA saves and rebuilds the
+spawned `KittenEva` vehicles, so the record never spawns anything. It rebinds each saved kitten ID
+to its reconstructed kitten, re-clones or reuses the tinted material set, and reapplies each saved
+material color by source/name.
+
+Each saved kitten now carries an optional `MaterialGroup`: the set ID it rendered with when saved.
+Kittens with the same group get one shared set on restore, the way a non-unique batch was spawned.
+The field is additive, so the version and record ID stay the same. Saves without it restore every
+tinted kitten with its own set, as before. A blank group is malformed and the coordinator rejects and
+retains it.
+
+Reset moves each live set into a detached cache keyed by kitten ID and character. Restore reuses a
+cached set only once, unless the saved group says to share it, so kittens that were unique in the
+save are never merged. When restore finishes, any cached set that no kitten rebound is released back
+to KSA's fixed-size GPU material pool (see [character-and-materials.md](character-and-materials.md#doh)
+#33-#35). Loads with no DOH record (vanilla saves, new systems) reset without a restore. Their cached
+sets are released on the next frame's `Update` instead. Reset and restore run inside one native call,
+so `Update` never sees a cache that a restore still needs. A released set is never reused, because its slots
+may already belong to other materials. GPU handles and cloned asset names are never saved as
+identities.
+
+`doh.tests` links the real adapter, registry, material-set and release code with JSON helpers and
+the scene coordinator. It checks group capture, same-save reuse without new allocations, legacy
+saves without the group field, missing kittens releasing their sets, vanilla-load cleanup before
+frame, no reuse after release, idempotent release, and rejection of a malformed group. Cloning
+itself, GPU writes and the native load are checked in-game.

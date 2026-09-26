@@ -9,7 +9,7 @@ Programmatic kitten spawning mod for KSA with per-kitten material customization.
 
 - **Spawn kittens programmatically** near any vehicle with configurable body-frame offset
 - **Per-kitten material tinting** — each kitten can have a unique AlbedoColor tint via runtime GPU material creation
-- **Batch spawning** — spawn 1–20 kittens at once with optional unique colors per kitten
+- **Batch spawning** — spawn 1–20 kittens at once. A tinted batch shares one material set unless **Unique Each** is on
 - **Character selection** — choose a specific character model or spawn random ones
 - **Live recoloring** — change a spawned kitten's tint color in real-time via the kitten list
 - **Despawn management** — remove individual kittens or despawn all at once
@@ -25,6 +25,14 @@ Programmatic kitten spawning mod for KSA with per-kitten material customization.
 6. Enable **Custom Color** and pick a tint with the color picker
 7. For batches, optionally enable **Unique Each** so each kitten gets its own material set
 8. Click **Spawn Kitten(s)**
+
+The selection sticks to that vehicle even as other vehicles, debris or kittens come and go. If the
+selected vehicle is removed, the selection clears instead of jumping to another craft.
+
+The status line shows how many of the game's 512 GPU material slots are in use and how many more
+tinted sets fit. Each tinted set uses about 10 slots, and doh always leaves 64 free for the game.
+When the pool is too full, a tinted spawn is refused with a message. Despawn tinted kittens, turn
+off **Unique Each** or spawn fewer to make room. Despawned kittens return their slots.
 
 Spawned kittens appear in the list below with:
 - Inline color editor for live recoloring (when custom materials were applied)

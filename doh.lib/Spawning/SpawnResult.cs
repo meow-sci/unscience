@@ -37,7 +37,10 @@ public sealed class SpawnResult
     /// <summary>Error message if the operation failed.</summary>
     public string? Error { get; init; }
 
-    /// <summary>Info about each kitten that was spawned.</summary>
+    /// <summary>Non-fatal problem on a successful spawn (e.g. some kittens could not be tinted).</summary>
+    public string? Warning { get; init; }
+
+    /// <summary>Info about each kitten that was spawned (also set when a batch stopped part-way).</summary>
     public SpawnedKittenInfo[] SpawnedKittens { get; init; } = Array.Empty<SpawnedKittenInfo>();
 
     /// <summary>Total number of kittens spawned.</summary>

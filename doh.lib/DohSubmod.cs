@@ -25,8 +25,9 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
     private SpawnedKittenRegistry? _registry;
     private KittenSpawner? _spawner;
 
-    // UI state — vehicle selection
-    private int _selectedVehicleIndex = -1;
+    // UI state — vehicle selection. Held by object, never by list index: the game's vehicle list
+    // swap-removes on deregister (and debris is filtered out), so indices shift under a selection.
+    private Vehicle? _selectedVehicle;
     private readonly ImInputString _vehicleFilter = new(128);
 
     // UI state — character selection
@@ -59,7 +60,14 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
         Console.WriteLine("doh: DohSubmod initialized");
     }
 
-    public void Update(double dt) { }
+    public void Update(double dt)
+    {
+        // Kittens the game removes itself (boarding, destruction) must not keep GPU material slots.
+        _spawner?.PruneDisposed();
+        // Loads reset and restore inside one native call, so a detached set still cached here was
+        // left by a load with no DOH record; its kittens are gone.
+        ReleaseStaleSavedMaterials();
+    }
 
     public void RenderContent()
     {
@@ -76,6 +84,7 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
     public void Dispose()
     {
         _spawner?.DespawnAll();
+        _savedMaterialCache.Clear();
         _materialFactory?.Cleanup();
         MaterialSystemAccessor.Cleanup();
         Console.WriteLine("doh: DohSubmod disposed");
@@ -110,7 +119,24 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
         }
 
         ImGui.TextDisabled($"Spawned: {_registry?.Count ?? 0} kittens  |  Materials: {_materialFactory?.CreatedSets.Count ?? 0}");
+        RenderMaterialPoolStatus();
         ImGui.Spacing();
+    }
+
+    private static void RenderMaterialPoolStatus()
+    {
+        if (!MaterialSystemAccessor.IsInitialized) return;
+        int capacity = MaterialSystemAccessor.GetCapacity();
+        int free = MaterialSystemAccessor.GetFreeSlotCount();
+        if (capacity < 0 || free < 0) return;
+
+        int available = MaterialSystemAccessor.GetAvailableSlots();
+        string text = $"GPU material slots: {capacity - free}/{capacity} used, room for ~" +
+            $"{available / MaterialSystemAccessor.EstimatedSlotsPerSet} more tinted set(s)";
+        if (available < MaterialSystemAccessor.EstimatedSlotsPerSet)
+            ImGui.TextColored(new float4(1f, 0.8f, 0.3f, 1f), text);
+        else
+            ImGui.TextDisabled(text);
     }
 
     // ---- Spawn Controls ----
@@ -179,7 +205,7 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
         ImGui.Spacing();
 
         // Spawn button
-        bool canSpawn = _selectedVehicleIndex >= 0 && _spawner != null;
+        bool canSpawn = _selectedVehicle != null && _spawner != null;
         if (!canSpawn) ImGui.BeginDisabled();
         if (ImGui.Button(" Spawn Kitten(s) ##doh"))
             DoSpawn();
@@ -206,12 +232,12 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
     private void RenderVehicleRow()
     {
         var vehicles = VehicleProvider.GetAllVehicles();
-        var vehicleNames = vehicles.Select(v => v.Id).ToArray();
 
-        if (_selectedVehicleIndex >= vehicleNames.Length)
-            _selectedVehicleIndex = -1;
+        // Drop a selection the game removed; never slide onto whatever took its list position.
+        if (_selectedVehicle != null && (_selectedVehicle.IsDisposed || !vehicles.Contains(_selectedVehicle)))
+            _selectedVehicle = null;
 
-        string preview = _selectedVehicleIndex >= 0 ? vehicleNames[_selectedVehicleIndex] : "Select vehicle...";
+        string preview = _selectedVehicle?.Id ?? "Select vehicle...";
 
         ImGui.TableNextRow();
         ImGui.TableNextColumn(); ImGui.AlignTextToFramePadding(); ImGui.Text("Vehicle");
@@ -227,16 +253,19 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
             ImGui.InputTextWithHint("##doh_vfilter", "filter..."u8, _vehicleFilter);
             string vehicleFilterText = _vehicleFilter.ToString().Trim();
 
-            for (int i = 0; i < vehicleNames.Length; i++)
+            for (int i = 0; i < vehicles.Count; i++)
             {
+                var vehicle = vehicles[i];
                 if (vehicleFilterText.Length > 0
-                    && !vehicleNames[i].Contains(vehicleFilterText, StringComparison.OrdinalIgnoreCase))
+                    && !vehicle.Id.Contains(vehicleFilterText, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
-                bool sel = _selectedVehicleIndex == i;
-                if (ImGui.Selectable(vehicleNames[i] + "##doh_v", sel))
-                    _selectedVehicleIndex = i;
+                bool sel = ReferenceEquals(vehicle, _selectedVehicle);
+                ImGui.PushID(i);
+                if (ImGui.Selectable(vehicle.Id + "##doh_v", sel))
+                    _selectedVehicle = vehicle;
+                ImGui.PopID();
                 if (sel) ImGui.SetItemDefaultFocus();
             }
             ImGui.EndCombo();
@@ -436,14 +465,8 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
 
     private void DoSpawn()
     {
-        if (_spawner == null) return;
-
-        var vehicles = VehicleProvider.GetAllVehicles();
-        if (_selectedVehicleIndex < 0 || _selectedVehicleIndex >= vehicles.Count)
-        {
-            SetStatus("No vehicle selected.", true);
-            return;
-        }
+        var target = GetSpawnTarget();
+        if (_spawner == null || target == null) return;
 
         string? characterId = _selectedCharacterIndex >= 0 && _selectedCharacterIndex < _availableCharacters.Length
             ? _availableCharacters[_selectedCharacterIndex]
@@ -451,7 +474,8 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
 
         var request = new SpawnRequest
         {
-            ReferenceVehicleId = vehicles[_selectedVehicleIndex].Id,
+            ReferenceVehicle = target,
+            ReferenceVehicleId = target.Id,
             OffsetBodyFrame = new double3(_offset.X, _offset.Y, _offset.Z),
             Count = _spawnCount,
             CharacterId = characterId,
@@ -459,23 +483,13 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
             UniqueMaterialsPerKitten = _uniquePerKitten,
         };
 
-        var result = _spawner.Spawn(request);
-        if (result.Success)
-            SetStatus($"Spawned {result.Count} kitten(s).", false);
-        else
-            SetStatus(result.Error ?? "Spawn failed.", true);
+        ReportSpawnResult(_spawner.Spawn(request), n => $"Spawned {n} kitten(s) at '{target.Id}'.");
     }
 
     private void DoFeelingLucky()
     {
-        if (_spawner == null) return;
-
-        var vehicles = VehicleProvider.GetAllVehicles();
-        if (_selectedVehicleIndex < 0 || _selectedVehicleIndex >= vehicles.Count)
-        {
-            SetStatus("No vehicle selected.", true);
-            return;
-        }
+        var target = GetSpawnTarget();
+        if (_spawner == null || target == null) return;
 
         string? characterId = _selectedCharacterIndex >= 0 && _selectedCharacterIndex < _availableCharacters.Length
             ? _availableCharacters[_selectedCharacterIndex]
@@ -486,7 +500,8 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
 
         var request = new SpawnRequest
         {
-            ReferenceVehicleId = vehicles[_selectedVehicleIndex].Id,
+            ReferenceVehicle = target,
+            ReferenceVehicleId = target.Id,
             OffsetBodyFrame = new double3(_offset.X, _offset.Y, _offset.Z),
             Count = _spawnCount,
             CharacterId = characterId,
@@ -495,11 +510,30 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
             UniqueMaterialsPerKitten = true,
         };
 
-        var result = _spawner.Spawn(request);
-        if (result.Success)
-            SetStatus($"Feeling lucky! Spawned {result.Count} rainbow kitten(s).", false);
-        else
+        ReportSpawnResult(_spawner.Spawn(request), n => $"Feeling lucky! Spawned {n} rainbow kitten(s) at '{target.Id}'.");
+    }
+
+    /// <summary>The selected vehicle if it still exists; otherwise clears it and reports why.</summary>
+    private Vehicle? GetSpawnTarget()
+    {
+        if (_selectedVehicle == null || _selectedVehicle.IsDisposed)
+        {
+            _selectedVehicle = null;
+            SetStatus("No vehicle selected (the previous selection no longer exists).", true);
+            return null;
+        }
+
+        return _selectedVehicle;
+    }
+
+    private void ReportSpawnResult(SpawnResult result, Func<int, string> successMessage)
+    {
+        if (!result.Success)
             SetStatus(result.Error ?? "Spawn failed.", true);
+        else if (result.Warning != null)
+            SetStatus(successMessage(result.Count) + " " + result.Warning, true);
+        else
+            SetStatus(successMessage(result.Count), false);
     }
 
     private static float4[] PickRandomUniqueColors((string Name, float4 Color)[] palette, int count)

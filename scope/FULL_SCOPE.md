@@ -80,7 +80,10 @@ carry-over, stock-grid native saves and a new `pebbles.clutter-state` record). S
 Godzilla visual scaling reinstalls; IvaForceRender shows interiors in the editor again; Bloomin's
 distant-sphere ring shadow writes the new material struct. Pre-existing bugs root-caused and
 fixed: Eternal Flame burn refills, a Torch/Dent Wizard teleport race with the orbit-hover job, Blinky's
-false feed warning and missing load-failure reports. See the [master index](game-integration-surface.md#5482-verification-summary)
+false feed warning and missing load-failure reports. doh has two more fixes. Its spawn target is
+held as a `Vehicle` object, because a list index moved onto another vehicle when KSA swap-removed one.
+Its tinted clones no longer exhaust the fixed 512-slot GPU material pool, which crashed the game in
+the native `KittenEva` constructor. See [character-and-materials.md](character-and-materials.md#doh) #33-#37. See the [master index](game-integration-surface.md#5482-verification-summary)
 and [upgrade report](../plans/KSA_5482_UPGRADE.md). Earlier 5438 migrations: [KSA_5438_UPGRADE](../plans/KSA_5438_UPGRADE.md).
 
 Kitchen Sink replaces the defunct Flexo test panels and solver hook with a filtered vehicle

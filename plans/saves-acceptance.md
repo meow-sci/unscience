@@ -62,7 +62,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [BYO Music](../byo-music.lib/ByoMusicSubmod.Saves.cs) | Unfinished sounds' vehicle targets, filenames, repeat, gap, volume and range. | Every restored sound is paused. Resume starts at the beginning; sample position, current gap progress and former paused/playing distinction are not restored. Finished sounds are omitted. Sound files remain required. |
 | [Camera Controller Override](../camera-controller-override.lib/CameraControllerOverrideSubmod.Saves.cs) | Ordered typed keyframe recipes, parallel groups, pending group recipes, return-to-start duration/easing/powers. | Restores stopped. Current running segment, elapsed time and its captured start pose are not resumed. Native camera pose loads independently. Pressing Play starts the reconstructed sequence through its normal behavior. |
 | [Dent Wizard](../dent-wizard.lib/DentWizardSubmod.cs) | KSA saves the launched vessel's resulting orbit/physical state; v1 `dent-wizard` is an empty lifecycle record. Reset cancels automatic mode, armed and pending shots. Mass labels are read live from native vessel state and are not sidecar data. | Source selection and speed are input for the next one-shot action, not an applied registration or ongoing force; they reset to unselected/5 m/s. Launches never replay on load. Kitchen Sink independently saves any source/target G-load protection. |
-| [DOH](../doh.lib/DohSubmod.Persistence.cs) | Registry of native-restored spawned kittens, character IDs, cloned tint and named material colors, plus spawn offset/count/character/color options. | Rebinds kittens instead of spawning duplicates; registry ownership supports later Despawn. Missing kittens or changed material identities warn. Character assets must be installed. Pending spawn actions are not replayed. |
+| [DOH](../doh.lib/DohSubmod.Persistence.cs) | Registry of native-restored spawned kittens, character IDs, cloned tint and named material colors, plus an optional per-kitten `MaterialGroup` so a shared batch keeps one material set, and spawn offset/count/character/color options. | Rebinds kittens instead of spawning duplicates; registry ownership supports later Despawn. Missing kittens or changed material identities warn. Legacy records without groups restore one set per kitten. Detached sets nothing rebinds, or left by a vanilla load, are released to KSA's fixed 512-slot GPU material pool. The spawn-target vehicle selection is UI input and resets. Character assets must be installed. Pending spawn actions are not replayed. |
 | [Don't Stifle Me](../dont-stifle-me.lib/DontStifleMeSubmod.Saves.cs) | Editor scale enable/snap flags and extended-value policy. | Existing part geometry/configuration remains native-owned. Does not serialize an editor undo stack or uncommitted operation. |
 | [Eternal Flame](../eternal-flame.lib/EternalFlameSubmod.Saves.cs) | Monitored vehicles, fuel/electricity switches and refill interval. | Monitoring resumes; interval timing restarts, without offline catch-up. Native save owns the current resource quantities. |
 | [Free Fallin'](../free-fallin.lib/FreeFallinSubmod.Saves.cs) | Applied global canopy material settings and effective albedo. | Recreates appearance, not a cloth simulation checkpoint. Applied state only; external textures remain dependencies. |
@@ -153,8 +153,9 @@ The repository contains targeted executable checks for
 [Godzilla baseline preservation](../godzilla.tests/README.md),
 [camera recipe reconstruction](../camera-saves.tests/README.md),
 [world recipe validation](../world-saves.tests/README.md),
-[Iron Man flight settings](../iron-man-flight.tests/README.md), and
-[Pyro cycle phase](../pyro.tests/README.md). The scale/animation checks include nonzero numeric
+[Iron Man flight settings](../iron-man-flight.tests/README.md),
+[Pyro cycle phase](../pyro.tests/README.md), and
+[DOH kitten/material-set rebinding and slot release](../doh.tests/README.md). The scale/animation checks include nonzero numeric
 round trips and repeated native-style reconstruction, rather than only serializability.
 Fixture checks substitute native seams; they do not execute real graphics/audio/physics ownership.
 Final full-solution build passed with zero warnings and errors. All 12 managed executables passed:
@@ -172,6 +173,11 @@ without sidecar* and *unreadable save reports failure and only clears load conte
 callback-isolation check. The reset-ordering traces now expect `join nearest-orbit-and-performance`.
 These are managed fixture results only; the three 5482 items in the checklist below remain open
 natively.
+
+DOH GPU material-pool fix (September 2026, KSA 5482): adds the optional per-kitten `MaterialGroup`
+field to the unchanged version-1 `doh` record, and releases detached material sets. The new
+`doh.tests` suite (25 checks) and the full solution build pass on macOS. These are managed results
+only; the DOH checklist items below remain open in-game.
 
 ## Native acceptance checklist
 
@@ -218,6 +224,10 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
   native lost part names, and stopping/deleting one grid leaves the others intact.
 - [ ] Save DOH clones with distinct materials and an uncolored clone. Check roster/vehicle counts remain
   unchanged, unique tint remains unique, material selection still works and Despawn acts on restored clones.
+- [ ] Save a DOH non-unique tinted batch; reload and confirm the batch still shares one set ("Tint All" on
+  one recolors all) while unique kittens stay independent. Watch the DOH window's GPU slot counter across
+  repeated loads, a vanilla load plus a spawn, and Despawn All: usage must return to its baseline instead
+  of growing.
 - [ ] Save enabled Iron Man mode with customized EVA/flight preferences. Confirm connectors are not
   duplicated, engines load disarmed, manual arming works, and Disable restores original control settings.
 - [ ] Verify Eternal Flame monitoring, I Feel Seen visibility, IVA rendering, editor flags and Glass FOV

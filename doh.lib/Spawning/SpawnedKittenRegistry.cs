@@ -48,6 +48,27 @@ public sealed class SpawnedKittenRegistry
         return _kittens.Values.ToList();
     }
 
+    /// <summary>True when any tracked kitten still renders with the given material set.</summary>
+    public bool IsMaterialSetInUse(KittenMaterialSet set)
+    {
+        return _kittens.Values.Any(k => ReferenceEquals(k.MaterialSet, set));
+    }
+
+    /// <summary>
+    /// Entries whose kitten the game has already disposed, or null when there are none.
+    /// Allocation-free in the common case, so it is safe to call every frame.
+    /// </summary>
+    public List<SpawnedKittenEntry>? GetDisposed()
+    {
+        List<SpawnedKittenEntry>? disposed = null;
+        foreach (var entry in _kittens.Values)
+        {
+            if (entry.Vehicle is { IsDisposed: true })
+                (disposed ??= new List<SpawnedKittenEntry>()).Add(entry);
+        }
+        return disposed;
+    }
+
     /// <summary>Clears all entries.</summary>
     public void Clear()
     {

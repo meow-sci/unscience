@@ -315,9 +315,13 @@ Programmatic kitten spawning with per-kitten GPU material customization. Spawns 
 - Live recoloring of spawned kittens via GPU buffer writes
 - Individual despawn or despawn-all management
 - Spawned kitten registry with full tracking
-- F8 ImGui window with vehicle/character combos (filterable), color picker, kitten list table
-- **doh.lib**: `MaterialSystemAccessor` (reflection bridge to GpuMaterialSystem/GpuTextureSystem), `MaterialFactory` (runtime per-kitten material creation), `KittenMaterialSet` (per-kitten GPU handles + live UpdateTint), `KittenSpawner` (spawn/despawn/recolor engine replicating EVADoor.CreateKittenEva), `SpawnRequest`/`SpawnResult` (DTOs), `SpawnedKittenRegistry` (state tracking), `DohSubmod` (ISubmod for unscience integration). All methods are game-thread-only.
+- F8 ImGui window with vehicle/character combos (filterable), color picker, kitten list table. The spawn target is held as the `Vehicle` object, never a list index, because KSA's vehicle list swap-removes
+- GPU material pool budget: KSA's material pool is a fixed 512 slots. doh keeps 64 free for the game, preflights tinted spawns (~10 slots per set), shares one set per non-unique batch, and releases sets on despawn, prune, unload and stale restore. A half-constructed `KittenEva` is cleaned up if its constructor throws
+- **doh.lib**: `MaterialSystemAccessor` (reflection bridge to GpuMaterialSystem/GpuTextureSystem; `.Pool.cs` capacity/free-slot/reserve/release), `MaterialFactory` (runtime per-kitten material creation; `.Lifetime.cs` release), `KittenMaterialSet` (per-kitten GPU handles, owned asset names, live UpdateTint), `KittenSpawner` (spawn/despawn/prune/recolor engine replicating EVADoor.CreateKittenEva; partials `.Positioning`, `.Materials`, `.Catalog`), `SpawnRequest`/`SpawnResult` (DTOs), `SpawnedKittenRegistry` (state tracking), `DohSubmod` (ISubmod for unscience integration; `.Persistence.cs` scene saves with optional shared `MaterialGroup`). All methods are game-thread-only.
 - **Unscience integration**: DOH is available as a submod in the unscience supermod via `DohSubmod`.
+
+### [doh.tests](doh.tests)
+Native-free managed checks that link the real DOH save adapter, kitten registry, material set and material-set release code. Cover shared `MaterialGroup` capture/restore, same-save reuse without new allocations, legacy records without groups, missing kittens releasing their sets, vanilla-load cleanup, no reuse after release and malformed groups. Run `dotnet run --project doh.tests`; see its [README](doh.tests/README.md).
 
 ---
 

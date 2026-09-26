@@ -37,7 +37,18 @@ public class Mod
     }
 
     [StarMapBeforeGui]
-    public void OnBeforeUi(double dt) { }
+    public void OnBeforeUi(double dt)
+    {
+        try
+        {
+            if (_isInitialized && !_isDisposed)
+                _submod.Update(dt);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"doh: Error in OnBeforeUi: {ex.Message}");
+        }
+    }
 
     [StarMapAfterGui]
     public void OnAfterUi(double dt)
