@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using HarmonyLib;
 using KSA;
@@ -11,10 +12,12 @@ public static class NativeSaveHooks
 {
     private static readonly List<(MethodInfo Target, MethodInfo Patch)> Installed = new();
     private static int _fileLoadDepth;
+    private static bool _nativeLoadReached;
     public static bool IsApplied => Installed.Count != 0 && PhysicsFrameHook.IsApplied;
 
     public static Action<GameSave>? Capturing { get; set; }
     public static Action<UncompressedSave>? Written { get; set; }
+    public static Action<UncompressedSave>? WriteFailed { get; set; }
     public static Action<UncompressedSave>? Loading { get; set; }
     public static Action? Resetting { get; set; }
     public static Action? Restoring { get; set; }
@@ -79,9 +82,14 @@ public static class NativeSaveHooks
         if (__runOriginal) Invoke(Capturing, __instance, "capture");
     }
 
-    private static void Saved(UncompressedSave __instance, bool __runOriginal)
+    private static void Saved(UncompressedSave __instance, bool __result, bool __runOriginal)
     {
-        if (__runOriginal) Invoke(Written, __instance, "write");
+        if (!__runOriginal) return;
+        // Since KSA 5482 a failed save returns false instead of throwing, and the previous save
+        // folder can survive intact. Writing the sidecar there would pair this session's feature
+        // state with the old universe, so only a successful native write publishes it.
+        if (__result) Invoke(Written, __instance, "write");
+        else Invoke(WriteFailed, __instance, "write failure");
     }
 
     private static bool LoadingSave(UncompressedSave __instance, out bool __state)
@@ -95,19 +103,23 @@ public static class NativeSaveHooks
         }
         __state = true;
         _fileLoadDepth++;
+        _nativeLoadReached = false;
         LastLoadError = null;
         Invoke(Loading, __instance, "preflight");
         return true;
     }
 
-    private static Exception? FinishedLoading(Exception? __exception, bool __state)
+    private static Exception? FinishedLoading(UncompressedSave __instance, Exception? __exception, bool __state)
     {
         if (__state)
         {
             _fileLoadDepth--;
-            LastLoadError = __exception;
+            // Since KSA 5482 an unreadable save is logged and Load returns before replacing the world.
+            Exception? failure = __exception ?? (_nativeLoadReached ? null
+                : new InvalidDataException($"KSA could not read save '{__instance.Id}'; the current scene was left unchanged."));
+            LastLoadError = failure;
             Invoke(LoadFinished, "finish load");
-            if (__exception != null) Invoke(LoadFailed, __exception, "load failure");
+            if (failure != null) Invoke(LoadFailed, failure, "load failure");
         }
         return __exception;
     }
@@ -125,6 +137,7 @@ public static class NativeSaveHooks
     private static bool ResetBeforeLoad(UniverseData universeData, out bool __state)
     {
         __state = false;
+        _nativeLoadReached = true;
         // Match the original's no-world early failure without touching the current session.
         if (Universe.CurrentSystem == null || universeData == null || !FrameHookAvailable()) return true;
         if (!PhysicsFrameHook.IsReplayingWorldChange)
@@ -174,7 +187,7 @@ public static class NativeSaveHooks
             JobSystems.ClothSolvers.Wait();
             // PrepareFrame queues nearest-orbit work before this handoff; it traverses
             // the current universe and must finish before vehicle destruction as well.
-            JobSystems.ConcurrentWorkers.Wait();
+            JobSystems.NearestOrbitAndPerformanceWorker.Wait();
             PhysicsFrameHook.ClearPending();
             Invoke(Resetting, "reset");
             // Cleanup callbacks can themselves enqueue old-world edits. They cannot survive

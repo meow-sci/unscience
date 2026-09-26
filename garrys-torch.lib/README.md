@@ -21,6 +21,10 @@ internal weld update using player delta and `step.PreviousTime`, and returns tha
 The patch requires unique ordered ApplyOrbit/Vehicle/ClothSolvers, GetJobSimStep and
 ExecuteNextCloth/Vehicle/OrbitSolvers calls. A changed layout fails installation rather than
 reintroducing unsafe UI teleports. Runtime errors are logged without preventing game scheduling.
+Before each `Vehicle.Teleport`, `WeldEngine` calls `PhysicsFrameHook.JoinOrbitReaders()`. In KSA 5482,
+`PrepareFrame` queues the nearest-orbit job before this handoff, and that job may still be reading
+orbit points that the teleport disposes. The join happens at most once per frame. Frames with no
+teleport and no queued mutation do not wait.
 
 This lets completed actuator module states commit before `Vehicle.Teleport` removes each source
 from its physics bubble. The next tick reattaches the source with its welded pose and committed

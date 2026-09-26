@@ -39,10 +39,10 @@ For procedural textures or unsupported mapping, save a separate export copy of t
 
 ## Implementation ownership
 
-- `Models/`: game-independent recipe schema, detached validation, bounded GLB container/geometry/scene decoding, exact file identities, material-slot ordering, primary texture mapping, testable CPU material conversion and pixel conversion.
+- `Models/`: game-independent recipe schema, detached validation, bounded GLB container/geometry/scene decoding, exact file identities, material-slot ordering, primary texture mapping, testable CPU material conversion and pixel conversion; removed/displaced clutter grid state (`ClutterGridState`, sidecar validation) and its carry-over rules (`ClutterGridMemory`).
 - `Assets/`: read-only registry discovery, private CPU geometry imports, native embedded-image decoding and lazily uploaded GLB textures.
 - `Import/`: feature-owned file browser and session-only navigation/selection state.
-- `Runtime/`: source capture, private ecotype/mesh/material graphs, resource preparation, per-body commit/restore, exclusion and physics invalidation, feature-owned Harmony demand.
+- `Runtime/`: source capture, private ecotype/mesh/material graphs, resource preparation, per-body commit/restore (`ClutterController`, `ClutterLiveRecord`), exclusion/displaced-object carry-over and native-save rewriting (`ClutterController.Grids`, `ClutterGridNative`), private hull colliders and their volume math (`ClutterColliders`, `HullMath`), physics invalidation, feature-owned Harmony demand.
 - `Preview/`: independent Vulkan color/depth target, geometry, material sampling and local camera; no stock thumbnail viewport, camera switch or Bepu simulation.
 - `Workshop/`: detached state/history, local camera and gizmo math, collider editing and responsive editor UI.
 - `PebblesSubmod*`: main authoring controls, per-planet applied-state controls and the standard `ISubmod` lifecycle. The submod owns its controller, recipe, import cache and editor; runtime resources are never serialized.
@@ -53,7 +53,7 @@ See [ground-clutter integration](../scope/ground-clutter.md) for native dependen
 
 ## Verification
 
-Run `dotnet run --project pebbles.tests/pebbles.tests.csproj` from the repository root. Managed checks cover detached copying/serialization, placement and collider constraints, camera/gizmo math, undo history, GLB geometry/container validation, transform baking, exact file identities, material-slot isolation and pure pixel conversion. Compilation verifies typed APIs against KSA 2026.9.7.5402. Native acceptance must cover private material descriptors, shadows, GPU retirement, stationary-cell collision refresh, exclusions, same-body replacement/restoration, scene changes, and Luna/Mars isolation. The preview uses conservative synchronization and may hitch while changing a large mesh or resizing; native rendering and gameplay are not established by managed checks. GLB acceptance additionally needs actual PNG/JPEG decode/upload, transformed atlases and secondary UVs, skipped detail maps, masks/blend cutouts, wrap approximations, alternate-image fallbacks, multi-material scenes, file changes, preview/live sharing and cache release.
+Run `dotnet run --project pebbles.tests/pebbles.tests.csproj` from the repository root. Managed checks cover detached copying/serialization, placement and collider constraints, camera/gizmo math, undo history, GLB geometry/container validation, transform baking, exact file identities, material-slot isolation, pure pixel conversion, hull volume/recentring math, the backface-normals recipe default, grid memory carry-over rules and the `pebbles.clutter-state` record. Compilation verifies typed APIs against KSA 2026.9.22.5482. Native acceptance must cover private material descriptors, shadows, GPU retirement, stationary-cell collision refresh, exclusions, same-body replacement/restoration, scene changes, and Luna/Mars isolation. The preview uses conservative synchronization and may hitch while changing a large mesh or resizing; native rendering and gameplay are not established by managed checks. GLB acceptance additionally needs actual PNG/JPEG decode/upload, transformed atlases and secondary UVs, skipped detail maps, masks/blend cutouts, wrap approximations, alternate-image fallbacks, multi-material scenes, file changes, preview/live sharing and cache release.
 
 Bound source textures must remain loaded while their recipes are applied or previewed. Native construction failure can leave allocations hidden in game-local variables; reachable resources are retired once and failures are reported, but a renderer/game restart may be required. See the [runtime failure limits](../scope/ground-clutter.md#failure-handling-and-verification-limits).
 
@@ -104,12 +104,23 @@ assets and native construction failures are reported rather than hidden in an as
 External GLBs resolve only within the current copied shared library, using the filename
 from the saved identity and the unchanged content hash. Copy the same files when moving a
 save to another computer; saved paths are not imported. Runtime caches and native resources
-are rebuilt. Destroyed-clutter simulation history/exclusion masks are not added to this
-setup snapshot; each loaded native world's history remains authoritative. Native cleanup
-faults retain ownership and block replay with a visible warning.
+are rebuilt. Native cleanup faults retain ownership and block replay with a visible warning.
 
-Scene saves rebuild applied clutter recipes; runtime destroyed-clutter/exclusion masks are not
-checkpointed, so regeneration can recreate previously removed clutter.
+Knocked-over and removed clutter persists (KSA 5482 saves clutter natively). The native save
+always holds each body's **stock-spacing** state, so the save stays correct without Pebbles.
+When an applied type uses a different object separation, Pebbles writes the remembered stock
+state into the native save and keeps its own spacing's removed/displaced objects in a separate
+`pebbles.clutter-state` sidecar record, restored after the recipes. Older saves without that
+record load their recipes and stock state only. A type applied at the stock spacing saves its
+live state natively; if Pebbles is later absent, those objects appear with stock meshes.
+
+## KSA 5482 compatibility
+
+- Clutter hits now displace objects (dynamic bodies, settled records). Apply/restore drain them like the game does and carry displaced objects to any graph with the same spacing, so nothing vanishes and loose objects keep moving; other spacings keep their own state for later.
+- Private convex hulls report their volume and are built around their bounds centre like stock hulls, so multi-hull rocks get stock mass distribution and centre of mass. Per-object `AngularDamping` (stock trees) is kept.
+- Tree materials keep the new stock backface-normal lighting flag. Recipes saved before it inherit the stock material's value.
+- Earth tree types changed their LOD 5 meshes, so 5438 recipes that include Earth trees must be recaptured (Apply/load reports "changed since capture").
+- Needs in-game acceptance: displacement across apply/restore, save/load at same and changed spacing, tree lighting, and the extra per-type displaced-instance VRAM.
 
 ## KSA 5438 compatibility
 

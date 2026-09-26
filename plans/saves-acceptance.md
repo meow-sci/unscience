@@ -1,8 +1,10 @@
 # Scene save implementation coverage and native acceptance
 
 Implementation baseline: `feature/saves`, KSA 5402 reference assemblies, September 2026.
-Current compatibility: **5438**, including Kitchen Sink G-load records and Dent Wizard.
-The combined checkout passes **74 solution projects and 15 managed suites** on macOS.
+Current compatibility: **5482** (`2026.9.22.5482`, upgraded from 5438), including Kitchen Sink
+G-load records and Dent Wizard. The 5482 fixes outside the separately tracked ground-clutter work
+change no save ID, version or payload. Against the 5482 reference assemblies, the checkout builds
+**74 solution projects** with no warnings or errors, and all **15 managed suites** pass on macOS.
 The preceding Kitchen Sink reconciliation passed **71 projects and 14 managed suites** on Windows;
 Kitchen Sink contributes 54 damage/lifecycle checks and 26 real-adapter save/restore checks.
 Both version-1 records remain unchanged. See [reconciliation evidence](KSA_5438_RECONCILIATION.md).
@@ -14,8 +16,9 @@ not the final implementation specification. See [SAVES.md](SAVES.md) for archite
 **Native acceptance is pending.** Managed builds and fixture tests cannot establish that
 Vulkan rendering, FMOD playback, native physics, cloth, or actual KSA loading behaves correctly.
 The original implementation checks ran on macOS ARM; the 5438 reconciliation ran managed checks
-on Windows with a matching installed game, without launching it. Run the checklist below in KSA
-before describing scene restoration as accepted.
+on Windows with a matching installed game, without launching it. The 5482 upgrade ran managed
+checks on macOS ARM64 only; the supplied KSA.dll is Windows x64, so the game was not launched.
+Run the checklist below in KSA before describing scene restoration as accepted.
 
 The combined Dent Wizard / Kitchen Sink checkout is covered by the
 [Dent Wizard integration record](DENT_WIZARD_UPSTREAM_INTEGRATION.md). Historical Windows and
@@ -40,7 +43,9 @@ audio sample position and every transient UI operation are not serialized by the
 Some animated setups resume their sampled phase; others deliberately stop, as specified below.
 
 Whole-world replacement is deferred to the early physics-frame boundary. Old native jobs join,
-old feature ownership and pending mutations are cleared, KSA reconstructs its world, and adapters
+including KSA 5482's `JobSystems.NearestOrbitAndPerformanceWorker` (renamed from `ConcurrentWorkers`).
+`PrepareFrame` re-queues the nearest-orbit job just before the handoff, so the explicit join is
+still required. Old feature ownership and pending mutations are cleared, KSA reconstructs its world, and adapters
 restore in dependency order before new simulation dispatch. This avoids destroying resources after
 the current ImGui frame has already referenced them. The extra frame and all native lifecycle
 assumptions still require the in-game checks below.
@@ -74,7 +79,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [Kitten Animations](../kitten-animations.lib/KittenAnimationsSubmod.Persistence.cs) | Selected kitten; forced clip by source/label, active/paused state and native clip phase; driver controls/global tuning; expression settings and latched expression clip identity. | Forced looping clips and frozen poses resume, and latched expressions return at their held weight. Unlatched one-shot expressions stay stopped; intermediate expression easing is not checkpointed. Missing/ambiguous clip identity or unavailable native phase fields warn/fail the block. |
 | [Kiwi's Marbles](../kiwis-marbles.lib/KiwisMarblesSubmod.Persistence.cs) | Celestial source/vehicle-or-celestial target/offset and original orbital parent, epoch and state vectors. | Restores ordered welds and their future Unweld baseline. Cycles through both target dependencies and actual parent ancestry are rejected. This is a weld/orbit recipe, not all possible arbitrary celestial-system mutations. |
 | [Parts Now](../parts-now.lib/PartsNowSubmod.Saves.cs) | Runtime mod IDs and declared part-template IDs as dependency records. | Does **not** install, embed, unload or automatically replay arbitrary runtime mods. Required native templates/characters are preflighted before world destruction; install/enable missing dependencies before retrying. |
-| [Pebbles](../pebbles.lib/PebblesSubmod.Saves.cs) | Applied per-body clutter recipes, including their imported mesh identities/settings. | Recreates applied fields and releases old import ownership. Workshop previews, unapplied recipe edits and runtime destroyed-clutter/exclusion masks are not captured; regenerating a field can recreate previously removed clutter. Imported GLB assets remain required; changed content hashes reject the saved selection. |
+| [Pebbles](../pebbles.lib/PebblesSubmod.Saves.cs) | Applied per-body clutter recipes, including their imported mesh identities/settings (`pebbles`); removed/displaced clutter on non-stock-spacing grids (`pebbles.clutter-state`, v1, order 61, new @5482). | Recreates applied fields and releases old import ownership. Stock-spacing removed/displaced clutter is saved natively by KSA 5482; Pebbles keeps those native entries stock-grid and restores override grids after recipes (native state wins). Workshop previews and unapplied recipe edits are not captured; pending unsynced hits are lost as natively. A missing record (vanilla/older saves) restores recipes and stock state only. Imported GLB assets remain required; changed content hashes reject the saved selection. |
 | [Pyro](../pyro.lib/PyroSubmod.Persistence.cs) | `pyro.templates`: edited shared plume templates. `pyro`: anchored plume settings, enabled flags and on/off cycling configuration, current phase and remaining interval. | Recreates plume instances after template edits, with cycling resumed without offline catch-up. Does not embed referenced assets or native renderer state; preset catalog remains separate. |
 | [Rocky McRockFace](../rocky-mcrock-face.lib/RockyMcRockFaceSubmod.Saves.cs) | Applied ring overlays still owning their target ring: LOD mesh/material/band selections and field overrides. | Reapplies after Bloomin' Onion. Superseded overlays and unapplied selection drafts are omitted. Referenced assets must remain available. |
 | [Skittles](../skittles.lib/SkittlesSubmod.Saves.cs) | Effective ImGui theme colors and style values. | A scene can restore its theme; native saves without a sidecar reset to the captured startup-theme baseline. Global theme library/default preference and window layout autosave are separate. |
@@ -117,11 +122,19 @@ remains open; the earlier baseline suite run below is not a claim of a new full-
   world. With no earlier record, the feature cannot be recovered from that failed capture; status and
   saved warnings identify the failure. After an incomplete destructive native load, preserving incoming
   feature records is data retention, not restoration of the previous running universe.
-- Sidecar replacement uses a flushed temporary file after native write succeeds. KSA's existing
-  destructive overwrite behavior is unchanged: KSA deletes the previous save directory before the
-  sidecar write hook runs. A native failure, process interruption or sidecar
-  write failure can leave a native-only/incomplete save. There is no atomic transaction across both
-  files and no automatic backup/version history.
+- Sidecar replacement uses a flushed temporary file, and the host writes it only when KSA's
+  `UncompressedSave.Write()` returns true. Since KSA 5482 (rev 5453) the overwrite deletes and
+  recreates the save folder inside `Write()` through `SaveDirectory.TryReplace`. This happens after
+  state capture and before the native files are written. If the delete fails after 3 IO retries, the
+  path is outside the saves root, or the native metadata/universe write fails, `Write()` returns
+  false instead of throwing. The old folder can then survive intact or partly deleted. The host
+  writes no sidecar and reports `KSA could not write save '<id>'; Unscience state was not written.`
+  A process interruption or sidecar write failure can still leave a native-only or incomplete save.
+  There is no atomic transaction across both files and no automatic backup/version history.
+- Since KSA 5482 (rev 5441) an unreadable `universe.xml` is logged by KSA, and `Load` returns
+  before reconstruction. The host reports
+  `Load failed: KSA could not read save '<id>'; the current scene was left unchanged.`
+  Nothing is reset, and the next successful load clears the error.
 - Arbitrary console/reflection edits, other mods' state, historical undo stacks, most unapplied UI
   drafts, pending unapplied jobs, file-selection dialogs and placement previews are outside these
   explicit adapters. Exceptions include captured weld/light queues, camera keyframes/pending groups
@@ -150,6 +163,15 @@ Final full-solution build passed with zero warnings and errors. All 12 managed e
 `pebbles.tests`, and `sphinx.tests`. The build used
 `dotnet build -m:1 -p:UNSCIENCE_DIST_DIR=/private/tmp/unscience-saves-dist`; generated output
 was isolated from the installed game. These results do not mark any native item below complete.
+
+KSA 5482 upgrade (September 2026): the full solution again builds with no warnings or errors, and
+all 15 managed suites pass against the 5482 reference assemblies. `saves.tests` now mirrors the 5482
+native shapes: `Write()` returns `bool`, `Load()` returns on an unreadable file, and the worker join
+is `NearestOrbitAndPerformanceWorker`. It adds *native write returning false reports failure
+without sidecar* and *unreadable save reports failure and only clears load context*, and updates the
+callback-isolation check. The reset-ordering traces now expect `join nearest-orbit-and-performance`.
+These are managed fixture results only; the three 5482 items in the checklist below remain open
+natively.
 
 ## Native acceptance checklist
 
@@ -224,6 +246,8 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
 - [ ] Save Bloomin' Onion rings with procedural bands and Rocky overlays on the same body. Test reset and
   reapplication order, original ring restoration, renderer rebuild, rings-disabled settings and missing assets.
 - [ ] Save Pebbles applied GLB recipes and Sphinx statics with UVs, visibility and each collision mode.
+- [ ] Pebbles (5482): save/load with removed and displaced clutter at the same and at a changed spacing;
+  confirm no new holes in stock clutter, override removals persist and in-flight objects keep velocity.
   Confirm placement/collision behavior after restart and repeated loads; no duplicate instances or growth
   in imported/render resource ownership should accumulate across a bounded repeated-load test.
 - [ ] Save terrain/part/canopy Graffiti and custom Free Fallin' materials. Test packed/deployed canopies,
@@ -248,3 +272,21 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
 - [ ] Inject native write failure, sidecar write failure and post-reset native load failure. Confirm status
   does not claim full success, no unmatched capture writes to another slot, later loads have no stale
   transaction context, and recovery limits are clear rather than implying automatic world rollback.
+- [ ] **KSA 5482 failed save.** Overwrite an existing save while `SaveDirectory.TryReplace` cannot
+  replace its folder. On Windows, keep a file in the save folder open. Confirm that KSA reports the
+  failure, that no new `unscience.json` is written into the surviving old folder, and that the old
+  sidecar still matches its `universe.xml`. The toolbox must show
+  `KSA could not write save '<id>'; Unscience state was not written.`, and a later normal save
+  must succeed with a sidecar. Managed
+  coverage: `saves.tests` write-returns-false check. Native: pending.
+- [ ] **KSA 5482 unreadable save.** Corrupt `universe.xml` in a copied save and load it. The current
+  scene and its Unscience setups must be unchanged, with no reset. The toolbox must show
+  `Load failed: KSA could not read save '<id>'; the current scene was left unchanged.`, and the next
+  successful load must clear it. Managed coverage: `saves.tests` unreadable-save and callback-isolation checks.
+  Native: pending.
+- [ ] **KSA 5482 reset join.** Start a deferred load, from the UI and from the console, while the
+  nearest-orbit job is busy. For example, hover a flight-plan patch at high warp with several
+  vessels. Expect no `ObjectDisposedException`, orbit-worker fault or hang, and cleanup must begin
+  only after `JobSystems.NearestOrbitAndPerformanceWorker` has joined. Managed coverage:
+  `saves.tests` load/new-system traces (`join nearest-orbit-and-performance`) and the join-failure
+  abort check. Native: pending.

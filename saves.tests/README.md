@@ -9,6 +9,18 @@ queued-action invalidation, editor refusal, capture/write/read/reconstruction er
 new-system loads, callback isolation, repeatability and targeted unpatching. These fixtures do not
 initialize KSA native graphics or physics and do not replace an in-game save/load smoke test.
 
+KSA 5482 behavior is mirrored by the fixtures. `UncompressedSave.Write()` returns `bool`, where
+`FailWrite` returns false and `ThrowWrite` throws. `Load()` returns without reconstruction on an
+unreadable file (`FailRead`). The worker join is `JobSystems.NearestOrbitAndPerformanceWorker`, and
+its trace label is `join nearest-orbit-and-performance`. The checks confirm:
+
+- a native write that returns false keeps its result, raises `WriteFailed` and publishes no `Written`
+  sidecar callback;
+- a throwing capture or write still skips sidecar callbacks;
+- an unreadable save raises `LoadFailed` once with an `InvalidDataException`, sets `LastLoadError`
+  and neither resets nor restores;
+- the next successful load clears that error, and callback isolation still reports it.
+
 Whole-load requests are held until the frame dispatcher replays them; the hook fixtures verify
 there is no preflight/reset at UI dispatch and only the latest request runs. Production dispatcher
 ordering is separately exercised by `garrys-torch.tests`, including computing the next simulation

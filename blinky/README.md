@@ -96,6 +96,10 @@ and for a sample pixel — controller activity, stage, each declared feed connec
 
 ### Render Toggle
 Checkbox to toggle engine mesh rendering for a significant performance boost — hides part meshes while keeping the pixel grid fully functional.
+Hiding uses the shared `PartRenderFilter` in `ksa-abstractions.lib`. The filter drops pixel-part
+instances (parts named `pixel_*` or registered in a live grid) from each frame's part instance
+lists, so hidden pixels also cast no shadows. Known gap since KSA 5482: pixel meshes are not hidden
+in **raytraced IVA** views.
 
 
 ## Grid Configuration
@@ -125,7 +129,7 @@ Grid names are user-chosen identifiers that distinguish multiple grids on the sa
 ```
 blinky/                       ← Mod entry point (ImGui UI + lifecycle)
 ├── Mod.cs                    ← Main mod class (F11 window, UI controls)
-├── Patcher.cs                ← Harmony render-skip patches for pixel parts
+├── Patcher.cs                ← Registers the pixel-part render filter (shared PartRenderFilter)
 ├── blinky.csproj
 └── mod.toml
 
@@ -144,7 +148,7 @@ blinky.lib/                   ← Core reusable logic (headless)
 
 ## Dependencies
 
-- `ksa-abstractions.lib` — `VehicleProvider` and `PartHelpers`
+- `ksa-abstractions.lib` — `VehicleProvider`, `PartHelpers` and `PartRenderFilter`
 
 ## Architecture
 
@@ -161,6 +165,18 @@ Normal KSA saves made with Unscience preserve grids, ownership, patterns and scr
 the native-loaded parts. No extra engine parts are spawned and vehicle ignition is preserved.
 See [save details](../blinky.lib/README.md#scene-saves). Native saves omit ordinary pixel names,
 so a scan alone cannot recover older saves that lack Unscience grid metadata.
+
+## KSA 5482 compatibility
+
+- KSA 5482 removed the per-module render hooks that the render toggle used. The toggle now registers
+  with the shared `PartRenderFilter`. Raytraced IVA views are not filtered.
+- KSA 5482 computes derived part-tree data lazily, so resource managers do not exist right after a
+  build. The builder now builds the resource groups before the propellant feed check. Without this,
+  every build logged a false `0/N pixel parts reached at least one tank` warning. Ignition was
+  unaffected.
+
+Verified by build only. The toggle, the feed report and ignition of dense grids still need an
+in-game pass.
 
 ## KSA 5438 compatibility
 

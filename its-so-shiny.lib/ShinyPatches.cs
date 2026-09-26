@@ -1,54 +1,29 @@
 using System;
-using System.Reflection;
 using HarmonyLib;
 using KSA;
+using MeowSci.KsaAbstractions;
 
 namespace MeowSci.ItsSoShinyLib;
 
 /// <summary>Harmony patch helpers for its-so-shiny render-skip behaviour on shiny light parts.</summary>
 public static class ShinyPatches
 {
-    private static MethodInfo? _partModelUpdateRenderData;
-    private static MethodInfo? _partModelDynamicUpdateRenderData;
-    private static MethodInfo? _partModelGlassUpdateRenderData;
+    private const string FilterOwner = "its-so-shiny";
 
-    private static MethodInfo? _partModelPrefix;
-    private static MethodInfo? _partModelDynamicPrefix;
-    private static MethodInfo? _partModelGlassPrefix;
-
+    /// <summary>
+    /// Hides shiny light-part meshes while their light is off. Parts stay in the part tree; only
+    /// their instances are dropped from the per-frame part instance lists (KSA 5482 removed the
+    /// per-module render hooks).
+    /// </summary>
     public static void Apply(Harmony harmony)
     {
-        _partModelPrefix        = typeof(ShinyPatches).GetMethod(nameof(PartModelModulePrefix),        BindingFlags.NonPublic | BindingFlags.Static)!;
-        _partModelDynamicPrefix = typeof(ShinyPatches).GetMethod(nameof(PartModelDynamicModulePrefix), BindingFlags.NonPublic | BindingFlags.Static)!;
-        _partModelGlassPrefix   = typeof(ShinyPatches).GetMethod(nameof(PartModelGlassModulePrefix),   BindingFlags.NonPublic | BindingFlags.Static)!;
-
-        _partModelUpdateRenderData        = AccessTools.Method(typeof(PartModelModule),        nameof(PartModelModule.UpdateRenderData));
-        _partModelDynamicUpdateRenderData = AccessTools.Method(typeof(PartModelDynamicModule), nameof(PartModelDynamicModule.UpdateRenderData));
-        _partModelGlassUpdateRenderData   = AccessTools.Method(typeof(PartModelGlassModule),   nameof(PartModelGlassModule.UpdateRenderData));
-
-        harmony.Patch(_partModelUpdateRenderData,        prefix: new HarmonyMethod(_partModelPrefix));
-        harmony.Patch(_partModelDynamicUpdateRenderData, prefix: new HarmonyMethod(_partModelDynamicPrefix));
-        harmony.Patch(_partModelGlassUpdateRenderData,   prefix: new HarmonyMethod(_partModelGlassPrefix));
-
+        PartRenderFilter.Register(harmony, FilterOwner, fullPart => !ShouldRenderShinyPart(fullPart));
         Console.WriteLine("its-so-shiny.lib: render-skip patches applied");
     }
 
     public static void Remove(Harmony harmony)
     {
-        if (_partModelUpdateRenderData != null && _partModelPrefix != null)
-            harmony.Unpatch(_partModelUpdateRenderData, _partModelPrefix);
-        if (_partModelDynamicUpdateRenderData != null && _partModelDynamicPrefix != null)
-            harmony.Unpatch(_partModelDynamicUpdateRenderData, _partModelDynamicPrefix);
-        if (_partModelGlassUpdateRenderData != null && _partModelGlassPrefix != null)
-            harmony.Unpatch(_partModelGlassUpdateRenderData, _partModelGlassPrefix);
-
-        _partModelUpdateRenderData        = null;
-        _partModelDynamicUpdateRenderData = null;
-        _partModelGlassUpdateRenderData   = null;
-        _partModelPrefix        = null;
-        _partModelDynamicPrefix = null;
-        _partModelGlassPrefix   = null;
-
+        PartRenderFilter.Unregister(harmony, FilterOwner);
         Console.WriteLine("its-so-shiny.lib: render-skip patches removed");
     }
 
@@ -62,13 +37,4 @@ public static class ShinyPatches
         if (ls == null) return true; // no switch — can't determine state, render to be safe
         return ls.LightIsActive;
     }
-
-    private static bool PartModelModulePrefix(PartModelModule __instance)
-        => ShouldRenderShinyPart(__instance.Parent.FullPart);
-
-    private static bool PartModelDynamicModulePrefix(PartModelDynamicModule __instance)
-        => ShouldRenderShinyPart(__instance.Parent.FullPart);
-
-    private static bool PartModelGlassModulePrefix(PartModelGlassModule __instance)
-        => ShouldRenderShinyPart(__instance.Parent.FullPart);
 }

@@ -58,6 +58,12 @@ public sealed class MaterialRecipe
     public bool ApplyExtraSpec { get; set; }
     public bool DistanceFadeDither { get; set; }
     public bool SourceColors { get; set; }
+    /// <summary>KSA 5473 double-sided lighting flag (stock trees). Null (recipes saved before it existed,
+    /// or imports) inherits the stock material named by <see cref="SourceId"/>, otherwise false.</summary>
+    public bool? KeepBackfaceNormals { get; set; }
+
+    public bool ResolveKeepBackfaceNormals(IReadOnlyDictionary<string, bool> stockFlags)
+        => KeepBackfaceNormals ?? (stockFlags.TryGetValue(SourceId, out var stock) && stock);
 }
 
 public sealed class LodRecipe

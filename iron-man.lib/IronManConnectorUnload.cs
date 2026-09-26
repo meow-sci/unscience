@@ -47,7 +47,8 @@ public static class IronManConnectorUnload
                     (ReferenceEquals(c.Connectors[0], link.One) && ReferenceEquals(c.Connectors[1], link.Two)) ||
                     (ReferenceEquals(c.Connectors[1], link.One) && ReferenceEquals(c.Connectors[0], link.Two))));
             }
-            foreach (var tree in roots.Select(root => root.Tree).Distinct()) tree.RecomputeAllDerivedData();
+            // A root whose deserialization aborted has no tree (KSA 5482+) and therefore no links.
+            foreach (var tree in roots.Select(root => root.Tree).OfType<PartTree>().Distinct()) tree.RecomputeAllDerivedData();
             if (roots.Any(root => IronManConnectors.GetOwned(root).Any(anchor => anchor.Connection != null)))
                 throw new InvalidOperationException("An Iron Man anchor unexpectedly remained connected during unload.");
             foreach (var root in roots) IronManConnectors.RemoveAll(root);
@@ -61,7 +62,7 @@ public static class IronManConnectorUnload
             foreach (var link in disconnected)
                 if (!Part.Connection.Connect(link.OriginalOne, link.OriginalTwo))
                     Console.WriteLine("iron-man: ERROR restoring an original anchor connection after unload conversion failed.");
-            foreach (var tree in disconnected.Select(link => link.OriginalOne.ConnectionPart.Tree).Distinct())
+            foreach (var tree in disconnected.Select(link => link.OriginalOne.ConnectionPart.Tree).OfType<PartTree>().Distinct())
             {
                 try { tree.RecomputeAllDerivedData(); }
                 catch (Exception restoreError) { Console.WriteLine($"iron-man: ERROR refreshing restored anchor links: {restoreError.Message}"); }

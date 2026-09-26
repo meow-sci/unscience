@@ -62,6 +62,8 @@ namespace MeowSci.KsaAbstractions
         public static event System.Action<double, KSA.UniverseTime>? BeforePhysics;
         public static int Subscribers => BeforePhysics?.GetInvocationList().Length ?? 0;
         public static void Dispatch(KSA.UniverseTime time) => BeforePhysics?.Invoke(0, time);
+        public static int OrbitReaderJoins;
+        public static void JoinOrbitReaders() => OrbitReaderJoins++;
     }
     public static class VehicleProvider
     {

@@ -1,6 +1,80 @@
 # Pixel-Grid & Custom-Render Mods — Game Integration Scope
 
-## Current verification — 5402 → 5438
+## KSA 5482 (5438 → 5482) verification
+
+Verified 2026-09-25 against `2026.9.22.5482` (revs 5439–5481), diffed from `2026.9.10.5438`.
+Static/managed only: the whole solution builds and the managed suites pass (including
+`ksa-upgrade.tests` `RenderFilterChecks`, which links the production filter); no native KSA run was
+possible. Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md). Rows changed this pass are
+marked `@5482` and carry 5482 line numbers.
+
+- 🔴 **Render-skip targets removed (fixed).** Rev 5456 deleted `PartModelModule` /
+  `PartModelDynamicModule` / `PartModelGlassModule.UpdateRenderData`. Part render data is now cached
+  per tree in `KSA.PartTreeRenderData` (`PartTree.RenderData`, `KSA/PartTree.cs:30`).
+  `PartTree.UpdateRenderData` (`:1158-1193`, signature unchanged) calls `EnsureBuilt` once per frame,
+  then per viewport `Compose` (`KSA/PartTreeRenderData.cs:1258`), `ComposeDynamic` (`:1152`) and
+  `ComposeGlass` (`:899`). The static raster branch (`:1300-1319`) bulk-appends one slot-ordered range
+  per model into `PartModel.ViewportData.InstanceList`/`DentInstanceList` without calling
+  `AddInstance`, so no per-part method decides submission any more. Blinky and its-so-shiny now
+  register predicates with the shared `ksa-abstractions.lib/PartRenderFilter`
+  (`BlinkyPatches.cs:20,26`; `ShinyPatches.cs:20,26`). Its prefix/postfix on the three `Compose*`
+  methods removes hidden slots (judged by `batch.Parts[j].FullPart`) from each appended range before
+  `PartModelRenderer.UpdateRenderData` uploads. Cached render data is never modified, so toggles take
+  effect on the next frame without invalidation, and draw counts and shadow bounds stay consistent.
+  One shared patch set is mandatory: two independent compactions would shift each other's ranges.
+  Reflection and failure behaviour: [00-architecture → PartRenderFilter](00-architecture-and-abstractions.md#partrenderfiltercs).
+  **Known gap vs 5438:** raytraced-IVA submissions (`Compose` RT branch `:1284-1298`, `ComposeGlass`
+  → `RayTraceTransforms`) bypass the instance lists and are not filtered.
+- ⚠️ **Blinky false "0/N pixel parts reached at least one tank" warning (fixed).** Rev 5464 made
+  derived tree data lazy. `CreateFromNewPartTree` → `RecomputeAllDerivedData` now only marks it dirty
+  (`KSA/PartTree.cs:475-478`), and `Combustor.ResourceManager` is a lazy property
+  (`KSA/Combustor.cs:19-29`) that stays null until `PartTree.FlushDirtyDerived` /
+  `FlushDirtyResourceManagers` run (`Program.cs:2209-2210`) or something forces them.
+  `LcdGridBuilder.cs:170` now calls `vehicle.Parts.EnsureDerived(DerivedData.ResourceGroups)` before
+  `VerifyPropellantFeeds`, restoring 5438's eager timing. Ignition was never affected: the next frame's
+  flush builds the managers before `ExecuteNextVehicleSolvers`.
+- ℹ️ **`Part.Tree` is nullable and the `Part` ctor no longer builds a tree** (`KSA/Part.cs:662,1490`;
+  new `CreateOwnTree()` `:1456`). Pixels from `new Part(...)` (`LcdGridBuilder.cs:364`,
+  `ShinyGridBuilder.cs:157`) have no tree until `CreateFromNewPartTree` → `TransferPart` assigns the
+  vehicle tree. `SetStage` and the transform setters use `Tree?.`, and `Connection.Connect` and
+  `Combustor.BindFeedPoints` do not touch the tree, so `RocketCore.FeedConnectors` (#22) is still bound
+  in the ctor. No code change; builds no longer create throwaway per-pixel trees.
+- ℹ️ **Lazy properties, source-compatible.** `PartTree.EngineThrottleMin` (#15, `KSA/PartTree.cs:176`),
+  `Combustor.ResourceManager` (#19/#23) and the `PowerManager` of `PowerConsumer`/`Generator`/`SolarPanel`
+  are now lazily rebuilt properties. `ResourceGroupList.cs` is byte-identical: `CalculateStages` still
+  eagerly calls internal `RecreateResourceManagers` (`KSA/PartTree.cs:837`), so #24 holds.
+- ⚠️ **Deferred rebuild vs orphaned trees (live check).** `vehicle.Parts = CreateFromNewPartTree(root)`
+  (`LcdGridBuilder.cs:148,242`; `ShinyGridBuilder.cs:94,147`) abandons the previous tree without
+  disposing it. If something else marked that tree dirty earlier in the same frame, the next flush can
+  recreate resource managers on the orphan for the shared engine/power modules. The window is narrow;
+  neither mod dirties the old tree itself.
+- ⚠️ **Content rev 5475.** Seven `CoreFairingA` parts (`NoseconeC/E/F/G/H`,
+  `InterstageBridge2W1WB`/`3W2WB`) gained `<Tank>` modules. Blinky's `FindAllFuelParts`
+  (`LcdGridBuilder.cs:417`) uses every tank part as a round-robin anchor, so on craft carrying them some
+  pixels may anchor to, drain or starve on a nosecone tank. No mod references these ids.
+- ✅ **thug-life compatible.** `SuperMeshRenderSystem.RenderMainPass` gained a leading `IViewport
+  viewport` (`KSA/SuperMeshRenderSystem.cs:364`, rev 5474 per-view mesh buckets). It is still the only
+  overload, resolved by name, and the postfix binds only `commandBuffer`, so it attaches unchanged. The
+  body is now `SetViewport` + `RenderPass(ViewForViewport(viewport), MeshPass.MainOpaque, …)`. Still
+  called 3× with `RenderedViewport` set first (`Program.cs:4417`): `:4496` (non-main viewports),
+  `:4756` (main flight), `:4964` (editor). `OffscreenTarget` (`:456`), `GetRenderCamera` (`:641`),
+  `RenderedViewport` (`:490`), `SetViewport` (`:4395`), `RenderingPresets`, `Renderer`,
+  `UnlitMesh.vert/.frag` and their `DefaultAssets.xml` ids are unchanged.
+- ✅ **Checked unchanged:** `ModLibrary.Get<PartTemplate>`; `Part.{TreeParent, TreeChildren,
+  SubtreeModules, IsSubPart, Template, SubParts, LightSwitch, FullPart, Id, Stage, Connections, Scale,
+  PositionParentAsmb, Asmb2ParentAsmb}`; `Part.Connection.Connect/Disconnect`; `Connector.CanConnect`;
+  `Vehicle.UpdateVehicleConfiguration` (`Vehicle.cs:1877`, same body, lazy underneath);
+  `EngineController.{SetIsActive, IsActive, MinimumThrottle, Cores}`; `RocketCore.cs`,
+  `ResourceManagerBase.cs`, `FlowOrder.cs`, `ResourceGroupList.cs`, `Battery.cs` byte-identical;
+  `PowerConsumer.LightIsActive` (`:30`); `LightPart` and `CorePropulsionA` content byte-identical.
+- **Native acceptance pending:** pixel/shiny meshes hidden in main and portrait viewports, with no
+  shadows and lights still working; live toggles in editor and flight; raytraced IVA (known gap);
+  blinky and shiny on one vehicle (one shared compaction); the blinky build log reports N/N; Repair Feed
+  on a large grid while thrusting (lazy manager-rebuild race); a craft carrying the new fairing tanks;
+  shiny battery anchors and light power on the frame after a build; thug-life quad in main and portrait
+  viewports.
+
+## Verification — 5402 → 5438 (historical)
 
 Blinky feed diagnostics now read `ResourceManager.ConsumptionOrder : FlowOrder<Tank>` through
 `blinky.lib/PropellantFeedDiagnostics.cs`, counting entries in every indexed level. This replaces the
@@ -20,16 +94,17 @@ enumerated and verified against decompiled sources **and** the Content asset tre
 
 **Verified game versions**
 
-- NEW decomp `2026.9.7.5402` root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
-- OLD decomp `2026.8.22.5348` root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
+- NEW decomp `2026.9.22.5482` root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
+- OLD decomp `2026.9.10.5438` root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
 - NEW Content root: `~/repos/meow-sci/ksa-game-assemblies/current/Content`
 - OLD Content root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/Content`
 
 Paths in the **Decomp/Content path (NEW)** column are relative to the NEW decomp root
 (namespace-foldered, e.g. `KSA/Part.cs`) or the NEW Content root (e.g.
 `Core/DefaultAssets.xml`). **Mod code** paths are relative to the repo root
-`~/repos/meow-sci/unscience`. Line numbers were re-verified against 5402 on 2026-09-02; the
-per-span "Δ vs OLD" cells are historical unless marked `@5402`.
+`~/repos/meow-sci/unscience`. Rows marked `@5482` were re-verified against 5482 on 2026-09-25;
+other line numbers were last re-verified against 5402 on 2026-09-02. The per-span "Δ vs OLD" cells
+are historical unless marked with a build.
 
 **How these mods are hosted (all three)**
 
@@ -38,14 +113,18 @@ per-span "Δ vs OLD" cells are historical unless marked `@5402`.
   (`MeowSci.KsaAbstractions.ISubmod`) consumed two ways:
   1. Standalone StarMap mod (`blinky/Mod.cs` F11, `its-so-shiny/Mod.cs` F11,
      `thug-life/Mod.cs` F12) — own ImGui window + own `Harmony` instance in its `Patcher.cs`.
-  2. Embedded in the **unscience** supermod (`unscience/Mod.cs:69` `new BlinkySubmod()`,
-     `:82` `new ItsSoShinySubmod()`, `:91` `new ThugLifeSubmod()`) as collapsible sections,
+  2. Embedded in the **unscience** supermod (`unscience/Mod.cs:73` `new BlinkySubmod()`,
+     `:90` `new ItsSoShinySubmod()`, `:101` `new ThugLifeSubmod()`) as collapsible sections,
      with all three patch sets applied on the **single** supermod Harmony instance
-     (`unscience/Patcher.cs:51` `ThugLifeRenderPatches.Apply`, `:57` `BlinkyPatches.Apply`,
-     `:58` `ShinyPatches.Apply`, each wrapped in `TryApply`).
-- `blinky` + `its-so-shiny` patch the **same three** render-data methods. Harmony allows
-  multiple prefixes; `blinky` keys on `pixel_*` Ids and `its-so-shiny` on `shiny_*` Ids,
-  so the prefixes never conflict (a part is skipped only if its own mod's prefix returns false).
+     (`unscience/Patcher.cs:60` `ThugLifeRenderPatches.Apply`, `:68` `BlinkyPatches.Apply`,
+     `:69` `ShinyPatches.Apply`, each wrapped in `TryApply`; lines @5482).
+- `blinky` + `its-so-shiny` share **one** render filter (@5482). Each registers a named predicate
+  with `ksa-abstractions.lib/PartRenderFilter` (`"blinky"`, `"its-so-shiny"`); the first registration
+  installs the single prefix/postfix set on `PartTreeRenderData.Compose/ComposeDynamic/ComposeGlass`
+  and the last `Unregister` removes it. A part is hidden when any predicate returns true. Blinky keys
+  on `pixel_*` Ids or grid-registry membership, its-so-shiny on `shiny_*` Ids or registry membership
+  plus the light state, so the predicates never conflict. (Before 5482 each mod prefixed the three
+  removed `*Module.UpdateRenderData` methods.)
 
 **Summary of 4680 -> 4750 risk: NO breaking deltas detected.** Every patched method,
 typed member, enum, shader id/path, and part-template id these mods use is
@@ -67,10 +146,10 @@ multiple named grids per vehicle, patterns, scrolling, static display, global sc
 a render-skip performance toggle. Controllable via ImGui.
 
 **Unscience integration** — `BlinkySubmod : ISubmod` (`blinky.lib/BlinkySubmod.cs:11`),
-instantiated by the supermod (`unscience/Mod.cs:69`) and the standalone host
+instantiated by the supermod (`unscience/Mod.cs:73`) and the standalone host
 (`blinky/Mod.cs:27`). Static singleton `BlinkyGridManager` (`blinky.lib/BlinkyGridManager.cs:38`)
-is the shared control surface for the UI and reusable callers. Render-skip patches applied via
-`BlinkyPatches.Apply` (`blinky/Patcher.cs:14` standalone, `unscience/Patcher.cs:57` embedded).
+is the shared control surface for the UI and reusable callers. Render-skip registration via
+`BlinkyPatches.Apply` (`blinky/Patcher.cs:14` standalone, `unscience/Patcher.cs:68` embedded).
 
 **UI/hotkeys** — Standalone window "blinky", 480x640, `MenuBar`, toggled by **F11**
 (`blinky/Mod.cs:52,79`). Create form (size/spacing/scale/offset/layout/engine/vehicle/
@@ -85,30 +164,31 @@ recovery is insufficient because KSA omits ordinary `pixel_*` ids. No StarMap sa
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature, or asset path) | Decomp/Content path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|---|---|---|---|---|---|---|
-| 1 | Harmony prefix | `blinky.lib/BlinkyPatches.cs:26,30,60` | `PartModelModule.UpdateRenderData(in double4x4, bool, IViewport, int)` — return false skips submit | `KSA/PartModelModule.cs:87` | Yes | **retyped @5402** — 3rd param `Viewport` (class, removed) → `IViewport`; body now `FullPart.IsLightSwitchedOff()` (`:106`) | Patched by name only; no overload (1 method); prefix takes only `__instance`, so the retype is transparent. Game itself uses `Parent.FullPart.IsLightSwitchedOff()` here (`KSA/Part.cs:1357`). |
-| 2 | Harmony prefix | `blinky.lib/BlinkyPatches.cs:27,31,66` | `PartModelDynamicModule.UpdateRenderData(in double4x4, bool, IViewport, int)` | `KSA/PartModelDynamicModule.cs:55` | Yes | **retyped @5402** (same as #1) | Same shape as #1. |
-| 3 | Harmony prefix | `blinky.lib/BlinkyPatches.cs:28,32,72` | `PartModelGlassModule.UpdateRenderData(in double4x4, bool, IViewport, int)` | `KSA/PartModelGlassModule.cs:72` | Yes | **retyped @5402** (param only; body unchanged) | 4745 merged ModelGlass+ModelEye **shaders**; the C# module class is unchanged. Downstream `PartModel.AddInstance`/`PartModelGlass.AddInstance` now early-return unless `viewport.HasAny(ViewportOptionFlags.RenderPartModels)` (`KSA/PartModel.cs:410`, `KSA/PartModelGlass.cs:504`) — every preset carries that flag (`KSA/ViewportPresets.cs`), so no viewport gains or loses part models. |
-| 4 | Direct (in prefix) | `blinky.lib/BlinkyPatches.cs:63,69,75` | `Module.Parent`→`Part`; `Part.FullPart`; `Part.Id` (string `StartsWith("pixel_")`) | `KSA/ModuleBase.cs:31`, `KSA/Part.cs:1123`, `:698` | Yes | None | `ModuleBase.Parent` is `required Part { get; set; }`; `FullPart => PartParent ?? this`. |
+| 1 | Shared render filter: Harmony prefix + postfix (installed by `ksa-abstractions.lib/PartRenderFilter`) | `blinky.lib/BlinkyPatches.cs:20` (`Register(harmony, "blinky", ShouldHide)`), `:26` (`Unregister`) | `PartTreeRenderData.Compose(ref readonly double4x4, bool, IViewport inViewport, int)` — static part models | `KSA/PartTreeRenderData.cs:1258` (raster branch `:1300-1319`) | Yes | **REPLACED @5482** — was a prefix on `PartModelModule.UpdateRenderData`, removed in rev 5456 | Prefix records each batch's `InstanceList.Count`; postfix removes hidden slots from the appended range (`InstanceList` and `DentInstanceList` together) only when exactly `batch.Count` entries were appended (raster path) and the dent list is aligned; otherwise it leaves the range alone. Exact four-type lookup. One shared patch set for every owner. |
+| 2 | Shared render filter (as #1) | `blinky.lib/BlinkyPatches.cs:20,26` | `PartTreeRenderData.ComposeDynamic(...)` (same signature) — dynamic part models (engines) | `KSA/PartTreeRenderData.cs:1152` | Yes | **REPLACED @5482** — was `PartModelDynamicModule.UpdateRenderData` | Still calls `PartModelDynamic.AddInstance` per slot, so Engine Emissive's sink prefix sees every instance first; compaction runs afterwards. |
+| 3 | Shared render filter (as #1) | `blinky.lib/BlinkyPatches.cs:20,26` | `PartTreeRenderData.ComposeGlass(...)` (same signature) — glass models | `KSA/PartTreeRenderData.cs:899` | Yes | **REPLACED @5482** — was `PartModelGlassModule.UpdateRenderData` | Instance list only (glass has no dent list). Raytraced-IVA glass goes to `RayTraceTransforms` and is not filtered. `Compose*` return early unless `inViewport.HasAny(RenderPartModels)`; the filter uses the same gate. |
+| 4 | Predicate (called by the filter) | `blinky.lib/BlinkyPatches.cs:31-32` | `Part.FullPart`; `Part.Id` (`StartsWith("pixel_")`) or grid-registry membership via `BlinkyGridManager.IsPixelPart` | `KSA/Part.cs:1171,702` | Yes | **CHANGED @5482** — receives `batch.Parts[j].FullPart`; `Module.Parent` is no longer read | `!BlinkyPatchState.RenderPixelParts && IsPixelPart(fullPart)`, evaluated once per model instance per viewport per frame on the main thread. A throw disables the whole filter for the session (fail-open: everything renders). |
 | 5 | Direct | `blinky.lib/LcdGridBuilder.cs:51` | `ModLibrary.Get<PartTemplate>(string id)` (string-keyed lookup) | `KSA/ModLibrary.cs:1042` | Yes | None | `Get<T>(string) where T:IKeyed`; throws if id missing. Runtime string id (see assets). |
-| 6 | Direct | `blinky.lib/LcdGridBuilder.cs:360` | `new Part(string inName, PartTemplate inTemplate, PartInstance?=null, Part?=null)` | `KSA/Part.cs:1386` | Yes | None | |
-| 7 | Direct | `blinky.lib/LcdGridBuilder.cs:148,238`; `:162,246` | `PartTree.CreateFromNewPartTree(Part rootPart)`; `Vehicle.UpdateVehicleConfiguration()` | `KSA/PartTree.cs:173`; `KSA/Vehicle.cs:1864` | Yes | None (bodies unchanged @5402) | Core build/destroy path; both unchanged. |
+| 6 | Direct | `blinky.lib/LcdGridBuilder.cs:364` | `new Part(string inName, PartTemplate inTemplate, PartInstance?=null, Part?=null)` | `KSA/Part.cs:1490` | Yes | **semantic @5482** — ctor no longer creates a tree; `Part.Tree` is `PartTree?` (`:662`) | Pixels have no tree until #7 transfers them; everything the builder calls in between is `Tree?.`-safe. Do not read `part.Tree` before #7. |
+| 7 | Direct | `blinky.lib/LcdGridBuilder.cs:148,242`; `:162,250`; `:170` | `PartTree.CreateFromNewPartTree(Part rootPart)`; `Vehicle.UpdateVehicleConfiguration()`; `PartTree.EnsureDerived(DerivedData)` | `KSA/PartTree.cs:291,521`; `KSA/Vehicle.cs:1877` | Yes | **semantic @5482** — `RecomputeAllDerivedData` only marks derived data dirty (rev 5464) | Core build/destroy path; bodies unchanged. Resource groups/managers, mass and rocket controls are rebuilt at the next frame's flush or on first read; blinky forces `ResourceGroups` (`:170`) before its feed check. The replaced tree is orphaned, not disposed (see the 5482 section). |
 | 8 | Direct | `blinky.lib/LcdGridBuilder.cs:37,236,148` | `Vehicle.Parts` (PartTree, get+set); `PartTree.Root`; `PartTree.Parts` | `KSA/Vehicle.cs:604`; `KSA/PartTree.cs:97,95` | Yes | None | `Vehicle.Parts` is a public field. |
 | 9 | Direct | `blinky.lib/LcdGridBuilder.cs:103-104,224-228` | `Part.TreeParent` (Part?); `Part.TreeChildren` (List<Part>) | `KSA/Part.cs:664,666` | Yes | None | Manual tree wiring. |
-| 10 | Direct | `blinky.lib/LcdGridBuilder.cs:125,297` | `Part.SetStage(int)`; `Part.Stage` (get) | `KSA/Part.cs:1210`, `:835` | Yes | None | |
+| 10 | Direct | `blinky.lib/LcdGridBuilder.cs:125,301` | `Part.SetStage(int)`; `Part.Stage` (get) | `KSA/Part.cs:1269`, `:839` | Yes | **semantic @5482** — `SetStage` resets `Tree?.ResourceGroupList` caches, a no-op on treeless pixels | Stage alignment still holds; managers are built lazily against the final tree. |
 | 11 | Direct | `blinky.lib/LcdGridBuilder.cs:466` (connect); `:213-215` (disconnect) | `Part.Connection.Connect(IConnector, IConnector)`; `Part.Connections` (List<Connection>); `Connection.Disconnect()`; `Connector.CanConnect()`; `Connector.Connection` | `KSA/Part.cs:538,670,554,343` | Yes | None | 🔴 **Semantics matter, not just the signature.** The engine side MUST be the engine's own declared feed `Connector` — a bare `Part`↔`Part` connection is rejected by `ResourceManager.CanFlowAcross` (see #22). The fuel side stays a `Part` (`Part.CanConnect()` is always `true`, `KSA/Part.cs:1979`), so one tank anchors the whole grid. |
 | 12 | Direct | `blinky.lib/LcdGridBuilder.cs:391,394,397` | `Part.PositionParentAsmb` (double3); `Part.Asmb2ParentAsmb` (doubleQuat); `Part.Scale` (double3) — all settable | `KSA/Part.cs:752,766,815` | Yes | None | |
 | 13 | Direct | `blinky.lib/LcdGridBuilder.cs:419,428,494,624,656` | `Part.SubtreeModules` (ModuleList); `ModuleList.Get<TModule>()` for `Tank`, `RocketCore`, `EngineController` | `KSA/Part.cs:688`; `KSA/ModuleList.cs:178`; `KSA/Tank.cs`, `KSA/EngineController.cs` | Yes | None | `Get<TModule>()` returns `Span<TModule>` (`.Length`/index used). |
 | 14 | Direct | `blinky.lib/LcdGridBuilder.cs:418,522,416` | `Part.IsSubPart`; `Part.Template` (PartTemplate); `Vehicle.Parts.Parts` | `KSA/Part.cs:1081,576` | Yes | None | |
-| 15 | Direct | `blinky.lib/LcdGridBuilder.cs:659` | `EngineController.MinimumThrottle` (float, settable) | `KSA/EngineController.cs:38` | Yes | None (file byte-identical @5402) | Set **before** the PartTree rebuild — `PartTree.RecomputeRocketControls` (`KSA/PartTree.cs:747-770`) folds it into `PartTree.EngineThrottleMin`, which clamps the vehicle's manual throttle. |
+| 15 | Direct | `blinky.lib/LcdGridBuilder.cs:662` | `EngineController.MinimumThrottle` (float, settable) | `KSA/EngineController.cs:38` | Yes | Member unchanged @5482; `PartTree.EngineThrottleMin` is now a lazy property (`KSA/PartTree.cs:176`) | Set **before** the PartTree rebuild; rocket-control recomputation (now lazy) folds it into `PartTree.EngineThrottleMin`, which clamps the vehicle's manual throttle. |
 | 16 | Direct | `blinky.lib/BlinkyGridManager.cs:223,252,266`; `NonLcdEngineCache.cs:46` | `EngineController.SetIsActive(Vehicle?, bool)` — pixel on/off | `KSA/EngineController.cs:77` | Yes | None (file byte-identical @5402) | Called with `null` vehicle arg. |
 | 17 | Direct | `blinky.lib/NonLcdEngineCache.cs:35` | `EngineController.IsActive` (get) | `KSA/EngineController.cs:44` | Yes | None | |
 | 18 | Direct | `blinky.lib/BlinkyGridManager.cs:258` | `Vehicle.SetEnum(Enum?)` with `VehicleEngine.MainIgnite` | `KSA/Vehicle.cs:6096`; `KSA/VehicleEngine.cs:5` | Yes | None | Ignites vehicle before lighting pixels. |
-| 19 | Direct (diagnostics) | `blinky.lib/PropellantFeedDiagnostics.cs:8`; `BlinkySubmod.cs` | `Combustor.ResourceManager`; `ResourceManagerBase.ConsumptionOrder : FlowOrder<Tank>`; `LevelCount` and indexed spans | `KSA/ResourceManagerBase.cs:81`; `KSA/FlowOrder.cs:5` | Yes | **Retyped @5438** | Counts actual tank entries across selected levels, including empty/same-stage/reversed views. No reflection. |
+| 19 | Direct (diagnostics) | `blinky.lib/PropellantFeedDiagnostics.cs:8`; `BlinkySubmod.cs:712,745` | `Combustor.ResourceManager`; `ResourceManagerBase.ConsumptionOrder : FlowOrder<Tank>`; `LevelCount` and indexed spans | `KSA/Combustor.cs:19-29`; `KSA/ResourceManagerBase.cs:81`; `KSA/FlowOrder.cs:5` | Yes | **Retyped @5438**; `ResourceManager` became a lazy property @5482 | Counts actual tank entries across selected levels, including empty/same-stage/reversed views. No reflection. The getter builds managers only when the tree has flagged them dirty (`PartTree.EnsureResourceManagersBuilt`, `:807`); on a fresh tree it returns null until the resource groups are derived. |
 | 20 | Direct (debug) | `blinky.lib/BlinkySubmod.cs:664-666,766` | `Vehicle.GetManualThrottle()`; `Vehicle.FlightComputer`; `Vehicle.IsSet<VehicleEngine>(T, bool)`; `EngineController.Cores` (RocketCore[]); `Connection.OtherPart(Part)` | `KSA/Vehicle.cs:1245,467,6206`; `KSA/EngineController.cs:36` (`Cores`); `KSA/Part.cs:501` | Yes | None | `IsSet(VehicleEngine.MainIgnite, false)` routes to the private `Vehicle.IsEngine` and reads `_manualControlInputs.EngineOn` — the only public read of the ignition flag. |
 | 21 | Abstraction | `blinky.lib/BlinkyGridManager.cs:280`; `BlinkySubmod.cs` | `VehicleProvider.GetAllVehicles()` / `GetControlledVehicle()` (ksa-abstractions.lib) | `MeowSci.KsaAbstractions` (repo lib) | Yes | None | Game coupling lives in ksa-abstractions scope. |
 | 22 | Direct | `blinky.lib/LcdGridBuilder.cs:491-497` | `RocketCore.FeedConnectors` (`Part.Connector[]`, bound in `RocketCore.OnFullPartCreated` → `BindFeedPoints` from the template's `ConsumerFeedWiring`/`FeedsFrom`) | `KSA/RocketCore.cs:20,24,26` | Yes | None (file byte-identical @5402) | 🔴 **The load-bearing dependency of the whole ignition path.** `ResourceManager.CanFlowAcross` (`KSA/ResourceManager.cs:274-282`) rejects the first hop out of the consumer part unless the connection sits on one of these connectors (`IsDeclaredFeedConnection`, `:305`). If the template wiring resolves to nothing, `FeedConnectors` is empty and the engine reaches no propellant. |
-| 23 | Direct | `blinky.lib/LcdGridBuilder.cs:631`; `PropellantFeedDiagnostics.cs:8` | `Combustor.ResourceManager.ConsumptionOrder` | `KSA/ResourceManagerBase.cs:81`; `KSA/FlowOrder.cs:5` | Yes | **Retyped @5438** | Post-build propellant reachability uses actual selected tank count; empty levels are not evidence of fuel. SolidMotor has no ResourceManager. |
-| 24 | Direct | `blinky.lib/LcdGridBuilder.cs:307` | `PartTree.ResourceGroupList` (public field); `ResourceGroupList.CalculateStages(bool = false)` | `KSA/PartTree.cs:27`; `KSA/ResourceGroupList.cs:100` | Yes | New this change | Public trigger for the **internal** `PartTree.RecreateResourceManagers` (`KSA/PartTree.cs:592`) — used by `RepairFuelFeeds` to rebuild the fuel graphs without rebuilding the part tree. If `CalculateStages` stops calling it, repair silently no-ops. |
+| 23 | Direct | `blinky.lib/LcdGridBuilder.cs:635`; `PropellantFeedDiagnostics.cs:8` | `Combustor.ResourceManager.ConsumptionOrder` | `KSA/Combustor.cs:19-29`; `KSA/ResourceManagerBase.cs:81`; `KSA/FlowOrder.cs:5` | Yes | **Retyped @5438**; **lazy @5482** (fixed) | Post-build propellant reachability uses actual selected tank count; empty levels are not evidence of fuel. SolidMotor has no ResourceManager. Since 5482 `BuildGrid` must call `vehicle.Parts.EnsureDerived(DerivedData.ResourceGroups)` (`LcdGridBuilder.cs:170`) first, or every manager is still null and the check reports 0/N. |
+| 24 | Direct | `blinky.lib/LcdGridBuilder.cs:311` | `PartTree.ResourceGroupList` (public field); `ResourceGroupList.CalculateStages(bool = false)` | `KSA/PartTree.cs:48`; `KSA/ResourceGroupList.cs:100` | Yes | None @5482 (`ResourceGroupList.cs` byte-identical) | Public trigger for the **internal** `PartTree.RecreateResourceManagers` (`KSA/PartTree.cs:837` @5482) — used by `RepairFuelFeeds` to rebuild the fuel graphs without rebuilding the part tree. Still eager at 5482. If `CalculateStages` stops calling it, repair silently no-ops. |
+| 25 | Private reflection (transitive, via `ksa-abstractions.lib/PartRenderFilter.Batches.cs:35-53`) | — | private `PartTreeRenderData._batches` / `_glassBatches` / `_dynamicBatches` (`List<Batch/GlassBatch/DynamicBatch>`); private nested `Batch` / `DynamicBatch` / `GlassBatch` fields `Model`, `Parts : Part[]`, `Count : int` | `KSA/PartTreeRenderData.cs:237,239,243`; nested types `:23,73,162` | Yes | **NEW @5482** | String names resolved with `FieldRefAccess` at the first `Register`; a miss throws there, `TryApply` logs it and render-skip is unavailable (pixel parts stay visible). Owned by ksa-abstractions; see 00-architecture. |
 
 **Game assets referenced**
 
@@ -214,10 +294,10 @@ of an engine. Pixels are toggled through the light's `PowerConsumer` light switc
 
 **Unscience integration** — `ItsSoShinySubmod : ISubmod`
 (`its-so-shiny.lib/ItsSoShinySubmod.cs:11`), instantiated by the supermod
-(`unscience/Mod.cs:82`) and standalone host (`its-so-shiny/Mod.cs:27`). Static
+(`unscience/Mod.cs:90`) and standalone host (`its-so-shiny/Mod.cs:27`). Static
 `ShinyGridManager` (`its-so-shiny.lib/ShinyGridManager.cs:31`) is the control surface.
-Render-skip patches via `ShinyPatches.Apply` (`its-so-shiny/Patcher.cs:15`,
-`unscience/Patcher.cs:58`). Color/intensity reuse `MeowSci.ZippoLib.LightController`
+Render-skip registration via `ShinyPatches.Apply` (`its-so-shiny/Patcher.cs:15`,
+`unscience/Patcher.cs:69`). Color/intensity reuse `MeowSci.ZippoLib.LightController`
 (sibling lib — the actual light-template reflection lives in the zippo scope).
 
 **UI/hotkeys** — Standalone window "its-so-shiny", 500x640, `MenuBar`, **F11**
@@ -234,13 +314,13 @@ ordinary `shiny_*` ids.
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature, or asset path) | Decomp/Content path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|---|---|---|---|---|---|---|
-| 1 | Harmony prefix | `its-so-shiny.lib/ShinyPatches.cs:25,29,66` | `PartModelModule.UpdateRenderData(in double4x4, bool, IViewport, int)` | `KSA/PartModelModule.cs:87` | Yes | **retyped @5402** (`Viewport` → `IViewport`; prefix takes only `__instance`) | Coexists with blinky #1 (different Id prefix). |
-| 2 | Harmony prefix | `its-so-shiny.lib/ShinyPatches.cs:26,30,69` | `PartModelDynamicModule.UpdateRenderData(in double4x4, bool, IViewport, int)` | `KSA/PartModelDynamicModule.cs:55` | Yes | **retyped @5402** | |
-| 3 | Harmony prefix | `its-so-shiny.lib/ShinyPatches.cs:27,31,72` | `PartModelGlassModule.UpdateRenderData(in double4x4, bool, IViewport, int)` | `KSA/PartModelGlassModule.cs:72` | Yes | **retyped @5402** | `PartModel(Glass).AddInstance` now gated on `ViewportOptionFlags.RenderPartModels` (see blinky #3) — every preset has it. |
-| 4 | Direct (in prefix) | `its-so-shiny.lib/ShinyPatches.cs:58-66` | `Module.Parent`→`Part`; `Part.FullPart`; `Part.Id`; `Part.LightSwitch` (PowerConsumer?); `PowerConsumer.LightIsActive` (bool) | `KSA/ModuleBase.cs:31`; `KSA/Part.cs:1123,686`; `KSA/PowerConsumer.cs:30` | Yes | **game chain changed @5402** | Mesh shown iff `LightIsActive`. The game's own hide test in #1/#2 is now `Part.IsLightSwitchedOff()` (`KSA/Part.cs:1357`) = `!LightIsActive \|\| !lightSwitch.IsSwitchedOn()` (new `PowerConsumer.IsSwitchedOn()` `:50`, reads `Tree.PowerConsumers.States[StatesIdx].Active`), and returns false when `lightSwitch.Parent.Tree != Tree`. The mod deliberately ignores the powered state (a pixel the mod turned on shows its mesh even if the bus is dead); unchanged behaviour. `Part.ResetModuleProperties` (`:1803`) nulls and re-resolves `LightSwitch` — always read it live, never cache. |
+| 1 | Shared render filter: Harmony prefix + postfix (installed by `ksa-abstractions.lib/PartRenderFilter`) | `its-so-shiny.lib/ShinyPatches.cs:20` (`Register(harmony, "its-so-shiny", p => !ShouldRenderShinyPart(p))`), `:26` (`Unregister`) | `PartTreeRenderData.Compose(ref readonly double4x4, bool, IViewport inViewport, int)` | `KSA/PartTreeRenderData.cs:1258` | Yes | **REPLACED @5482** — was a prefix on the removed `PartModelModule.UpdateRenderData` | Same shared patch set as blinky #1–#3; both predicates are OR-ed per slot. |
+| 2 | Shared render filter (as #1) | `its-so-shiny.lib/ShinyPatches.cs:20,26` | `PartTreeRenderData.ComposeDynamic(...)` | `KSA/PartTreeRenderData.cs:1152` | Yes | **REPLACED @5482** — was `PartModelDynamicModule.UpdateRenderData` | |
+| 3 | Shared render filter (as #1) | `its-so-shiny.lib/ShinyPatches.cs:20,26` | `PartTreeRenderData.ComposeGlass(...)` | `KSA/PartTreeRenderData.cs:899` | Yes | **REPLACED @5482** — was `PartModelGlassModule.UpdateRenderData` | Raytraced-IVA submissions are not filtered (known gap, see the 5482 section). |
+| 4 | Predicate (called by the filter) | `its-so-shiny.lib/ShinyPatches.cs:32-38` | `Part.FullPart`; `Part.Id`; `Part.LightSwitch` (PowerConsumer?); `PowerConsumer.LightIsActive` (bool) | `KSA/Part.cs:1171,702,688`; `KSA/PowerConsumer.cs:30` | Yes | **CHANGED @5482** — receives `batch.Parts[j].FullPart`; `Module.Parent` no longer read | Mesh shown iff `LightIsActive` (or no switch, or not a shiny part). Read live every frame, so no invalidation is needed. The game's own light test `Part.IsLightSwitchedOff()` (`KSA/Part.cs:1461`) now only feeds the cached per-full-part "no emissive" bit 0x40 (`PartTreeRenderData.cs:628`); it never hid meshes. The mod still ignores the powered state (mesh shown while the bus is dead). `Part.ResetModuleProperties` nulls and re-resolves `LightSwitch` — always read it live, never cache. |
 | 5 | Direct | `its-so-shiny.lib/ShinyGridBuilder.cs:27` | `ModLibrary.Get<PartTemplate>("LightPart")` | `KSA/ModLibrary.cs:1042` | Yes | None | Runtime string id (see assets). |
-| 6 | Direct | `its-so-shiny.lib/ShinyGridBuilder.cs:157` | `new Part(string, PartTemplate, ...)` | `KSA/Part.cs:1386` | Yes | None | |
-| 7 | Direct | `its-so-shiny.lib/ShinyGridBuilder.cs:94,147`; `:98,148` | `PartTree.CreateFromNewPartTree(Part)`; `Vehicle.UpdateVehicleConfiguration()` | `KSA/PartTree.cs:173`; `KSA/Vehicle.cs:1864` | Yes | None | |
+| 6 | Direct | `its-so-shiny.lib/ShinyGridBuilder.cs:157` | `new Part(string, PartTemplate, ...)` | `KSA/Part.cs:1490` | Yes | **semantic @5482** — no tree until #7 (see blinky #6) | `SetStage` / `Connect` on the treeless light part are null-safe. |
+| 7 | Direct | `its-so-shiny.lib/ShinyGridBuilder.cs:94,147`; `:98,148` | `PartTree.CreateFromNewPartTree(Part)`; `Vehicle.UpdateVehicleConfiguration()` | `KSA/PartTree.cs:291`; `KSA/Vehicle.cs:1877` | Yes | **semantic @5482** — derived data (incl. `PowerManager`s) rebuilt lazily | No manager reads in this mod, so no ensure call is needed; light power resolves at the next frame's flush. |
 | 8 | Direct | `its-so-shiny.lib/ShinyGridBuilder.cs:17,146,76-77` | `Vehicle.Parts`/`PartTree.Root`; `Part.TreeParent`/`Part.TreeChildren` | `KSA/Vehicle.cs:604`; `KSA/PartTree.cs:97`; `KSA/Part.cs:664,666` | Yes | None | |
 | 9 | Direct | `its-so-shiny.lib/ShinyGridBuilder.cs:205,209-210` | `PartTree.Modules.Get<Battery>()`; `Battery.Parent`→`Part`; `Part.FullPart` | `KSA/PartTree.cs:37`; `KSA/ModuleList.cs:178`; `KSA/Battery.cs:9`; `KSA/ModuleBase.cs:31`; `KSA/Part.cs:1123` | Yes | None | Battery anchors for power partitioning. |
 | 10 | Direct | `its-so-shiny.lib/ShinyGridBuilder.cs:87,221,131,133` | `Part.SetStage(int)`; `Part.Connection.Connect(IConnector,IConnector)`; `Part.Connections`; `Connection.Disconnect()` | `KSA/Part.cs:1210,538,670,554` | Yes | None | |
@@ -310,7 +390,7 @@ lost on reload. No StarMap save hooks, no disk I/O.
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature, or shader/asset path) | Decomp/Content path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|---|---|---|---|---|---|---|
-| 1 | Harmony postfix | `thug-life.lib/ThugLifeRenderPatches.cs:19-21,44` | `SuperMeshRenderSystem.RenderMainPass(CommandBuffer commandBuffer)` — postfix records quad draws into the active offscreen pass | `KSA/SuperMeshRenderSystem.cs:347` | Yes | `:338`→`:347` @5402; body gained only a profiler `TagRegion(SkinnedTwoSidedMeshes)` around the new two-sided skinned technique's draws (parachute canopies) | Single method, patched by name. Called 3x from `KSA/Program.cs`: `:4395` (`RenderViewport`, once per **non-main visible** viewport — secondary + crew-portrait), `:4656` (main flight scene), `:4856` (editor). The part-thumbnail viewport does **not** go through it. |
+| 1 | Harmony postfix | `thug-life.lib/ThugLifeRenderPatches.cs:19-21,44` | `SuperMeshRenderSystem.RenderMainPass(IViewport viewport, CommandBuffer commandBuffer)` — postfix records quad draws into the active offscreen pass | `KSA/SuperMeshRenderSystem.cs:364` | Yes | **signature @5482** (compatible) — gained leading `IViewport viewport` (rev 5474 per-view mesh buckets); body is now `SetViewport` + `RenderPass(ViewForViewport(viewport), MeshPass.MainOpaque, …)` | Single method, patched by name; the postfix binds only `commandBuffer` by name, so the new parameter is transparent. Called 3x from `KSA/Program.cs` @5482: `:4496` (`RenderViewport`, once per **non-main visible** viewport — secondary + crew-portrait), `:4756` (main flight scene), `:4964` (editor), always with `RenderedViewport`. The part-thumbnail viewport does **not** go through it. Optional hygiene: bind `viewport` and use `viewport.GetCamera()` instead of `Program.GetRenderCamera()` (#9). |
 | 2 | Render asset (shader) | `thug-life.lib/ThugLifeQuadRenderer.cs:114` | `ModLibrary.Get<ShaderReference>("UnlitMeshVert")` | id→path in `Core/DefaultAssets.xml:53`; file `Core/Shaders/Mesh/UnlitMesh.vert` | Yes | None (file byte-identical 5348→5402; `DefaultAssets.xml` only gained `StaticObjectPrePassIndirectFrag` at `:62`) | Stock shader; **not** MeshIndirect/Model* — untouched by 4693/4745. |
 | 3 | Render asset (shader) | `thug-life.lib/ThugLifeQuadRenderer.cs:115` | `ModLibrary.Get<ShaderReference>("UnlitMeshFrag")` | id→path in `Core/DefaultAssets.xml:54`; file `Core/Shaders/Mesh/UnlitMesh.frag` | Yes | None (byte-identical) | Frag hard-writes `alpha=1.0` (cut-out via geometry, per renderer comment). |
 | 4 | Direct (render) | `thug-life.lib/ThugLifeQuadRenderer.cs:117` | `RenderTechnique.CreateShaderStages(Device, Span<ShaderReference>, Span<VkSpecializationInfo>=default)` | `RenderCore/RenderTechnique.cs:35` | Yes | None (file byte-identical) | `ShaderReference : FileReference, IKeyed, IComboable` (`KSA/ShaderReference.cs:21`). |
@@ -548,7 +628,7 @@ Both managers now expose typed save participants and native part-path cell rebin
 parts already exist in native `PartInstance` trees; replay must not build another grid. KSA omits
 ordinary `Part.Id` and assigns new runtime ids, so `PixelGrid.BuildFromPartGroups` and Shiny's direct
 cell constructor rebuild the associations. Registry HashSet membership supplements `pixel_*` /
-`shiny_*` name recognition in existing render prefixes; Blinky's ordinary-engine cache uses the same
+`shiny_*` name recognition in the render-skip predicates (`PartRenderFilter` since 5482); Blinky's ordinary-engine cache uses the same
 identity check. All memberships clear on native scene reset and update on register/unregister.
 
 Saved engine/switch state stays native. Replay restores active-mask metadata without ignition side

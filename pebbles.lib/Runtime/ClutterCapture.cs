@@ -70,7 +70,7 @@ internal static class ClutterCapture
     {
         SourceId = m.Id, DiffuseId = m.DiffuseReference?.Get().Id ?? "", NormalId = m.NormalReference?.Get().Id ?? "", PbrId = m.PBRMap?.Get().Id ?? "",
         OpacityId = m.OpacityMap?.Get().Id ?? "", ThicknessId = m.ThicknessMap?.Get().Id ?? "", UseTerrainMask = m.UseTerrainMask.Value,
-        DoubleSided = m.DoubleSided.Value, CastShadows = m.CastShadows.Value, ReceiveShadows = m.ReceiveShadows.Value,
+        DoubleSided = m.DoubleSided.Value, KeepBackfaceNormals = m.KeepBackfaceNormals.Value, CastShadows = m.CastShadows.Value, ReceiveShadows = m.ReceiveShadows.Value,
         BiasNormalsUp = m.BiasNormalsUp.Value, ApplyExtraSpec = m.ApplyExtraSpec.Value, DistanceFadeDither = m.DistanceFadeDither.Value
     };
 

@@ -50,21 +50,42 @@ internal static class ClutterColliders
 
     private sealed class OwnedHull : ColliderTemplate
     {
-        private readonly Vector3[] _points;
+        private readonly Vector3[] _points; // Recentred on their bounds centre, as stock hulls are (KSA 5447).
         private readonly double3 _center;
+        private readonly double _volume;
         public double Radius { get; }
         public override double3 ShapeOffsetCollider => _center;
+        // KSA 5447 weights compound child masses and centre of mass by volume; the base getter returns 0.
+        public override double VolumeCubicMetres => _volume;
         public OwnedHull(MeshReference mesh, Vec3 scale, bool stockHull)
         {
-            _points = (stockHull ? mesh.HostPrimitives.Take(1) : mesh.HostPrimitives).SelectMany(p => p.GetVertexSpan<float3>(MeshAttribute.Position).ToArray())
+            var points = (stockHull ? mesh.HostPrimitives.Take(1) : mesh.HostPrimitives).SelectMany(p => p.GetVertexSpan<float3>(MeshAttribute.Position).ToArray())
                 .Select(p => new Vector3(p.X * scale.X, p.Y * scale.Y, p.Z * scale.Z)).Distinct().ToArray();
-            if (_points.Length is < 4 or > 65536) throw new InvalidOperationException("Convex hulls need 4–65,536 unique points.");
-            Radius = _points.Max(p => (double)p.Length());
+            if (points.Length is < 4 or > 65536) throw new InvalidOperationException("Convex hulls need 4–65,536 unique points.");
+            Radius = points.Max(p => (double)p.Length());
+            var boundsCentre = HullMath.BoundsCentre(points);
+            _points = points.Select(p => p - boundsCentre).ToArray();
             using var unlock = ConstraintSim.UnlockShapes();
             if (!ConvexHullHelper.CreateShape(_points, unlock.BufferPool, out var center, out var hull))
                 throw new InvalidOperationException("Convex hull is degenerate; choose closed geometry with volume.");
-            _center = new double3(center.X, center.Y, center.Z);
-            hull.Dispose(unlock.BufferPool);
+            try
+            {
+                var centroid = center + boundsCentre;
+                _center = new double3(centroid.X, centroid.Y, centroid.Z);
+                _volume = Volume(in hull);
+            }
+            finally { hull.Dispose(unlock.BufferPool); }
+        }
+        private static double Volume(in ConvexHull hull)
+        {
+            var faces = new Vector3[hull.FaceToVertexIndicesStart.Length][];
+            for (var f = 0; f < faces.Length; f++)
+            {
+                hull.GetVertexIndicesForFace(f, out var indices);
+                faces[f] = new Vector3[indices.Length];
+                for (var v = 0; v < indices.Length; v++) hull.GetPoint(indices[v], out faces[f][v]);
+            }
+            return HullMath.Volume(faces);
         }
         protected override void CreateShapeInto(in ShapesUnlock unlock, double scale, out TypedIndex handle)
         {

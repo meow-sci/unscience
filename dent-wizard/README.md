@@ -32,6 +32,9 @@ Launches run at the shared physics handoff after completed results are applied a
 snapshots. Click geometry is retained relative to the target, so an intervening render frame
 of orbital motion does not introduce aim drift. Source orientation and spin are preserved.
 KSA's flight-plan rejection is reported instead of claiming a successful launch.
+On KSA 5482 a launch first waits for the game's nearest-orbit job, which may still be reading the
+source's orbit points that the teleport disposes (`PhysicsFrameHook.JoinOrbitReaders`). Idle frames
+do not wait.
 
 This is an initial ballistic launch. Gravity differences, drag, target acceleration/rotation,
 engines, EVA controls, and other mods continue to act afterwards; long/slow shots are not guided

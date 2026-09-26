@@ -294,7 +294,9 @@ public sealed class KittenSpawner
         if (partTemplate == null) return null;
 
         var part = new Part(partTemplate.Id, partTemplate);
-        part.Tree.ReinitializeDerivedValues();
+        // KSA 5482 no longer builds a tree in the Part constructor; mirror EVADoor.GetBackPackPart.
+        var tree = part.CreateOwnTree();
+        tree.ReinitializeDerivedValues();
 
         var mix = TryGetReactantMix("MMH_NTO");
         if (mix != null)
@@ -304,7 +306,7 @@ public sealed class KittenSpawner
                 tanks[i].ConfigureFor(mix);
         }
 
-        part.Tree.RefillConsumables();
+        tree.RefillConsumables();
         return part;
     }
 

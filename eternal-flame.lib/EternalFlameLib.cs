@@ -25,8 +25,7 @@ public sealed class MonitoredVehicle
 public sealed class FuelManager
 {
     private readonly List<MonitoredVehicle> _monitored = new();
-    private double _accumulatedMs;
-    private long _lastElectricRefillTickMs;
+    private long _lastRefillTickMs;
     public int RefillIntervalMs { get; set; } = 100;
 
     public IReadOnlyList<MonitoredVehicle> MonitoredVehicles => _monitored;
@@ -46,58 +45,26 @@ public sealed class FuelManager
         Console.WriteLine($"eternal-flame: RemoveVehicle - vehicleId={vehicleId}, removed={removed}, monitored={_monitored.Count}");
     }
 
-    public void Update(double deltaTimeSeconds)
-    {
-        if (_monitored.Count == 0)
-            return;
-
-        _accumulatedMs += deltaTimeSeconds * 1000.0;
-
-        int interval = Math.Max(RefillIntervalMs, 1);
-        if (_accumulatedMs < interval)
-            return;
-
-        _accumulatedMs -= interval;
-        // Clamp to avoid runaway accumulation
-        if (_accumulatedMs > interval * 2)
-            _accumulatedMs = 0;
-
-        var vehicles = VehicleProvider.GetAllVehicles();
-        if (vehicles.Count == 0)
-            return;
-
-        foreach (var entry in _monitored)
-        {
-            if (!entry.RefillFuel)
-                continue;
-
-            var vehicle = vehicles.FirstOrDefault(v => v.Id == entry.VehicleId);
-            if (vehicle == null)
-                continue;
-
-            try
-            {
-                vehicle.RefillConsumables();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"eternal-flame: Error refilling fuel {entry.DisplayName}: {ex.Message}");
-            }
-        }
-    }
-
-    public void UpdateElectricityBeforeVehicleSolvers()
+    /// <summary>
+    /// Refills monitored vehicles from the <c>Universe.ExecuteNextVehicleSolvers</c> prefix.
+    /// Fuel and battery charge are module state that the vehicle worker snapshots when it starts
+    /// and commits back after its step. A refill made later in the frame (for example from the UI
+    /// update) is overwritten by that commit while engines burn, so both refills run here: after
+    /// the previous results are applied and before the next snapshot, where KSA's own refill
+    /// command runs. KSA 5482 flags refilled tanks so dry engines re-read their propellant.
+    /// </summary>
+    public void RefillBeforeVehicleSolvers()
     {
         if (_monitored.Count == 0)
             return;
 
         long now = Environment.TickCount64;
         int interval = Math.Max(RefillIntervalMs, 1);
-        long elapsedMs = _lastElectricRefillTickMs == 0 ? interval : now - _lastElectricRefillTickMs;
+        long elapsedMs = _lastRefillTickMs == 0 ? interval : now - _lastRefillTickMs;
         if (elapsedMs < interval)
             return;
 
-        _lastElectricRefillTickMs = now;
+        _lastRefillTickMs = now;
 
         var vehicles = VehicleProvider.GetAllVehicles();
         if (vehicles.Count == 0)
@@ -105,20 +72,35 @@ public sealed class FuelManager
 
         foreach (var entry in _monitored)
         {
-            if (!entry.RefillElectricity)
+            if (!entry.RefillFuel && !entry.RefillElectricity)
                 continue;
 
             var vehicle = vehicles.FirstOrDefault(v => v.Id == entry.VehicleId);
             if (vehicle == null)
                 continue;
 
-            try
+            if (entry.RefillFuel)
             {
-                RefillBatteries(vehicle);
+                try
+                {
+                    vehicle.RefillConsumables();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"eternal-flame: Error refilling fuel {entry.DisplayName}: {ex.Message}");
+                }
             }
-            catch (Exception ex)
+
+            if (entry.RefillElectricity)
             {
-                Console.WriteLine($"eternal-flame: Error refilling electricity {entry.DisplayName}: {ex.Message}\n{ex}");
+                try
+                {
+                    RefillBatteries(vehicle);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"eternal-flame: Error refilling electricity {entry.DisplayName}: {ex.Message}\n{ex}");
+                }
             }
         }
     }

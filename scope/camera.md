@@ -1,12 +1,76 @@
 # Camera / View Mods — Game Integration Scope
 
-## Current verification — 5402 → 5438
+## KSA 5482 (5438 → 5482) verification
+
+No code migration is required in camera-controller-override, glass or hot-pursuit. This pass was
+checked against `2026.9.22.5482` (NEW) and `2026.9.10.5438` (OLD) using both supplied decomp/Content
+trees. Verification is managed/static only: the full solution build passes, and `camera-saves.tests`
+passes. No native KSA run was possible.
+Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
+
+- **Camera and controller diffs are input-only.**
+  - `Camera.cs` changes only `OnKey` (`:857,862`, now `Input.Contains(in keyEvent, …)`).
+  - The Orbit/Fly/Map controller diffs are rev 5449 input-binding edits.
+  - `OrbitController.OnFrame` (`:487`) and `FlyController.OnFrame` (`:653`) have identical bodies.
+  - These files are byte-identical: `Controller.cs`, `FixedController.cs`, `Transform3D.cs`,
+    `IPosition.cs`, `ViewportRegistry.cs`, `GameViewport`, `IGameViewport`, `IViewport` and `Cursor.cs`.
+- **glass.** Nothing it touches changed:
+  - `_fovRadians :53`, `SetFieldOfView :412`, `UpdateProjection :466` and `GetFieldOfView :785`.
+  - `ChangeFieldOfView :450` is still a single overload; its only callers are `Camera.OnKey :859,864`.
+  - `Program.GetMainCamera :631` and `ViewportRegistry.IsMainCamera :97`.
+
+  The private string lookups remain the standing watch item.
+- **hot-pursuit and per-view mesh buckets (rev 5474): no change needed.**
+  - `SuperMeshRenderSystem` pre-registers a `ViewHandle` for each of the 8 viewport `ShaderSlot`s
+    (`_cascadeViewBase = 8`, `:286`), with `ViewForViewport(v) => _views[v.ShaderSlot]` (`:241`).
+  - `Program.RenderViewport` (`:4415-4419`) now calls `SetViewOptions(viewport)` and
+    `ClearBuckets(RenderedViewport)` once per view, where 5438 used global flags and a single
+    `ClearBuckets()`.
+  - Leased secondary viewports are therefore covered automatically, and views no longer clobber each
+    other's buckets.
+  - Capacity is now 1024 instances and 256 draws per view per pass. In 5438 it was a shared pool of 8192.
+- **hot-pursuit picking (semantic drift, low risk).** `Part.RayCastEgo` (`:2534`) now early-outs on a
+  bounding sphere at `PositionEgo`. The radius is `|max corner of BoundingBoxPartAsmb| × max|ScaleTotal|`
+  (`:2544-2549`). This is the same path KSA hover picking uses. A part could become unpickable if a mod
+  moves its sub-part transforms without calling `UpdateBounds`.
+- **Follow hand-off (rev 5471): no change needed.** The recover path now uses
+  `Vehicle.FindHeaviestBubbleNeighbour()` (`Vehicle.cs:672`) → the new `Universe.FollowInHoveredViewport`
+  (`:2529`). That method was extracted from `SeekNextVehicle` and keeps the same hovered-viewport
+  semantics. Hot Pursuit re-asserts its follow every frame, and camera-controller-override reads
+  `Camera.Following` fresh every frame.
+- **Checked unchanged.**
+  - `FixedController.OnFrame(IViewport,double) :22`.
+  - `ViewportRegistry`: `MAX_VIEWPORTS :18`, `AvailableSecondaryCount :54`, `TryClaimSecondaryViewport :181`,
+    `ReleaseSecondaryViewport :213`, `TryGetOwned :246`.
+  - `Program.FindNearbyCelestial :5146` and `OnFrameCelestials :2686` have identical bodies, so the
+    80,000 km mirror is still valid.
+  - `Part.MatrixAsmb2Ego :1213`, `Camera.SetFollow :597` and `ClampCamera :628`.
+  - `GameSettings.OnKeyAll :3407` (HotkeyGuard). Rev 5449 routes user-assigned mouse-button bindings
+    to `Program.DispatchKeyEvent` without passing it; the shared guard is owned by
+    [00-architecture](00-architecture-and-abstractions.md).
+  - `GalacticPlane` (rev 5469) only feeds the sky matrix.
+
+  Rows marked @5482 below have refreshed lines. Other rows keep their cited build.
+- **Pre-existing, unchanged.**
+  - glass string lookups.
+  - camera-controller-override does not patch `MapController.OnFrame`.
+  - `CameraControllerOverridePatches.Remove` calls `harmony.UnpatchAll(harmony.Id)`
+    (`CameraControllerOverridePatches.cs:38`), which in the supermod unpatches everything at unload.
+  - Hot Pursuit secondary renders still lack the main planet, cloud and particle passes.
+- **Live checks pending (native).**
+  - Hot Pursuit:
+    - all four leases, with vehicles, kittens, chutes and fur in the feeds under per-view buckets;
+    - picking small, scaled and animated sub-parts;
+    - recovering or destroying the followed craft while a Hot Pursuit feed is hovered.
+  - glass and Hot Pursuit together at different FOVs.
+
+## Verification — 5402 → 5438 (historical)
 
 No code migration required. Camera `_fovRadians` (:53), ChangeFieldOfView and UpdateProjection (:466) are unchanged. Orbit/Fly/Fixed OnFrame bodies only rename decompiler temporaries; public Controller.Camera and override argument names remain correct. ViewportRegistry interfaces, slot allocation and part raycasts retain their contracts. Secondary-viewport rendering omissions remain a native watch item; the new frame abandon/swapchain fixes do not move camera ownership.
 
 Verified against `2026.9.10.5438` using both supplied source/Content trees.
 See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
-Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+Older catalog tables below retain their explicitly cited build/line numbers unless marked @5482.
 
 Permanent reference for detecting when KSA game updates break the camera/view mods
 (`camera-controller-override`, `glass`, `hot-pursuit`). Every game-facing member these mods touch is
@@ -14,6 +78,7 @@ enumerated and verified against decompiled sources.
 
 **Verified game versions**
 
+- Current: NEW `2026.9.22.5482` / OLD `2026.9.10.5438` (top section). Catalog baseline below:
 - NEW decomp `2026.9.7.5402` root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
 - OLD decomp `2026.8.22.5348` root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
 
@@ -189,9 +254,9 @@ docking cameras, or another mod.
 | 2 | Direct viewport lease API | `HotPursuitSubmod.cs` | `ViewportRegistry.{AvailableSecondaryCount,TryClaimSecondaryViewport(IViewportOwner,out IGameViewport),TryGetOwned,ReleaseSecondaryViewport(IViewportOwner)}` | `KSA/ViewportRegistry.cs:54,181,213,246` | Four shared leases; reset-on-claim/release means all settings are reapplied. Allocation is sealed and capped at 8. |
 | 3 | Direct viewport configuration | `HotPursuitSubmod.cs`, `.Ui.cs` | `IGameViewport.{SetName,SetCameraMode,SetResizeAllowed,RequestResize,SetVisible,BaseCamera}`; `CameraMode.Fixed` | `KSA/IGameViewport.cs`; `KSA/IViewport.cs`; `KSA/CameraMode.cs` | Stock render targets and ImGui window. Closing `DrawImGui` releases the lease. |
 | 4 | Direct camera API | `HotPursuitSubmod.cs`, `HotPursuitPose.cs`, `HotPursuitCelestialState.cs` | `Camera.{SetFollow(...changeControl:false),SetFieldOfView(float),PositionEcl,WorldRotation,LookAtRotation,ClampCamera,NearbyCelestial,DistanceToNearbyCelestialKm,DistanceToNearbyCelestialSurfaceMeanKm,NearbyCelestialTerrainHeight,CurrentAltitudeKm}` | `KSA/Camera.cs:31-37,71,110,134,198,412,597,628` | `changeControl:false` is load-bearing: true would change the controlled vehicle. Hot Pursuit applies the public 0.5 m AGL terrain clamp before synchronizing celestial metrics; `Camera.OnFrame` repeats the now-idempotent clamp immediately afterward. |
-| 5 | Direct picking API | `HotPursuitPicker.cs` | `Cursor.GetEgoRay(IViewport)`; `Part.RayCastEgo(...)`; `Vehicle.{BoundingSphereRadiusBody,GetMatrixAsmb2Ego(Camera)}` | `KSA/Cursor.cs:27`; `KSA/Part.cs:2398`; `KSA/Vehicle.cs` | Same-frame main cursor ray. Hit position/normal belong to the returned closest sub-part, not necessarily the top-level part. Terrain is deliberately unsupported. |
-| 6 | Direct part transform/addressing | `HotPursuitCamera.cs`, `HotPursuitPose.cs`, `HotPursuitSubmod.cs` | `Part.{InstanceId,SubParts,MatrixAsmb2Ego}`; `Vehicle.Id`; `Universe.CurrentSystem` via `VehicleProvider` | `KSA/Part.cs:321,655,1165`; `KSA/Astronomical.cs:85` | Stable id re-resolution makes missing/failed/staged targets dormant rather than dereferencing destroyed objects. Full matrix includes scale and articulated sub-part parents. |
-| 7 | Direct nearby-celestial lookup | `hot-pursuit.lib/HotPursuitCelestialState.cs` | `Program.FindNearbyCelestial(Camera)` | `KSA/Program.cs:5037` | KSA's `OnFrameCelestials` updates only `Program.GetCamera()` (the main/frame camera); Hot Pursuit explicitly performs the equivalent lookup for its owned secondary camera after `PositionEcl`. |
+| 5 | Direct picking API | `HotPursuitPicker.cs:36,41` | `Cursor.GetEgoRay(IViewport)`; `Part.RayCastEgo(...)`; `Vehicle.{BoundingSphereRadiusBody,GetMatrixAsmb2Ego(Camera)}` | `KSA/Cursor.cs:27`; `KSA/Part.cs:2534` @5482; `KSA/Vehicle.cs:527,1270` @5482 | Same-frame main cursor ray. Hit position/normal belong to the returned closest sub-part, not necessarily the top-level part. Terrain is deliberately unsupported. ⚠️ @5482 `RayCastEgo` rejects rays that miss a bounding sphere (`BoundingBoxPartAsmb` × largest `ScaleTotal` axis, `:2544-2549`) before the sub-part loop; bounds refresh on `UpdateBounds` (sub-part attach, keyframe animation). |
+| 6 | Direct part transform/addressing | `HotPursuitCamera.cs`, `HotPursuitPose.cs`, `HotPursuitSubmod.cs` | `Part.{InstanceId,SubParts,MatrixAsmb2Ego}`; `Vehicle.Id`; `Universe.CurrentSystem` via `VehicleProvider` | `KSA/Part.cs:574,1127,1213` @5482; `KSA/Astronomical.cs:85` | Stable id re-resolution makes missing/failed/staged targets dormant rather than dereferencing destroyed objects. Full matrix includes scale and articulated sub-part parents. |
+| 7 | Direct nearby-celestial lookup | `hot-pursuit.lib/HotPursuitCelestialState.cs` | `Program.FindNearbyCelestial(Camera)` | `KSA/Program.cs:5146` @5482 (body identical) | KSA's `OnFrameCelestials` updates only `Program.GetCamera()` (the main/frame camera); Hot Pursuit explicitly performs the equivalent lookup for its owned secondary camera after `PositionEcl`. |
 | 8 | Lifecycle/shared input guard | `hot-pursuit/Mod.cs`, `Patcher.cs`; unscience host | StarMap attributes; `HotkeyGuard` | StarMap / abstraction | No game assets or custom shaders. |
 
 **Compatibility and live-test risks**
@@ -229,7 +294,7 @@ game's own FOV input.
 
 **UI/hotkeys** — Standalone window toggled with **F9** (`glass/Mod.cs:51`). Embedded copy is a
 collapsible section in the unscience window. `HotkeyGuard` applied. The game's own +/- FOV keys (which
-call `Camera.ChangeFieldOfView`, `KSA/Camera.cs:769,774`) are suppressed by the prefix while override is active.
+call `Camera.ChangeFieldOfView`, `KSA/Camera.cs:859,864` @5482, from `OnKey`) are suppressed by the prefix while override is active.
 
 **Persistence** — None. `FovController` state (`IsOverrideActive`, `OverrideFovDegrees`) is runtime-only;
 `GlassSubmod.Dispose()` calls `FovController.DisableOverride()` to hand control back to the game on unload.
@@ -238,11 +303,11 @@ call `Camera.ChangeFieldOfView`, `KSA/Camera.cs:769,774`) are suppressed by the 
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|------|----------------------|----------------------------------------|-------------------|---------|----------|------------|
-| 1 | **Reflection (AccessTools.Field — PRIVATE)** | `glass.lib/GlassPatches.cs:20` | `KSA.Camera._fovRadians` — `private float _fovRadians = 0.87266463f` | `KSA/Camera.cs:53` | **Yes** | **None** (OLD `KSA/Camera.cs:53`, identical declaration) | **Single most important check — PASSED (5402).** String-based private field; a rename would silently break all FOV control with no compile error. Name + type unchanged through every build since 4680. |
+| 1 | **Reflection (AccessTools.Field — PRIVATE)** | `glass.lib/GlassPatches.cs:20` | `KSA.Camera._fovRadians` — `private float _fovRadians = 0.87266463f` | `KSA/Camera.cs:53` | **Yes** | **None** (identical declaration through 5482) | **Single most important check — PASSED (5402, 5438, 5482).** String-based private field; a rename would silently break all FOV control with no compile error. Name + type unchanged through every build since 4680. |
 | 2 | Reflection (private field write, `SetValue`) | `glass.lib/GlassPatches.cs:57-66` | `KSA.Camera._fovRadians` (write target FOV in radians) | `KSA/Camera.cs:53` | Yes | behavior narrowed for Hot Pursuit | `UpdateProjectionPrefix` now first checks `ViewportRegistry.IsMainCamera(__instance)`, so secondary/portrait/thumbnail cameras retain their independent projection. |
 | 3 | Reflection (AccessTools.Method) + Harmony prefix (skips original) | `glass.lib/GlassPatches.cs:25,50-53` | `KSA.Camera.ChangeFieldOfView(float change)` — `public void` | `KSA/Camera.cs:450` | Yes | behavior narrowed for Hot Pursuit | Prefix blocks stock FOV input only for a main viewport camera while override is active. |
 | 4 | Reflection (AccessTools.Method) + Harmony prefix (`void`, runs-before) | `glass.lib/GlassPatches.cs:26,57-66` | `KSA.Camera.UpdateProjection()` — `public void` | `KSA/Camera.cs:466` | Yes | None (OLD declaration identical) | Main-camera-only prefix injects `_fovRadians`, then original rebuilds the projection matrix. |
-| 5 | Direct typed API (static + instance) | `glass.lib/FovController.cs:40-55` | `KSA.Program.GetMainCamera() : Camera` + `KSA.Camera.GetFieldOfView() : float` (RADIANS) | `KSA/Program.cs:632`, `KSA/Camera.cs:785` | Yes | switched from frame camera | Reads/applies the player's main lens explicitly so a frame-scoped secondary camera cannot be stomped. |
+| 5 | Direct typed API (static + instance) | `glass.lib/FovController.cs:40-55` | `KSA.Program.GetMainCamera() : Camera` + `KSA.Camera.GetFieldOfView() : float` (RADIANS) | `KSA/Program.cs:631` @5482, `KSA/Camera.cs:785` | Yes | switched from frame camera | Reads/applies the player's main lens explicitly so a frame-scoped secondary camera cannot be stomped. |
 | 6 | Direct typed API (instance) | `glass.lib/FovController.cs:55` | `KSA.Camera.SetFieldOfView(float fovDegrees)` — `public void` (param is DEGREES; converts to radians internally) | `KSA/Camera.cs:412` | Yes | None (OLD `KSA/Camera.cs:412`) | Called from `ApplyFov()` on the game thread. Note the asymmetry: setter takes **degrees**, getter (#5) returns **radians**. |
 | 7 | Harmony patch (shared, required) | `glass/Patcher.cs:15` (+ unscience via HotkeyGuard) | `MeowSci.KsaAbstractions.HotkeyGuard.Patch(Harmony)` | n/a (abstraction lib) | Yes | n/a | Per-mod requirement. |
 | 8 | Lifecycle (StarMap attributes) | `glass/Mod.cs:19,22,38,45,60` | `StarMap.API` load/gui/unload attributes | StarMap library | Yes | n/a | Standalone load lifecycle. |

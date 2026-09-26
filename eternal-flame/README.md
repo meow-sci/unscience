@@ -12,8 +12,17 @@ Keeps selected vehicles topped up by periodically refilling fuel tanks and batte
 - **Fuel refill** — periodically calls `RefillConsumables()` to top up all resource tanks; toggle per vehicle with the **Fuel** checkbox
 - **Electricity refill** — periodically sets all `Battery` module charges to `MaximumCapacity`; toggle per vehicle with the **Elec** checkbox
 - **Refill interval slider** — drag slider (0–5000ms) controlling how often refills run
-- **Solver-timed electric refill loop** — runs from a Harmony prefix before vehicle solver preparation so battery changes are copied into the next electrical simulation step
-- **Throttled electric diagnostics** — logs solver-loop vehicle, monitored, matched, and battery counts every few seconds while electric refill is enabled
+- **Solver-timed refill loop** — fuel and battery refills both run from the Harmony prefix on `Universe.ExecuteNextVehicleSolvers` (both hosts), on one wall-clock interval timer; `EternalFlameSubmod.Update` does no refill work
+
+## Refill timing
+
+The vehicle-solver worker snapshots fuel and battery module state when it starts and commits its
+results back after the step. Earlier builds refilled fuel from the UI `Update` tick, which runs after
+the worker has started. While engines were burning, that commit overwrote the refill, so tanks
+drained during burns. Both refills now run in the solver prefix, after the previous results are
+applied and before the next snapshot. KSA's own refill command runs at the same point. In KSA 5482,
+`RefillConsumables` also flags the refilled tanks, so dry engines read their propellant again.
+This root cause was found by source analysis; refilling during a burn still needs an in-game check.
 
 ## Files
 

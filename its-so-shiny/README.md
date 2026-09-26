@@ -31,6 +31,10 @@ The mod uses the built-in `LightPart` template. Light parts consume electrical p
 - New grids are registered directly from the freshly created parts, avoiding a post-build whole-vehicle rescan.
 - `ShinyGridManager` deduplicates color and intensity writes by underlying `PartTemplate`, which cuts repeated reflection work when large grids are created or recolored.
 - `ShinyGridManager` is the public control surface for registered grids and can be reused by aggregate mods or future RPC endpoints.
+- A pixel's light-part mesh renders only while its light is on, unless render-all is enabled. `ShinyPatches` registers this rule with
+  the shared `PartRenderFilter` in `ksa-abstractions.lib`, because KSA 5482 removed the per-module render hooks. Known gap: the
+  filter does not apply in **raytraced IVA** views.
+
 Normal KSA saves made with Unscience preserve grid/cell associations, ownership, appearance and
 scrolling. Replay rebinds native-loaded light parts rather than spawning another grid.
 See [save details](../its-so-shiny.lib/README.md#scene-saves).

@@ -18,6 +18,15 @@ This library contains the submod UI and all game-facing behavior so the standalo
 ## Implementation Notes
 
 Each pixel is one built-in `LightPart`. The builder attaches created light parts under the vehicle root, connects them to battery-bearing parts when available, rebuilds the part tree once, and then controls pixel state through each light's stock `PowerConsumer` light switch. Color and intensity reuse Zippo's `LightController` helper.
+
+### Render filtering (KSA 5482)
+
+`ShinyPatches.Apply/Remove` register and unregister the `its-so-shiny` owner with
+`ksa-abstractions.lib/PartRenderFilter`. A shiny pixel part (named `shiny_*` or registered in a
+live grid) is hidden unless `RenderShinyParts` is set or its `LightSwitch` reports `LightIsActive`.
+Parts without a switch always render. Blinky shares the same compaction patches, and raytraced IVA submissions are not
+filtered.
+
 ## Scene saves
 
 Unscience saves grid/cell ownership, durable host/light part paths, appearance, active-mask metadata,

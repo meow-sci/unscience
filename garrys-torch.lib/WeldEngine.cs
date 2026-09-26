@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Brutal.Numerics;
 using KSA;
+using MeowSci.KsaAbstractions;
 
 namespace MeowSci.GarrysTorchLib;
 
@@ -116,6 +117,7 @@ public static partial class WeldEngine
             entry.Source.Orbit.OrbitLineColor
         );
 
+        PhysicsFrameHook.JoinOrbitReaders(); // Teleport disposes orbit points the hover job may read.
         entry.Source.Teleport(newOrbit, newSrcBody2Cce, newBodyRates);
         entry.Source.UpdatePerFrameData();
         return true;

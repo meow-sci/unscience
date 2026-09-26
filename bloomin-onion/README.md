@@ -49,7 +49,12 @@ Notes:
   of custom LOD meshes (keep LOD 2+ light).
 - The ecliptic frame needs a parent body; it is disabled for the root body.
 - The ring's shadow on the planet follows automatically (the planet shader reads the ring
-  reference every frame). The far-away "distant sphere" ring shadow is patched in best-effort.
+  reference every frame). Since KSA 5482 (rev 5470) the atmosphere also casts ring shadows from the
+  same reference, read each frame, so a ring on an atmospheric body such as Earth shades its
+  atmosphere as soon as it is applied. The far-away "distant sphere" ring shadow is synced
+  best-effort. Applying writes the ring radii and band texture into the renderer's material data.
+  When a body is left without rings, the sync turns its distant-sphere ring shadow off, so the
+  sphere never samples a released painted band. These shadow paths still need an in-game check on 5482.
 
 ### Rings on vessels / kittens?
 
@@ -102,5 +107,6 @@ kiwis-marbles** — the ring rides along with the moon.
 See [`../scope/rings.md`](../scope/rings.md) (bloomin-onion section). No Harmony patches. Reflection:
 `Program._planetTransparenciesRenderer` → `{_ringsRenderer, _ringRendererCreated, _anyRings}`,
 `TextureReference.<TextureAsset>k__BackingField`, and the cosmetic
-`StaticCelestial._distantRenderer` → `DistantSphereRenderer._data` sync — plus rocky's catalog
+`StaticCelestial._distantRenderer` → `DistantSphereRenderer._material` (`DistantSphereMaterialData`,
+typed `FieldRefAccess` since KSA 5482; a rename is logged and skipped) sync — plus rocky's catalog
 reflection. Everything else is typed public API.

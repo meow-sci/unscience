@@ -33,7 +33,27 @@ internal static class PebblesChecks
         item.Lods[1].MinScreenSize = 0; item.Lods.RemoveAt(4); Reject(() => RecipeValidation.Object(item));
         recipe.CandidateBudget = long.MaxValue; Reject(() => RecipeValidation.Validate(recipe));
         SimpleAuthoring();
+        BackfaceNormals();
         Console.WriteLine("PASS: Pebbles detached recipes, transform round trips, collider geometry, collision/placement constraints and resource budgets.");
+    }
+    /// <summary>KSA 5473 KeepBackfaceNormals: recipes saved before the flag inherit the stock material's value.</summary>
+    private static void BackfaceNormals()
+    {
+        var stock = new System.Collections.Generic.Dictionary<string, bool> { ["TreeBark"] = true, ["Rock"] = false };
+        var recipe = new PebblesRecipe { Ecotypes = [new() { Name = "Tree", Objects = [new() { SourceId = "Tree1" }] }] };
+        recipe.Ecotypes[0].Objects[0].Lods[0].Materials = [new() { SourceId = "TreeBark", DoubleSided = true }, new() { SourceId = "import/material/0" }];
+        var json = System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(recipe))!;
+        foreach (var material in json["Ecotypes"]![0]!["Objects"]![0]!["Lods"]![0]!["Materials"]!.AsArray()) material!.AsObject().Remove("KeepBackfaceNormals");
+        var legacy = JsonSerializer.Deserialize<PebblesRecipe>(json.ToJsonString())!.Ecotypes[0].Objects[0].Lods[0].Materials;
+        Check(legacy[0].KeepBackfaceNormals == null && legacy[0].ResolveKeepBackfaceNormals(stock), "Legacy recipes inherit the stock tree material's backface normals.");
+        Check(!legacy[1].ResolveKeepBackfaceNormals(stock), "Materials without a stock source default to flipped backface normals.");
+        legacy[0].KeepBackfaceNormals = false;
+        Check(!legacy[0].ResolveKeepBackfaceNormals(stock), "An explicit captured value overrides inheritance.");
+        legacy[1].KeepBackfaceNormals = true;
+        var copy = RecipeCopy.Clone(legacy[1]);
+        Check(copy.KeepBackfaceNormals == true && RecipeCopy.Clone(new MaterialRecipe()).KeepBackfaceNormals == null, "The flag and its absence both round trip.");
+        var saved = MeowSci.KsaAbstractions.Persistence.SaveJson.FromElement<PebblesRecipe>(MeowSci.KsaAbstractions.Persistence.SaveJson.ToElement(recipe));
+        Check(saved.Ecotypes[0].Objects[0].Lods[0].Materials[0].KeepBackfaceNormals == null, "Sidecar serialization preserves an unset flag.");
     }
     private static void SimpleAuthoring()
     {

@@ -14,6 +14,8 @@ boundary fixtures and the game-shipped `Brutal.Core.Numerics`/`BepuUtilities` as
 - automatic re-fire across multiple clicks, miss/failure retention, no timer-based shots,
   pending-shot preservation, toggle-off cancellation and automatic-mode cleanup;
 - one-shot dispatch, repeated initialization, scene-reset cancellation and unload cleanup;
+- a shot joins the orbit readers (`PhysicsFrameHook.JoinOrbitReaders`) exactly once before
+  teleporting, and an idle frame does not join;
 - the production Kitchen Sink G-load registry retains exact source protection across launch,
   rejection and Dent Wizard reset/unload without protecting an unregistered target.
 

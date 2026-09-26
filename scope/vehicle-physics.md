@@ -1,12 +1,125 @@
 # Vehicle Manipulation / Physics Mods — Game Integration Scope
 
-## Current verification — 5402 → 5438
+## KSA 5482 (5438 → 5482) verification
 
-No new code change required in eternal-flame, Garry's Torch, Godzilla or i-feel-seen. `Universe.ExecuteNextVehicleSolvers` (NEW :2033), result-application methods, `Vehicle.GetWorldMatrix`, `UpdateRenderData`, `UpdateCollisionGeometry` (:1937), `RefillConsumables` (:3175), and `ColliderModule.SetScale` are body-identical; Teleport differs only in a log source line. The avatar scale field chain is unchanged. Rev 5420 permits mid-step bubble merge/split, and new contact-local deformation/crash limits require live collision and weld checks. Rev 5434 reapplies non-root scales on native load; existing snapshot/restoration logic remains. The old fuel-during-burn report is still open: fuel is dispatched from the UI update, electricity from the solver prefix; no new regression is established by this span.
+Verified against `2026.9.22.5482` (NEW) vs `2026.9.10.5438` (OLD) with both supplied decomp/Content
+trees. Managed/static only: full solution build passes, and `garrys-torch.tests`, `godzilla.tests` and
+`dent-wizard.tests` pass. No native KSA run was possible, so every behavioral item below still needs
+in-game acceptance.
+Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
+
+**Changed and fixed**
+
+- **Godzilla visual scale (silent runtime break, fixed).** `Vehicle.UpdateRenderData(IViewport,int)`
+  (NEW `Vehicle.cs:3713`) no longer reads `MeanRadius`. Its one-pixel cull moved into the new public
+  non-virtual `Vehicle.IsLargeEnoughToRender(Camera)` (`:3707-3711`; sole caller `:3716`). The old
+  transpiler found 0 radius reads and threw, which rolled back all five `VisualScalePatches`. That made
+  visual-only and collider-only modes unavailable, and the standalone host also skipped
+  `ColliderScalePatches`. `godzilla.lib/VisualScalePatches.cs:25,70-92` now patches the caller: exactly
+  one `IsLargeEnoughToRender` call is redirected to `IsLargeEnoughToRenderScaled(Vehicle, Camera)`, a
+  mirror that uses `RenderRadius`. The helper itself is not patched because it is tiny and may be
+  inlined. `GetWorldMatrix` (`:3694`, body identical, one `MeanRadius` read) keeps its transpiler and
+  postfix, and the `PartTree.UpdateRenderData` prefix/finalizer is unchanged. `godzilla.tests/Fixture.cs:75-89`
+  now mirrors the 5482 shape; before this it mirrored 5438, so the managed checks gave false confidence.
+- **Eternal Flame fuel during burns (pre-existing bug, root-caused and fixed).** Fuel refills ran from
+  the UI `Update` tick (`OnDrawUiFrame`, `Program.cs:2258`), which comes after
+  `ExecuteNextVehicleSolvers` (`:2211`) has started the vehicle worker. The worker snapshots module
+  state in `StateUpdater.Prepare` (`ModuleStateful.cs:777-786`), copies it on first write (`:685-697`)
+  and commits it back unconditionally (`:383-412`). A refill made while engines burned was therefore
+  overwritten; the same was true in 5438. The fix is `FuelManager.RefillBeforeVehicleSolvers()`
+  (`eternal-flame.lib/EternalFlameLib.cs:56-106`), called from the existing solver prefix. It refills
+  fuel (`Vehicle.RefillConsumables`) and batteries on one `Environment.TickCount64` interval, and
+  `EternalFlameSubmod.Update` is now a no-op (`EternalFlameSubmod.cs:31`). In 5482,
+  `ResourceManager.RefillAllTanks` → `OnContentsReplaced` (`ResourceManager.cs:454-487`, rev 5478)
+  raises the tank-contents flag. The next worker snapshot now carries that flag, so an engine that ran
+  dry relights. The refill dirties no lazy derived data, so it is safe to run after the new PartTree
+  flush. The save payload is unchanged.
+- **Nearest-orbit job vs mod teleports (threading, fixed).** Rev 5480 renamed
+  `JobSystems.ConcurrentWorkers` → `NearestOrbitAndPerformanceWorker` (`JobSystems.cs:12`) and waits
+  on it at frame start (`Program.cs:2149-2150`). However, `PrepareFrame` re-queues `NearestOrbitPointJob`
+  at `:2188-2192`, before the `GetJobSimStep` handoff at `:2207`. `Vehicle.Teleport` → `SetFlightPlan` →
+  `Orbit.ReleaseCachedPoints` (`Orbit.cs:1372`) disposes cached points that this job may be reading.
+  The new `PhysicsFrameHook.JoinOrbitReaders()` (`ksa-abstractions.lib/PhysicsFrameHook.cs:29-34`)
+  waits at most once per frame; its flag is reset at the handoff (`:109`). It is called:
+  - automatically before a deferred world change (`:114`);
+  - automatically before draining queued mutations (`:125`);
+  - explicitly before the Garry's Torch `Teleport` (`garrys-torch.lib/WeldEngine.cs:120`);
+  - explicitly before the Dent Wizard launch (`dent-wizard.lib/DentWizardSubmod.cs:48`).
+
+  Idle frames do not wait. This race is a plausible source of the standing Garry's Torch error spam.
+  Managed ordering and once-per-frame checks were added to `garrys-torch.tests` and `dent-wizard.tests`.
+
+**Semantic drift, no code change**
+
+- `Universe.ExecuteNextVehicleSolvers(double,SimStep)` (`Universe.cs:2034`, still a single overload)
+  lost `_vehicleUpdateTask.RemoveEligibleVehicles()`. Parent-change eviction now runs in the vehicle
+  worker after stepping (`VehicleUpdateTask.ReassignDivergentVehicles`, `:333`, rev 5476).
+  `PartTree.FlushDirtyDerived()` and `FlushDirtyResourceManagers()` now run immediately before it
+  (`Program.cs:2209-2210`). Solver prefixes therefore run after the lazy-derived flush, and anything a
+  prefix dirties is recomputed lazily on first read, possibly on a worker. Eternal Flame dirties nothing.
+- `PhysicsFrameHook.Transpile` still finds each of the seven seams exactly once and in order
+  (`Program.cs:2162-2212`); the flush calls sit between the cloth and vehicle scheduling. Handoff edits
+  that dirty derived data (Godzilla `RecomputeAllDerivedData`) are flushed in the same frame, before
+  workers start.
+- Rev 5464 lazy PartTree data: `RecomputeAllDerivedData()` only marks dirty (`PartTree.cs:475-497`).
+  `UpdateAfterPartTreeModification` (`Vehicle.cs:1894`, body identical) still forces mass/stores
+  synchronously. `Part.Tree` is now `PartTree?` (`Part.cs:662`); no mod in this area dereferences it.
+- `KSA/BubbleStepJob.cs` was **removed**. Bubbles now step as `VehicleUpdateTask.ContactIsland` batch
+  jobs on `VehicleWorkerPool` (`VehicleUpdateTask.cs:46-83,679`, rev 5452); no mod referenced it. Each
+  `ConstraintSim` is still driven by one worker at a time. The Garry's Torch brackets on
+  `DetectCollisions(double)` and `Simulate(double, in SimStep)` (`ConstraintSim.cs:870,887`) still enclose
+  all rigid-body dispatch, now including clutter `BeginContactPass` and the post-`Timestep`
+  `ApplyPendingHits` / `PartContactLoad.Apply`.
+- `Part.RayCastEgo` (`Part.cs:2534`) now early-outs on a bounding sphere (`:2544-2549`). This does not
+  affect Dent Wizard picking in normal cases.
+- Rev 5465: sleeping bodies skip terrain updates (`ConstraintSim.cs:425-433`). A resting landed vessel
+  that Godzilla scales up keeps its old terrain patch until something wakes it.
+- Other changes:
+  - 5450 fixes a torque-free rotation singularity, which helps Godzilla inertia and lock-rotation welds.
+  - 5471: `Vehicle.Dispose` now wakes the vehicles it was supporting.
+  - 5442 adds "Clear Debris"; the mods already guard `IsDisposed`.
+  - 5475 turns seven CoreFairingA nosecones/interstages into tanks. Eternal Flame now refills them, and
+    Godzilla scales them through the native `Tank.SetScale`.
+
+**Checked unchanged (NEW lines)**
+
+- `Vehicle` members, bodies identical: `Teleport :2241`, `UpdatePerFrameData :2645`,
+  `GetPositionCci :2622`, `GetVelocityCci :2570`, `GetBody2Cci :3127`, `RefillConsumables :3201`,
+  `GetMatrixAsmb2Ego :1270`, and the private string target `UpdateCollisionGeometry :1944`.
+- `Battery.cs` is byte-identical, and `PartTree.Batteries` is at `:78`.
+- `Orbit.CreateFromStateCci :1581`, `KittenRenderable._characterAvatar :13` and `ModelToBodyMatrix() :107`.
+- Byte-identical: `ColliderModule`, `ScaleFactors`, `CharacterAvatar`, `IParentBody`, `Celestial`,
+  `Cursor` and `IViewport`.
+- `GameSettings.OnKeyAll :3407`.
+- Both I Feel Seen string targets are still single overloads, and `KittenEva.UpdateRenderData` still
+  calls `base` and then `GetWorldMatrix` (`KittenEva.cs:1062-1065`).
+
+Table rows below are refreshed only where the target, semantics or mod line changed. Other rows keep
+their cited build.
+
+**Live checks pending (native)**
+
+- **Eternal Flame:** burn to dry with Fuel on; dry-engine relight; F2 hidden HUD; warp.
+- **Godzilla:**
+  - visual-only and collider-only modes at planet scale;
+  - cull distance;
+  - together with I Feel Seen;
+  - kittens;
+  - scale-up of a resting landed vessel.
+- **Garry's Torch:**
+  - welds while hovering trajectories, with no `ObjectDisposedException` from `NearestOrbitPointJob`;
+  - lock-rotation weld on a spinning target;
+  - clutter collisions;
+  - Clear Debris.
+- **Dent Wizard:** launch while hovering orbit lines; cross-parent source; scaled-part picking.
+
+## Verification — 5402 → 5438 (historical)
+
+No new code change required in eternal-flame, Garry's Torch, Godzilla or i-feel-seen. `Universe.ExecuteNextVehicleSolvers` (NEW :2033), result-application methods, `Vehicle.GetWorldMatrix`, `UpdateRenderData`, `UpdateCollisionGeometry` (:1937), `RefillConsumables` (:3175), and `ColliderModule.SetScale` are body-identical; Teleport differs only in a log source line. The avatar scale field chain is unchanged. Rev 5420 permits mid-step bubble merge/split, and new contact-local deformation/crash limits require live collision and weld checks. Rev 5434 reapplies non-root scales on native load; existing snapshot/restoration logic remains. The old fuel-during-burn report was still open at 5438 (fuel dispatched from the UI update, electricity from the solver prefix); it was root-caused and fixed in the 5482 pass (see above).
 
 Verified against `2026.9.10.5438` using both supplied source/Content trees.
 See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
-Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+Older catalog tables below retain their explicitly cited build/line numbers unless marked @5482.
 
 Permanent reference for detecting when KSA game updates break the vehicle-manipulation /
 physics mods (`eternal-flame`, `garrys-torch`, `i-feel-seen`). Every game-facing member
@@ -14,8 +127,9 @@ these mods touch is enumerated and verified against decompiled sources.
 
 **Verified game versions**
 
-- NEW decomp `2026.9.7.5402` root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
-- OLD decomp `2026.8.22.5348` root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
+- Current: NEW `2026.9.22.5482` / OLD `2026.9.10.5438` (see the top section; rows refreshed @5482 say so).
+- Catalog baseline: NEW decomp `2026.9.7.5402` root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
+- Catalog baseline: OLD decomp `2026.8.22.5348` root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
 
 Paths in the **Decomp path (NEW)** column are relative to the NEW decomp root
 (namespace-foldered, e.g. `KSA/Vehicle.cs`). **Mod code** paths are relative to the repo
@@ -56,20 +170,23 @@ root `~/repos/meow-sci/unscience`.
 
 **Purpose** — Infinite fuel + electricity. Keeps selected vehicles topped up: periodically
 calls `Vehicle.RefillConsumables()` (fuel/resource tanks) and refills every `Battery`
-module to `MaximumCapacity`. Battery refills are driven from a Harmony **prefix** on
-`Universe.ExecuteNextVehicleSolvers` so the new charge is copied into the next electrical
-simulation step; fuel refills run on the normal UI update tick.
+module to `MaximumCapacity`. **Both** refills are driven from a Harmony **prefix** on
+`Universe.ExecuteNextVehicleSolvers` (since the 5482 pass): main thread, after the previous
+step's results are committed and before the next worker snapshot, the same window as KSA's own
+refill command (`InputEvents` applied at `Program.cs:2179`). A refill made from the UI tick is
+overwritten by the worker's module-state commit while engines burn (see the top section).
 
 **Unscience integration** — `EternalFlameSubmod : ISubmod`
 (`eternal-flame.lib/EternalFlameSubmod.cs:10`), holding a `FuelManager`
-(`eternal-flame.lib/EternalFlameLib.cs:25`). `Update(dt)` -> `FuelManager.Update` (fuel);
-`UpdateBeforeVehicleSolvers()` -> `FuelManager.UpdateElectricityBeforeVehicleSolvers`
-(batteries). Standalone host `eternal-flame/Mod.cs:27` (`new EternalFlameSubmod()`), with the
-solver prefix wired in `eternal-flame/Patcher.cs:43-69` (`EternalFlameSolverPatch`). Embedded
-host: `unscience/Mod.cs:69` (`new EternalFlameSubmod()`); the supermod re-declares the
-identical solver prefix as `EternalFlamePatches` in `unscience/Patcher.cs:144-178`
-(applied at `unscience/Patcher.cs:64`). `EternalFlameSubmod.Instance` (static) is the bridge
-the prefix calls into.
+(`eternal-flame.lib/EternalFlameLib.cs:25`). `Update(dt)` is a no-op (`EternalFlameSubmod.cs:31`);
+`UpdateBeforeVehicleSolvers()` -> `FuelManager.RefillBeforeVehicleSolvers` (fuel + batteries,
+one wall-clock interval, `EternalFlameLib.cs:56-106`). Standalone host `eternal-flame/Mod.cs:27`
+(`new EternalFlameSubmod()`), with the solver prefix wired in `eternal-flame/Patcher.cs:43-69`
+(`EternalFlameSolverPatch`). Embedded host: `unscience/Mod.cs:80` (`new EternalFlameSubmod()`); the
+supermod re-declares the identical solver prefix as `EternalFlamePatches` in
+`unscience/Patcher.cs:177-210` (applied at `unscience/Patcher.cs:75`). `EternalFlameSubmod.Instance`
+(static) is the bridge the prefix calls into. Refills continue with the HUD hidden because they no
+longer depend on a UI callback.
 
 **UI/hotkeys** — Standalone window "Eternal Flame - Infinite Fuel", 500x450, toggled by
 **F11** (`eternal-flame/Mod.cs:58,91`). Content (`EternalFlameSubmod.RenderContent`,
@@ -77,27 +194,29 @@ the prefix calls into.
 table with per-row Fuel/Elec checkboxes and remove, refill-interval `DragInt` (0–5000 ms).
 All ImGui via `Brutal.ImGuiApi`.
 
-**Persistence** — None. Monitored list, interval, and toggles are in-memory
-(`FuelManager._monitored`, `RefillIntervalMs`) and reset on reload. No disk I/O, no save hooks.
+**Persistence** — Scene-saved through the `eternal-flame` participant
+(`eternal-flame.lib/EternalFlameSubmod.Saves.cs`): interval plus per-vehicle Fuel/Elec flags,
+rebound by vehicle ID; reset replaces the `FuelManager` (clearing the refill timer). Payload unchanged
+by the 5482 refill move. See [Scene persistence](#scene-persistence-weld-and-size-ownership) below.
 
 **Integration points**
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|------|----------------------|----------------------------------------|-------------------|---------|----------|------------|
-| 1 | Harmony (prefix) | `eternal-flame/Patcher.cs:47,55` (standalone) and `unscience/Patcher.cs:148,156` (supermod) | `Universe.ExecuteNextVehicleSolvers(double dtPlayer, SimStep simStep)` — `public static void`; resolved `AccessTools.Method(typeof(Universe), nameof(...))` (no param array), prefix is param-less `void` (priority First) | `KSA/Universe.cs:1834` | Yes | Same (OLD `Universe.cs:1767`); 5402 body diff = removal of a clutter debug-draw block only | Single overload, so no-arg resolution is unambiguous. Prefix returns void -> original always runs. Highest-value chokepoint for this mod. Since 5402 `Universe.ExecuteNextClothSolvers` is kicked **before** this method (`KSA/Program.cs:2144-2145`); irrelevant to battery refill. |
-| 2 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:80` | `Vehicle.RefillConsumables()` — `public void` | `KSA/Vehicle.cs:3169` | Yes | Same (OLD `Vehicle.cs:3008`; body identical) | Internally calls `Parts.RefillConsumables()` + `RecomputeMassProperties` + `FlightComputer.ReadUpdatedVehicleConfiguration` (all internal; not touched directly). |
-| 3 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:128` | `Vehicle.Parts` — `public PartTree Parts` (field) | `KSA/Vehicle.cs:604` | Yes | Same (OLD `Vehicle.cs:598`) | Entry to battery state list. |
-| 4 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:128` | `PartTree.Batteries` — `public ModuleStateful<Battery,BatteryState,EmptyStruct,EmptyStruct>.StateList Batteries` (field) | `KSA/PartTree.cs:53` | Yes | Same (OLD `PartTree.cs:53`) | Generic `StateList`. |
-| 5 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:129` | `StateList.NumModules` — `public int NumModules` | `KSA/ModuleStateful.cs:274` | Yes | Same (file byte-identical) | Early-out when 0. |
-| 6 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:132` | `StateList.Modules` — `public Span<TModule> Modules` | `KSA/ModuleStateful.cs:266` | Yes | Same (file byte-identical) | Iterates `Battery[]`. |
-| 7 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:136` | `StateList.GetModuleAndAllMutableStatesForInitialization(TModule)` — returns `ModuleAndAllMutableStatesRef` | `KSA/ModuleStateful.cs:479` | Yes | Same (file byte-identical) | Returns ref struct with `.Module` + `.State`. |
-| 8 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:137` | `ModuleAndAllMutableStatesRef.Module` / `.State` (Battery / BatteryState) | `KSA/ModuleStateful.cs` (nested ref struct) | Yes | Same | Game uses the same `.Module.Refill(ref ...State)` shape in `KSA/ResourceManager.cs`. |
-| 9 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:137` | `Battery.Refill(ref BatteryState state)` — `public void` (sets `state.Charge = MaximumCapacity`) | `KSA/Battery.cs:63` | Yes | Same (file byte-identical 5348→5402) | **Insulates the mod from rev 4681.** Body unchanged OLD->NEW. |
+| 1 | Harmony (prefix) | `eternal-flame/Patcher.cs:47,55` (standalone) and `unscience/Patcher.cs:181,189` (supermod) | `Universe.ExecuteNextVehicleSolvers(double dtPlayer, SimStep simStep)` — `public static void`; resolved `AccessTools.Method(typeof(Universe), nameof(...))` (no param array), prefix is param-less `void` (priority First) | `KSA/Universe.cs:2034` @5482 | Yes | ⚠️ body @5482: `RemoveEligibleVehicles()` removed (eviction moved to the vehicle worker, rev 5476); `PartTree.FlushDirtyDerived/FlushDirtyResourceManagers` now run just before the call (`Program.cs:2209-2211`) | Single overload, so no-arg resolution is unambiguous. Prefix returns void -> original always runs. Highest-value chokepoint for this mod: since 5482 it drives **fuel and battery** refills. Runs after the lazy-derived flush, so prefix edits that dirty derived data recompute lazily (the refills dirty none). Cloth solvers are kicked just before (`Program.cs:2208`). |
+| 2 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:86` | `Vehicle.RefillConsumables()` — `public void` | `KSA/Vehicle.cs:3201` @5482 | Yes | Same (body identical); ⚠️ callee semantics @5482: `ResourceManager.RefillAllTanks` → `OnContentsReplaced` (`ResourceManager.cs:454-487`, rev 5478) raises `Moles` `ValuesUpdated` + `PerformanceSequences.SetDirty()` | Internally calls `Parts.RefillConsumables()` + `RecomputeMassProperties` + `FlightComputer.ReadUpdatedVehicleConfiguration`. The contents flag only reaches the worker if the refill runs before the snapshot, which is why the call moved into the prefix. Side effect: `PartTree.HasUnsavedChanges = true` (editor-only consumer). |
+| 3 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:110` | `Vehicle.Parts` — `public PartTree Parts` (field) | `KSA/Vehicle.cs:605` @5482 | Yes | Same | Entry to battery state list. |
+| 4 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:110` | `PartTree.Batteries` — `public ModuleStateful<Battery,BatteryState,EmptyStruct,EmptyStruct>.StateList Batteries` (field) | `KSA/PartTree.cs:78` @5482 | Yes | Same | Generic `StateList`. |
+| 5 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:111` | `StateList.NumModules` — `public int NumModules` | `KSA/ModuleStateful.cs:274` | Yes | Same (5482 file diff = `part.Tree?` only) | Early-out when 0. |
+| 6 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:114` | `StateList.Modules` — `public Span<TModule> Modules` | `KSA/ModuleStateful.cs:266` | Yes | Same | Iterates `Battery[]`. |
+| 7 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:118` | `StateList.GetModuleAndAllMutableStatesForInitialization(TModule)` — returns `ModuleAndAllMutableStatesRef` | `KSA/ModuleStateful.cs:479` | Yes | Same | Returns ref struct with `.Module` + `.State`. |
+| 8 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:119` | `ModuleAndAllMutableStatesRef.Module` / `.State` (Battery / BatteryState) | `KSA/ModuleStateful.cs` (nested ref struct) | Yes | Same | Game uses the same `.Module.Refill(ref ...State)` shape in `KSA/ResourceManager.cs`. |
+| 9 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:119` | `Battery.Refill(ref BatteryState state)` — `public void` (sets `state.Charge = MaximumCapacity`) | `KSA/Battery.cs:63` | Yes | Same (file byte-identical through 5482) | **Insulates the mod from rev 4681.** Body unchanged OLD->NEW. |
 | 10 | Direct typed API (indirect) | via #9 | `Battery.MaximumCapacity` — `public required Joules MaximumCapacity` | `KSA/Battery.cs:23` | Yes | Same (file byte-identical) | Read only inside `Refill`; mod never names `Joules`. |
-| 11 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:74,111` (lookup) | `Vehicle.Id` — `public virtual string Id` (inherited `Astronomical.Id`) | `KSA/Astronomical.cs:104` | Yes | Same (OLD `Astronomical.cs:104`) | Monitored-vehicle key matching. |
-| 12 | Direct typed API | `ksa-abstractions.lib/VehicleProvider.cs:14` (called `EternalFlameLib.cs:65,102`; `EternalFlameSubmod.cs:54,109`) | `Universe.CurrentSystem` (`KSA/Universe.cs:94`) -> `CelestialSystem.All` (`KSA/CelestialSystem.cs:64`) -> `LookupCollection<Astronomical>.UnsafeAsList()` (`KSA/LookupCollection.cs:210`) | `KSA/Universe.cs:94` | Yes | Same (`CelestialSystem.All` OLD `:57`) | Shared enumerator; a break here cascades to all three mods' UI. Since 5402 the list also contains debris fragments (`Vehicle.IsDebris`, `KSA/Vehicle.cs:392`). |
-| 13 | Harmony + Reflection | `eternal-flame/Patcher.cs:20` -> `HotkeyGuard.cs:21` | `GameSettings.OnKeyAll(GlfwKeyEvent)` — `public static bool`; `nameof`-resolved, prefix `ref bool __result` | `KSA/GameSettings.cs:3301` | Yes | Same (file byte-identical) | Shared guard (full row in the master integration surface). |
-| 14 | Lifecycle | `eternal-flame/Mod.cs:19-87` | StarMap attrs: `StarMapMod`, `StarMapImmediateLoad`, `StarMapAllModsLoaded`, `StarMapBeforeGui`, `StarMapAfterGui`, `StarMapUnload` (StarMap.API) | (StarMap.API package) | Yes | Same | Fuel in `OnBeforeUi`; battery via the solver prefix. |
+| 11 | Direct typed API | `eternal-flame.lib/EternalFlameLib.cs:78` (lookup) | `Vehicle.Id` — `public virtual string Id` (inherited `Astronomical.Id`) | `KSA/Astronomical.cs:104` | Yes | Same (OLD `Astronomical.cs:104`) | Monitored-vehicle key matching. |
+| 12 | Direct typed API | `ksa-abstractions.lib/VehicleProvider.cs:14` (called `EternalFlameLib.cs:69`; `EternalFlameSubmod.cs`) | `Universe.CurrentSystem` (`KSA/Universe.cs:94`) -> `CelestialSystem.All` (`KSA/CelestialSystem.cs:64`) -> `LookupCollection<Astronomical>.UnsafeAsList()` (`KSA/LookupCollection.cs:210`) | `KSA/Universe.cs:94` | Yes | Same (`CelestialSystem.All` OLD `:57`) | Shared enumerator; a break here cascades to all three mods' UI. Since 5402 the list also contains debris fragments (`Vehicle.IsDebris`, `KSA/Vehicle.cs:392`). |
+| 13 | Harmony + Reflection | `eternal-flame/Patcher.cs:20` -> `HotkeyGuard.cs:21` | `GameSettings.OnKeyAll(GlfwKeyEvent)` — `public static bool`; `nameof`-resolved, prefix `ref bool __result` | `KSA/GameSettings.cs:3407` @5482 | Yes | Same signature (5482 body uses `Input.MatchReleased(in …)`) | Shared guard (full row in the master integration surface, incl. the 5482 mouse-binding bypass). |
+| 14 | Lifecycle | `eternal-flame/Mod.cs:19-87` | StarMap attrs: `StarMapMod`, `StarMapImmediateLoad`, `StarMapAllModsLoaded`, `StarMapBeforeGui`, `StarMapAfterGui`, `StarMapUnload` (StarMap.API) | (StarMap.API package) | Yes | Same | `OnBeforeUi` still calls `Update(dt)`, now a no-op; fuel and batteries both refill via the solver prefix (#1) since 5482. |
 
 **Game assets referenced** — None.
 
@@ -181,10 +300,21 @@ relying on a previously inlined solver callee. On game updates, also re-read the
 semantics: lexical call order alone cannot prove they remain equivalent. `SimStep.PreviousTime`
 is the just-applied state time; the former `NextTime` stamp is wrong at this earlier handoff.
 
+**@5482:** `PrepareFrame` (`Program.cs:2139`) waits on NearestOrbitAndPerformance/orbit/vehicle/cloth
+workers (`:2149-2160`), applies results (`:2161-2169`) and input (`:2179`), then **queues
+`NearestOrbitPointJob` (`:2188-2192`) before** `GetJobSimStep` (`:2207`), followed by cloth (`:2208`),
+`PartTree.FlushDirtyDerived/FlushDirtyResourceManagers` (`:2209-2210`), vehicle (`:2211`) and orbit
+(`:2212`) scheduling. The hover job reads flight plans and cached orbit points concurrently with the
+handoff, so any handoff code that teleports or edits a flight plan must first call
+`PhysicsFrameHook.JoinOrbitReaders()` (once per frame; automatic for queued work and world changes).
+`WeldEngine.UpdateWeld` does so before `Teleport` (`WeldEngine.cs:120`).
+
 **Validation** — `garrys-torch.tests` runs the production Harmony patch on a warmed-up managed
 fixture and tests retained actuator progress, one update per frame, start-time stamps, pause/warp,
-missing system/submod, exception isolation, unload and malformed call sequences. This does not run
-native KSA physics. In-game: weld a separate light craft at a non-overlapping offset, actuate forward
+missing system/submod, exception isolation, unload and malformed call sequences. Since 5482 the
+fixture's `JobSystems.NearestOrbitAndPerformanceWorker` records joins: queued mutations join the
+orbit readers once, after the step and before editing, and a second `JoinOrbitReaders()` in the same
+frame does not wait again. This does not run native KSA physics. In-game: weld a separate light craft at a non-overlapping offset, actuate forward
 and back (stock and Zippo Disco), toggle Weld Enabled, hide HUD with F2, exercise pause/warp and a
 weld chain anchored to a moving target part, and unload. Watch for body/origin time mismatches,
 collection/shape-lock errors and part destruction; compare with the same unwelded light craft.
@@ -207,28 +337,29 @@ the legacy scalar `scale` key uniformly for backwards compatibility.
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|------|----------------------|----------------------------------------|-------------------|---------|----------|------------|
-| 1 | **Harmony transpiler / private method** | `ksa-abstractions.lib/PhysicsFrameHook.cs` | `Program.PrepareFrame(double currentPlayerTime, double dtPlayer)`; wraps the single `Universe.GetJobSimStep(double)` call | `KSA/Program.cs:2094,2143` | Yes | New mod hook against unchanged 5402 surface | Requires unique ordered ApplyOrbit/Vehicle/Cloth, GetJobSimStep, ExecuteNextCloth/Vehicle/Orbit calls. Re-read game wait/snapshot semantics on updates. No UI fallback. |
-| C1 | Harmony prefix/finalizer | `garrys-torch.lib/WeldCollisionPatches.cs` | `ConstraintSim.DetectCollisions(double)` / `Simulate(double, in SimStep)` | `KSA/ConstraintSim.cs:834,851` | Yes | New mod hooks on current surface | Scope shape removal/restoration around detection and full timesteps, before/after Bepu worker dispatch. |
+| 1 | **Harmony transpiler / private method** | `ksa-abstractions.lib/PhysicsFrameHook.cs:71-102` | `Program.PrepareFrame(double currentPlayerTime, double dtPlayer)`; wraps the single `Universe.GetJobSimStep(double)` call | `KSA/Program.cs:2139,2207` @5482 | Yes | ⚠️ @5482: seven seams still unique/ordered; new non-seam calls interleaved (profiler tags, `NearestOrbitAndPerformanceWorker` wait/queue, `PartTree.FlushDirty*` between cloth and vehicle) | Requires unique ordered ApplyOrbit/Vehicle/Cloth, GetJobSimStep, ExecuteNextCloth/Vehicle/Orbit calls. Re-read game wait/snapshot semantics on updates. No UI fallback. Handoff mutations that dirty derived data are flushed the same frame before workers. |
+| 1b | Direct typed API (worker join) | `ksa-abstractions.lib/PhysicsFrameHook.cs:29-34,109,114,125`; `garrys-torch.lib/WeldEngine.cs:120` | `JobSystems.NearestOrbitAndPerformanceWorker : JobScheduler` → `Wait()` (renamed from `ConcurrentWorkers`, rev 5480; same 1-runner scheduler) | `KSA/JobSystems.cs:12,31`; queued `KSA/Program.cs:2188-2192` | Yes | **new @5482** | `JoinOrbitReaders()` joins the hover job once per frame before a teleport/flight-plan edit at the handoff (`Orbit.ReleaseCachedPoints`, `Orbit.cs:1372`, disposes points it may read). Automatic before queued mutations and world changes; idle frames never wait. A rename is a compile break. |
+| C1 | Harmony prefix/finalizer | `garrys-torch.lib/WeldCollisionPatches.cs` | `ConstraintSim.DetectCollisions(double)` / `Simulate(double, in SimStep)` | `KSA/ConstraintSim.cs:870,887` @5482 | Yes | Signatures same; bodies now also run clutter `BeginContactPass` and, in Simulate, `ApplyPendingHits` + `PartContactLoad.Apply` after `Timestep` (inside the bracket) | Scope shape removal/restoration around detection and full timesteps, before/after Bepu worker dispatch. Islands (rev 5452, `VehicleUpdateTask.RunIsland`, `:679`) still drive each sim from one worker; `BepuWorkerDispatcher` always joins in `finally`. |
 | C2 | Direct typed API | `WeldCollisionPatches.cs` | `ConstraintSim.HandleToState`, `VehicleUpdateState.ReadOnlyVehicle`, `ConstraintSim.Simulation`, `Simulation.Bodies[BodyHandle]`, `BodyReference.Collidable.Shape`, `BodyReference.SetShape(TypedIndex)` | `KSA/ConstraintSim.cs:52,54`; `KSA/VehicleUpdateState.cs:14`; `BepuPhysics/BodyReference.cs:195`; `BepuPhysics/Bodies.cs:350-378` | Yes | New dependencies | Read source identity, capture exact shape, temporarily remove broad-phase entry; preserve body/module state and allocated shape geometry. |
-| 2 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:19,75` | `Vehicle.Parent` — `public IParentBody Parent => Orbit.Parent` | `KSA/Vehicle.cs:372` | Yes | Same (OLD `Vehicle.cs:370`) | Reference-compared for parent-body match; `.GetCci2Cce()` called on it (#10). |
-| 3 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:28` | `Vehicle.GetPositionCci()` — `public double3` | `KSA/Vehicle.cs:2590` | Yes | Same (OLD `Vehicle.cs:2433`) | Target world position. |
-| 4 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:29` | `Vehicle.GetVelocityCci()` — `public double3` | `KSA/Vehicle.cs:2538` | Yes | Same (OLD `Vehicle.cs:2381`) | Source velocity = target velocity. |
-| 5 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:30,90` | `Vehicle.GetBody2Cci()` — `public doubleQuat` | `KSA/Vehicle.cs:3095` | Yes | Same (OLD `Vehicle.cs:2934`) | Orientation transforms. |
-| 6 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:58` | `Vehicle.CenterOfMassAsmb` — `public double3 CenterOfMassAsmb` | `KSA/Vehicle.cs:564` | Yes | Same (OLD `Vehicle.cs:558`) | Part-anchor offset base. |
-| 7 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:85,92` | `Vehicle.BodyRates` — `public double3 BodyRates` | `KSA/Vehicle.cs:510` | Yes | Same (OLD `Vehicle.cs:504`) | Passed to `Teleport`; NaN-guarded by mod. |
-| 8 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:126` | `Vehicle.Orbit` — `public Orbit Orbit => Patch.Orbit` (reads `.OrbitLineColor`) | `KSA/Vehicle.cs:370` | Yes | Same (OLD `Vehicle.cs:368`) | Source orbit's line color reused for new orbit. |
-| 9 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:129` | `Vehicle.Teleport(Orbit? orbit, doubleQuat? body2Cce, double3? bodyRates)` — `public void` | `KSA/Vehicle.cs:2209` | Yes | Same (OLD `Vehicle.cs:2053`; body identical bar a log line-number constant) | The core mutation. Nullable params; mod passes non-null. No new gating in 5402 — but the vehicle it moves is now subject to the new `PartFailure` contact-pressure system (see 5348→5402 summary). |
-| 10 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:130` | `Vehicle.UpdatePerFrameData()` — `public override void` | `KSA/Vehicle.cs:2613` | Yes | Same (OLD `Vehicle.cs:2456`; body identical) | Refresh caches post-teleport. |
-| 11 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:75` | `IParentBody.GetCci2Cce()` — `doubleQuat` (interface) | `KSA/IParentBody.cs:51` | Yes | Same (file byte-identical) | Called on `Vehicle.Parent`. |
-| 12 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:58` | `Part.PositionVehicleAsmb` — `public double3` (computed property) | `KSA/Part.cs:704` | Yes | Same (OLD `Part.cs:696`) | Part-anchor position. |
-| 13 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:61` | `Part.Asmb2VehicleAsmb` — `public doubleQuat` (computed property) | `KSA/Part.cs:720` | Yes | Same (OLD `Part.cs:712`) | Part-anchor orientation. (5402 also added `Asmb2VehicleAsmb` to the nested `Part.Connection.IConnector` interface, `Part.cs:483` — unrelated to this binding.) |
+| 2 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:29,85` | `Vehicle.Parent` — `public IParentBody Parent => Orbit.Parent` | `KSA/Vehicle.cs:373` @5482 | Yes | Same | Reference-compared for parent-body match; `.GetCci2Cce()` called on it (#10). |
+| 3 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:38` | `Vehicle.GetPositionCci()` — `public double3` | `KSA/Vehicle.cs:2622` @5482 | Yes | Same | Target world position. |
+| 4 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:39` | `Vehicle.GetVelocityCci()` — `public double3` | `KSA/Vehicle.cs:2570` @5482 | Yes | Same | Source velocity = target velocity. |
+| 5 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:40,100` | `Vehicle.GetBody2Cci()` — `public doubleQuat` | `KSA/Vehicle.cs:3127` @5482 | Yes | Same | Orientation transforms. |
+| 6 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:68` | `Vehicle.CenterOfMassAsmb` — `public double3 CenterOfMassAsmb` | `KSA/Vehicle.cs:565` @5482 | Yes | Same | Part-anchor offset base. |
+| 7 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:95,102` | `Vehicle.BodyRates` — `public double3 BodyRates` | `KSA/Vehicle.cs:511` @5482 | Yes | Same | Passed to `Teleport`; NaN-guarded by mod. |
+| 8 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:117` | `Vehicle.Orbit` — `public Orbit Orbit => Patch.Orbit` (reads `.OrbitLineColor`) | `KSA/Vehicle.cs:371` @5482 | Yes | Same | Source orbit's line color reused for new orbit. |
+| 9 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:121` | `Vehicle.Teleport(Orbit? orbit, doubleQuat? body2Cce, double3? bodyRates)` — `public void` | `KSA/Vehicle.cs:2241` @5482 | Yes | Same (body identical) | The core mutation. Nullable params; mod passes non-null. Subject to the `PartFailure` contact-pressure system (see 5348→5402 summary). @5482: preceded by `PhysicsFrameHook.JoinOrbitReaders()` (`:120`, row 1b) because `SetFlightPlanUnsynchronized` releases cached orbit points. |
+| 10 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:122` | `Vehicle.UpdatePerFrameData()` — `public override void` | `KSA/Vehicle.cs:2645` @5482 | Yes | Same (body identical) | Refresh caches post-teleport. |
+| 11 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:85` | `IParentBody.GetCci2Cce()` — `doubleQuat` (interface) | `KSA/IParentBody.cs:51` | Yes | Same (file byte-identical) | Called on `Vehicle.Parent`. |
+| 12 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:68` | `Part.PositionVehicleAsmb` — `public double3` (computed property) | `KSA/Part.cs:708` @5482 | Yes | Same | Part-anchor position. |
+| 13 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:71` | `Part.Asmb2VehicleAsmb` — `public doubleQuat` (computed property) | `KSA/Part.cs:724` @5482 | Yes | Same | Part-anchor orientation. (5402 also added `Asmb2VehicleAsmb` to the nested `Part.Connection.IConnector` interface, `Part.cs:483` — unrelated to this binding.) |
 | 14 | Direct typed API (read/write) | `garrys-torch.lib/WeldScaleSnapshot.cs` | `Part.Scale` — `public double3 Scale { get; set; }` (setter calls `ResetCachedPosMatrixValues`) | `KSA/Part.cs:815` | Yes | Same (OLD `Part.cs:807`) | Captured full-part XYZ multipliers; SubPart local scales are never overwritten by welding. KSA's separate `ScaleFactors(double3)` collapses module rescaling to the largest axis; Garry's Torch does not claim anisotropic mass/module physics. |
 | 15 | Direct typed API | `garrys-torch.lib/WeldScaleSnapshot.cs`; `WeldEngine.Scaling.cs` | `Part.SubParts` — `public ReadOnlySpan<Part> SubParts`; `PartTree.Parts` — `public ReadOnlySpan<Part> Parts` | `KSA/Part.cs:1079`; `KSA/PartTree.cs:95` | Yes | Same (OLD `Part.cs:1052`; `PartTree.cs:95`) | Part-tree walk for scaling + target-part list. |
 | 16 | Direct typed API | `garrys-torch.lib/GarrysTorchSubmod.cs:190,198` | `Part.Template` (`public PartTemplate Template`) -> `PartTemplate.Id` (`public string Id`, inherited `SerializedId.Id`); `Part.Id` (`public string Id { get; init; }`) | `KSA/Part.cs:576`,`698`; `KSA/SerializedId.cs:13` | Yes | Same (OLD `Part.cs:568`,`690`) | Target-part combo labels. |
-| 17 | Direct typed API | `ksa-abstractions.lib/PhysicsFrameHook.cs` | `Universe.GetJobSimStep(double)`; `SimStep.PreviousTime : UniverseTime` | `KSA/Universe.cs:2322`; `KSA/SimStep.cs:5` | Yes | Same | The wrapper computes the original step once and returns it unchanged. PreviousTime stamps the source orbit before workers start. |
-| 18 | Behavioral / callback argument | `ksa-abstractions.lib/PhysicsFrameHook.cs` | `Program.PrepareFrame` supplies `dtPlayer` to `GetJobSimStep` | `KSA/Program.cs:2143` | Yes | Same | Player delta also advances weld interpolation. No direct `Program.GetPlayerDeltaTime()` dependency remains in Garry's Torch. |
-| 19 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:121` | `Orbit.CreateFromStateCci(IParentBody parent, UniverseTime stateTime, double3 positionCci, double3 velocityCci, byte4 orbitLineColor)` — `public static Orbit` | `KSA/Orbit.cs:1563` | Yes | Same (OLD `Orbit.cs:1563`) | 5-arg factory; arg order/types unchanged since the 5261 `SimTime`→`UniverseTime` rename. |
-| 20 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:126` | `Orbit.OrbitLineColor` — `public byte4 OrbitLineColor` (field) | `KSA/Orbit.cs:1138` | Yes | Same (OLD `Orbit.cs:1138`) | — |
+| 17 | Direct typed API | `ksa-abstractions.lib/PhysicsFrameHook.cs` | `Universe.GetJobSimStep(double)`; `SimStep.PreviousTime : UniverseTime` | `KSA/Universe.cs:2540` @5482; `KSA/SimStep.cs:5` | Yes | Same (`SimStep.cs` byte-identical) | The wrapper computes the original step once and returns it unchanged. PreviousTime stamps the source orbit before workers start. |
+| 18 | Behavioral / callback argument | `ksa-abstractions.lib/PhysicsFrameHook.cs` | `Program.PrepareFrame` supplies `dtPlayer` to `GetJobSimStep` | `KSA/Program.cs:2207` @5482 | Yes | Same | Player delta also advances weld interpolation. No direct `Program.GetPlayerDeltaTime()` dependency remains in Garry's Torch. |
+| 19 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:112` | `Orbit.CreateFromStateCci(IParentBody parent, UniverseTime stateTime, double3 positionCci, double3 velocityCci, byte4 orbitLineColor)` — `public static Orbit` | `KSA/Orbit.cs:1581` @5482 | Yes | Same (body identical) | 5-arg factory; arg order/types unchanged since the 5261 `SimTime`→`UniverseTime` rename. |
+| 20 | Direct typed API | `garrys-torch.lib/WeldEngine.cs:117` | `Orbit.OrbitLineColor` — `public byte4 OrbitLineColor` (field) | `KSA/Orbit.cs:1138` | Yes | Same (OLD `Orbit.cs:1138`) | — |
 | 21 | Direct typed API | `garrys-torch.lib/WeldScaleSnapshot.cs` | `vehicle is KittenEva`; `KittenEva.Renderable : KittenRenderable` | `KSA/KittenEva.cs:13,59` | Yes | Same | Compile-checked replacement for the former type-name + `_renderable` reflection. |
 | 22 | Reflection (private field, string) | `garrys-torch.lib/WeldScaleSnapshot.cs` | `KittenRenderable._characterAvatar` — `private CharacterAvatar _characterAvatar` | `KSA/KittenRenderable.cs:12` | Yes | Same | **String field name.** Capture avatar and original scalar before any scale mutation; missing avatar rejects weld creation. |
 | 23 | Direct typed API | `garrys-torch.lib/WeldScaleSnapshot.cs` | `CharacterAvatar.Core` — `public CharacterCore Core` (**struct** field) | `KSA/CharacterAvatar.cs:211` | Yes | Same | Typed `CharacterAvatar.Core` access, shared with the Godzilla snapshot pattern; boxed reflection removed. |
@@ -236,7 +367,7 @@ the legacy scalar `scale` key uniformly for backwards compatibility.
 | 25 | **Harmony postfix + Reflection** | `garrys-torch.lib/KittenScalePatches.cs` | private `KittenRenderable.ModelToBodyMatrix() : float4x4` | `KSA/KittenRenderable.cs:106-109` | Yes | Same | Load-bearing for anisotropic KittenEva rendering. Postfix pre-multiplies `(1, Y/X, Z/X)` into the original matrix; weak-table lookup makes non-welded kittens a constant-time no-op. Loud `MissingMethodException` at patch apply if renamed. |
 | 26 | Direct typed API (UI color) | `garrys-torch.lib/GarrysTorchSubmod.cs` | `KSAColor.Xkcd.Scarlet`, `KSAColor.Xkcd.PaleGrey` — `static Color.Preset` | `KSA/KSAColor.cs:1561`,`837` | Yes | Same (file byte-identical) | Unweld-button styling only; failure is visual, not functional. |
 | 27 | Direct typed API | `ksa-abstractions.lib/VehicleProvider.cs:14` | `Universe.CurrentSystem` / `CelestialSystem.All` / `LookupCollection.UnsafeAsList` / `Vehicle.Id` | `KSA/Universe.cs:94` etc. | Yes | Same | Shared enumerator (see eternal-flame #12). |
-| 28 | Harmony + Reflection | `garrys-torch/Patcher.cs` -> `HotkeyGuard.cs:21` | `GameSettings.OnKeyAll(GlfwKeyEvent)` — `public static bool`, `nameof`-resolved | `KSA/GameSettings.cs:3301` | Yes | Same (file byte-identical) | Shared guard. |
+| 28 | Harmony + Reflection | `garrys-torch/Patcher.cs` -> `HotkeyGuard.cs:21` | `GameSettings.OnKeyAll(GlfwKeyEvent)` — `public static bool`, `nameof`-resolved | `KSA/GameSettings.cs:3407` @5482 | Yes | Same signature | Shared guard. |
 | 29 | Lifecycle | `garrys-torch/Mod.cs`; `unscience/Mod.cs`; both `Patcher.cs` hosts | StarMap initializes/disposes the submod and installs/removes `GarrysTorchPatches` | (StarMap.API package) | Yes | Weld execution moved out of UI callbacks | Welds keep running with the HUD hidden without the after-GUI fallback. |
 
 **Game assets referenced** — None (TOML preset file is mod-authored under `.unscience/`, not a game asset).
@@ -356,23 +487,25 @@ added at `:75`), tracker handed to the supermod patcher at `unscience/Mod.cs:106
 (`i-feel-seen/Mod.cs:47,73`). Content (`IFeelSeenSubmod.RenderContent:27`): filterable vehicle
 combo + Add, tracked-vehicle table with per-row "SeeMe" checkbox and del.
 
-**Persistence** — None. Tracked list is in-memory (`VehicleTracker.Tracked`), cleared on
-reload (`IFeelSeenSubmod.Dispose` -> `VehicleTracker.Clear`).
+**Persistence** — Scene-saved through the `i-feel-seen` participant (`i-feel-seen.lib/IFeelSeenSubmod.Saves.cs`):
+tracked vehicle IDs and SeeMe flags, rebound after native load; `VehicleTracker.Tracked` is the live
+state, cleared on reset and on `IFeelSeenSubmod.Dispose` -> `VehicleTracker.Clear`. See
+[Scene persistence](#scene-persistence-weld-and-size-ownership).
 
 **Integration points**
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|------|----------------------|----------------------------------------|-------------------|---------|----------|------------|
-| 1 | Harmony (prefix) + Reflection (string) | `i-feel-seen.lib/IFeelSeenPatches.cs:27,30` (prefix body `:52`) | `Vehicle.GetWorldMatrix(Camera camera)` — `public float4x4?`; resolved `AccessTools.Method(typeof(Vehicle), "GetWorldMatrix")` (string), prefix `(Vehicle __instance, Camera camera, ref float4x4? __result)` | `KSA/Vehicle.cs:3662` | Yes | Same (OLD `Vehicle.cs:3501`; body identical) | **String-resolved**; method is `public`, non-virtual, single overload. Only game caller in both trees is `KittenEva.UpdateRenderData` (`KSA/KittenEva.cs:1065`). |
-| 2 | Harmony (prefix) + Reflection (string) | `i-feel-seen.lib/IFeelSeenPatches.cs:28,31` (prefix body `:64`) | `Vehicle.UpdateRenderData(IViewport viewport, int inFrameIndex)` — `public virtual void`; resolved `AccessTools.Method(typeof(Vehicle), "UpdateRenderData")`, prefix `(Vehicle __instance, IViewport viewport, int inFrameIndex)` | `KSA/Vehicle.cs:3675` | Yes | **Retyped @5402** — `Viewport` → `IViewport` (OLD `Vehicle.cs:3514`); mod prefix updated. Still the single `UpdateRenderData` overload. | **String-resolved.** `virtual`; `KittenEva` overrides it (`KSA/KittenEva.cs:1062`, also `IViewport`) — see findings. Cull gate (`objectDiameterPixels < 1.0`) and the non-kitten call site (`KSA/Program.cs:4210`) unchanged; `viewport == Program.MainViewport` became `viewport.IsMain()`. |
+| 1 | Harmony (prefix) + Reflection (string) | `i-feel-seen.lib/IFeelSeenPatches.cs:27,30` (prefix body `:52`) | `Vehicle.GetWorldMatrix(Camera camera)` — `public float4x4?`; resolved `AccessTools.Method(typeof(Vehicle), "GetWorldMatrix")` (string), prefix `(Vehicle __instance, Camera camera, ref float4x4? __result)` | `KSA/Vehicle.cs:3694` @5482 | Yes | Same (body identical 5438→5482) | **String-resolved**; method is `public`, non-virtual, single overload. Only game caller is still `KittenEva.UpdateRenderData` (`KSA/KittenEva.cs:1065`). Godzilla also transpiles/postfixes it (one `MeanRadius` read). |
+| 2 | Harmony (prefix) + Reflection (string) | `i-feel-seen.lib/IFeelSeenPatches.cs:28,31` (prefix body `:64`) | `Vehicle.UpdateRenderData(IViewport viewport, int inFrameIndex)` — `public virtual void`; resolved `AccessTools.Method(typeof(Vehicle), "UpdateRenderData")`, prefix `(Vehicle __instance, IViewport viewport, int inFrameIndex)` | `KSA/Vehicle.cs:3713` @5482 | Yes | ⚠️ body @5482: cull moved into new `IsLargeEnoughToRender(Camera)` (`:3707`); body also submits `SubmitClutterTerrainDebugOverlay` (physics-debug only). Signature unchanged (retyped `IViewport` @5402), still single overload. | **String-resolved.** `virtual`; `KittenEva` overrides it (`KSA/KittenEva.cs:1062`) — see findings. Prefix skips the whole body for tracked vehicles (so Godzilla's call-site cull transpiler and the debug overlays are bypassed for them — pre-existing). Non-kitten call site `KSA/Program.cs:4298` @5482. |
 | 3 | Direct typed API (prefix body) | `i-feel-seen.lib/IFeelSeenPatches.cs:57` | `Camera.GetPositionEgo(IPosition astronomical)` — `public double3` | `KSA/Camera.cs:231` | Yes | Same (OLD `Camera.cs:231`; body identical) | Passes `__instance` (Vehicle is `IPosition`). |
 | 4 | Direct typed API (prefix body) | `i-feel-seen.lib/IFeelSeenPatches.cs:59` | `Vehicle.Body2Cce` — `public doubleQuat Body2Cce` | `KSA/Vehicle.cs:475` | Yes | Same (OLD `Vehicle.cs:469`) | Rotation for the override matrix. |
 | 5 | Direct typed API (prefix body) | `i-feel-seen.lib/IFeelSeenPatches.cs:69` | `IViewport.GetCamera()` — `Camera` (interface member; implemented by `GameViewport` via `ViewportBase`) | `KSA/IViewport.cs:51` | Yes | **Retyped @5402** — was `Viewport.GetCamera()` at `KSA/Viewport.cs:366`; `Viewport.cs` no longer exists | Mod receives the `IViewport` from the prefix and calls through the interface. |
 | 6 | Direct typed API (prefix body) | `i-feel-seen.lib/IFeelSeenPatches.cs:69` | `Vehicle.GetMatrixAsmb2Ego(Camera camera)` — `public double4x4` | `KSA/Vehicle.cs:1256` | Yes | Same (OLD `Vehicle.cs:1204`) | — |
 | 7 | Direct typed API (prefix body) | `i-feel-seen.lib/IFeelSeenPatches.cs:70` | `Vehicle.IsEditedVehicle` — `public bool` | `KSA/Vehicle.cs:408` | Yes | Same (OLD `Vehicle.cs:402`) | Passed to `PartTree.UpdateRenderData`. |
-| 8 | Direct typed API (prefix body) | `i-feel-seen.lib/IFeelSeenPatches.cs:70` | `PartTree.UpdateRenderData(ref readonly double4x4 matrixAsmb2Ego, bool isEditedVehicle, IViewport viewport, int frameIndex)` — `public void` (via `Vehicle.Parts`, `KSA/Vehicle.cs:604`) | `KSA/PartTree.cs:912` | Yes | **Retyped @5402** — `Viewport` → `IViewport` (OLD `PartTree.cs:912`); body also gained a `Parachute.UpdateLineRenderData` loop (`:938-945`) | Mod passes `in matrixAsmb2Ego` -> `ref readonly`. Re-implements the original's body to bypass the cull check; because it calls the real `PartTree.UpdateRenderData`, tracked vehicles get chute lines too. Chute canopies are drawn by the new, uncalled-by-mod `Vehicle.UpdateParachuteRenderData(IViewport)` (`Vehicle.cs:3706`, invoked without a distance cull from `Program.cs:4329,4524`). |
+| 8 | Direct typed API (prefix body) | `i-feel-seen.lib/IFeelSeenPatches.cs:70` | `PartTree.UpdateRenderData(ref readonly double4x4 matrixAsmb2Ego, bool isEditedVehicle, IViewport viewport, int frameIndex)` — `public void` (via `Vehicle.Parts`, `KSA/Vehicle.cs:605`) | `KSA/PartTree.cs:1158` @5482 (signature same; body now `RenderData.EnsureBuilt` + `Compose/ComposeDynamic/ComposeGlass`, rev 5456) | Yes | **Retyped @5402** — `Viewport` → `IViewport` (OLD `PartTree.cs:912`); body also gained a `Parachute.UpdateLineRenderData` loop (`:938-945`) | Mod passes `in matrixAsmb2Ego` -> `ref readonly`. Re-implements the original's body to bypass the cull check; because it calls the real `PartTree.UpdateRenderData`, tracked vehicles get chute lines too. Chute canopies are drawn by the new, uncalled-by-mod `Vehicle.UpdateParachuteRenderData(IViewport)` (`Vehicle.cs:3706`, invoked without a distance cull from `Program.cs:4329,4524`). |
 | 9 | Direct typed API | `i-feel-seen.lib/IFeelSeenSubmod.cs:29` + `VehicleTracker` | `VehicleProvider.GetAllVehicles()` chain + `Vehicle.Id`; tracked entries compared by reference | `KSA/Universe.cs:94` etc. | Yes | Same | Shared enumerator (see eternal-flame #12). |
-| 10 | Harmony + Reflection | `i-feel-seen/Patcher.cs:15` -> `HotkeyGuard.cs:21` | `GameSettings.OnKeyAll(GlfwKeyEvent)` — `public static bool`, `nameof`-resolved | `KSA/GameSettings.cs:3301` | Yes | Same (file byte-identical) | Shared guard. |
+| 10 | Harmony + Reflection | `i-feel-seen/Patcher.cs:15` -> `HotkeyGuard.cs:21` | `GameSettings.OnKeyAll(GlfwKeyEvent)` — `public static bool`, `nameof`-resolved | `KSA/GameSettings.cs:3407` @5482 | Yes | Same signature | Shared guard. |
 | 11 | Lifecycle | `i-feel-seen/Mod.cs:19-69` | StarMap attrs (full set) | (StarMap.API package) | Yes | Same | Patches applied in `OnFullyLoaded` after tracker init. |
 
 **Game assets referenced** — None.
@@ -406,14 +539,16 @@ reload (`IFeelSeenSubmod.Dispose` -> `VehicleTracker.Clear`).
   - `VehicleProvider` chain — `Universe.CurrentSystem` (`KSA/Universe.cs:94`),
     `CelestialSystem.All` (`KSA/CelestialSystem.cs:64`),
     `LookupCollection<Astronomical>.UnsafeAsList()` (`KSA/LookupCollection.cs:210`),
-    `Vehicle.Id` (`KSA/Astronomical.cs:104`), `Program.ControlledVehicle` (`KSA/Program.cs:503`).
+    `Vehicle.Id` (`KSA/Astronomical.cs:104`), `Program.ControlledVehicle` (`KSA/Program.cs:502` @5482).
     Drives every mod's vehicle list. All signature-identical OLD->NEW.
-  - `Universe.ExecuteNextVehicleSolvers(double, SimStep)` (`KSA/Universe.cs:1834`) — patched by
-    eternal-flame and central to garrys-torch's timing rationale.
-  - `GameSettings.OnKeyAll` (`KSA/GameSettings.cs:3301`) — shared `HotkeyGuard`, `nameof`-resolved.
+  - `Universe.ExecuteNextVehicleSolvers(double, SimStep)` (`KSA/Universe.cs:2034` @5482) — patched by
+    eternal-flame (fuel + batteries since 5482) and kiwis-marbles; runs after the new PartTree flush.
+  - `Program.PrepareFrame` handoff (`PhysicsFrameHook`) and `JobSystems.NearestOrbitAndPerformanceWorker`
+    (`PhysicsFrameHook.JoinOrbitReaders`) — Garry's Torch, Godzilla, Dent Wizard and saves share them.
+  - `GameSettings.OnKeyAll` (`KSA/GameSettings.cs:3407` @5482) — shared `HotkeyGuard`, `nameof`-resolved.
 - **Embedded vs standalone Harmony:** when the unscience supermod is loaded it owns one
   `Harmony("MeowSci.Unscience")` that re-registers eternal-flame's solver prefix
-  (`unscience/Patcher.cs:144-178`), garrys-torch's KittenEva matrix postfix, and i-feel-seen's render
+  (`unscience/Patcher.cs:177-210`), garrys-torch's KittenEva matrix postfix, and i-feel-seen's render
   prefixes. Running a standalone mod *and* the supermod simultaneously would double-patch these
   targets — not a game-version risk, but a packaging note.
 - **Mutation vs read:** eternal-flame and garrys-torch **write** game state
@@ -541,10 +676,10 @@ weld timing invariant and managed Harmony tests remain in force.
 | Integration | Game source / invariant | Owner |
 |---|---|---|
 | `Vehicle.Parts.Parts`, `Part.SubParts`, `Part.Scale`, `PositionParentAsmb`, `Vehicle.CenterOfMassAsmb` | `Part.cs:704,738,787,815`; full parts have assembly-space positions; subparts inherit parent matrices. Smart scales full-part offsets about captured COM and multiplies full-part authored scales only. | `godzilla.lib/VesselScaleSnapshot.cs` |
-| `Part.ResetCachedPosMatrixValues`, `RefreshScale`, `UpdateBounds` | `Part.cs:1182,1192,1571`; a parent setter does **not** invalidate descendant caches. RefreshScale walks IRescale modules, connectors and subparts. `ScaleFactors(double3)` chooses the **largest axis**, so Basic XYZ physics is a uniform approximation. | snapshot refresh |
-| `PartTree.RecomputeAllDerivedData`, `Vehicle.UpdateAfterPartTreeModification` | `PartTree.cs:358`; `Vehicle.cs:1881`; rebuild scale-sensitive mass, stores, attachments, seat alignment, collider compound, aero and flight-computer data without replacing keyframe module state arrays. | snapshot refresh |
+| `Part.ResetCachedPosMatrixValues`, `RefreshScale`, `UpdateBounds` | `Part.cs:1241,1674,1251` @5482; a parent setter does **not** invalidate descendant caches. @5482 `ResetCachedPosMatrixValues` also invalidates the tree's cached render transforms (`Tree?.RenderData`, rev 5456), so setter-based edits re-render; direct field writes would not. RefreshScale walks IRescale modules, connectors and subparts. `ScaleFactors(double3)` chooses the **largest axis**, so Basic XYZ physics is a uniform approximation. | snapshot refresh |
+| `PartTree.RecomputeAllDerivedData`, `Vehicle.UpdateAfterPartTreeModification` | `PartTree.cs:475`; `Vehicle.cs:1894` @5482; rebuild scale-sensitive mass, stores, attachments, seat alignment, collider compound, aero and flight-computer data without replacing keyframe module state arrays. ⚠️ @5482 (rev 5464) `RecomputeAllDerivedData` only marks all derived data dirty; `UpdateAfterPartTreeModification` forces `StaticMassPropsAsmb`/`SubstanceStores` synchronously, the rest flushes at `Program.cs:2209` in the same frame, before vehicle workers (edits run at the handoff or after explicit solver waits). | snapshot refresh |
 | `KittenEva.Renderable`, private `KittenRenderable._characterAvatar`, typed `CharacterAvatar.Core.Scale` | `KittenRenderable.cs:12,108`; `CharacterAvatar.cs:34,211`; preserve captured avatar scalar and call shared `KittenScalePatches.SetScale` for XYZ correction. Same private matrix postfix as Garry's Torch. | snapshot character scaling |
-| `JobSystems.OrbitSolvers/VehicleSolver/ClothSolvers.Wait()` | `Program.cs:2103-2105`; queued edits already run after waits; unload explicitly waits before restoring native modules/shapes. | `GodzillaSubmod.Dispose` |
+| `JobSystems.OrbitSolvers/VehicleSolver/ClothSolvers.Wait()` | `godzilla.lib/GodzillaSubmod.cs:232-234`; game waits at `Program.cs:2149-2160` @5482. Queued edits run after those waits (and, since 5482, after `PhysicsFrameHook` joins the nearest-orbit job when work is queued); unload explicitly waits before restoring native modules/shapes. | `GodzillaSubmod.Dispose` |
 | `Vehicle.IsDisposed`, live system vehicle identity, part reference topology | Skip destroyed/unloaded objects. Staging/docking restores surviving captured parts and releases ownership; do not mutate departed pieces' modules. | `GodzillaSubmod.CheckSessions` |
 | StarMap / ISubmod | Thin development host + Unscience registration; only Unscience deploys. `HotkeyGuard`, shared physics hook and kitten correction installed by hosts. | `godzilla/Mod.cs`, `Patcher.cs`, `unscience/Mod.cs` |
 
@@ -559,7 +694,7 @@ including queued edits before welds, deferred reentrant work, exceptions and unl
 Full solution compiles against 5402. Native collisions, scale-sensitive module behavior, kitten fur,
 actuation at scale, docking/staging and unload still need a live game pass.
 
-### Godzilla visual-only rendering (@5402)
+### Godzilla visual-only rendering (@5402; cull seam retargeted @5482)
 
 `VisualScalePatches` is installed/removed by both hosts. With Scale physics off, sessions keep `Part.Scale`, full-part
 positions, `CharacterAvatar.Core.Scale`, mass/modules and nominal physical radii at captured size;
@@ -571,20 +706,23 @@ it deliberately has different geometry from physical Basic's absolute per-part o
 
 | New integration | Current source / invariant |
 |---|---|
-| `Vehicle.UpdateRenderData(IViewport,int)` and `Vehicle.GetWorldMatrix(Camera)` transpilers | `Vehicle.cs:3662–3691`: each contains exactly one `MeanRadius` getter read for the one-pixel cull. Replace only that read with physical radius × max visual axis. Guarded match count; patch installation rolls back on failure. Never patch the radius getter globally. |
+| `Vehicle.UpdateRenderData(IViewport,int)` call-site transpiler (`RenderCullTranspiler`, `VisualScalePatches.cs:25,70-92`) | **@5482** `Vehicle.cs:3713-3726`: the one-pixel cull is a call to the new public non-virtual `Vehicle.IsLargeEnoughToRender(Camera)` (`:3707-3711`, sole caller `:3716`); the body has no `MeanRadius` read. Redirect exactly one such call to `IsLargeEnoughToRenderScaled(Vehicle, Camera)` (`:87-91`), a mirror using physical radius × max visual axis. Do **not** patch the helper itself (tiny, inlinable, would leak into future callers). Guarded match count; installation rolls back on failure. Never patch the radius getter globally. At 5438 this method read `MeanRadius` inline; the old radius transpiler found 0 reads at 5482 and rolled back all five patches. |
+| `Vehicle.GetWorldMatrix(Camera)` radius transpiler (`RenderRadiusTranspiler`, `VisualScalePatches.cs:26,96`) | `Vehicle.cs:3694-3705` @5482 (body identical): exactly one `MeanRadius` getter read for the kitten null-cull. Replace only that read. |
 | `Vehicle.GetWorldMatrix(Camera)` postfix | Used by `KittenEva.UpdateRenderData` (`KittenEva.cs:1062`); premultiply its result by visual body-axis scale. Preserve world translation, null culling and other prefixes' transforms (I Feel Seen). Avatar/helmet/fur/MMU inherit; `ModelToBodyMatrix` and bone-local queries remain physical. |
-| `PartTree.UpdateRenderData(ref readonly double4x4,bool,IViewport,int)` prefix/finalizer | `PartTree.cs:912`; `OwningVehicle` field gates lookup. Premultiply draw input by `T(-COM) * Scale * T(COM)` using live `Vehicle.CenterOfMassAsmb`. The finalizer restores the caller's readonly matrix even on exceptions. Part models/dynamic/glass and local draw consumers inherit; physical part/assembly matrices remain unchanged. |
+| `PartTree.UpdateRenderData(ref readonly double4x4,bool,IViewport,int)` prefix/finalizer | `PartTree.cs:1158` @5482 (signature same); `OwningVehicle` field (`:46`) gates lookup. @5482 the body calls `RenderData.EnsureBuilt` then `Compose/ComposeDynamic/ComposeGlass`, which apply the ego matrix per frame (`Matrices[i] * ego`, not cached), so substituting the input still scales every draw. Premultiply draw input by `T(-COM) * Scale * T(COM)` using live `Vehicle.CenterOfMassAsmb`. The finalizer restores the caller's readonly matrix even on exceptions. Part models/dynamic/glass and local draw consumers inherit; physical part/assembly matrices remain unchanged. |
 | Host lifecycle | `godzilla/Patcher.cs`, `unscience/Patcher.cs`: add `VisualScalePatches.Apply/Remove`; no new StarMap hooks. Queued channel setters convert current sessions in order with Apply/Restore; legacy `SetVisualOnly` sets both. |
 
 Bubble envelopes use physical `ReadOnlyVehicle/VehicleProperties.BoundingSphereRadiusBody`
 (`PhysicsBubble.cs:357,374`), which the render hooks never modify. Camera targeting and picking
 remain physical-sized; contacts follow the independent collider channel. Separate world-space exhaust and simulated cloth are not scaled by
 these hooks. `Program.RefreshVehiclesInFrame` includes all current-system vehicles (`Program.cs:583`);
-recheck this if upstream adds earlier size culling. No new shader, asset or private field dependency.
+recheck this if upstream adds earlier size culling (@5482 unchanged, `Program.cs:582`). No new shader, asset or private field dependency.
 
 Managed checks cover planet-scale multipliers, no physics refresh, both cull paths, COM/XYZ math,
 exception restoration, mode transitions, kitten scalar isolation, external render prefix coexistence
-and patch reload. Native bubbles, planet-scale clipping/shadows/LOD, terrain overlap, Iron Man early
+and patch reload. Since 5482 the fixture mirrors the `UpdateRenderData` → `IsLargeEnoughToRender`
+shape (`godzilla.tests/Fixture.cs:75-89`), so the call-site transpiler is exercised against the
+current layout. Native bubbles, planet-scale clipping/shadows/LOD, terrain overlap, Iron Man early
 part submission and restoration still require an in-game acceptance pass.
 
 ### Godzilla independent collider scaling (@5402)
@@ -598,10 +736,10 @@ nominal physical bounds), then register a `ColliderScaleState` and rebuild only 
 
 | Integration | Source / invariant |
 |---|---|
-| `ColliderModule.SetScale(in ScaleFactors)` prefix/finalizer | `ColliderModule.cs:46`: substitute only this module's shape scale. **Restore the readonly input on success/exception**: `Part.RefreshScale` passes the same local to all `IRescale` modules (`Part.cs:1571`); leaking it changes mass/fuel modules. Native template-owned/instance-owned shape creation and disposal remain in KSA. |
-| `ColliderModule.PositionVehicleAsmb` getter postfix | `ColliderModule.cs:42`: collider-only mode moves centers around live COM with whole-craft XYZ; dimensions use largest axis. Physics-only mode reconstructs the original part hierarchy using captured full-part scales/positions, captured Basic child scales, and live child animation/rotations. Orientation remains native `Collider2VehicleAsmb`. |
-| `Vehicle.UpdateCollisionGeometry()` private method | `Vehicle.cs:1931`: open `Action<Vehicle>` delegate rebuilds compounds without mass/aero/module refresh. Prefix/finalizer preserve `GetPhysicsStatesMutable().Props.{BoundingBoxAsmb,GeometricCenterAsmb,BoundingSphereRadiusBody}` during override/rebuild, including exceptions. This intentionally keeps bubble/terrain coverage tied to the physics channel. New string reflection watchpoint. |
-| `Vehicle.Parts.Modules.Get<ColliderModule>()`, `ColliderModule.Parent`, `PositionPartAsmb`, `NeedsColliderUpdate`, `ScaleFactors.Scale` | Typed native shape/pose inputs. Reflag colliders after collision-only rebuilds and full snapshot refreshes because native compound rebuild clears the flags. `ConstraintSim.UpdateShape` (`ConstraintSim.cs:424`) must return true for `PushBodyStateToSim` to refresh broad-phase bounds (`:261`). No new ConstraintSim patch. |
+| `ColliderModule.SetScale(in ScaleFactors)` prefix/finalizer | `ColliderModule.cs:48` (file byte-identical @5482): substitute only this module's shape scale. **Restore the readonly input on success/exception**: `Part.RefreshScale` passes the same local to all `IRescale` modules (`Part.cs:1674` @5482); leaking it changes mass/fuel modules. Native template-owned/instance-owned shape creation and disposal remain in KSA. |
+| `ColliderModule.PositionVehicleAsmb` getter postfix | `ColliderModule.cs:44`: collider-only mode moves centers around live COM with whole-craft XYZ; dimensions use largest axis. Physics-only mode reconstructs the original part hierarchy using captured full-part scales/positions, captured Basic child scales, and live child animation/rotations. Orientation remains native `Collider2VehicleAsmb`. |
+| `Vehicle.UpdateCollisionGeometry()` private method | `Vehicle.cs:1944` @5482 (body identical): open `Action<Vehicle>` delegate rebuilds compounds without mass/aero/module refresh. Prefix/finalizer preserve `GetPhysicsStatesMutable().Props.{BoundingBoxAsmb,GeometricCenterAsmb,BoundingSphereRadiusBody}` during override/rebuild, including exceptions. This intentionally keeps bubble/terrain coverage tied to the physics channel. New string reflection watchpoint. |
+| `Vehicle.Parts.Modules.Get<ColliderModule>()`, `ColliderModule.Parent`, `PositionPartAsmb`, `NeedsColliderUpdate`, `ScaleFactors.Scale` | Typed native shape/pose inputs. Reflag colliders after collision-only rebuilds and full snapshot refreshes because native compound rebuild clears the flags. `ConstraintSim.UpdateShape` (`ConstraintSim.cs:453` @5482) must return true for `PushBodyStateToSim` (`:290`) to refresh broad-phase bounds. No new ConstraintSim patch. ⚠️ @5482 (rev 5465) `UpdateTerrainForNextStep` (`:425`) skips sleeping bodies: a resting landed vessel whose colliders grow keeps its old terrain patch until woken (`UpdateSimFromVehicle`, `:340`, wakes non-on-rails bodies). Live check; optional `Vehicle.TakeOffRails()` hardening. |
 | `Part.PartParent`, `ScaleTotal`, `Asmb2ParentAsmb`, `Asmb2VehicleAsmb`, `PositionVehicleAsmb` | `Part.cs:704–815`; reconstruct collision-only original transforms without changing cached game matrices. `KeyframeAnimationModule.cs:334–363` updates child transforms and marks colliders dirty; preserve this native pose path. |
 | Lifecycle / resources | Module+vehicle registrations are changed at the shared handoff after worker waits; workers read stable registrations. Clear restores surviving modules through native SetScale, rebuilds/flags the compound and retains retry state if restoration throws. Prune forgets disposed/unloaded references. Collider membership changes are checked alongside part topology. Both hosts install/remove `ColliderScalePatches`. |
 
@@ -649,18 +787,21 @@ Added against KSA **2026.9.10.5438**. `dent-wizard.lib` owns a regular `ISubmod`
 | `VehicleProvider.GetAllVehicles(includeDebris: true)` → `Universe.CurrentSystem.All`; `Vehicle.Id`, `IsDisposed`, `IsEditedVehicle`, `IsDebris`; `KittenEva` | Filterable source dropdown includes every live flight vehicle, EVA and debris. Retain exact object identity; reject disappeared/replaced objects at the handoff. |
 | `Vehicle.TotalMass` (`float`, kilograms, includes propellant) | Live source-entry and selected-combo mass labels. Fixed ImGui item IDs prevent changing fuel mass from changing widget identity. Read-only native telemetry; no persistence or physics mutation. |
 | `Program.EditorFlag`, `Program.GetMainCamera`, `Program.MainViewport`, `Program.HoveredViewport.IsMain()`; `Cursor.GetEgoRay` | Main-camera-only world click; ImGui capture suppresses UI clicks. Ray is EGO/ecliptic; source CoM goes to camera origin, not near-plane ray origin. |
-| `Vehicle.GetMatrixAsmb2Ego`; `PartTree.Parts`, `Part.RayCastEgo` | Closest visible art-mesh triangle, including nested parts. Source is excluded. Distance along the ray reconstructs the hit in EGO. No collision mesh/shader coupling. |
+| `Vehicle.GetMatrixAsmb2Ego`; `PartTree.Parts`, `Part.RayCastEgo` | Closest visible art-mesh triangle, including nested parts. Source is excluded. Distance along the ray reconstructs the hit in EGO. No collision mesh/shader coupling. @5482 `RayCastEgo` (`Part.cs:2534`) rejects rays missing a bounding sphere (`BoundingBoxPartAsmb` × largest `ScaleTotal` axis, `:2544-2549`) before the sub-part loop; conservative, same path as KSA hover picking. |
 | `KittenEva`, `PartTree.Root`, `Part.PositionEgo`, `Part.ScaleTotal`, `Vehicle.BoundingSphereRadiusBody`, `Double3Ex.GetAbsoluteLargestElement`, `Ray.Raycast(BoundingSphere3D)` | EVA sphere proxy matching stock/Graffiti; ordinary art-mesh picking is unavailable for the avatar. Separate canopy cloth and imported statics/clutter are not targets. |
 | `Camera.GetPositionEgo(IPosition)`, `Camera.NearbyCelestial`; `Celestial.GetCce2Ccf`, `MeanRadius`, `GetTerrainHeightFromDirCcf(accurate: true)` | Floating-origin-safe click offsets; 128 quadratic terrain samples then 24 bisections, maximum 10 km. Terrain competes by hit distance. Narrow features can be missed. |
 | `Vehicle.Parent`, `IParentBody.GetCce2Cci`, `Vehicle.GetPositionCci`, `GetVelocityCci`, `BodyRates`, `GetBody2Cci` | Vessel offsets captured in parent CCI; at handoff use target's committed translation and `v_target + omega_CCI × hitOffset + speed × direction`. Body rates must remain body-frame radians/s. |
 | `IParentBody.GetCcf2Cci(UniverseTime)`, `GetAngularVelocityCci` | Terrain click/camera positions stored in CCF, transformed at state time. Surface velocity is angular velocity crossed with hit position in CCI. |
-| `PhysicsFrameHook.BeforePhysics`, `IsApplied`; `Program.PrepareFrame(double,double)` existing transpiler; `SimStep.PreviousTime` | One pending shot consumed after result application, before next cloth/vehicle/orbit snapshots. No render-loop teleport. Existing hook must validate ordered solver seams; missing hook disables Aim. World reset clears the request before dispatch. |
+| `PhysicsFrameHook.BeforePhysics`, `IsApplied`, `JoinOrbitReaders()`; `Program.PrepareFrame(double,double)` existing transpiler; `SimStep.PreviousTime` | One pending shot consumed after result application, before next cloth/vehicle/orbit snapshots. No render-loop teleport. Existing hook must validate ordered solver seams; missing hook disables Aim. World reset clears the request before dispatch. @5482 `FirePending` calls `JoinOrbitReaders()` (`dent-wizard.lib/DentWizardSubmod.cs:48`, → `JobSystems.NearestOrbitAndPerformanceWorker.Wait()`, once per frame) before the launch teleport, because the hover `NearestOrbitPointJob` queued at `Program.cs:2188-2192` may still read the source's cached orbit points; idle frames do not wait. |
 | `Orbit.CreateFromStateCci(IParentBody,UniverseTime,double3,double3,byte4)`, `Orbit.OrbitLineColor`; `Vehicle.Teleport(Orbit?,doubleQuat?,double3?)`, `FlightPlan`, `UpdatePerFrameData` | Creates target-parent orbit at the committed state timestamp. Null attitude/rates preserve source orientation/spin. Native Teleport leaves old bubble, updates parent Children via SetFlightPlan, rewrites physics with Situation.Maneuvering. If native trajectory computation rejects the orbit, unchanged FlightPlan identity reports failure. Recheck these semantics each upgrade. |
 | `ISubmod.Initialize/Update/RenderContent/RenderFloatingWindows/Dispose`; `ISaveParticipant`, ID `dent-wizard`, v1; host `HotkeyGuard` | Standard embedding, one-shot or automatic re-fire on each click while panel is collapsed, transient form/mode/shot reset on load and unsubscribe on unload. Actual launch effects are native vessel state. |
 
 No new Harmony target, reflection lookup, shader, byte offset, game asset or collision override.
 The standalone host installs/removes shared HotkeyGuard/PhysicsFrameHook; Unscience explicitly
-ensures the existing shared handoff and owns its lifetime.
+ensures the existing shared handoff and owns its lifetime. The only 5482 change is the typed worker
+join above (managed check "shot joins once, idle frame doesn't" in `dent-wizard.tests`). Worker-side
+bubble eviction (rev 5476) now handles a cross-parent source after the step instead of in
+`ExecuteNextVehicleSolvers`; live check.
 
 Validation: full solution build and `dent-wizard.tests` managed production arithmetic/launch
 boundary fixtures pass. The combined upstream check also links the real Kitchen Sink registry:
@@ -683,7 +824,7 @@ along that tangent indefinitely. Long, slow, or thrusting-target shots can miss.
 ## Kitchen Sink selective G-load protection
 
 Kitchen Sink adds an opt-in, scene-saved vehicle registry and a guarded transpiler on
-`PhysicsBubble.DetectStructuralFailure(VehicleUpdateState)` (5438:873, unchanged from 5402:782).
-It gates only the GLoadFraction comparison (5438:890, previously 5402:799), preserving contacts, part damage, pressure damage and real
+`PhysicsBubble.DetectStructuralFailure(VehicleUpdateState)` (5482:958, body identical to 5438:873 and 5402:782).
+It gates only the GLoadFraction comparison (5482:975; 5438:890; 5402:799), preserving contacts, part damage, pressure damage and real
 load telemetry. Both hosts install it. Full surface/lifecycle map and native acceptance limits:
 [UI/customization](ui-customization.md#kitchen-sink).

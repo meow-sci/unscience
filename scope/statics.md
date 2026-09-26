@@ -1,14 +1,67 @@
 # Sphinx — body-fixed imported GLB statics
 
-## Current verification — 5402 → 5438
+## KSA 5482 (5438 → 5482) verification
+
+No code migration is required in Sphinx. This pass compared `2026.9.22.5482` (NEW) with
+`2026.9.10.5438` (OLD) using both supplied decomp/Content trees. It is managed/static only: the full
+solution build passes (including `sphinx.lib`, which was blocked only by the `pebbles.lib` compile break),
+and `sphinx.tests` passes. No native KSA run was possible.
+Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
+
+- **Unchanged render surface.**
+  - `StaticObjectRenderer.cs` and `StaticObjectModel.cs` are byte-identical, so the three hooks,
+    descriptor layouts and `PerDrawData`/`DrawBucket` still match. The hooks are `UpdateRenderData :275`,
+    `WriteCommandsColor :306` (private, string) and `WriteCommandsPrePass :367`.
+  - The three StaticObject shaders are unchanged.
+  - `Core/Renderer.cs` changes are additive only (present-wait and the frame queue).
+  - Sphinx does not use the 5474 `ViewHandle` mesh buckets, `SuperMesh`, `StaticMeshRenderable`, or the
+    `StaticObjectAssetBundler` / GLB-collider validation changes.
+- **Unchanged physics hooks.** `ConstraintSim` keeps these signatures and parameter names:
+  `UnlockShapes :124`, `IsGroundSurfaceFor :169`, `TryResetForPool :193`, `Dispose :228`,
+  `UpdateSimForSnappedOrigin :309` and `BeginStaticObjectPass :545`. The body of `BeginStaticObjectPass`
+  is identical. `BepuHandles.IsGroundSurface` is now `public readonly bool` (`:118`); only the pool helper
+  changed. No new nullable annotations appear on the members Sphinx uses.
+- **`NarrowPhaseCallbacks.AllowContactGeneration` body changed (semantic drift, no code change).**
+  - The transpiler invariant still holds: there is exactly one `BepuHandles.IsGroundSurface` call
+    (`NarrowPhaseCallbacks.cs:56`). The method now ends in `return flag || value.BepuHandles.IsGroundSurface(...)`,
+    where `flag` is `Sim.TerrainBlocks?.IsTerrainBlock(handle)` (`:51`). Sphinx handles are never terrain blocks.
+  - New earlier returns: a clutter static always generates contacts (`:46-49`). A static paired with a
+    body that is not a vehicle now returns `Sim.ClutterStatics?.IsClutterBody(body)` (`:52-55`), where it
+    previously returned `false`.
+  - As a result, displaced dynamic clutter bodies (rev 5447) now collide with Sphinx box and mesh statics.
+    This is the desired outcome, because `HandleManifoldForClutterBody` (`ConstraintSim.cs:999`) passes
+    non-clutter statics through as normal contacts. Live check.
+- **`IsGroundSurfaceFor` gained a `TerrainBlocks` clause (`ConstraintSim.cs:169-180`).** The Sphinx
+  postfix (`__result |= Owns(...)`) is unaffected, and the call sites are unchanged (`ConstraintSim.cs:1186,1227`,
+  `NarrowPhaseCallbacks.cs:150`).
+- **Physics islands (rev 5452).** `BubbleStepJob.cs` was removed, and bubbles now step as
+  `VehicleUpdateTask.ContactIsland` batch jobs (`VehicleUpdateTask.cs:46-80,679`). Sphinx's per-simulation
+  ownership still holds:
+  - there is still one `ConstraintSim` per bubble, driven by one worker at a time;
+  - the `BeginStaticObjectPass` call sites are unchanged (`PhysicsBubble.cs:2151,2846`), so `Sync` stays
+    idempotent per segment;
+  - pooling still goes through `ConstraintSimPool` → `TryResetForPool`, which fires the `Clear` prefix;
+  - `ReassignDivergentVehicles` and `WakeVehiclesSupportedBy` do not touch statics.
+- **Pre-existing, unchanged.**
+  - `AllowContactGeneration` and `IsGroundSurfaceFor` are still `[AggressiveInlining]` members of a
+    Bepu callback struct, so native collision acceptance is still open.
+  - Moving or removing a Sphinx static under a landed on-rails vehicle does not wake that vehicle. The
+    new `PhysicsBubble.WakeVehiclesSupportedBy(VehicleUpdateState)` (`:252`, rev 5471) only handles a
+    departing vehicle.
+- **Live checks pending.**
+  - Knocked-loose clutter collides with Sphinx statics.
+  - Statics still collide with vessels and EVA kittens across merged and split islands.
+  - The native acceptance lists below.
+
+## Verification — 5402 → 5438 (historical)
 
 Sphinx uses renamed `VkIndexType.UInt32` with unchanged index representation. StaticObjectRenderer, its three shaders, BepuHandles and NarrowPhaseCallbacks are byte-identical. Exact render overloads, `Sim` field, single IsGroundSurface transpiler match, origin-snap and reset/dispose hooks remain. New contact-point deformation and segmented bubble stepping do not change per-simulation ownership, but collision, origin shifts, mid-step merges and resource retirement need native acceptance.
 
 Verified against `2026.9.10.5438` using both supplied source/Content trees.
 See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
-Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+Older catalog tables below retain their explicitly cited build/line numbers unless marked @5482.
 
-Baseline: KSA **2026.9.7.5402**; source paths below are relative to
+Baseline: KSA **2026.9.7.5402** (re-verified at 5438 and 5482, see above); source paths below are relative to
 `../ksa-game-assemblies/current/decomp`, shaders to its sibling `Content` directory.
 Implementation: `sphinx.lib`; hosts: Unscience (distributed), Sphinx (development only).
 
@@ -66,11 +119,11 @@ is shared with rendering to preserve Y-up/slope basis. Bubble translation subtra
 
 | Hook / direct seam | Use and update requirement |
 |---|---|
-| `ConstraintSim.BeginStaticObjectPass()` postfix | Refresh our handles once per substep before narrow phase; read `HandleToState`, `VehicleUpdateState.Origin/GetReadOnlyStates`, `ReadOnlyPhysicsStates.Kinematic.PositionPhys`. Require matching `BubbleOrigin.Parent` and `BubbleFrame.Ccf`; include statics within 2 km + shape radius of any bubble vehicle. |
+| `ConstraintSim.BeginStaticObjectPass()` postfix | (@5482 `:545`, body identical; call sites `PhysicsBubble.cs:2151,2846` unchanged under islands.) Refresh our handles once per substep before narrow phase; read `HandleToState`, `VehicleUpdateState.Origin/GetReadOnlyStates`, `ReadOnlyPhysicsStates.Kinematic.PositionPhys`. Require matching `BubbleOrigin.Parent` and `BubbleFrame.Ccf`; include statics within 2 km + shape radius of any bubble vehicle. |
 | `ConstraintSim.UpdateSimForSnappedOrigin(VehicleUpdateState)` postfix | Refresh poses after origin shifts; inspect ordering when the bubble reframes. |
 | `ConstraintSim.TryResetForPool()` / `Dispose()` prefixes | Remove all owned statics before the game clears/reuses handles or nulls Simulation. Shape ownership stays with entries. |
-| `ConstraintSim.IsGroundSurfaceFor(VehicleUpdateState,StaticHandle)` postfix | Recognize only Sphinx-owned handles in that exact simulation; stock results remain true. Required for ground friction, EVA contact normals and terrain-contact bookkeeping. Recheck callers/inlining on updates. |
-| **String/IL watchlist:** internal `KSA.NarrowPhaseCallbacks.AllowContactGeneration(int,CollidableReference,CollidableReference,ref float)` and its `Sim` field | Replace exactly one call to `BepuHandles.IsGroundSurface(StaticHandle)` with a helper that also checks the callback's own simulation. Validate the one-call invariant; preserve stock filtering and Pebbles' early return. Without this hook Sphinx statics never generate contacts. |
+| `ConstraintSim.IsGroundSurfaceFor(VehicleUpdateState,StaticHandle)` postfix | Recognize only Sphinx-owned handles in that exact simulation; stock results remain true. Required for ground friction, EVA contact normals and terrain-contact bookkeeping. Recheck callers/inlining on updates. @5482 `ConstraintSim.cs:169` also accepts `TerrainBlocks` handles; callers `:1186,1227` and `NarrowPhaseCallbacks.cs:150` unchanged. |
+| **String/IL watchlist:** internal `KSA.NarrowPhaseCallbacks.AllowContactGeneration(int,CollidableReference,CollidableReference,ref float)` and its `Sim` field (`sphinx.lib/SphinxPhysicsPatches.cs:23-25,53,71`) | Replace exactly one call to `BepuHandles.IsGroundSurface(StaticHandle)` with a helper that also checks the callback's own simulation. Validate the one-call invariant; preserve stock filtering and Pebbles' early return. Without this hook Sphinx statics never generate contacts. @5482 (`NarrowPhaseCallbacks.cs:24-57`): still one call (`:56`, now `flag \|\| …IsGroundSurface`, `flag` = `TerrainBlocks.IsTerrainBlock`); new earlier returns for clutter statics (`:46-49`) and for static vs non-vehicle bodies (`IsClutterBody`, `:52-55`), so displaced clutter bodies collide with Sphinx statics. |
 | `ConstraintSim.Simulation`, `Simulation.Statics.{Add,ApplyDescription,Remove}`, `StaticDescription`, `RigidPose`, `StaticReference.{Pose,Shape}`, `StaticHandle`, `TypedIndex` | Per-simulation handles reference entry-owned global shapes. Default awakening wakes bodies when supporting statics are moved/removed. No shape changes from solver threads. |
 | `JobSystems.{VehicleSolver,ClothSolvers}.Wait()` | Before main-thread queued edits, body pruning, disposal or unpatch. All bubble handles detach before freeing shapes. No mutation during narrow-phase callbacks. |
 
@@ -143,7 +196,7 @@ RGBA decoder and `GlbTexture.Upload/Release`; it does not dispose borrowed stock
 
 ## Validation
 
-Full solution build: zero warnings/errors against 5402. Managed sphinx.tests exercises 200
+Full solution build: zero warnings/errors against 5402, 5438 and 5482. Managed sphinx.tests exercises 200
 scale/rotation/offset grounding cases plus invalid and overflowing inputs. UV mapping tests cover
 scale/offset ordering, matching backfaces, 200 repeated edits/resets, unchanged source vertices and
 geometry, invalid/overflow rejection and the vertex ABI. Pebbles managed tests cover importer and

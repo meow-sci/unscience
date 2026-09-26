@@ -1,14 +1,28 @@
 # Audio — BYO Music integration
 
-## Current verification — 5402 → 5438
+## KSA 5482 (5438 → 5482) verification
+
+No code migration required. Verified against `2026.9.22.5482` (NEW) vs `2026.9.10.5438` (OLD) with
+both supplied decomp/Content trees; managed/static only (full solution build and `byo-music.tests`
+pass). `Brutal.FmodApi` / `Brutal.FmodApi.Studio` decomp are identical (the `Brutal.Fmod.dll` bytes
+differ only as a rebuild). `GameAudio`, `SpatialAudio`, `MusicPlayList`, `ChannelGroupReference`,
+`ChannelWrapper`, `SoundReference` and `ModLibrary` are byte-identical, and the audio Content is
+unchanged. `Vehicle.Id/IsDisposed` are unchanged (`IsDisposed :618`); `Part.Tree` becoming nullable
+does not reach BYO Music. Current lines: `GameAudio.System :55` (created `:106`),
+`GetAudioCamera :65`, `CreateFmodSound :270`, Sfx group registration `:121-128`;
+`SpatialAudio` ctor `:36`, `PositionView/VelocityView :55,60`; `ChannelWrapper.SetSpatialAudio :434`.
+Live audio pass unchanged from below (no new checks).
+Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
+
+## Verification — 5402 → 5438 (historical)
 
 The FMOD wrapper package changed, but BYO Music's named sound/channel APIs and lifecycle still compile against the current DLLs. GameAudio.Update only adds ExplosionSoundSystem.UpdateAudio; stream ownership, listener registration and vehicle-relative positioning contracts remain. No new reflection or audio asset dependency. Codec playback, spatial gain, repeat/target-loss and native unload still require a live audio pass.
 
 Verified against `2026.9.10.5438` using both supplied source/Content trees.
 See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
-Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+Older catalog tables below retain their explicitly cited build/line numbers (5482 lines are in the top section).
 
-Cataloged against KSA 2026.9.7.5402, `../ksa-game-assemblies/current/decomp`. BYO Music is now an
+Cataloged against KSA 2026.9.7.5402, `../ksa-game-assemblies/current/decomp`; re-verified at 5438 and 5482. BYO Music is now an
 Unscience `ISubmod`; its standalone host remains a compile-only development reference.
 
 | Integration | Source / invariant | Consumer |

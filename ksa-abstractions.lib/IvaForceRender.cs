@@ -14,11 +14,16 @@ public static class IvaForceRender
 {
     private static bool _enabled;
     private static readonly List<PartModelModule.Template> _mutatedTemplates = new();
+    // Editor-only reveal: internal templates known so far, and those revealed for one Compose call.
+    private static readonly List<PartModelModule.Template> _internalTemplates = new();
+    private static readonly List<PartModelModule.Template> _revealed = new();
+    private static bool _internalTemplatesDirty = true;
 
     private static MethodBase? _ctorOriginal;
     private static MethodInfo? _ctorPostfix;
-    private static MethodBase? _addInstanceOriginal;
-    private static MethodInfo? _addInstancePostfix;
+    private static MethodBase? _composeOriginal;
+    private static MethodInfo? _composePrefix;
+    private static MethodInfo? _composeFinalizer;
 
     public static bool Enabled
     {
@@ -43,10 +48,13 @@ public static class IvaForceRender
         _ctorPostfix = typeof(IvaForceRender).GetMethod(nameof(CtorPostfix), BindingFlags.NonPublic | BindingFlags.Static)!;
         harmony.Patch(_ctorOriginal, postfix: new HarmonyMethod(_ctorPostfix));
 
-        _addInstanceOriginal = ResolveAddInstance();
-        _addInstancePostfix = typeof(IvaForceRender).GetMethod(nameof(AddInstanceWithDentPostfix),
-            BindingFlags.NonPublic | BindingFlags.Static)!;
-        harmony.Patch(_addInstanceOriginal, postfix: new HarmonyMethod(_addInstancePostfix));
+        // KSA 5482 raster-composes static part models from cached batches and applies the
+        // internal/IVA gate itself, without calling PartModel.AddInstance.
+        _composeOriginal = AccessTools.Method(typeof(PartTreeRenderData), nameof(PartTreeRenderData.Compose), new[] { typeof(Brutal.Numerics.double4x4).MakeByRefType(), typeof(bool), typeof(IViewport), typeof(int) })
+            ?? throw new MissingMethodException(nameof(PartTreeRenderData), nameof(PartTreeRenderData.Compose));
+        _composePrefix = typeof(IvaForceRender).GetMethod(nameof(ComposePrefix), BindingFlags.NonPublic | BindingFlags.Static)!;
+        _composeFinalizer = typeof(IvaForceRender).GetMethod(nameof(ComposeFinalizer), BindingFlags.NonPublic | BindingFlags.Static)!;
+        harmony.Patch(_composeOriginal, prefix: new HarmonyMethod(_composePrefix), finalizer: new HarmonyMethod(_composeFinalizer));
 
         Console.WriteLine("ksa-abstractions: IvaForceRender patches applied");
     }
@@ -58,29 +66,20 @@ public static class IvaForceRender
     {
         if (_ctorOriginal != null && _ctorPostfix != null)
             harmony.Unpatch(_ctorOriginal, _ctorPostfix);
-        if (_addInstanceOriginal != null && _addInstancePostfix != null)
-            harmony.Unpatch(_addInstanceOriginal, _addInstancePostfix);
+        if (_composeOriginal != null && _composePrefix != null)
+            harmony.Unpatch(_composeOriginal, _composePrefix);
+        if (_composeOriginal != null && _composeFinalizer != null)
+            harmony.Unpatch(_composeOriginal, _composeFinalizer);
 
         _ctorOriginal = null;
         _ctorPostfix = null;
-        _addInstanceOriginal = null;
-        _addInstancePostfix = null;
+        _composeOriginal = null;
+        _composePrefix = null;
+        _composeFinalizer = null;
+        _internalTemplates.Clear();
+        _internalTemplatesDirty = true;
 
         Console.WriteLine("ksa-abstractions: IvaForceRender patches removed");
-    }
-
-    /// <summary>
-    /// Resolves the shared private submission method introduced with dent-aware part rendering.
-    /// Both public wrappers call it, so the editor duplicate is added once per stock submission.
-    /// </summary>
-    private static MethodBase? ResolveAddInstance()
-    {
-        MethodBase? submission = AccessTools.Method(typeof(PartModel), nameof(PartModel.AddInstance), new[]
-        {
-            typeof(PartModel.PerInstanceData), typeof(KSA.Deformation.PerInstanceDent),
-            typeof(IViewport), typeof(int)
-        });
-        return submission?.IsPrivate == true ? submission : null;
     }
 
     /// <summary>
@@ -98,6 +97,7 @@ public static class IvaForceRender
     /// </summary>
     private static void CtorPostfix(PartModel __instance)
     {
+        _internalTemplatesDirty = true;
         if (!_enabled) return;
         if (!__instance.Template.Internal) return;
 
@@ -106,30 +106,43 @@ public static class IvaForceRender
     }
 
     /// <summary>
-    /// Postfix for the KSA 5438 private PartModel.AddInstance submission. It keeps internal meshes
-    /// visible in the vehicle editor and copies the native dent record alongside its duplicate;
-    /// otherwise the native dent buffer and instance list would have different lengths.
-    /// Both viewport gates mirror the original's gates because Harmony postfixes still run after an
-    /// original early return.
+    /// Keeps internal meshes visible in the vehicle editor outside IVA. Reveals every internal
+    /// template for this one Compose call so stock code appends instances and dents consistently;
+    /// <see cref="ComposeFinalizer"/> restores them even when Compose throws. Only the main-thread
+    /// render path reads <c>Template.Internal</c>, so no other reader observes the change.
     /// </summary>
-    private static void AddInstanceWithDentPostfix(PartModel __instance,
-        PartModel.PerInstanceData instanceData, KSA.Deformation.PerInstanceDent dentInstance,
-        IViewport viewport)
+    private static void ComposePrefix(IViewport inViewport)
     {
-        if (!ShouldReAdd(__instance, viewport)) return;
-        PartModel.ViewportData viewportData = PartModel.ViewportData.Get(__instance, viewport);
-        viewportData.InstanceList.Add(instanceData);
-        viewportData.DentInstanceList.Add(dentInstance);
+        if (Program.Editor == null || inViewport.Mode == CameraMode.IVA
+            || !inViewport.HasAny(ViewportOptionFlags.RenderPartModels)) return;
+        if (_internalTemplatesDirty) RebuildInternalTemplates();
+        foreach (var template in _internalTemplates)
+        {
+            if (!template.Internal) continue;
+            template.Internal = false;
+            _revealed.Add(template);
+        }
     }
 
-    private static bool ShouldReAdd(PartModel instance, IViewport viewport)
+    private static Exception? ComposeFinalizer(Exception? __exception)
     {
-        if (Program.Editor == null) return false;
-        if (!viewport.HasAny(ViewportOptionFlags.RenderPartModels)) return false;
-        if (!instance.Template.Internal) return false;
-        if (viewport.Mode == CameraMode.IVA) return false;
-        if (instance.Template.RayTracing == PartModelModule.RaytracingMode.ShadowProxy) return false;
-        return true;
+        foreach (var template in _revealed)
+            template.Internal = true;
+        _revealed.Clear();
+        return __exception;
+    }
+
+    private static void RebuildInternalTemplates()
+    {
+        _internalTemplates.Clear();
+        foreach (var pm in PartModel.Instances)
+        {
+            var template = pm.Template;
+            if (template.Internal && template.RayTracing != PartModelModule.RaytracingMode.ShadowProxy
+                && !_internalTemplates.Contains(template))
+                _internalTemplates.Add(template);
+        }
+        _internalTemplatesDirty = false;
     }
 
     private static void ForceInternalVisible()
@@ -150,6 +163,7 @@ public static class IvaForceRender
     {
         foreach (var t in _mutatedTemplates)
             t.Internal = true;
+        _internalTemplatesDirty = true;
         Console.WriteLine($"ksa-abstractions: IvaForceRender restored {_mutatedTemplates.Count} internal templates");
         _mutatedTemplates.Clear();
     }

@@ -134,9 +134,9 @@ public static class LcdGridBuilder
         }
 
         // ── SetMinimumThrottle — iterate EngineControllers ──────────────────────
-        // Must run BEFORE the tree rebuild: PartTree.RecomputeRocketControls folds every
-        // EngineController.MinimumThrottle into PartTree.EngineThrottleMin during
-        // CreateFromNewPartTree, and that is what clamps the vehicle's manual throttle.
+        // Must run BEFORE the tree rebuild: RecomputeRocketControls folds every MinimumThrottle into
+        // PartTree.EngineThrottleMin when the new tree's derived data is computed (lazily since KSA 5482,
+        // by the next frame's flush at the latest), and that is what clamps the vehicle's manual throttle.
         sw.Restart();
         SetMinimumThrottle(createdParts, 0.0001f);
         timings.Add(("SetMinimumThrottle", sw.ElapsedMilliseconds));
@@ -163,7 +163,11 @@ public static class LcdGridBuilder
         timings.Add(("UpdateVehicleConfiguration", sw.ElapsedMilliseconds));
 
         // ── Propellant-feed verification ─────────────────────────────────────────
+        // KSA 5482 recomputes derived tree data lazily (normally at the next frame's flush), so
+        // resource managers do not exist yet. Build the resource groups now, as 5438 did eagerly,
+        // or every pixel engine reports no reachable tank.
         sw.Restart();
+        vehicle.Parts.EnsureDerived(DerivedData.ResourceGroups);
         VerifyPropellantFeeds(createdParts);
         timings.Add(("VerifyPropellantFeeds", sw.ElapsedMilliseconds));
 

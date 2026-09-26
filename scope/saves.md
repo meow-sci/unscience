@@ -1,12 +1,102 @@
 # Save/load lifecycle integration
 
-## Current verification — 5402 → 5438
+## KSA 5482 (5438 → 5482) verification
+
+Verified against `2026.9.22.5482` (NEW) vs `2026.9.10.5438` (OLD) with both supplied decomp trees.
+Managed/static only: the full solution build passes, and `saves.tests`, `world-saves.tests` and
+`camera-saves.tests` pass. No native save or load was run.
+Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
+
+- **Worker rename (compile break, fixed).** Rev 5480 renamed `JobSystems.ConcurrentWorkers` to
+  `NearestOrbitAndPerformanceWorker` (`JobSystems.cs:12,31`). It is the same single-runner,
+  BelowNormal scheduler, running `NearestOrbitPointJob` and `SequencePerformanceJob`.
+  - `NativeSaveHooks` joins it after the orbit, vehicle and cloth solvers
+    (`ksa-abstractions.lib/Persistence/NativeSaveHooks.cs:185-190`). The `saves.tests` trace label is
+    now "join nearest-orbit-and-performance".
+  - The explicit join is still required. `PrepareFrame` waits on the worker at frame start
+    (`Program.cs:2149-2150`), but it re-queues the hover job at `:2188-2192`, before our handoff
+    (`:2207`). Native `Universe.DeserializeSave` (`Universe.cs:2354-2363`) still joins only the orbit,
+    vehicle and cloth solvers.
+  - The deferred world-change replay also calls `PhysicsFrameHook.JoinOrbitReaders()` first
+    (`PhysicsFrameHook.cs:114`).
+- **`UncompressedSave.Write()` now returns `bool` (semantic drift, fixed).**
+  - In 5438, `void Write()` threw on every failure, so our postfix never ran after a failed write.
+  - In 5482, `bool Write()` (`UncompressedSave.cs:108-139`; `GameSave.cs:42`) returns `false` instead of
+    throwing. That happens when `SaveDirectory.TryReplace` fails, or when the metadata/universe write
+    throws; that exception is caught and logged, and a `TimedAlert` is shown.
+  - `TryReplace` fails after 3 IO retries, or when the path is outside the saves root
+    (`SaveDirectory.cs:21-116`, rev 5453).
+  - After a failed delete, the previous save can survive intact. Publishing the sidecar would then pair
+    this session's feature state with the old `universe.xml`, and the hash check would pass on a later load.
+  - Fix: `Saved(UncompressedSave, bool __result, bool __runOriginal)` (`NativeSaveHooks.cs:85-93`)
+    publishes `Written` only when `__result` is true. Otherwise it invokes the new `WriteFailed` callback.
+    `unscience/UnscienceSaves.cs:64-68` then drops the capture and reports
+    "KSA could not write save '<id>'; Unscience state was not written."
+  - New managed check: "native write returning false reports failure without sidecar". The throwing
+    fixture variant is kept.
+- **Lazy, caught universe read (rev 5441; load-failure reporting fixed).**
+  - The directory constructor no longer reads `universe.xml` (`UncompressedSave.cs:24-30`), and
+    `GameSave.UniverseData` defaults to an empty object (`GameSave.cs:7`).
+  - `Load()` reads the file inside a try/catch (`:61-79`). On failure it logs, then returns without
+    throwing and without calling `DeserializeSave`.
+  - Our finalizer therefore saw no exception, so `LoadFailed` never fired. The status line could also
+    claim that scene setups would be cleared when nothing had been cleared.
+  - Fix: `LoadingSave` clears `_nativeLoadReached` (`NativeSaveHooks.cs:106`), and `ResetBeforeLoad`
+    sets it (`:140`). If the load never reached `DeserializeSave`, `FinishedLoading` (`:112-125`) creates
+    `InvalidDataException("KSA could not read save '<id>'; the current scene was left unchanged.")`
+    and publishes it through `LastLoadError` and `LoadFailed`. It is reported once, and the next
+    successful load clears it.
+  - `SceneSaveCoordinator.FinishLoad` restores the retained records, because no reset ran.
+  - The lazy read itself is harmless to us: `LoadingSave` and `UnscienceSaves.Load` read only
+    `save.Directory`, and preflight still validates the parsed data in the `DeserializeSave` prefix.
+  - Managed check: "unreadable save reports failure and only clears load context".
+- **Overwrite ordering (rev 5453; stale docs corrected below).** `Overwrite()`
+  (`UncompressedSave.cs:100-106`) no longer deletes the save up front. The order is now:
+  1. `Make(Id)`.
+  2. `Populate`, where our capture runs.
+  3. `Write`, where `SaveDirectory.TryReplace` deletes and recreates the **same final folder** in place
+     (no temp folder, no rename) and the native files are written.
+
+  Our postfix then writes `unscience.json` into that folder after `universe.xml` exists, and the old
+  sidecar is deleted along with the folder. A failed deletion leaves the old save and its old sidecar
+  intact, which is why the `__result` gate matters. `CacheStrings` and `GameSaves.Register` now run
+  inside `Write`, before our postfix (`:136-137`). The listed size therefore excludes `unscience.json`
+  until the list refreshes; this is cosmetic.
+- **KSA now saves native ground clutter (state owned by KSA, not the sidecar).**
+  - `CelestialSystem.SerializeSave` writes `GroundClutterRenderer.SerializeSave` into
+    `CelestialSystemData.GroundClutter` (`CelestialSystem.cs:641`).
+  - `Universe.DeserializeSave` clears `_clutterExclusions` and resets the renderer (`Universe.cs:2370-2371`)
+    before `CelestialSystem.DeserializeSave` reapplies the data (`:778`).
+  - Both steps happen between our `Resetting` prefix and our `Restoring` postfix.
+  - Its interaction with Pebbles' private placements is covered in [ground-clutter](ground-clutter.md).
+- **Payload compatibility.** The fixes in this pass change no participant ID, version or payload.
+  Eternal Flame's refill move and Humble Arteest's render-state version are runtime-only. Any Pebbles
+  sidecar change is recorded in [ground-clutter](ground-clutter.md).
+- **Checked unchanged.**
+  - The hook targets: `GameSave.Populate()` (virtual, body unchanged), `UncompressedSave.Load()` (void),
+    `Universe.DeserializeSave(UniverseData)` (`:2354`), `Universe.LoadSystem(string)` (`:179`, body
+    unchanged), `SystemLibrary.Find` and `GameSaves.RefusedInEditor`.
+  - Preflight inputs gained only the additive `ExistsIn` helpers and the `GroundClutter` list. The
+    sidecar hash is still computed over `universe.xml`.
+  - The seven `PhysicsFrameHook` seams are unique and in order (`Program.cs:2162-2212`).
+  - The join set is still complete. Physics islands run inside the `VehicleSolver` job on
+    `VehicleWorkerPool`, `BubbleStepJob.cs` was removed, and no new schedulers were added.
+    `PlumeTrailLodBuilder` is still not joined, which is a standing issue.
+- **Live checks pending (native).**
+  - Overwrite while the old folder is locked (Windows): no sidecar is written into the intact old save,
+    and the toolbox reports the failure.
+  - Normal overwrite: the sidecar is present and the listed size refreshes.
+  - Load a save with a corrupted `universe.xml`: the scene is unchanged and the toolbox reports the failure.
+  - Deferred load while hovering a flight-plan patch at high warp.
+  - The standing A→B→A and vanilla checks below.
+
+## Verification — 5402 → 5438 (historical)
 
 Native GameSave.Populate, UncompressedSave.Write/Load and Universe.DeserializeSave/LoadSystem hook contracts remain compatible; all seven PhysicsFrameHook seams retain order. The shared library now references Planet.Render.Core for KeyHash. Native vehicle serialization now preserves IsDebris and reapplies non-root part scales, which existing adapters inherit. Pyro migrates the two retired template IDs; Free Fallin restores per-canopy native material ownership during cleanup. Managed persistence tests cover transaction logic, while native scene/GPU round trips remain open.
 
 Verified against `2026.9.10.5438` using both supplied source/Content trees.
 See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
-Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+Older catalog text below is updated in place where 5482 changed a contract (marked @5482).
 
 The suite extends native directory saves through `ksa-abstractions.lib/Persistence/NativeSaveHooks`.
 Research and ordering evidence: [native lifecycle assessment](../plans/saves-game-lifecycle.md).
@@ -14,18 +104,20 @@ Research and ordering evidence: [native lifecycle assessment](../plans/saves-gam
 | Hook / direct dependency | Purpose and ordering contract |
 |---|---|
 | Harmony postfix `GameSave.Populate()` | Capture detached feature state against the completed native UniverseData snapshot. Never mutate live physics for capture. |
-| Harmony postfix `UncompressedSave.Write()` | Write sidecar only after successful native file output. Failed native writes do not publish sidecar success. |
-| Harmony prefix + finalizer `UncompressedSave.Load()` | Preflight and scope the file transaction; skip editor refusal; clear context on success or exceptions without suppressing native errors. |
+| Harmony postfix `UncompressedSave.Write()` (`bool` @5482; bound by name + `Type.EmptyTypes`) | Write sidecar only after successful native file output: `Written` fires only when the original returned `true` (`__result`) and was not skipped. A `false` return (@5482: `SaveDirectory.TryReplace` or native write failure, old folder possibly intact) invokes `WriteFailed`, which discards the capture and reports failure; a throwing write publishes nothing. |
+| Harmony prefix + finalizer `UncompressedSave.Load()` | Preflight and scope the file transaction; skip editor refusal; clear context on success or exceptions without suppressing native errors. @5482 the universe read is lazy and caught inside `Load` (logged, returns before `DeserializeSave`); the finalizer turns a load that never reached `DeserializeSave` into `LastLoadError`/`LoadFailed` (`InvalidDataException`). |
 | Harmony prefix + postfix + finalizer `Universe.DeserializeSave(UniverseData)` | Join workers, discard stale queued edits and reset old ownership before native destruction; replay after reconstructed vehicles/camera and before next solver dispatch. Direct loads also reset baseline. |
 | Harmony prefix + finalizer `Universe.LoadSystem(string)` | Validate system name via `SystemLibrary.Find` before cleanup on world replacement. No replay from previous save. |
-| `JobSystems.OrbitSolvers`, `VehicleSolver`, `ClothSolvers`, `ConcurrentWorkers` / `JobScheduler.Wait()` | Explicit joins before prefix cleanup: the original's internal joins are too late for prefix mutations. Requires `Brutal.Concurrency` reference. |
+| `JobSystems.OrbitSolvers`, `VehicleSolver`, `ClothSolvers`, `NearestOrbitAndPerformanceWorker` (renamed from `ConcurrentWorkers` @5482) / `JobScheduler.Wait()` | Explicit joins before prefix cleanup: the original's internal joins are too late for prefix mutations. Requires `Brutal.Concurrency` reference. |
 | `Program.IsEditorOpen`, `Universe.CurrentSystem` | Preserve active setup on editor-refused requests and no-world early failures. |
 | `PhysicsFrameHook.ClearPending()` | Discard queued old-world mutations both before and after cleanup callbacks. BeforePhysics subscriptions remain registered. |
 
 No XML-deserializer hook is used: listing saves reads XML without loading a world. No dependency on
 `Program.OnGameLoaded` readiness is introduced; it only closes menus. Native overwrite remains
-non-transactional and deletes the previous save before capture/write. JSON atomicity does not change
-that limitation. Callback exceptions are logged individually and do not suppress native operations
+non-transactional across native files and sidecar. @5482 `Overwrite` captures first, then
+`SaveDirectory.TryReplace` deletes and recreates the same final folder in place inside `Write` (no temp
+folder or rename) before native files and our sidecar are written; a failed replace leaves the old
+save and its old sidecar intact and publishes nothing new. JSON atomicity does not change that limitation. Callback exceptions are logged individually and do not suppress native operations
 or the native exception. Harmony installation rolls back its own installed methods on failure and
 removes only these precise patches on unload.
 
@@ -68,11 +160,14 @@ checked before reset. `UniverseData.IsValid` is deliberately avoided: its Camera
 a nonempty Following identity, but native saves explicitly support unfollowed/free cameras.
 `LoadFailed` and `LastLoadError` surface deferred native exceptions to the toolbox. LastLoadError
 is set before LoadFinished rolls back a non-destructive failed transaction; LoadFailed then reports
-the exception. Nested native deserialization reports once through its file transaction.
+the exception. Nested native deserialization reports once through its file transaction. @5482 an
+unreadable `universe.xml` no longer throws; the finalizer synthesizes the failure when the file
+transaction never reached `DeserializeSave`.
 
-The early frame boundary still follows submission of `NearestOrbitPointJob`; it traverses the old
-world's vehicles and orbital state. `ConcurrentWorkers.Wait` therefore joins that work as well as
-the normal orbit/vehicle/cloth solvers. Any failed join aborts before reset or native destruction.
+The early frame boundary still follows submission of `NearestOrbitPointJob` (`Program.cs:2188-2192`
+@5482); it traverses the old world's vehicles and orbital state. `NearestOrbitAndPerformanceWorker.Wait`
+(`ConcurrentWorkers` before 5482) therefore joins that work as well as the normal orbit/vehicle/cloth
+solvers. Any failed join aborts before reset or native destruction.
 
 `SavedPartReference` captures vehicle ID, tree/subpart indices, target template and a structural
 SHA-256 signature of the entire ordered vehicle tree. Capture/replay uses a transaction-local
@@ -110,7 +205,8 @@ retains the original record. Legacy/vanilla saves lacking the new record restore
 Dispose/unpatch clears runtime references; ordinary updates prune missing/disposed objects.
 No new native save hook or changed legacy payload. Only picker state is transient.
 
-Reconciled against 5438: the detector, readonly vehicle identity and shared replay lifecycle
+Reconciled against 5438 and re-checked at 5482 (detector body identical, `PhysicsBubble.cs:958`,
+GLoadFraction read `:975`): the detector, readonly vehicle identity and shared replay lifecycle
 remain compatible. Both version-1 records are unchanged. All 14 managed suites pass, including
 26 Kitchen Sink adapter checks; see [the reconciliation record](../plans/KSA_5438_RECONCILIATION.md).
 

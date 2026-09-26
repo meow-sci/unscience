@@ -52,8 +52,9 @@ A unified supermod that consolidates 29 KSA feature libraries into a single ImGu
 - **`ISubmod`** interface (from `ksa-abstractions.lib`) defines the submod contract: `Name`, `Initialize()`, `Update(dt)`, `RenderContent()`, `Dispose()`
 - **`Mod.cs`** orchestrates all submods — instantiates lib submod classes directly, calls `Update()` every frame for all (even hidden), renders only visible ones
 - **Hidden-HUD (F2) resilience**: `HiddenUiFrameHook.BeforeGui` replays `UpdateSubmods(dt)` while KSA skips StarMap UI callbacks. Welds run independently through `GarrysTorchPatches` in `Program.PrepareFrame`; no after-GUI weld callback is registered. Mod windows and the F11 toggle remain hidden with the HUD.
-- **`Patcher.cs`** consolidates Harmony patches from blinky (render-skip), camera-controller-override (sequence playback via `CameraControllerOverridePatches`), free-fallin (canopy material substitution and material-gated full-canopy shader projection via `FreeFallinPatches`), garrys-torch (KittenEva XYZ render-scale correction via `KittenScalePatches`), glass (FOV override), graffiti (projected-decal render pass via `GraffitiPatches`), i-feel-seen (render distance), pyro (exhaust submission via `PyroPatches`), skittles (hotkey blocking), and dont-stifle-me (editor scale and configurable-value limits via `EditorScalePatches` / `EditorValueLimitPatches`), delegating to patch helpers in each lib
-- **Garry's Torch update timing**: the shared `GarrysTorchPatches` frame transpiler runs weld animation and teleports after completed orbit/vehicle/cloth results are applied and before any next-step physics snapshots. Teleports use `SimStep.PreviousTime`, preserving source actuator state and body/origin time alignment. Ordinary submod and UI updates do not advance welds.
+- **`Patcher.cs`** consolidates Harmony patches from blinky and its-so-shiny (render-skip through the shared `PartRenderFilter`), camera-controller-override (sequence playback via `CameraControllerOverridePatches`), free-fallin (canopy material substitution and material-gated full-canopy shader projection via `FreeFallinPatches`), garrys-torch (KittenEva XYZ render-scale correction via `KittenScalePatches`), glass (FOV override), graffiti (projected-decal render pass via `GraffitiPatches`), i-feel-seen (render distance), pyro (exhaust submission via `PyroPatches`), skittles (hotkey blocking), and dont-stifle-me (editor scale and configurable-value limits via `EditorScalePatches` / `EditorValueLimitPatches`), delegating to patch helpers in each lib
+- **Garry's Torch update timing**: the shared `GarrysTorchPatches` frame transpiler runs weld animation and teleports after completed orbit/vehicle/cloth results are applied and before any next-step physics snapshots. Teleports use `SimStep.PreviousTime`, preserving source actuator state and body/origin time alignment. Ordinary submod and UI updates do not advance welds. On KSA 5482, teleports, launches, queued mutations and deferred loads first join the game's nearest-orbit job (`PhysicsFrameHook.JoinOrbitReaders`), which reads orbit points that a teleport disposes.
+- **Eternal Flame refill timing**: fuel and battery refills both run in the `Universe.ExecuteNextVehicleSolvers` prefix, before the vehicle worker snapshots module state, so burning engines no longer overwrite fuel refills.
 - Submod implementations live in their respective **`.lib` projects** (for example `BlinkySubmod` + `BlinkyPatchState` in `blinky.lib`, `CameraControllerOverrideSubmod` in `camera-controller-override.lib`, and `KittenAnimationsSubmod` in `kitten-animations.lib`)
 - **`unscience/Submods/`** directory has been removed — no intermediate wrapper layer
 - Each lib submod owns its own ImGui `RenderContent()` — unscience just calls it
@@ -90,8 +91,17 @@ Use KSA's ordinary **Save**, **Overwrite** and **Load**. Unscience adds `unscien
 is loaded. This is separate from **State → Auto save window layout**. Scene state is saved when
 KSA saves the game; the window-layout timer does not save the game.
 
-The toolbox displays the most recent save/load result and expandable diagnostics. It captures
-feature-owned configuration, targets and original values needed by Restore/Unweld controls.
+The toolbox displays the most recent save/load result and expandable diagnostics. KSA 5482 no
+longer throws for a failed native save or an unreadable save, so the host detects and reports them:
+
+- **Failed save** (for example, the old save folder is locked or outside the saves root):
+  `KSA could not write save '<name>'; Unscience state was not written.` No `unscience.json` is
+  written, so an old folder that survives keeps its original sidecar.
+- **Unreadable `universe.xml`**:
+  `Load failed: KSA could not read save '<name>'; the current scene was left unchanged.`
+  KSA logs the error and does not replace the world.
+
+Saves capture feature-owned configuration, targets and original values needed by Restore/Unweld controls.
 Created grid parts, spawned kittens and other native state are rebound after KSA reconstructs them;
 they are not spawned twice. Runtime part IDs are remapped using durable tree addresses.
 Loads execute at the next simulation boundary before new physics and UI work.
@@ -117,8 +127,10 @@ feature's README and the [implemented coverage and acceptance checklist](../plan
 
 A sidecar copied beside a different `universe.xml`, malformed data, or a future document schema is
 reported and not applied. Native saves remain usable without the sidecar where their required
-part mods are installed. Atomic sidecar writing does not make KSA's native overwrite atomic: KSA
-still deletes the old save directory first. Keep normal backup copies for valuable scenes.
+part mods are installed. Atomic sidecar writing does not make KSA's native overwrite atomic. Since
+KSA 5482, `Write` deletes and recreates the save folder after state capture and before writing native
+files. A failed deletion can leave the old save intact or partly deleted. Keep normal backup copies
+for valuable scenes.
 
 Architecture: `UnscienceSaves` discovers library participants and wires shared `NativeSaveHooks`;
 `SceneSaveCoordinator` orders/reset/replays them and retains failed records. See the
@@ -140,3 +152,21 @@ G-load destruction while retaining collisions and other damage checks. Its activ
 saved in the Unscience sidecar and rebound after native vehicle reconstruction. See [Kitchen Sink](../kitchen-sink/README.md).
 Reconciled with KSA 5438: no G-load/save migration is needed, and the consolidated host retains
 upstream's shared dent-aware IVA patch. [Build and test evidence](../plans/KSA_5438_RECONCILIATION.md).
+On KSA 5482 the G-load detector is unchanged. The shared IVA helper now reveals editor interiors
+through `PartTreeRenderData.Compose`.
+
+## KSA compatibility
+
+Built against KSA **2026.9.22.5482** (the previous baseline was 2026.9.10.5438). Verification is
+compile-time plus managed fixture suites; no native game session has been run on this build.
+User-visible changes:
+
+- Meshes hidden by Blinky/It's So Shiny still render in raytraced IVA views (known gap).
+- Eternal Flame refills fuel during burns; this needs in-game confirmation.
+- Blinky no longer logs a false *0/N pixel parts reached at least one tank* warning after every build.
+- New save status messages for failed saves and unreadable saves (see [Scene saves](#scene-saves)).
+- Godzilla's visual-only and collider-only modes, Vehicle Paint, the kitten visor toggle, DOH
+  spawning and editor IVA interiors required 5482 fixes, and each still needs an in-game check.
+- Pebbles keeps knocked-loose (displaced) and removed clutter across apply/restore; KSA's new native
+  clutter saves stay on the stock spacing, and override spacings are kept in a `pebbles.clutter-state`
+  save record. Pebbles recipes that include Earth trees captured on 5438 report "changed since capture".

@@ -20,6 +20,9 @@ The host must apply the shared `PhysicsFrameHook` and `HotkeyGuard`. Unscience a
 shared hook for saves/welds, and explicitly ensures it for Dent Wizard too. The feature does not
 remove a host-owned hook on disposal. No new Harmony targets or string reflection are introduced.
 All game operations run on the main thread at the existing handoff; no worker tasks are created.
+`FirePending` calls `PhysicsFrameHook.JoinOrbitReaders()` before executing a shot. KSA 5482 queues the
+nearest-orbit job just before the handoff, and the launch teleport disposes orbit points that the
+job may be reading. Frames with no pending shot do not join.
 
 Managed regression fixtures link production launch code against the game-shipped numeric types.
 Build and tests do not verify native terrain picking, rendering, collision damage or EVA flight.

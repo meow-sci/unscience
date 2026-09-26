@@ -1,4 +1,52 @@
-## Current triage — KSA 2026.9.10.5438
+## Current triage — KSA 2026.9.22.5482
+
+See [upgrade review](plans/KSA_5482_UPGRADE.md). Upgrade from 5438 (revs 5439–5481). The code
+fixes are in the working tree. They were verified by a
+full solution build and the managed suites on macOS; no native KSA run was possible. **Every item
+below still needs an in-game pass.** Where this section conflicts with the 5438 notes, it takes
+precedence.
+
+- **Eternal Flame refill during burns:** root-caused and fixed in code; live confirmation is
+  pending. The bug is not new in 5482; 5438 had the same ordering. Fuel was refilled from the UI
+  `Update` tick, which runs after `ExecuteNextVehicleSolvers` has started the vehicle worker. The
+  worker snapshots module state when it starts and commits it back after the step, so the commit
+  overwrote the refill while engines burned. Fuel and battery refills now both run in the existing
+  `ExecuteNextVehicleSolvers` prefix, before the snapshot. KSA 5482's `RefillConsumables` also sets
+  the tank-contents flag (rev 5478), so dry engines should relight. Live check: a monitored vessel
+  keeps its fuel at full throttle, and an engine that ran dry relights after a refill.
+- **Garry's Torch errors:** candidate cause found and mitigated; live confirmation is pending.
+  `PrepareFrame` queues the nearest-orbit job, which reads flight plans and cached orbit points, just
+  before the weld handoff. `Vehicle.Teleport` → `Orbit.ReleaseCachedPoints` can dispose points while
+  the job is reading them; rev 5480 fixed only the game's own disposal path. Welds now call
+  `PhysicsFrameHook.JoinOrbitReaders()` before teleporting, which waits once per frame. Rev 5450's
+  fix for the torque-free rotation singularity may also remove exceptions for lock-rotation welds.
+  Native logs are needed to confirm either cause.
+- **Blinky false feed warning:** new in 5482 and fixed. Rev 5464 made derived part-tree data lazy,
+  so the resource managers did not exist yet when the post-build feed check ran, and every build
+  logged `0/N pixel parts reached at least one tank`. The builder now builds the resource groups
+  first. Ignition was unaffected. The earlier dense-grid ignition/rendering live pass is still
+  outstanding.
+- **Silent 5482 regressions fixed in code:**
+  - Blinky/Shiny render toggles: the per-module hooks were removed in rev 5456; both now use the
+    shared `PartRenderFilter`.
+  - Vehicle Paint: now writes into the cached per-tree state flags.
+  - Kitten visor toggle: the draw call became `Draw(ViewHandle)` in rev 5474.
+  - Godzilla visual scaling: every visual patch had rolled back.
+  - DOH spawning: backpack parts had no tree, so every spawn threw a null reference.
+  - Kitchen Sink editor IVA interiors: the editor reveal had stopped working.
+  - Bloomin' Onion distant-sphere ring shadow: the ring fields moved to `_material`.
+  - Saves: a failed native write returns false, and the sidecar was being written into the surviving
+    old save. An unreadable `universe.xml` was not reported.
+- **Known gaps (new):**
+  - Blinky/Shiny hiding does not apply in raytraced IVA views.
+  - Game actions bound to mouse buttons bypass `HotkeyGuard` while typing (rev 5449). Default
+    bindings are keys, and the optional hardening has not been applied.
+- **Ring shadows:** atmosphere ring shadows (rev 5470) now also follow Bloomin' Onion and Rocky
+  McRock Face bands. An opaque band without alpha gives a solid dark shadow.
+- **Kitten animation repetition / Zippo electricity:** unchanged. The 5348 animation fixes still
+  await a live pass; Zippo electricity remains a feature request.
+
+## Triage notes — KSA 2026.9.10.5438
 
 See [upgrade review](plans/KSA_5438_UPGRADE.md). Confirmed code migrations are implemented in the
 working tree; native rendering/flight acceptance remains pending.
@@ -16,21 +64,21 @@ working tree; native rendering/flight acceptance remains pending.
   tanks. The earlier propellant repair remains. Dense-grid ignition/rendering needs live acceptance.
 - **Eternal Flame refill during burns:** still open; refill APIs and solver ordering are unchanged.
   Fuel remains UI-timed, unlike the solver-timed electrical refill. Do not attribute the old report
-  to 5438 without reproducing it.
+  to 5438 without reproducing it. *(5482: the UI-timed refill was the root cause; see current triage.)*
 - **Garry's Torch errors:** prior actuator/collision fixes remain. New segmented bubble stepping,
   contact-local deformation and crash budgets require native reproduction; no new broken hook found.
 - **Kitten animation repetition:** existing processor/clip fixes remain; reflection chain unchanged.
 - **Zippo electricity:** remains a feature request, not a detected upgrade regression.
 
-The dated notes below retain historical reports and hypotheses; this section supersedes their
-current-status claims.
+The dated notes below retain historical reports and hypotheses; the current triage section
+supersedes their current-status claims.
 
 ---
 
-- blinky broken — **root-caused and fixed 2026-08-23 (propellant feed), needs a live pass** (see triage note below)
-- eternal flame broken (seems like refill not working while engines are lit.. maybe race condition on data mutations since DMZ changes?)
-- garry's torch - works but throws errors
-- humble arteest vehicle paint broken
+- blinky broken — **root-caused and fixed 2026-08-23 (propellant feed), needs a live pass** (see triage note below); 5482 false feed warning fixed
+- eternal flame broken (seems like refill not working while engines are lit.. maybe race condition on data mutations since DMZ changes?) — **root-caused and fixed in code for 5482: the fuel refill ran after the vehicle worker's snapshot and was overwritten by its commit; needs a live pass**
+- garry's torch - works but throws errors — **5482: candidate cause (nearest-orbit job vs teleport race) mitigated with a join; needs native logs to confirm**
+- humble arteest vehicle paint broken — rebuilt for 5018; ported to 5482 cached render state; needs a live pass
 - kitten animations don't properly play each one, always the same — **root-caused and reworked 2026-08-23, needs a live pass** (see triage note below)
 - 
 

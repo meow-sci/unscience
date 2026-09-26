@@ -12,12 +12,28 @@ public static class PhysicsFrameHook
 {
     private static readonly Queue<Action> Pending = new();
     private static Action? _pendingWorldChange;
+    private static bool _orbitReadersJoined;
     public static bool IsApplied { get; private set; }
     public static bool IsReplayingWorldChange { get; private set; }
     public static event Action<double, UniverseTime>? BeforePhysics;
 
     /// <summary>Queue a main-thread mutation after worker results, before welds and new snapshots.</summary>
     public static void Enqueue(Action action) => Pending.Enqueue(action);
+
+    /// <summary>
+    /// Waits for the nearest-orbit/performance job that PrepareFrame queues just before this
+    /// handoff. It reads flight plans and cached orbit points concurrently, and Teleport or other
+    /// flight-plan edits dispose those points. Joins at most once per frame; callbacks that move
+    /// vessels call it before mutating, and queued work and world changes join automatically.
+    /// Intended for the handoff only: the flag resets there, and later in the frame the same worker
+    /// may run unrelated editor performance jobs, which this does not wait for.
+    /// </summary>
+    public static void JoinOrbitReaders()
+    {
+        if (_orbitReadersJoined) return;
+        JobSystems.NearestOrbitAndPerformanceWorker.Wait();
+        _orbitReadersJoined = true;
+    }
 
     /// <summary>Discard mutations queued against a world that is being replaced.</summary>
     public static void ClearPending() => Pending.Clear();
@@ -92,10 +108,12 @@ public static class PhysicsFrameHook
         // The previous ImGui frame has finished and worker results have committed. A
         // console load requested after ImGui.Image must never dispose its textures inline.
         // Replay the whole transaction here, before computing any time from the old world.
+        _orbitReadersJoined = false;
         Action? worldChange = _pendingWorldChange;
         _pendingWorldChange = null;
         if (worldChange != null)
         {
+            JoinOrbitReaders();
             IsReplayingWorldChange = true;
             try { worldChange(); }
             catch (Exception ex) { Console.WriteLine($"unscience saves: deferred world change failed: {ex}"); }
@@ -106,6 +124,7 @@ public static class PhysicsFrameHook
 
         // Drain only the actions present at the handoff; actions queued by callbacks wait a frame.
         int count = Pending.Count;
+        if (count > 0) JoinOrbitReaders();
         for (int i = 0; i < count; i++)
         {
             try { Pending.Dequeue()(); }

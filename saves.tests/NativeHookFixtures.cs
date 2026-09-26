@@ -16,6 +16,7 @@ namespace KSA
 
     public class GameSave
     {
+        public string Id = "fixture";
         public UniverseData UniverseData = new();
         public bool FailCapture;
 
@@ -32,20 +33,24 @@ namespace KSA
     {
         public bool FailRead;
         public bool FailWrite;
+        public bool ThrowWrite;
 
+        // KSA 5482: SaveDirectory/write failures return false; unexpected faults still throw.
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public void Write()
+        public bool Write()
         {
             Trace.Events.Add("native write");
-            if (FailWrite) throw new InvalidOperationException("native write failed");
+            if (ThrowWrite) throw new InvalidOperationException("native write failed");
+            return !FailWrite;
         }
 
+        // KSA 5482: an unreadable universe file is logged and Load returns without replacing the world.
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void Load()
         {
             if (Program.IsEditorOpen) { Trace.Events.Add("refused"); return; }
             Trace.Events.Add("native read");
-            if (FailRead) throw new InvalidOperationException("native read failed");
+            if (FailRead) return;
             Universe.DeserializeSave(UniverseData);
             Trace.Events.Add("native menus closed");
         }
@@ -152,7 +157,7 @@ namespace KSA
         public static readonly Jobs OrbitSolvers = new("orbit");
         public static readonly Jobs VehicleSolver = new("vehicle");
         public static readonly Jobs ClothSolvers = new("cloth");
-        public static readonly Jobs ConcurrentWorkers = new("concurrent");
+        public static readonly Jobs NearestOrbitAndPerformanceWorker = new("nearest-orbit-and-performance");
     }
 }
 

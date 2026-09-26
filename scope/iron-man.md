@@ -1,6 +1,77 @@
 # Iron Man — EVA editor, connectors and vessel physics
 
-## Current verification — 5402 → 5438
+## KSA 5482 (5438 → 5482) verification
+
+Verified 2026-09-25 against `2026.9.22.5482` (revs 5439–5481), diffed from `2026.9.10.5438`.
+Static/managed only: the whole solution builds and the `iron-man`, `iron-man-flight` and
+`iron-man-mode` suites pass. Those suites compile production sources against fixture mirrors, not
+KSA.dll, so they cannot detect KSA signature drift. No native KSA run was possible. Evidence:
+[KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
+
+- 🔴 **`Part.Tree` nullable (fixed; 3× CS8602).** `Part.Tree` is `PartTree?` (`KSA/Part.cs:662`) and
+  the `Part` ctor (`:1490`) no longer creates a tree. Trees now come from `CreateOwnTree()` (`:1456`),
+  `PartTree.CreateFromNewPartTree` (`PartTree.cs:291`, used by `Deserialize`) or `Merge`.
+  `IronManConnectorUnload.cs:51,65` filter the roots' and restored links' trees with
+  `.OfType<PartTree>()`: owned roots are registered by the ctor postfix before `PartTree.Deserialize`
+  builds the tree, so an aborted deserialization can leave a treeless root, which has no links, and
+  skipping it preserves behaviour. `IronManRcsOrientationPatches.cs:53` uses
+  `root.Tree?.OwningVehicle` on the worker (null → native authored map).
+- ✅ **Editor avatar hook compatible.** `SuperMeshRenderSystem.ClearBuckets()` became
+  `ClearBuckets(IViewport viewport)` (`SuperMeshRenderSystem.cs:517`; clears only that view's four
+  colour passes, rev 5474). It is still one overload; `IronManEditorPatches.cs:22-23` resolves it by
+  name and the postfix binds only `__instance`. `RenderEditor` sets `_renderedViewport = MainViewport`,
+  calls `ClearBuckets(RenderedViewport)` (`Program.cs:4901`) and then the prepass, and
+  `KittenRenderable.UpdateRenderData` draws into `ViewForViewport(viewport)` (`KittenRenderable.cs:356`),
+  the same view that was just cleared. The postfix now also fires per viewport from `RenderViewport`
+  (`:4419`) and `RenderGame` (`:4613`); `RenderCharacter` (`IronManEditorPatches.cs:133-142`) still
+  returns unless an editor kitten exists and `RenderedViewport` is the main viewport.
+- ✅ **Early equipment submission is now strictly required.** `Vehicle.UpdateRenderData(IViewport,int)`
+  (`Vehicle.cs:3713`; pixel cull moved into `IsLargeEnoughToRender`, `:3707`) and
+  `PartModelRenderer.UpdateRenderData(IViewport,int)` (`PartModelRenderer.cs:815`) keep their
+  signatures. `PartTree.UpdateRenderData` now goes through the cached `PartTreeRenderData`
+  (`EnsureBuilt` + `Compose*`). Frame order: `ClearFrameData` (`Program.cs:2334` →
+  `PartModelRenderer.ClearFrameData`, `PartModelRenderer.cs:844`) → early loop skipping `KittenEva`
+  (`Program.cs:4292-4299`) → upload (`:4317`) → late `KittenEva.UpdateRenderData` (`:4428`
+  `RenderViewport`, `:4622` `RenderGame`). Instance lists are cleared at frame start rather than by
+  `WriteInstancesToGpu`, and shadow culling re-reads them after upload. A late submission is therefore
+  discarded rather than uploaded a frame late, so Iron Man's pre-upload submission is the only path by
+  which equipment renders.
+- ✅ **Lazy derived data (rev 5464).** `PartTree.RecomputeAllDerivedData` (`PartTree.cs:475-478`) now
+  only marks derived data dirty. It is rebuilt on first read (`EnsureDerived`, `:521`) or by
+  `PartTree.FlushDirtyDerived()` / `FlushDirtyResourceManagers()` in `PrepareFrame`
+  (`Program.cs:2209-2210`). Those run after the `GetJobSimStep` handoff, where Iron Man's queued
+  enable/disable/arm/connector edits execute, and before `ExecuteNextVehicleSolvers`, so worker
+  snapshots still see recomputed data in the same frame; `UpdateVehicleConfiguration` reads mass
+  through the lazy getters. Unload's recompute can no longer fail inside its transactional try/catch:
+  a resource-graph rebuild error would surface later, at the flush. Optional hardening: call
+  `EnsureDerived(DerivedData.All)` during unload for synchronous failure detection.
+- ✅ **Input (rev 5449).** `Vehicle.OnKey(GlfwKeyEvent)` (`Vehicle.cs:3274`), `KittenEva.OnKey`
+  (`KittenEva.cs:110`) and both `ProcessInput` methods keep their signatures; the bodies now match via
+  `Input.Contains/Matches(in keyEvent, …)`. The reverse patch snapshots the new body, so enabled kittens
+  inherit the new binding semantics. `GlfwKeyEvent` gained `Button`/`IsMouse`; user-bound mouse buttons
+  now arrive as synthetic key events, which the prefixes forward unchanged.
+- ⚠ **`Vehicle.Dispose(bool)` wake gating** (`Vehicle.cs:3775-3790`, revs 5452/5476) wakes on-rails
+  vessels resting on the disposed vehicle only when it is not a `KittenEva` (a type test, not
+  `IsKitten`). Disposing an enabled Iron Man kitten will not wake vessels stacked on it. Edge case;
+  live check only.
+- ✅ **Checked unchanged:** `TeleportToLocation` (`Vehicle.cs:4214`; one
+  `GetInitialKinematicStateForLocation` call, `:4130`); `Ctrl2Body` (`:585`); the
+  `OrbitController.GetFrame2Ecl` / `EditorOnScroll` bodies; `ThrusterController.cs`,
+  `ThrusterControllerGlobalState.cs`, `Rocket.cs`; `GaugeCanvas.cs`, `GaugeButtonFlightComputer.cs`,
+  `FlightComputer.cs`, `Gauges.xml`; `VehicleUpdateState.PrepareFromVehicle` and every worker
+  `IsKitten` branch; the patched `VehicleEditor` bodies; `VehicleSaveData.Create`;
+  `Part.GetReferenceWithChildren`. `PartTree.Deserialize` still runs the ctor per node, then
+  `RegenerateConnectionsFromPartInstance`, then builds the tree, so the constructor-before-index
+  invariant holds. `KittenBackPackPart` assets are unchanged.
+- ℹ️ Test fidelity (not updated this pass): `iron-man-flight.tests/FlightFixture.cs` still models
+  5438's "upload clears pending" in `PartModelRenderer`, and `iron-man.tests/Fixture.cs:63` keeps
+  `Part.Tree` non-nullable, so the treeless-root path is not exercised.
+- **Native acceptance pending** (in addition to the checklist below): equipment drawn exactly once per
+  view in main and secondary viewports, with shadows; editor avatar aligned in prepass and main pass;
+  same-frame mass/thrust/propellant after enable/arm/connector edits; mouse-bound vehicle actions on an
+  enabled kitten; loading a save with marked anchors.
+
+## Verification — 5402 → 5438 (historical)
 
 No migration required in the opt-in flight/editor hooks. KittenEva, GaugeCanvas, GaugeButtonFlightComputer, VehicleSaveData, KittenRenderable and VehicleEditingSpace are byte-identical. Constructor/serializer, two EVA gauge checks, one generic gauge-policy call, one teleport-helper call, camera pan and single ManualControlMap read invariants remain. PartModelRenderer retains UpdateRenderData and supplies its new deformation descriptors internally. Native connector recomputation now also invalidates FlowTopology. Rocket/EVA mode, crashes, RCS/gauges and save reconstruction require native acceptance.
 
@@ -8,7 +79,8 @@ Verified against `2026.9.10.5438` using both supplied source/Content trees.
 See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
 Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
 
-Baseline: **KSA 2026.9.7.5402**, `ksa-game-assemblies/current/decomp`. Added 2026-09-07.
+Original baseline: **KSA 2026.9.7.5402**, `ksa-game-assemblies/current/decomp`. Added 2026-09-07.
+Current verification: **2026.9.22.5482** (section above); watchlist rows marked `@5482` carry 5482 lines.
 [Research evidence](../plans/iron-man/RESEARCH.md) explains the design;
 [player instructions](../iron-man/README.md) describe activation and save dependencies.
 The [flight-computer follow-up](../plans/iron-man/FLIGHT_COMPUTER.md) records the native HUD fix.
@@ -44,14 +116,14 @@ signature/overload changes; private string names must be re-grepped on every gam
 | `VehicleUpdateState.PrepareFromVehicle(bool,ManualControlInputs)` | flight postfix | Stock assigns `IsKitten` from `ReadOnlyVehicle` on main thread before workers; opted-in snapshots become ordinary vessels. |
 | `KittenEva.OnKey(GlfwKeyEvent)` / `ProcessInput(InputAction,GlfwKeyAction,GlfwModifier)` | flight prefixes | Enabled kittens use original base Vehicle input; reverse patches on `Vehicle.OnKey` / `ProcessInput` must retain nonvirtual dispatch. |
 | `Vehicle.UpdateRenderData(IViewport,int)` | render prefix; nonvirtual early base dispatch | Suppress late equipment submission without suppressing KittenEva's character draw. Early dispatch must retain other mods' base-render patches. |
-| `PartModelRenderer.UpdateRenderData(IViewport,int)` | render prefix | Submit authored EVA equipment before upload. `Program` skips EVA in early loop (`Program.cs:4210`), uploads at 4227, then draws avatar at 4327/4522. |
-| `SuperMeshRenderSystem.ClearBuckets()` | editor postfix | Only matching Program renderer/main viewport/editor: submit avatar after clearing and before prepass (`Program.cs:4793`). |
+| `PartModelRenderer.UpdateRenderData(IViewport,int)` | render prefix | Submit authored EVA equipment before upload. @5482 `Program` skips EVA in the early loop (`Program.cs:4292-4299`), uploads at 4317, then draws the avatar at 4428/4622. Instance lists are cleared at frame start (`PartModelRenderer.ClearFrameData`), so equipment submitted after the upload is discarded, not drawn a frame late. |
+| `SuperMeshRenderSystem.ClearBuckets(IViewport)` | editor postfix | **Signature @5482** (was parameterless; per-view buckets, rev 5474); still one overload, postfix binds only `__instance`. Only matching Program renderer/main viewport/editor: submit avatar after clearing and before prepass (`Program.cs:4901` @5482). Also invoked per viewport from `RenderViewport` (`:4419`) and `RenderGame` (`:4613`), where the editor-kitten gate returns early. |
 | `VehicleEditor.OnFrame`, `OnMouseButton`, `OnKey`, `UpdateSelected` | editor root-selection guards | Clear body selection/grab without interfering with accessory parts. |
 | `VehicleEditor.DeletePart(Part)`, `SetFocusedTree(PartTree)` | editor prefixes | Preserve existing body root and focused tree. |
 | private `VehicleEditor.DuplicateHighlightedPart`, `RequestNewVehicle`, `FinalizeNewVehicle` | editor prefixes | Block body duplication/replacement/new-vessel actions during a configured kitten edit in either flight mode. |
 | `VehicleSaveData.Create(string,PartTree)` | metadata postfix | Preserve Character for a live KittenEva with this exact authored root, including after disabling; no character guessed for unrelated trees. |
 | internal `Part.GetReferenceWithChildren(ref uint,PartInstance,bool)` | connector serialization postfix | Set marked instance Id only for owned nodes, preserving original Id, stock prefix count and ordered owned suffix. |
-| `Part(string,PartTemplate,PartInstance,Part)` | constructor prefix/postfix | Decode valid marked data, restore runtime Id, append nodes BEFORE `RegenerateConnectionsFromPartInstance` indexes them. |
+| `Part(string,PartTemplate,PartInstance,Part)` | constructor prefix/postfix | Decode valid marked data, restore runtime Id, append nodes BEFORE `RegenerateConnectionsFromPartInstance` indexes them. @5482 the ctor (`Part.cs:1490`) no longer creates a tree; the postfix touches only template/sub-part/scale/connectors, so a root is registered while its `Tree` is still null (unload filters those out). |
 
 No private field reflection, shader strings, GPU byte offsets or game DLL modifications.
 Reverse-patch behavior and emitted nonvirtual dispatch are also covered by managed Harmony checks.
@@ -76,7 +148,7 @@ Unexpected IL match counts fail installation with rollback; removed hooks restor
   Preserve worker MMU bookkeeping with its matching saved EVA FC state; no locomotion reset/teleport.
 - `Vehicle.ControlPart/ControlConnector/Ctrl2Body`; `VehicleEditingSpace.Asmb2Ecl`,
   `VehicleEditor.CameraOffset`; `ThrusterController.Parent.FullPart/ManualControlMap`,
-  `Part.Tree.OwningVehicle/Template.Id`; root `KittenBackPackPart` authored RCS mappings.
+  `Part.Tree?.OwningVehicle` (nullable since 5482) / `Template.Id`; root `KittenBackPackPart` authored RCS mappings.
   `ModuleStateful<ThrusterController,ThrusterControllerState,ThrusterControllerGlobalState,EmptyStruct>`
   `InitializeHotPathList(Parts.States).GetMutableGlobalStateForInitialization()` resets authority to
   `ThrusterControllerGlobalState.Zero` at joined enable/disable/disposal. Native cache checks Ctrl2Body;
@@ -106,7 +178,8 @@ Unexpected IL match counts fail installation with rollback; removed hooks restor
   `Connection`, owner, scale and transforms. `ScaleFactors` reduces scale to a single scalar.
 - `Part.Connection.Connect/Disconnect`, `Connection.Connectors[0/1]`, `IConnector.ConnectionPart`;
   preserve resource capabilities on unload. Stock wildcard Part-to-Part links do not carry bulk fuel.
-- `PartTree.RecomputeAllDerivedData`, `HasUnsavedChanges`, `PerformanceSequences.SetDirty`;
+- `PartTree.RecomputeAllDerivedData` (marks derived data dirty since 5482; rebuilt on first read or at
+  the `PrepareFrame` flush before the vehicle solvers), `HasUnsavedChanges`, `PerformanceSequences.SetDirty`;
   serialized `PartInstance.Id` and connection-index regeneration. No undo/redo API in 5402.
 - `PhysicsFrameHook.Enqueue`: handoff after worker result application, before all next snapshots.
   Teardown waits `JobSystems.VehicleSolver` and `ClothSolvers`; closes owned editor before unpatching.
@@ -128,7 +201,9 @@ sidecars restore the chosen mode disarmed. Saved files require the mod while
 connected runtime indices exist; removing a mod cannot retroactively make these files stock-safe.
 
 Unload tracks weak roots, converts owned endpoints to stock surface links transactionally and
-recomputes resource graphs before removing nodes. It preserves the other endpoint; if bulk flow
+marks derived data for recomputation before removing nodes (since 5482 the resource graphs are rebuilt
+lazily, on first read or at the next `PrepareFrame` flush, on the final stock-link topology and
+outside the transaction). It preserves the other endpoint; if bulk flow
 would be lost or a reconnect fails, it retains original links and passive hooks, logging the reason.
 Existing equipment is never silently deleted. Native behavior after completely removing rendering
 support follows the game's original EVA limitations.

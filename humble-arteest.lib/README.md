@@ -66,9 +66,10 @@ The swap was inert.
 
 ### How it works now
 
-**Transport: the free bits of `StateBitFlag`.** The game writes only bits **0..10** of that field
-(highlight, grabbed, translucent, selected, edited-vehicle, IVA, no-emissive, add-emissive-color,
-selected-connected, selected-disconnected, fuel-flow). Bits **11..31** are free — 21 bits, which
+**Transport: the free bits of `StateBitFlag`.** The game writes only bits **0..10** of that field.
+KSA 5482 defines them in `PartTreeRenderData.StateBit`: highlighted, grabbed, fake-translucent,
+selected, no-celestial-shadows, no-planet-shine, no-emissive, add-emissive-color, selected-connected,
+selected-disconnected and highlight-green. Bits **11..31** are free — 21 bits, which
 carries a 7:7:7 sRGB color. `StateBitFlag` lives at offset 64 in *every* `PerInstanceData` variant
 (static, dynamic, glass) and is already forwarded to every part fragment shader as the
 `inStateFlags`@location 4 varying.
@@ -97,29 +98,40 @@ Nothing on disk is read-modify-written, and no temp file is created. Any failure
 compile error, unexpected exception) returns control to the original method, so the worst case is
 **stock rendering**, never a broken pipeline.
 
-### Data flow
+### Data flow (KSA 5482)
 
 ```
-PartModelModule.UpdateRenderData(...)          ← HARMONY PREFIX: remember which Part this is
-    │   builds PerInstanceData { ModelMatrix, StateBitFlag, EmissiveColor, Wetness }
+PartTreeRenderData.EnsureBuilt(tree, frame)    ← HARMONY PREFIX: InvalidateStates() once after a paint
+    │                                             change (RenderStateVersion differs for this tree)
     ▼
-PartModel.AddInstance(instanceData, ...)       ← public wrappers converge on a private submission;
-                                                  HARMONY PREFIX: instanceData.StateBitFlag |= paintBits
+PartTreeRenderData.WriteState(batch, slot, part)             ← HARMONY POSTFIXES (private methods):
+PartTreeRenderData.WriteDynamicState(batch, slot, module)       batch.StateBitFlags[slot] |= paintBits
+    ▼                                             (runs only when the tree's cached state is dirty)
+PartTreeRenderData.Compose / ComposeDynamic     (unmodified — per viewport, copies cached flags into
+    │                                             instance lists, or RayTraceTransforms in raytraced IVA)
     ▼
-PartModel.WriteInstancesToGpu()                 (unmodified)
-    ▼
-vkCmdDrawIndexedIndirect
+PartModelRenderer upload + vkCmdDrawIndexedIndirect   (unmodified)
     ▼
 MeshIndirect.vert                               (unmodified — forwards outStateFlags@4)
     ▼
-MeshIndirect.frag                              ← PATCHED: unpack bits 11..31, blend into sampledColor
+MeshIndirect.frag / MeshIndirectRaytraced.frag  ← PATCHED: unpack bits 11..31, blend into sampledColor
 ```
 
-`PartModelModule.UpdateRenderData` and `PartModelDynamicModule.UpdateRenderData` call the public
-wrappers, including KSA's dent-aware wrappers. Those wrappers converge on a private submission
-overload, which is the method patched by Vehicle Paint and Engine Emissive. This keeps the
-"remember the part, then consume it" hand-off exact and applies each override once while the
-native `PerInstanceDent` record continues through unchanged.
+KSA 5482 removed `PartModelModule.UpdateRenderData` and `PartModelDynamicModule.UpdateRenderData`.
+Part render data is now cached per tree in `PartTreeRenderData` (`PartTree.RenderData`).
+`EnsureBuilt` runs once per frame and rewrites a batch's cached `StateBitFlags` only when the tree
+is dirty. The private `WriteState` and `WriteDynamicState` methods are the only writers of those
+caches for static and dynamic models, and their postfixes OR in the paint bits. The raster `Compose`
+path appends cached slots in bulk without calling `PartModel.AddInstance`, which is why the 5438
+`AddInstance` prefix and part hand-off could no longer be used.
+
+`VehiclePaint.RenderStateVersion` changes on every paint mutation: global enable/color, per-part
+and per-template set/clear, clear-all and pruning. It also changes when the patched shaders are
+installed or removed. The `EnsureBuilt` prefix keeps the last version seen for each tree in a weak
+table. It calls `InvalidateStates()` once after a change and on a tree's first sighting. Otherwise
+each frame costs one version comparison per tree. The cached bits reach raster **and** raytraced IVA submissions. Part thumbnails do not
+use these caches and stay unpainted, as before. Engine Emissive still prefixes the dynamic
+`AddInstance` submission, which runs every frame.
 
 ### The injected GLSL
 
@@ -166,7 +178,7 @@ Setting a color, on the other hand, costs nothing — it is just a dictionary wr
 
 ### Targeting
 
-Resolution order per part, evaluated in the `AddInstance` prefix:
+Resolution order per part, evaluated when KSA rewrites that part's cached state:
 
 1. **Per part instance** — `Dictionary<Part, …>` (reference identity). The finest unit the render path exposes.
 2. **Per part type** — keyed by `Part.Id` (the template id), so "all fuel tanks white" is one click.
@@ -184,9 +196,10 @@ it, so windows stay clear.
 - **`RenderCore.ShaderModuleUtils.FromFile(...)`** — the Harmony seam (param names `device` / `filePath` / `shaderStage` / `options` are load-bearing)
 - **`ShaderModuleUtils.FromString(...)`** / **`ShaderStageFromFileExtension(...)`** — used to compile the patched source
 - **`Brutal.ShaderCApi.CompileOptions`** — only to declare the prefix signature; passed through untouched
-- **`PartModelModule.UpdateRenderData` / `PartModelDynamicModule.UpdateRenderData`** — part identity (`Module<T>.Parent`)
-- **`PartModel.AddInstance` / `PartModelDynamic.AddInstance`** — the shared private submission
-  overload is where the paint bits are ORed in; the dent-aware public wrappers feed it
+- **private `PartTreeRenderData.WriteState(Batch, int, Part)` / `WriteDynamicState(DynamicBatch, int, PartModelDynamicModule)`**
+  plus the nested batches' `int[] StateBitFlags` (string lookups) — where the paint bits are ORed in;
+  dynamic slots take part identity from `Module<T>.Parent`
+- **`PartTreeRenderData.EnsureBuilt(PartTree, ulong)`** / **`InvalidateStates()`** — cache rewrite after a paint change
 - **`Program.RendererRebuildNeeded`** — deferred renderer rebuild
 - **`ModLibrary.Get<ShaderReference>("MeshIndirectFrag").ModPath`** — pre-flight anchor check only
 - **`Program.Editor`**, **`VehicleEditor.EditingSpace.Parts` / `.UnattachedPartTrees`**, **`PartTree.Parts`** — editor paint targets
@@ -198,15 +211,16 @@ it, so windows stay clear.
 | KSA starts using `StateBitFlag` bit 11 or above | Paint and that feature corrupt each other | Re-audit the bit map; shrink the paint payload (e.g. 6:6:6 or a palette index) or move the transport |
 | `vec3 sampledColor = …;` anchor moves or is renamed | "Enable" fails with a UI message; rendering stays stock | Update the anchor predicate in `VehiclePaintShaders.Inject` |
 | `inStateFlags` varying renamed or removed | Same — `Inject` refuses and reports why | Follow the new state-flag varying name |
-| `ShaderModuleUtils.FromFile` signature or param names change | Log shows fewer than 5/5 hooks attached; UI warns | Update `ResolveFromFile` + the prefix signature |
-| `*Module.UpdateRenderData` renamed | 5/5 drops; paint silently has no target | Update the patch targets |
+| `ShaderModuleUtils.FromFile` signature or param names change | Log shows fewer than 4/4 hooks attached; UI warns | Update `ResolveFromFile` + the prefix signature |
+| `PartTreeRenderData.WriteState`/`WriteDynamicState` or nested `Batch`/`DynamicBatch.StateBitFlags` renamed or re-typed | Fewer than 4/4 hooks; that model kind renders unpainted | Find the new writers of the cached state flags |
+| `EnsureBuilt`/`InvalidateStates` change role | Paint changes appear only when something else dirties the tree | Find the new per-tree state invalidation point |
 | Fragment shader gains a *new* file that renders parts | New shader renders unpainted | Add its file name to `VehiclePaintShaders.TargetFileNames` |
 
 ### Files
 
 - `VehiclePaint.cs` — paint registry (per part / per type / global), bit encoding, blend-mode setting
 - `VehiclePaintShaders.cs` — GLSL transform, source cache, install/uninstall + rebuild request
-- `VehiclePaintPatches.cs` — the five Harmony seams
+- `VehiclePaintPatches.cs` — the four Harmony seams
 - `PaintTargets.cs` — enumerates paintable parts in flight and in the editor
 - `VehiclePaintSubmod.cs` / `VehiclePaintSubmodTables.cs` — ISubmod UI panel
 
@@ -267,9 +281,12 @@ writes enabled. The shader does **not** discard on alpha: its non-`EYE` branch h
 `opacity = 0.75`, then computes `finalAlpha = mix(opacity, 1.0, fresnel * 0.5)`. Changing
 `AlbedoColor.W` cannot make that glass invisible. The `EYE` variant hard-codes opacity to 0.3.
 
-`KittenVisorPatches` transpiles `KittenRenderable.UpdateRenderData`, replacing exactly the call
-immediately following `ldfld CharacterAvatar.Helmet.VisorMesh` with a conditional draw helper.
-Skipping `StaticMeshRenderable.Draw()` omits both transparent color and depth-prepass submissions.
+`KittenVisorPatches` transpiles `KittenRenderable.UpdateRenderData`, replacing exactly one visor
+draw call with a conditional draw helper. Since KSA 5482 meshes are bucketed per render view, and
+the call is `VisorMesh.Draw(view)`. The transpiler matches `ldfld CharacterAvatar.Helmet.VisorMesh`,
+a local load of the view and `StaticMeshRenderable.Draw(ViewHandle)`, then substitutes
+`DrawVisor(StaticMeshRenderable, ViewHandle)`. Skipping `Draw(view)` omits both transparent color
+and depth-prepass submissions for that view.
 The helmet shell, eyes, other glass, animation, attachment state and mesh visibility flags are
 untouched. No shader recompilation or renderer rebuild is needed. Both hosts apply/remove the
 patch. If the expected single IL match changes, patch installation fails and the UI disables the
@@ -378,7 +395,7 @@ humble-arteest/                    — Standalone mod (F11 toggle)
 humble-arteest.lib/                — Core library (referenced by unscience supermod)
 ├── VehiclePaint.cs                — Paint registry + StateBitFlag bit encoding
 ├── VehiclePaintShaders.cs         — GLSL injection, source cache, install/rebuild
-├── VehiclePaintPatches.cs         — The five Harmony seams
+├── VehiclePaintPatches.cs         — The four Harmony seams
 ├── PaintTargets.cs                — Paintable part enumeration (flight + editor)
 ├── VehiclePaintSubmod.cs          — ISubmod UI: shader state, brush, blend mode
 ├── VehiclePaintSubmodTables.cs    — ISubmod UI: per-part and per-part-type tables
@@ -417,18 +434,19 @@ also clears the hide flag.
 ## Key Decompiled Source References
 
 For future maintenance when KSA updates break this mod. The authoritative current decomp/assets live
-under `ksa-game-assemblies/current/decomp` and `.../current/Content`.
+under `ksa-game-assemblies/current/decomp` and `.../current/Content`. Line numbers are for KSA 5482.
 
 | File | What to Check |
 |------|---------------|
 | `KSA/PartModel.cs` | `PerInstanceData` layout (:383-394), public wrappers and private submission (:459-490) |
-| `KSA/PartModelDynamic.cs` | Dynamic `PerInstanceData` (:393-404), public wrappers and private submission (:463-481) |
-| `KSA/PartModelModule.cs` | `UpdateRenderData()` (:79) — **the `StateBitFlag` bit map lives here** (:82-133) |
-| `KSA/PartModelDynamicModule.cs` | Dynamic variant with Temperature/TFI (:55) |
+| `KSA/PartModelDynamic.cs` | Dynamic `PerInstanceData` (:393-404), public wrappers and private submission (:463-481; Engine Emissive) |
+| `KSA/PartTreeRenderData.cs` | **`StateBit` bit map** (:196-219), `InvalidateStates` (:323), `EnsureBuilt` (:444), `WriteDynamicState` (:1088), `WriteState` (:1210), `Compose` (:1258) |
+| `KSA/PartModelDynamicModule.cs` | Dynamic module with Temperature/TFI |
+| `KSA/KittenRenderable.cs` | `VisorMesh.Draw(view)` (:370) — the visor transpiler match |
 | `KSA/PartModelRenderer.cs` | `ColorData.BuildPipelineModel/Dynamic` — which `ENABLE_*` defines each pipeline uses |
 | `KSA/ShaderReference.cs` | `CompileVariantWithCustomOptions()` — why `.Shader` swapping is inert |
 | `RenderCore/ShaderModuleUtils.cs` | `FromFile` (:115) / `FromString` (:77) — the interception seam |
-| `KSA/Program.cs` | `RendererRebuildNeeded` (:383), consumed in `PrepareFrame` (:2080) |
+| `KSA/Program.cs` | `RendererRebuildNeeded` (:430), consumed in `PrepareFrame` (:2141) |
 | `Content/Core/Shaders/Mesh/MeshIndirect.frag` | Paint anchor (:114) and the `inStateFlags` bit tests (:308-353) |
 | `Content/Core/Shaders/Mesh/MeshIndirectRaytraced.frag` | Same anchor (:156) for the IVA raytraced path |
 | `Content/Core/Shaders/Common/Shared.glsl` | `gammaToLinear` (:203), `unpackRGB` (:50) |

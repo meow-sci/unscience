@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
 using KSA;
+using RenderCore.Systems;
 
 namespace MeowSci.HumbleArteestLib;
 
@@ -53,16 +54,18 @@ public static class KittenVisorPatches
     {
         var code = new List<CodeInstruction>(instructions);
         var visorField = AccessTools.Field(typeof(CharacterAvatar.Helmet), nameof(CharacterAvatar.Helmet.VisorMesh));
-        var draw = AccessTools.Method(typeof(StaticMeshRenderable), nameof(StaticMeshRenderable.Draw), Type.EmptyTypes);
+        // KSA 5482 draws per render view: VisorMesh.Draw(view), with the view loaded between.
+        var draw = AccessTools.Method(typeof(StaticMeshRenderable), nameof(StaticMeshRenderable.Draw),
+            new[] { typeof(ViewHandle) });
         var replacement = AccessTools.Method(typeof(KittenVisorPatches), nameof(DrawVisor));
         int matchIndex = -1;
         int matches = 0;
 
-        // Match the receiver, not just Draw(): the adjacent helmet draw must stay stock.
-        for (int i = 1; i < code.Count; i++)
+        // Match the receiver, not just Draw(view): the adjacent helmet draw must stay stock.
+        for (int i = 2; i < code.Count; i++)
         {
-            if (code[i - 1].opcode == OpCodes.Ldfld && Equals(code[i - 1].operand, visorField)
-                && code[i].Calls(draw))
+            if (code[i - 2].opcode == OpCodes.Ldfld && Equals(code[i - 2].operand, visorField)
+                && code[i - 1].IsLdloc() && code[i].Calls(draw))
             {
                 matchIndex = i;
                 matches++;
@@ -72,15 +75,15 @@ public static class KittenVisorPatches
         if (matches != 1)
             throw new InvalidOperationException($"Expected one VisorMesh.Draw call, found {matches}.");
 
-        // Same stack effect: consume the mesh reference, return void. Preserve labels/blocks.
+        // Same stack effect: consume the mesh reference and view, return void. Preserve labels/blocks.
         code[matchIndex].opcode = OpCodes.Call;
         code[matchIndex].operand = replacement;
         return code;
     }
 
-    private static void DrawVisor(StaticMeshRenderable visor)
+    private static void DrawVisor(StaticMeshRenderable visor, ViewHandle view)
     {
         if (!Hidden)
-            visor.Draw();
+            visor.Draw(view);
     }
 }

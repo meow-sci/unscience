@@ -30,8 +30,10 @@ The removed Flexo diagnostics no longer own any part-transform or solver-resync 
 
 `dotnet run --project kitchen-sink.tests` links the production registry/transpiler into managed
 KSA 5438 decision fixtures (the detector and end-frame caller are unchanged from 5402).
-The shared IVA helper retains upstream's explicit dent-aware AddInstance binding and paired
-instance/dent submission. No G-load algorithm or saved-record migration is required for 5438.
+No G-load algorithm or saved-record migration is required for 5438 or 5482. On KSA 5482
+`PhysicsBubble.DetectStructuralFailure` has a byte-identical body. The shared IVA helper in
+`ksa-abstractions.lib` now reveals editor internals through `PartTreeRenderData.Compose`, because
+5482 raster composition bypasses the dent-aware `AddInstance` sink that 5438 used.
 Full solution compilation checks typed game/UI references. Actual
 cart collision behavior and rendered controls require native acceptance; see the
 [test README](../kitchen-sink.tests/README.md).

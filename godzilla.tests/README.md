@@ -13,8 +13,9 @@ The production `WeldScale` validator is linked too. Checks exercise Smart and Ba
 `VisualScaleChecks` applies production Harmony patches to representative draw methods. It checks
 10,000,000× rendering without physical refreshes, render-only pixel culling, COM and XYZ transforms,
 caller matrix restoration on success/exception, physical↔visual transitions, avatar scale isolation,
-coexistence with an external GetWorldMatrix prefix, and unload/reapply. Physical bubble execution
-and actual KSA render submissions still need in-game testing.
+coexistence with an external GetWorldMatrix prefix, and unload/reapply. The draw fixture mirrors the
+KSA 5482 shape, where `UpdateRenderData` culls through `Vehicle.IsLargeEnoughToRender`. Physical
+bubble execution and actual KSA render submissions still need in-game testing.
 
 `ColliderScaleChecks` applies the production collider patches to native-shaped managed fixtures
 with real Bepu sphere/box structs. Covers all four physics/collider combinations, independent XYZ

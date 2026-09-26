@@ -71,7 +71,8 @@ internal static class PerAxisScaleDrag
             part.Scale = newScale;
             part.RefreshScaleAndReposition();
         });
-        selected.Tree.RefreshStaticMass();
+        // Part.Tree is nullable since KSA 5482; editor selections always belong to a tree.
+        selected.Tree?.RefreshStaticMass();
     }
 
     private static void SetAxis(ref double3 v, int axis, double value)

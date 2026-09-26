@@ -32,10 +32,10 @@ replay order, and native state overlap must be modeled deliberately.
 | Open save window | `GameSaves.Toggle`, `GameSavesWindow` | Uses existing name/list/load/delete/overwrite UI. Rejects editor state. |
 | New save | `GameSaves.MakeSave` → `MakeUncompressedSave` → `UncompressedSave.Make` | Validates name. Existing name displays native overwrite confirmation. |
 | Capture | `GameSave.Populate` → `UniverseData.Create` | Synchronous. Captures time, main base camera, one celestial-system data record, kitten roster. |
-| Write | `UncompressedSave.Write` | Deletes destination directory, creates it, writes `meta.toml`, writes `universe.xml`, caches size/date and registers save. |
-| Overwrite | `UncompressedSave.Overwrite` | Calls `Delete()` BEFORE `Make(Id)`, so old data can be lost even if later capture fails. |
+| Write | `UncompressedSave.Write` (returns `bool` since KSA 5482) | 5482: `SaveDirectory.TryReplace` deletes/recreates the destination in place (bounded retries; refuses paths outside the saves root), then writes `meta.toml` and `universe.xml`, caches size/date and registers the save. Any failure returns `false` instead of throwing; the sidecar is written only on `true`. Before 5482 it deleted, recreated and threw on failure. |
+| Overwrite | `UncompressedSave.Overwrite` | 5482: calls only `Make(Id)`; the old folder is replaced inside `Write`, so a save that cannot be written leaves the existing one intact. Before 5482 it called `Delete()` BEFORE `Make(Id)`. |
 | Refresh/list discovery | `GameSaves.Refresh` → `UncompressedSave.FromDirectory` | Scans directories. Loads native XML while constructing list entries; this is NOT a world-load event. |
-| World load | `UncompressedSave.Load` | Editor guard; loads fresh XML from disk; `Universe.DeserializeSave`; `Program.OnGameLoaded`. |
+| World load | `UncompressedSave.Load` | Editor guard; loads fresh XML from disk (5482: a read failure is logged and `Load` returns before `DeserializeSave`, which Unscience reports as a load failure); `Universe.DeserializeSave`; `Program.OnGameLoaded`. |
 | Delete | `UncompressedSave.Delete` | Recursively removes whole directory. Sidecar and bundled assets follow native deletion automatically. |
 | Terminal save/load | `GameSaves.MakeUncompressedSave`, `LoadSaveGame` | Same underlying save objects; hook core methods rather than just UI callbacks. |
 
@@ -175,7 +175,7 @@ when a partial feature fails, but unknown/unrestored data must not silently beco
 ## File integrity and portability
 
 Native saves are not transactional. `Write` deletes the destination before writing either native
-file; `Overwrite` deletes even earlier. A sidecar-only atomic rename protects only that JSON file,
+file (since 5482 in place through `SaveDirectory.TryReplace`; `Overwrite` no longer deletes earlier). A sidecar-only atomic rename protects only that JSON file,
 not the whole save. A crash between native write and sidecar completion leaves a vanilla save;
 interruption during native XML write can corrupt the native save itself. This must be stated honestly.
 
@@ -183,7 +183,7 @@ The practical first increment should stage/validate mod capture before native Wr
 to XML with a cryptographic hash, write sidecar last, and never reuse a stale sidecar when capture
 fails. A later robust full-save transaction can stage all files under a sibling directory and
 swap/backup directories, but needs additional native hooks because readonly `Directory` and
-`SaveMetaData._path` assume the final path, while `Overwrite` performs early deletion. A backup hook
+`SaveMetaData._path` assume the final path (and, before KSA 5482, `Overwrite` performed early deletion). A backup hook
 before native overwrite, with bounded rotation, is less intrusive than replacing native serialization.
 
 Imported PNG/GLB/audio files should be copied by content hash into the save and referenced by safe

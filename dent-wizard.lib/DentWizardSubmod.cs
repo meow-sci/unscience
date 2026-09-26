@@ -44,6 +44,8 @@ public sealed partial class DentWizardSubmod : ISubmod, ISaveParticipant
         var request = _pending;
         _pending = null;
         if (request == null) return;
+        // The launch teleports the source, which disposes orbit points the hover job may read.
+        PhysicsFrameHook.JoinOrbitReaders();
         try { SetStatus(request.Execute(stateTime), false); }
         catch (Exception ex) { SetStatus(ex.Message, true); }
     }

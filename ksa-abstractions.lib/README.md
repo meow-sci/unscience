@@ -53,6 +53,28 @@ Wrapper around the KSA universe's simulation time.
 ### HotkeyGuard
 Mandatory Harmony prefix on `GameSettings.OnKeyAll` that swallows game hotkeys while any ImGui text input has focus (bypassed while the dev console is open). Every top-level mod applies it via `HotkeyGuard.Patch(harmony)` / `HotkeyGuard.Unpatch(harmony)`.
 
+Since KSA 5482, game actions bound to a **mouse button** are dispatched from `Program.OnMouseButton` without passing `OnKeyAll`, so they are not blocked while typing. All default bindings are keys; only user-assigned mouse bindings are affected.
+
+### PartRenderFilter
+Hides selected parts' meshes while the parts stay in their vehicle and keep working (KSA 5482+).
+Blinky and It's So Shiny register their render toggles here.
+
+- `PartRenderFilter.Register(harmony, owner, Func<Part, bool> shouldHide)` adds or replaces an owner's predicate; `Unregister(harmony, owner)` removes it; `IsInstalled` reports the shared patches.
+- A predicate receives the full part (`Part.FullPart`) once per model instance per viewport per frame, on the main thread. A part is hidden when any owner's predicate returns true.
+- The first owner installs one shared prefix/postfix pair on each of `PartTreeRenderData.Compose`, `ComposeDynamic` and `ComposeGlass`; the last owner removes them. All owners share one patch set because two independent compactions would shift each other's ranges.
+- The prefix records where each batch's range starts in `PartModel.ViewportData.InstanceList`. The postfix removes hidden slots from the range that `Compose*` just appended and removes the matching `DentInstanceList` entries. Cached render data is never modified, so predicate changes apply on the next frame. Hidden parts cast no shadows.
+- Fails open. If the appended count does not match the batch (non-raster path) or the dent list is misaligned, the filter leaves that range unchanged. Any exception disables the filter for the session and logs it; the render loop continues. `Register` throws when the required members are missing.
+- String reflection: private `PartTreeRenderData._batches`, `_dynamicBatches` and `_glassBatches`, plus the nested `Batch`/`DynamicBatch`/`GlassBatch` `.Model`, `.Parts` and `.Count`.
+- **Known gap:** raytraced IVA submissions go to `RayTraceTransforms`, not the instance lists, so they are not filtered. The KSA 5438 per-module skip also hid those.
+- Managed checks: `RenderFilterChecks` in [ksa-upgrade.tests](../ksa-upgrade.tests/README.md).
+
+### IvaForceRender
+Shared implementation of Kitchen Sink's **Always Render IVA Interiors**. Hosts call `IvaForceRender.Patch(harmony)` / `Unpatch(harmony)`.
+
+- `Enabled = true` sets `Template.Internal = false` on loaded part-model templates. A `PartModel` constructor postfix catches models created later. Disabling or unpatching restores the changed flags.
+- **Editor preview:** internal meshes stay visible in the vehicle editor outside IVA while the patch is installed, whether or not `Enabled` is set. KSA 5482 raster-composes static models in `PartTreeRenderData.Compose` and applies the internal/IVA gate there, without calling `PartModel.AddInstance`. The helper therefore uses a prefix on `Compose` for editor, non-IVA viewports that render part models. The prefix temporarily clears `Template.Internal` on internal, non-`ShadowProxy` templates, and a finalizer restores them even when `Compose` throws. Stock code then appends instances and dents consistently. The template list is rebuilt from `PartModel.Instances` after model creation or restoration.
+- Change from 5438: internal meshes no longer appear in editor part thumbnails. The old `AddInstance` postfix also reached thumbnails.
+
 ### HiddenUiFrameHook
 Keeps per-frame mod work alive while the game HUD is hidden (**F2** / `InputAction.ToggleUi`).
 
@@ -165,6 +187,13 @@ actions are discarded when the system is absent or the hook is removed. Callers 
 queued actions after disposal. Exceptions are isolated per action/listener. Garry's Torch installs
 this hook for Unscience and subscribes its weld callback; Godzilla queues edits and restores.
 
+`JoinOrbitReaders()` waits for `JobSystems.NearestOrbitAndPerformanceWorker`, at most once per frame.
+In KSA 5482, `PrepareFrame` queues the nearest-orbit job on that worker just before this handoff. The
+job reads flight plans and cached orbit points, and `Vehicle.Teleport` or other flight-plan edits
+dispose those points. The hook joins automatically before a deferred world change and before
+draining queued mutations. `BeforePhysics` listeners that move vessels must call it before mutating;
+Garry's Torch and Dent Wizard do. Idle frames do not wait.
+
 `VehicleScaleOwnership` keeps weak vehicle keys with tool names. `TryAcquire`, `GetOwner` and
 owner-checked `Release` prevent Godzilla/Garry's Torch from replacing one another's scale state.
 
@@ -208,8 +237,30 @@ an arbitrary cross-craft matching API. The JSON serializer retains only primitiv
 swizzles, and rejects nonfinite floating-point values including exponent overflow. It is for explicit DTOs only, not live game
 objects. Sidecars are limited to 32 MiB/depth 64 and paired to SHA-256 of universe.xml.
 
+`NativeSaveHooks` publishes `Written` only when KSA's `UncompressedSave.Write()` returns true.
+Since KSA 5482 a failed native save returns false instead of throwing. This happens when
+`SaveDirectory.TryReplace` cannot delete the old folder, or when writing metadata or the universe
+fails. The previous save folder can then survive. The hook raises `WriteFailed` instead, so no sidecar
+from this session is written into the old save. KSA 5482 also catches an unreadable `universe.xml`,
+logs it and returns before `Universe.DeserializeSave`. When a file load never reaches reconstruction,
+`FinishedLoading` sets `LastLoadError` to an `InvalidDataException` and raises `LoadFailed`; the
+current scene is unchanged. The reset join waits for `JobSystems.NearestOrbitAndPerformanceWorker`
+(renamed from `ConcurrentWorkers` in 5482).
+
 See [save integration](../scope/saves.md), [plan](../plans/SAVES.md) and
 [managed checks](../saves.tests/README.md). GPU/native acceptance is separate from managed tests.
+
+## KSA 5482 compatibility
+
+Verified against KSA `2026.9.22.5482` by build and managed checks only. There has been no native run.
+
+- New `PartRenderFilter` replaces the removed per-module `*Module.UpdateRenderData` render-skip targets.
+- `IvaForceRender` reveals editor internals through `PartTreeRenderData.Compose` instead of the `AddInstance` sink.
+- `PhysicsFrameHook.JoinOrbitReaders` joins the nearest-orbit job before vessel moves at the handoff.
+- `NativeSaveHooks` reports failed native writes (`WriteFailed`) and unreadable saves (`LoadFailed`), and joins the renamed `NearestOrbitAndPerformanceWorker`.
+
+Still needs in-game acceptance: Blinky/Shiny hiding in main, portrait and shadow views; editor IVA
+internals; a locked-folder save and a corrupted-`universe.xml` load.
 
 ## KSA 5438 compatibility
 

@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using Brutal.VulkanApi;
+using HarmonyLib;
 using KSA;
 using KSA.Rendering.Rings.Rendering;
 using MeowSci.KsaAbstractions;
@@ -22,6 +23,7 @@ namespace MeowSci.BloominOnionLib;
 public static class RingRendererRebuilder
 {
     private const BindingFlags AnyInstance = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+    private static AccessTools.FieldRef<DistantSphereRenderer, DistantSphereMaterialData>? _distantMaterial;
 
     public static bool Rebuild(out string message)
     {
@@ -76,32 +78,30 @@ public static class RingRendererRebuilder
 
     /// <summary>
     /// Best-effort: a <c>StaticCelestial</c>'s distant-sphere renderer bakes "has ring shadow",
-    /// the radii and the band texture handle into its push-constant struct at construction.
-    /// Refreshing those fields keeps the ring shadow correct on the far-away sphere too.
-    /// Silent on any mismatch — this is cosmetic.
+    /// the radii and the band texture handle into its private material struct at construction
+    /// (<c>_material</c>, a <c>DistantSphereMaterialData</c> since KSA 5482; re-uploaded every
+    /// frame, with the ring normal recomputed live). Refreshing those fields keeps the ring shadow
+    /// correct on the far-away sphere and stops it sampling a pruned painted band.
+    /// Cosmetic, so any mismatch is logged and skipped.
     /// </summary>
     public static void SyncDistantSphereShadow(Celestial celestial)
     {
         try
         {
-            var distant = GetFieldFromHierarchy(celestial, "_distantRenderer");
-            if (distant == null) return;
-            var dataField = distant.GetType().GetField("_data", AnyInstance);
-            if (dataField == null) return;
-            object? data = dataField.GetValue(distant);
-            if (data == null) return;
+            if (GetFieldFromHierarchy(celestial, "_distantRenderer") is not DistantSphereRenderer distant) return;
+            _distantMaterial ??= AccessTools.FieldRefAccess<DistantSphereRenderer, DistantSphereMaterialData>("_material");
+            ref DistantSphereMaterialData material = ref _distantMaterial(distant);
 
             var rings = celestial.BodyTemplate?.RingsReference;
-            var type = data.GetType();
-            type.GetField("UseRingShadows")?.SetValue(data, rings != null ? 1 : 0);
-            if (rings != null)
+            material.UseRingShadows = rings != null ? 1 : 0;
+            if (rings == null)
             {
-                type.GetField("RingInnerRadius")?.SetValue(data, (float)rings.InnerRadius.InMeters());
-                type.GetField("RingOuterRadius")?.SetValue(data, (float)rings.OuterRadius.InMeters());
-                type.GetField("RingTextureId")?.SetValue(data, rings.Texture.Get().BindlessHandle);
-                type.GetField("SamplerClampId")?.SetValue(data, Program.Instance.TextureSystem.SamplerClampHandle);
+                material.RingTextureId = 0; // Matches a renderer constructed without rings.
+                return;
             }
-            dataField.SetValue(distant, data);
+            material.RingInnerRadius = (float)rings.InnerRadius.InMeters();
+            material.RingOuterRadius = (float)rings.OuterRadius.InMeters();
+            material.RingTextureId = rings.Texture.Get().BindlessHandle;
         }
         catch (Exception ex)
         {

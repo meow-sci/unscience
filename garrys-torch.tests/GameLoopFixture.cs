@@ -28,6 +28,16 @@ namespace KSA
         }
     }
 
+    public sealed class JobScheduler(string name)
+    {
+        public void Wait() => Universe.Events.Add("join " + name);
+    }
+
+    public static class JobSystems
+    {
+        public static readonly JobScheduler NearestOrbitAndPerformanceWorker = new("orbit readers");
+    }
+
     public static class Universe
     {
         public static object? CurrentSystem = new();

@@ -26,6 +26,9 @@ The caller transpiler now lives in `ksa-abstractions.lib/PhysicsFrameHook`; Garr
 its weld callback. Queued Godzilla edits run before this callback. Source scale ownership is exclusive:
 restore Godzilla before welding, or unweld before applying Godzilla. Managed checks also cover queued
 mutation ordering, reentrant deferral, exception isolation and stale-system queue disposal.
+The fixture's `JobSystems.NearestOrbitAndPerformanceWorker` records joins. Checks confirm that queued
+mutations join the orbit readers once, after the step and before editing, and that a second
+`JoinOrbitReaders()` in the same frame does not wait again.
 
 ## Collision and preset regression
 

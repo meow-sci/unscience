@@ -11,5 +11,9 @@
     <Compile Include="../free-fallin.lib/FreeFallinPatches.cs" Link="FreeFallinPatches.cs" />
     <Compile Include="../parts-now.lib/Runtime/BundleValidatorRulesSchema.cs" Link="BundleValidatorRulesSchema.cs" />
     <Compile Include="../parts-now.lib/Runtime/BundleValidationIssue.cs" Link="BundleValidationIssue.cs" />
+    <Compile Include="../ksa-abstractions.lib/PartRenderFilter.cs" Link="PartRenderFilter.cs" />
+    <Compile Include="../ksa-abstractions.lib/PartRenderFilter.Batches.cs" Link="PartRenderFilter.Batches.cs" />
+    <Compile Include="../humble-arteest.lib/VehiclePaint.cs" Link="VehiclePaint.cs" />
+    <Compile Include="../humble-arteest.lib/VehiclePaintPatches.cs" Link="VehiclePaintPatches.cs" />
   </ItemGroup>
 </Project>

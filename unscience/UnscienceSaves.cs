@@ -24,6 +24,7 @@ internal sealed class UnscienceSaves : IDisposable
         _coordinator = new(participants);
         NativeSaveHooks.Capturing = Capture;
         NativeSaveHooks.Written = Write;
+        NativeSaveHooks.WriteFailed = WriteFailed;
         NativeSaveHooks.Loading = Load;
         NativeSaveHooks.Resetting = _coordinator.ResetWorld;
         NativeSaveHooks.Restoring = Restore;
@@ -58,6 +59,12 @@ internal sealed class UnscienceSaves : IDisposable
         }
         catch (Exception ex) { _coordinator.MarkFailure($"KSA saved '{save.Id}', but Unscience state could not be written: {ex.Message}"); }
         finally { _captures.Remove(save); }
+    }
+
+    private void WriteFailed(UncompressedSave save)
+    {
+        _captures.Remove(save);
+        _coordinator.MarkFailure($"KSA could not write save '{save.Id}'; Unscience state was not written.");
     }
 
     private void Load(UncompressedSave save)
@@ -103,6 +110,7 @@ internal sealed class UnscienceSaves : IDisposable
     {
         NativeSaveHooks.Capturing = null;
         NativeSaveHooks.Written = null;
+        NativeSaveHooks.WriteFailed = null;
         NativeSaveHooks.Loading = null;
         NativeSaveHooks.Resetting = null;
         NativeSaveHooks.Restoring = null;

@@ -1,6 +1,81 @@
 # 00 — Unscience supermod shell + `ksa-abstractions.lib` game-integration scope
 
-## Current verification — 5402 → 5438
+## KSA 5482 (5438 → 5482) verification
+
+Verified 2026-09-25 against `2026.9.22.5482` (revs 5439–5481), diffed from `2026.9.10.5438`.
+Static/managed only: 74 projects build with 0 warnings and the 15 managed suites pass (`saves.tests`,
+`ksa-upgrade.tests` `RenderFilterChecks`, `garrys-torch.tests` and `dent-wizard.tests` cover this
+area's changes). No native KSA run was possible (macOS; KSA.dll is Windows x64). Only `KSA.dll` and
+`Planet.Render.Core.dll` changed; Brutal/Bepu, StarMap.API 0.3.6 and Lib.Harmony 2.4.2 are unchanged.
+Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
+
+- 🔴 **Root compile break (fixed): `JobSystems.ConcurrentWorkers` → `NearestOrbitAndPerformanceWorker`**
+  (rev 5480, pure rename; same single-runner scheduler, `KSA/JobSystems.cs:12`). This one error masked
+  16 errors in 8 projects. `NativeSaveHooks.ResetAtJoinedBoundary` (`Persistence/NativeSaveHooks.cs:190`)
+  still needs the explicit join: `PrepareFrame` waits on the worker at frame start
+  (`Program.cs:2150`) but re-queues the nearest-orbit job at `:2188-2192`, before our `GetJobSimStep`
+  handoff (`:2207`), and `Universe.DeserializeSave` joins only the orbit, vehicle and cloth solvers.
+- 🔴 **New shared seam: `PartRenderFilter`** (`PartRenderFilter.cs`, `PartRenderFilter.Batches.cs`).
+  Rev 5456 removed the per-module `*Module.UpdateRenderData` hooks that blinky and its-so-shiny
+  prefixed; the replacement is one prefix/postfix set on `PartTreeRenderData.Compose` /
+  `ComposeDynamic` / `ComposeGlass` plus private batch reflection. See [PartRenderFilter.cs](#partrenderfiltercs).
+- 🔴 **`IvaForceRender` editor reveal (fixed; was silently dead).** The raster `Compose` branch applies
+  `(!Template.Internal || IVA)` itself (`PartTreeRenderData.cs:1300`) and no longer calls the private
+  `PartModel.AddInstance` sink, so the 5438 sink postfix stopped re-adding internal meshes in the
+  editor. It is replaced by a prefix + finalizer on `PartTreeRenderData.Compose` that temporarily clears
+  `Template.Internal` on cached internal, non-`ShadowProxy` templates. See [IvaForceRender.cs](#ivaforcerendercs).
+- 🔴 **`NativeSaveHooks` write/load results (fixed; silent 5482 regressions).** `UncompressedSave.Write()`
+  now returns `bool` (`KSA/UncompressedSave.cs:108-139`, `GameSave.cs:42`) and returns false instead of
+  throwing when `SaveDirectory.TryReplace` or the metadata/universe write fails; the old folder can
+  survive. The `Saved(UncompressedSave, bool __result, bool __runOriginal)` postfix
+  (`NativeSaveHooks.cs:85-93`) now publishes `Written` only on `__result`, otherwise the new
+  `WriteFailed` callback (`:20`; `unscience/UnscienceSaves.cs:27,64-68` discards the capture and reports
+  the failure), so this session's feature state is never paired with an intact older `universe.xml`.
+  `UncompressedSave.Load()` now catches unreadable-universe errors and returns before
+  `Universe.DeserializeSave` (`UncompressedSave.cs:61-79`). `ResetBeforeLoad` sets `_nativeLoadReached`
+  (`:140`), and `FinishedLoading(UncompressedSave __instance, …)` (`:112-125`) synthesizes an
+  `InvalidDataException` when the file load never reached deserialization, so `LastLoadError` /
+  `LoadFailed` report it. Details: [saves](saves.md).
+- 🔴 **`PhysicsFrameHook.JoinOrbitReaders()` (new; pre-existing race).** The nearest-orbit job queued at
+  `Program.cs:2188-2192` reads flight plans and cached orbit points while our handoff runs, and
+  `Vehicle.Teleport` → `Orbit.ReleaseCachedPoints` disposes them (rev 5480 fixed only the game's own
+  disposal path). `JoinOrbitReaders` (`PhysicsFrameHook.cs:29-34`) waits on
+  `NearestOrbitAndPerformanceWorker` at most once per frame (flag reset at handoff start, `:109`). It is
+  called automatically before a deferred world change (`:114`) and before draining queued mutations when
+  any exist (`:125`), and explicitly by `garrys-torch.lib/WeldEngine.cs:120` before `Teleport` and
+  `dent-wizard.lib/DentWizardSubmod.cs:48` before a launch. Idle frames do not wait.
+- ⚠️ **`PrepareFrame` seam order (rev 5464).** `PartTree.FlushDirtyDerived()` and
+  `FlushDirtyResourceManagers()` now run between `ExecuteNextClothSolvers` and
+  `ExecuteNextVehicleSolvers` (`Program.cs:2208-2211`). The `PhysicsFrameHook` transpiler still finds all
+  seven `Universe.*` calls exactly once and in order (interleaved non-seam calls are tolerated), so it
+  installs unchanged. Handoff mutations are flushed in the same frame, before the vehicle-solver
+  snapshot. `ExecuteNextVehicleSolvers` prefixes (inline `EternalFlamePatches`, kiwis-marbles) run
+  *after* the flush, so anything they dirty is recomputed lazily on read.
+- ⚠️ **HotkeyGuard: mouse-bound actions bypass it (rev 5449).** `GameSettings.OnKeyAll` (`:3407`,
+  body now `Input.MatchReleased`) still guards every keyboard event: `Program.OnKey` (`:1743-1751`) calls
+  it before the new private `DispatchKeyEvent(in GlfwKeyEvent)` (`:1754`). User mouse-button bindings go
+  `Program.OnMouseButton` (`:2001`) → `DispatchKeyEvent` (`:2018`) and never pass `OnKeyAll`,
+  `ConsoleWindow.IsOpen` or `WantCaptureKeyboard`. All 101 default bindings are keys, so only
+  user-assigned mouse bindings are affected. Optional hardening: prefix `DispatchKeyEvent` and swallow
+  `IsMouse` events while typing.
+- ✅ **Checked unchanged:** StarMap targets `Program.OnDrawUiFrame(double)` (`:3098`),
+  `OnDrawUiViewports(double)` (`:3129`) and `OnFrame(double,double)` (`:2229`), with the
+  `if (DrawUI) {…}` block at `:2256-2260`. `HiddenUiFrameHook` → `OnDrawUiConsole(double)` (`:3086`) is
+  still called unconditionally at `:2266`, after `DrawFps()` (`:2265`) and before `ImGui.Render()`
+  (`:2276`); `DrawUI` is at `:526`. `MenuBarPatch` → `DrawProgramMenusHook()` (`:3961`, still empty,
+  called `:3948`). `Universe.ExecuteNextVehicleSolvers(double, SimStep)` (`Universe.cs:2034`) is still a
+  single overload; its body only lost `_vehicleUpdateTask.RemoveEligibleVehicles()` (eviction moved to
+  the worker, rev 5476). Providers: `Program.ControlledVehicle` (`:502`), `MainViewport` (`:484`),
+  `Editor` (`:227`), `Universe.CurrentSystem`, `CelestialSystem.All`, `LookupCollection.UnsafeAsList`,
+  `Universe.GetElapsedTime` (`:2323`), `Vehicle.IsDebris/IsDisposed`, `Vehicle.Parts`,
+  `PartTree.Parts/Root`, `Part.SubParts`, `KSAColor.Xkcd`. Brutal decomp folders are identical.
+- **Native acceptance pending:** save overwrite with a locked old folder (no sidecar written, failure
+  reported) and a normal overwrite; loading a corrupted `universe.xml` (scene unchanged, status line);
+  mouse-bound action while typing; deferred load / weld / Dent Wizard launch while hovering a flight
+  plan at high warp (no `ObjectDisposedException`, no hang); Force IVA in the editor; blinky/shiny
+  render-skip; F2 hidden-HUD replay; Unscience menu item.
+
+## Verification — 5402 → 5438 (historical)
 
 `KeyHash` moved from KSA.dll to Planet.Render.Core.dll (rev 5412); the shared library now explicitly references the latter with `Private=false` for native save identity lookups. `IvaForceRender` must bind the common explicit `PartModel.AddInstance` overload because stock dent-aware wrappers were added. Its postfix now forwards the native `PerInstanceDent` into `DentInstanceList` alongside the duplicate `InstanceList` entry. `GameSettings.OnKeyAll` (NEW :3465), `Program.OnDrawUiConsole`, providers, and the seven ordered `PrepareFrame` solver seams retain their contracts. Input polling moved before `ApplyInputEvents`, still before the handoff; the new render pool does not move the solver boundary. `unscience/Patcher.cs:84` already wires IVA force render.
 
@@ -20,9 +95,10 @@ cross-reference table.
 
 Verification baseline:
 
-- **NEW decomp (current, build 2026.9.10.5438):** `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
-- **OLD decomp (previous, build 2026.9.7.5402):** `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
-- Decomp line numbers in the tables below are **@5438** unless a row says otherwise (older passes' lines are kept only inside the dated area summaries).
+- **NEW decomp (current, build 2026.9.22.5482):** `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
+- **OLD decomp (previous, build 2026.9.10.5438):** `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
+- Decomp line numbers in the tables below are **@5438** unless a row or cell says otherwise; rows touched
+  by the 5482 pass carry `@5482` lines (older passes' lines are kept only inside the dated area summaries).
 - Decomp paths below are **relative to the decomp root** (e.g. `KSA/Universe.cs`). KSA game types live under `KSA/`; ImGui/console types under `Brutal.ImGuiApi*`.
 - Every game target was grepped in BOTH decomps; "Δ vs OLD" records the delta (line moves are not deltas).
 
@@ -46,7 +122,8 @@ Verification baseline:
   first, exactly once.
 - **`ksa-abstractions.lib` is the game-facing seam.** All cross-cutting game access is funnelled
   through small static helpers here (`VehicleProvider`, `CelestialProvider`, `SimTimeProvider`,
-  `PartHelpers`, `XkcdColorHelper`, `HotkeyGuard`, `HiddenUiFrameHook`, `IvaForceRender`, `KsaPaths`) plus pure-C#
+  `PartHelpers`, `XkcdColorHelper`, `HotkeyGuard`, `HiddenUiFrameHook`, `IvaForceRender`, `PartRenderFilter` (5482),
+  `PhysicsFrameHook`, `Persistence/NativeSaveHooks`, `KsaPaths`) plus pure-C#
   utilities (`ISubmod`, `EasingHelper`, `ReflectionHelpers`, `SubmodUI`). Concentrating game touchpoints here means a
   game update's blast radius is mostly this one library.
 
@@ -58,14 +135,14 @@ Attributes come from `StarMap.API` (`StarMap.API/BaseAttributes.cs`, `OnGuiAttri
 
 | Mod.cs member (line) | Attribute | StarMap → game hook | Game method (NEW / OLD) | Δ vs OLD |
 |---|---|---|---|---|
-| `class Mod` (38) | `[StarMapMod]` | marks entry class (`StarMapModAttribute`) | n/a | — |
-| `ImmediateUnload` prop (40) | required bool property | StarMap reads it during unload | n/a | — |
-| `OnImmediateLoad` (56) | `[StarMapImmediateLoad]` | early load (renderer NOT live) | n/a | — |
-| `OnFullyLoaded` (59) | `[StarMapAllModsLoaded]` | after all mods loaded → build submods + `Patcher.Patch()` | n/a | — |
-| `OnBeforeUi(double dt)` (137) → `UpdateSubmods` (143) | `[StarMapBeforeGui]` | **PREFIX** of `Program.OnDrawUiFrame(double)` | `KSA/Program.cs:3021` @5402 (`:2892` @5348) | none (same sig; body only gained `PartContactLoadDebug.Draw()`) |
-| `OnAfterUi(double dt)` (UI only) | `[StarMapAfterGui]` | **POSTFIX** of `Program.OnDrawUiViewports(double)` | `KSA/Program.cs:3051` @5402 (`:2921` @5348) | same sig; body now iterates `ViewportRegistry.GameViews` and draws only `HasUi` secondary viewports (5402) |
-| `UpdateSubmods` (registered in OnFullyLoaded) | `HiddenUiFrameHook.BeforeGui` (**not** StarMap) | **PREFIX** of `Program.OnDrawUiConsole(double)`, active only while `Program.DrawUI == false` | `KSA/Program.cs:3009` @5402 (`:2880` @5348) | same sig; body uses `HoveredViewport.IsMain()` instead of index compare (5402) |
-| `Unload` (212) | `[StarMapUnload]` | mod unload → `Patcher.Unload()` | n/a | — |
+| `class Mod` (41) | `[StarMapMod]` | marks entry class (`StarMapModAttribute`) | n/a | — |
+| `ImmediateUnload` prop (43) | required bool property | StarMap reads it during unload | n/a | — |
+| `OnImmediateLoad` (60-61) | `[StarMapImmediateLoad]` | early load (renderer NOT live) | n/a | — |
+| `OnFullyLoaded` (63-64) | `[StarMapAllModsLoaded]` | after all mods loaded → build submods + `Patcher.Patch()` (`:135`) | n/a | — |
+| `OnBeforeUi(double dt)` (146-147) → `UpdateSubmods` (153) | `[StarMapBeforeGui]` | **PREFIX** of `Program.OnDrawUiFrame(double)` | `KSA/Program.cs:3098` @5482 (`:3021` @5402) | none @5482 (same sig) |
+| `OnAfterUi(double dt)` (165-166, UI only) | `[StarMapAfterGui]` | **POSTFIX** of `Program.OnDrawUiViewports(double)` | `KSA/Program.cs:3129` @5482 (`:3051` @5402) | same sig; body iterates `ViewportRegistry.GameViews` and draws only `HasUi` secondary viewports (since 5402) |
+| `UpdateSubmods` (registered in OnFullyLoaded, `:132`) | `HiddenUiFrameHook.BeforeGui` (**not** StarMap) | **PREFIX** of `Program.OnDrawUiConsole(double)`, active only while `Program.DrawUI == false` | `KSA/Program.cs:3086` @5482 (`:3009` @5402) | same sig; still called unconditionally (`:2266` @5482) |
+| `Unload` (204-205) | `[StarMapUnload]` | mod unload → `Patcher.Unload()` (`:219`) | n/a | — |
 
 **Hidden-HUD (F2) fallback.** `Program.OnFrame` (`KSA/Program.cs:2191-2201` @5402) calls `OnDrawUiFrame` /
 `OnDrawUiViewports` / `OnDrawUiThreadSafe` only inside `if (DrawUI)`, and F2 (`InputAction.ToggleUi`,
@@ -77,7 +154,10 @@ and refills stop). `ksa-abstractions.lib/HiddenUiFrameHook.cs` prefixes
 shell's registered `UpdateSubmods` only when `DrawUI` is false. Welds use the independent PrepareFrame handoff. ImGui rendering
 (`RenderWindow`, `RenderFloatingWindows`, F11) is intentionally **not** replayed so mod windows honour
 the hidden HUD. `DrawUI` only flips during `Glfw.PollEvents()` in `PrepareFrame` (or from the menu bar,
-drawn later), so a frame never runs both StarMap's hooks and the fallback.
+drawn later), so a frame never runs both StarMap's hooks and the fallback. Re-verified @5482:
+`OnFrame` `:2229` → `if (DrawUI) {…}` `:2256-2260` → `DrawFps()` `:2265` → `OnDrawUiConsole` `:2266` →
+`ImGui.Render()` `:2276`; `DrawUI` `:526`. F2 can now also arrive from a user mouse binding
+(`OnMouseButton` → `DispatchKeyEvent`), which is still processed inside `PollEvents`.
 
 `[StarMapAfterOnFrame]` (POSTFIX of `Program.OnFrame(double,double)`, `KSA/Program.cs:2164` / OLD
 `:2066`) exists in StarMap but is **not** used by the supermod shell. The shell's F11 toggle uses
@@ -101,40 +181,51 @@ instance. Targets are listed at cross-reference granularity (type+member); per-c
 live in each feature's own `scope/` file. **Two entries are owned by this area** (in **bold**) and
 are fully verified below: the inlined `EternalFlamePatches` and `MenuBarPatch`.
 
+Apply/Remove line numbers are the current `unscience/Patcher.cs` (re-read @5482).
+
 | Patch class | Owning project | Apply (Patcher.cs) | Remove (Patcher.cs) | Primary game target(s) | Kind | Risk note |
 |---|---|---|---|---|---|---|
-| `HotkeyGuard` | **ksa-abstractions.lib** | 46 | 100 | `GameSettings.OnKeyAll(GlfwKeyEvent)` | prefix | verified ↓ (no delta; `GameSettings.cs` byte-identical @5402) |
-| `HiddenUiFrameHook` | **ksa-abstractions.lib** | 50 | 101 | `Program.OnDrawUiConsole(double)` (**string** "OnDrawUiConsole") | prefix (no-op while `Program.DrawUI`) | string-named — verified ↓ @5402 |
-| `ThugLifeRenderPatches` | thug-life.lib | 51 | 113 | `SuperMeshRenderSystem.RenderMainPass` | postfix | render pass — see thug-life scope |
-| **`MenuBarPatch`** | **unscience/ (self)** | 52-55 | 102 | `Program.DrawProgramMenusHook()` | postfix | verified ↓ (no delta) |
-| `BlinkyPatches` | blinky.lib | 57 | 103 | `PartModelModule`/`PartModelDynamicModule`/`PartModelGlassModule`.`UpdateRenderData` | prefix ×3 | render — see blinky scope (`Viewport`→`IViewport` param @5402) |
-| `ShinyPatches` | its-so-shiny.lib | 58 | 104 | same three `UpdateRenderData` | prefix ×3 | render — see its-so-shiny scope |
-| `CameraControllerOverridePatches` | camera-controller-override.lib | 59-63 | 105 | `OrbitController.OnFrame` / `FlyController.OnFrame` (**string** "OnFrame") | prefix | string-named — see camera scope |
-| **`EternalFlamePatches`** | **unscience/ (INLINE)** | 64 | 106 | `Universe.ExecuteNextVehicleSolvers` | prefix `Priority.First` | verified ↓ (no delta) |
-| `KiwisMarblesPatches` | kiwis-marbles.lib | 65 | 107 | `Universe.ExecuteNextVehicleSolvers` | prefix `Priority.First` | sim-step timing — see celestial-and-lights scope |
-| `GlassPatches` | glass.lib | 70 | 108 | `Camera.ChangeFieldOfView` / `Camera.UpdateProjection` (**string**) + field `Camera._fovRadians` (**string**) | prefix | string-named — see glass scope |
-| `IFeelSeenPatches` | i-feel-seen.lib | 71 | 109 | `Vehicle.GetWorldMatrix` / `Vehicle.UpdateRenderData` (**string**) | prefix | string-named — see i-feel-seen scope |
-| `PhysicsFrameHook` (via `GarrysTorchPatches`) | ksa-abstractions.lib | 70 | 114 | private `Program.PrepareFrame(double,double)` → `Universe.GetJobSimStep` call | transpiler | after result commits, before next snapshots; see vehicle-physics timing invariant |
-| `VehiclePaintPatches` | humble-arteest.lib | 72 | 112 | `PartModel.AddInstance` | prefix | render — see humble-arteest scope (`IViewport` param + new `RenderPartModels` gate @5402) |
-| `EngineEmissivePatches` | humble-arteest.lib | 73 | 110 | `PartModelDynamic.AddInstance` | prefix | render — see humble-arteest scope |
-| `IvaForceRender` | **ksa-abstractions.lib** | 74 | 114 | `PartModel..ctor` + `PartModel.AddInstance` (see IvaForceRender ↓) | postfix ×2 | wired 2026-08-23; `IViewport` retype @5402 |
-| `EditorScalePatches` | dont-stifle-me.lib | 75 | 111 | `VehicleEditor.ScaleBoundsFor` / `UpdateSelectedScale` / `QuantizeScale` | postfix/prefix | see part-editor-and-robotics scope |
-| `KittenAnimationPatches` | kitten-animations.lib | 76 | 115 | `AnimatedRenderable.UpdateAnimation(double)` (**string** via `AccessTools.Method`) | prefix `(AnimatedRenderable __instance, ref double dt)` | ⚠️ **hot path** — runs for every animated renderable every frame; must stay a reference compare + early return. See character-and-materials scope |
-| `PyroPatches` | pyro.lib | 77 | 116 | `Vehicle.AddVolumetricExhaustInstances` (`nameof`) | postfix | see exhaust-plumes scope |
-| `GraffitiPatches` | graffiti.lib | 78 | 117 | `RenderTarget.ResolveAttachments` (`nameof`) | postfix | see decals scope |
-| `HotPursuitPatches` | hot-pursuit.lib | 79 | 118 | `FixedController.OnFrame(IViewport,double)` (`nameof`) | selective prefix | skips stock math only for owned part-mounted cameras; see camera scope |
+| `HotkeyGuard` | **ksa-abstractions.lib** | 55 | 120 | `GameSettings.OnKeyAll(GlfwKeyEvent)` | prefix | verified ↓ @5482 (`:3407`; keyboard path intact, user mouse bindings bypass it) |
+| `HiddenUiFrameHook` | **ksa-abstractions.lib** | 59 | 121 | `Program.OnDrawUiConsole(double)` (**string** "OnDrawUiConsole") | prefix (no-op while `Program.DrawUI`) | string-named — verified ↓ @5482 |
+| `ThugLifeRenderPatches` | thug-life.lib | 60 | 139 | `SuperMeshRenderSystem.RenderMainPass(IViewport, CommandBuffer)` | postfix | leading `IViewport` added @5482 (compatible) — see pixel-grids scope |
+| **`MenuBarPatch`** | **unscience/ (self)** | 61-65 | 122 | `Program.DrawProgramMenusHook()` | postfix | verified ↓ (no delta @5482) |
+| `NativeSaveHooks` | **ksa-abstractions.lib** | 66 | 119 | `GameSave.Populate()`, `UncompressedSave.Write()` (returns `bool` @5482), `UncompressedSave.Load()`, `Universe.DeserializeSave(UniverseData)`, `Universe.LoadSystem(string)` | postfix / prefix+finalizer / prefix+postfix | write-result and unreadable-load handling changed @5482 — see ↑ and saves scope |
+| `PhysicsFrameHook` | ksa-abstractions.lib | 67 (direct) and 77 (via `GarrysTorchPatches`) | 128 (via `GarrysTorchPatches.Remove`) | private `Program.PrepareFrame(double,double)` → `Universe.GetJobSimStep` call | transpiler | after result commits, before next snapshots; `JoinOrbitReaders` added @5482; see vehicle-physics timing invariant |
+| `BlinkyPatches` | blinky.lib | 68 | 123 | via `PartRenderFilter`: `PartTreeRenderData.Compose` / `ComposeDynamic` / `ComposeGlass` | shared prefix + postfix ×3 | **REPLACED @5482** (the three `*Module.UpdateRenderData` targets were removed) — see pixel-grids scope and `PartRenderFilter` ↓ |
+| `ShinyPatches` | its-so-shiny.lib | 69 | 124 | same shared `PartRenderFilter` set | (shared) | **REPLACED @5482** — registers a second predicate; no extra patches |
+| `CameraControllerOverridePatches` | camera-controller-override.lib | 70-74 | 125 | `OrbitController.OnFrame` / `FlyController.OnFrame` (**string** "OnFrame") | prefix | string-named — see camera scope |
+| **`EternalFlamePatches`** | **unscience/ (INLINE)** | 75 | 126 | `Universe.ExecuteNextVehicleSolvers` | prefix `Priority.First` | verified ↓ @5482; now also carries the fuel refill |
+| `KiwisMarblesPatches` | kiwis-marbles.lib | 76 | 127 | `Universe.ExecuteNextVehicleSolvers` | prefix `Priority.First` | sim-step timing — see celestial-and-lights scope |
+| `GlassPatches` | glass.lib | 81 | 132 | `Camera.ChangeFieldOfView` / `Camera.UpdateProjection` (**string**) + field `Camera._fovRadians` (**string**) | prefix | string-named — see glass scope |
+| `IFeelSeenPatches` | i-feel-seen.lib | 82 | 133 | `Vehicle.GetWorldMatrix` / `Vehicle.UpdateRenderData` (**string**) | prefix | string-named — see i-feel-seen scope |
+| `VehiclePaintPatches` | humble-arteest.lib | 83 | 138 | `ShaderModuleUtils.FromFile`; private `PartTreeRenderData.WriteState` / `WriteDynamicState`; `PartTreeRenderData.EnsureBuilt` | prefix / postfix ×2 / prefix | **REPLACED @5482** (was `*Module.UpdateRenderData` + `AddInstance` prefixes) — see character-and-materials A1–A5 |
+| `EngineEmissivePatches` | humble-arteest.lib | 84 | 134 | private `PartModelDynamic.AddInstance` sink | prefix | unchanged @5482 (still reached per slot from `ComposeDynamic`) — see humble-arteest scope |
+| `KittenVisorPatches` | humble-arteest.lib | 85 | 135 | `KittenRenderable.UpdateRenderData` (`VisorMesh.Draw(ViewHandle)` call) | transpiler | **anchor re-pinned @5482** — see character-and-materials visor rows |
+| `IvaForceRender` | **ksa-abstractions.lib** | 86 | 140 | `PartModel..ctor` postfix + `PartTreeRenderData.Compose` prefix/finalizer (see IvaForceRender ↓) | postfix, prefix + finalizer | **REPLACED @5482** (was a postfix on the private `PartModel.AddInstance` sink) |
+| `EditorScalePatches` | dont-stifle-me.lib | 88 | 137 | `VehicleEditor.ScaleBoundsFor` / `UpdateSelectedScale` / `QuantizeScale` | postfix/prefix | see part-editor-and-robotics scope |
+| `KittenAnimationPatches` | kitten-animations.lib | 90 | 142 | `AnimatedRenderable.UpdateAnimation(double)` (**string** via `AccessTools.Method`) | prefix `(AnimatedRenderable __instance, ref double dt)` | ⚠️ **hot path** — runs for every animated renderable every frame; must stay a reference compare + early return. See character-and-materials scope |
+| `PyroPatches` | pyro.lib | 91 | 145 | `Vehicle.AddVolumetricExhaustInstances` (`nameof`) | postfix | see exhaust-plumes scope |
+| `GraffitiPatches` | graffiti.lib | 94 | 146 | `RenderTarget.ResolveAttachments` (`nameof`) | postfix | see decals scope |
+| `HotPursuitPatches` | hot-pursuit.lib | 97 | 149 | `FixedController.OnFrame(IViewport,double)` (`nameof`) | selective prefix | skips stock math only for owned part-mounted cameras; see camera scope |
 
-Non-Harmony cleanup also driven by `Patcher.Unload()`: `VehiclePaint.Cleanup()` (line 119) and
-`EngineEmissive.Cleanup()` (line 120), both humble-arteest.lib.
+Also applied on the same instance but catalogued only in their feature scopes: `GarrysTorchPatches` /
+`KittenScalePatches` (77-78 / 128-129), Godzilla `ColliderScalePatches` / `VisualScalePatches` (79-80 /
+130-131), `GLoadProtectionPatches` (87 / 141), `EditorValueLimitPatches` (89 / 136), `IronManPatches`
+(92 / 143), `SphinxPatches` (93 / 144), `FreeFallinPatches` (95 / 147) and Pebbles (96 / 148).
+
+Non-Harmony cleanup also driven by `Patcher.Unload()`: `VehiclePaint.Cleanup()` (line 151) and
+`EngineEmissive.Cleanup()` (line 152), both humble-arteest.lib.
 
 Notes:
 - **garrys-torch uses a shared frame transpiler.** Both hosts apply/remove `GarrysTorchPatches`,
   which wraps `Program.PrepareFrame`'s `Universe.GetJobSimStep` call after completed result
   application and before the next cloth/vehicle/orbit snapshots. `SimStep.PreviousTime` stamps
   teleports. No `OnAfterUi` or hidden-HUD weld callback remains. See vehicle-physics scope.
-- `IFeelSeenPatches.Apply` takes a second argument (`IFeelSeenTracker`, wired at `Mod.cs:114`).
+- `IFeelSeenPatches.Apply` takes a second argument (`IFeelSeenTracker`, wired at `Mod.cs:124`).
 - `CameraControllerOverridePatches.SequencePlayer` and `MenuBarPatch.ToggleWindow` are wired before
-  Apply (Patcher.cs:61, 54).
+  Apply (Patcher.cs:72, 63).
+- Blinky and its-so-shiny share one `PartRenderFilter` patch set; the first `Register` installs it and
+  the last `Unregister` removes it, so their Apply/Remove order does not matter.
 - `KittenAnimationPatches.Driver` is wired **after** Apply, from `KittenAnimationsSubmod.Initialize()`
   (`Mod.cs` initialises submods after `Patcher.Patch()`). The prefix null-checks it, so the ordering
   is safe; before the submod initialises the patch is simply inert.
@@ -143,13 +234,13 @@ Notes:
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|---|---|---|---|---|---|---|
-| 1 | Harmony postfix | `MenuBarPatch.cs:8` (`[HarmonyPatch]`), applied `:15`, removed `:21-24` | `Program.DrawProgramMenusHook()` — `public void DrawProgramMenusHook()` (empty hook) | `KSA/Program.cs:3876` (called from `DrawMenuBar` at `:3863`) | Yes | None — identical empty instance method (OLD `:3736`) | Game ships this as a deliberate no-op modding hook. Postfix appends an "Unscience" `ImGui.MenuItem`. Low risk. |
+| 1 | Harmony postfix | `MenuBarPatch.cs:8` (`[HarmonyPatch]`), applied `:15`, removed `:21-24` | `Program.DrawProgramMenusHook()` — `public void DrawProgramMenusHook()` (empty hook) | `KSA/Program.cs:3961` @5482 (called from `DrawMenuBar` at `:3948`) | Yes | None @5482 — identical empty instance method | Game ships this as a deliberate no-op modding hook. Postfix appends an "Unscience" `ImGui.MenuItem`. Low risk. |
 
 ### `EternalFlamePatches` (inlined in unscience/Patcher.cs) — owned by this area
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|---|---|---|---|---|---|---|
-| 1 | Harmony prefix (`Priority.First`) | `Patcher.cs:148` (lookup), `:156` (patch), `:159-165` (remove) | `Universe.ExecuteNextVehicleSolvers(double dtPlayer, SimStep simStep)` — `public static void` | `KSA/Universe.cs:1834` (`SimStep` = `KSA/SimStep.cs:3`, readonly struct) | Yes | None — identical sig and body (OLD `:1767`); still the only overload | Looked up by name only (`nameof`, no param-type array), so a param change would NOT break the lookup unless the method became overloaded. Prefix dispatches to `EternalFlameSubmod.Instance?.UpdateBeforeVehicleSolvers()`, wrapped in try/catch. Same target kiwis-marbles and kitchen-sink also patch. |
+| 1 | Harmony prefix (`Priority.First`) | `Patcher.cs:181` (lookup), `:189` (patch), `:192-198` (remove), `:200-210` (prefix) | `Universe.ExecuteNextVehicleSolvers(double dtPlayer, SimStep simStep)` — `public static void` | `KSA/Universe.cs:2034` @5482 (`SimStep` = `KSA/SimStep.cs:3`, readonly struct) | Yes | Signature unchanged @5482, still the only overload; body lost `_vehicleUpdateTask.RemoveEligibleVehicles()` (eviction moved to the worker, rev 5476) | Looked up by name only (`nameof`, no param-type array), so a param change would NOT break the lookup unless the method became overloaded. Prefix dispatches to `EternalFlameSubmod.Instance?.UpdateBeforeVehicleSolvers()` → `FuelManager.RefillBeforeVehicleSolvers()` (`eternal-flame.lib/EternalFlameLib.cs`), wrapped in try/catch. **Since 5482 it refills fuel as well as batteries** (fuel previously ran from the UI tick after the worker snapshot and was overwritten by the worker commit during burns). Runs after `PartTree.FlushDirtyDerived/FlushDirtyResourceManagers` (`Program.cs:2209-2210`); a refill raises the tank-contents flag (rev 5478) but dirties no lazily derived data. kiwis-marbles also patches this target; kitchen-sink's former solver hook was removed on 2026-09-13. |
 
 ---
 
@@ -271,8 +362,8 @@ Update-risk findings (4680→4750):
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|---|---|---|---|---|---|---|
-| 1 | Harmony prefix | `HotkeyGuard.cs:21` (lookup), `:23` (patch), `:29-30` (unpatch) | `GameSettings.OnKeyAll(GlfwKeyEvent keyEvent)` — `public static bool` | `KSA/GameSettings.cs:3301` | Yes | None (OLD `:3301`; `GameSettings.cs` byte-identical @5402) | Prefix `Prefix(ref bool __result)`: when guard active, sets `__result = true` and returns false (skip original), swallowing the key. Looked up by `nameof`. Caller `Program.OnKey` (`KSA/Program.cs:1723`) still evaluates it first; @5402 the camera/controller key handlers moved into a second `if` (`:1727-1731`) that only runs when the first one falls through, so the guard still covers them. |
-| 2 | Direct API (field) | `:38` | `Program.ConsoleWindow` — `public static ConsoleWindow ConsoleWindow;` | `KSA/Program.cs:284` | Yes | None (OLD `:267`) | |
+| 1 | Harmony prefix | `HotkeyGuard.cs:21` (lookup), `:23` (patch), `:29-30` (unpatch) | `GameSettings.OnKeyAll(GlfwKeyEvent keyEvent)` — `public static bool` | `KSA/GameSettings.cs:3407` @5482 (OLD `:3465`) | Yes | Signature unchanged @5482; body now matches via `Input.MatchReleased(in keyEvent, …)` (rev 5449) | Prefix `Prefix(ref bool __result)`: when guard active, sets `__result = true` and returns false (skip original), swallowing the key. Looked up by `nameof`. @5482 `Program.OnKey` (`:1743-1751`) calls `OnKeyAll` first and only then the new private `DispatchKeyEvent(in GlfwKeyEvent)` (`:1754-1999`, which now holds every former key handler), so all keyboard input stays guarded. ⚠ User mouse-button bindings (`GlfwKeyEvent.IsMouse`) reach `DispatchKeyEvent` from `Program.OnMouseButton` (`:2001`, dispatch `:2018`) without passing `OnKeyAll`; all 101 default bindings are keys. |
+| 2 | Direct API (field) | `:38` | `Program.ConsoleWindow` — `public static ConsoleWindow ConsoleWindow;` | `KSA/Program.cs:285` @5482 | Yes | None | |
 | 3 | Direct API (prop) | `:38` | `ConsoleWindow.IsOpen` — `public bool IsOpen => _show;` | `Brutal.ImGuiApi.Abstractions/ConsoleWindow.cs:292` | Yes | None (OLD `:292`) | Guard is bypassed while the dev console is open. |
 | 4 | ImGui API | `:38` | `ImGui.GetIO().WantTextInput` (Brutal.ImGuiApi) | `Brutal.ImGuiApi/*` | Yes | None observed | Detects ImGui text-input focus globally (every InputText/combo filter). See Brutal-package note below. |
 
@@ -287,8 +378,8 @@ the *Hidden-HUD fallback* note under the lifecycle table for the why.
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (5348) | In 5348? | Risk/notes |
 |---|---|---|---|---|---|---|
-| 1 | Harmony prefix (**string-named**) | `HiddenUiFrameHook.cs:28` (name), `:44` (lookup), `:47` (patch), `:54` (unpatch) | `Program.OnDrawUiConsole(double dt)` — `private void`, instance | `KSA/Program.cs:3009`; called unconditionally from `OnFrame` at `:2201` | Yes | `AccessTools.Method` by string; a miss throws `MissingMethodException` at `Patch()` → logged and skipped by `Patcher.TryApply` (mods then freeze on F2 again, nothing else breaks). **Phase contract:** must stay a method the game calls every frame *after* the `if (DrawUI)` UI block and *before* `ImGui.Render()`/`OnPreRender` — `DrawFps()` (`:3137`, static, no `dt`) is the fallback anchor if `OnDrawUiConsole` moves. Body drift @5402 (`HoveredViewport.IsMain()` / `.ImGuiId`) does not touch the signature. |
-| 2 | Direct API (static prop) | `:40`, `:64` | `Program.DrawUI` — `public static bool { get; set; }` | `KSA/Program.cs:527` | Yes | Gate. Toggled by `InputAction.ToggleUi` (`KSA/Input.cs:297` = F2, handled `Program.cs:1755`). If the game ever gates `OnDrawUiFrame` on something else, this prefix goes dead-silent (no crash). |
+| 1 | Harmony prefix (**string-named**) | `HiddenUiFrameHook.cs:28` (name), `:44` (lookup), `:47` (patch), `:54` (unpatch) | `Program.OnDrawUiConsole(double dt)` — `private void`, instance | `KSA/Program.cs:3086` @5482, called unconditionally from `OnFrame` at `:2266` (`:3009` / `:2201` @5402) | Yes | `AccessTools.Method` by string; a miss throws `MissingMethodException` at `Patch()` → logged and skipped by `Patcher.TryApply` (mods then freeze on F2 again, nothing else breaks). **Phase contract:** must stay a method the game calls every frame *after* the `if (DrawUI)` UI block and *before* `ImGui.Render()`/`OnPreRender` — `DrawFps()` (`:3137`, static, no `dt`) is the fallback anchor if `OnDrawUiConsole` moves. Body drift @5402 (`HoveredViewport.IsMain()` / `.ImGuiId`) does not touch the signature. |
+| 2 | Direct API (static prop) | `:40`, `:64` | `Program.DrawUI` — `public static bool { get; set; }` | `KSA/Program.cs:526` @5482 (`:527` @5402) | Yes | Gate. Toggled by `InputAction.ToggleUi` (`KSA/Input.cs:297` = F2, handled `Program.cs:1755`). If the game ever gates `OnDrawUiFrame` on something else, this prefix goes dead-silent (no crash). |
 
 Update-risk findings (5261→5348): n/a (new). Verified against 5348 by construction: `OnFrame`
 (`:2066`) → `if (DrawUI) { OnDrawUiFrame; OnDrawUiViewports }` (`:2093`) → `if (DrawUI) OnDrawUiThreadSafe`
@@ -299,19 +390,24 @@ Re-verified @5402 with the same shape: `OnFrame` (`:2164`) → `if (DrawUI) {…
 
 ### IvaForceRender.cs
 
+Rows re-verified @5482 (mod lines are the current `ksa-abstractions.lib/IvaForceRender.cs`).
+
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|---|---|---|---|---|---|---|
-| 1 | Harmony postfix (ctor) | `IvaForceRender.cs:42` (lookup), `:44` (patch) | `PartModel..ctor(PartModelModule.Template)` — `protected PartModel(PartModelModule.Template template)` | `KSA/PartModel.cs:384` | Yes | None (OLD `:383`; body identical, still the only ctor) | `AccessTools.Constructor` finds the **protected** ctor; explicit param-type array. |
-| 2 | Harmony postfix (method) | `:46` (lookup), `:48` (patch), `:109-128` (postfix sig) | **Private** `PartModel.AddInstance(PerInstanceData, KSA.Deformation.PerInstanceDent, IViewport, int)` — shared sink for both public wrappers | `KSA/PartModel.cs:459-490` | Yes | **NEW @5438** — dent-aware public overload added; old by-name lookup was ambiguous | Exact four-type lookup binds the private sink once. Postfix mirrors stock editor gates and appends both `InstanceList` and `DentInstanceList`, preserving per-instance/dent alignment. |
-| 3 | Direct API (nested struct) | `:98` | `PartModel.PerInstanceData` — `public struct PerInstanceData` | `KSA/PartModel.cs:332` | Yes | None (OLD `:331`) | postfix param type. |
-| 4 | Direct API (field) | `:87,89,101,113,116,125` | `PartModelModule.Template.Internal` — `public bool Internal = false;` | `KSA/PartModelModule.cs:40` | Yes | None (OLD `:40`) | mutated to force interior render. |
-| 5 | Direct API (field) | `:103` | `PartModelModule.Template.RayTracing` — `public RaytracingMode RayTracing` | `KSA/PartModelModule.cs:32` | Yes | None (OLD `:32`) | |
-| 6 | Direct API (enum) | `:103` | `PartModelModule.RaytracingMode.ShadowProxy` | `KSA/PartModelModule.cs:15` | Yes | None (OLD `:15`) | |
-| 7 | Direct API (field) | `:100` | `Program.Editor` — `public static VehicleEditor? Editor;` | `KSA/Program.cs:226` | Yes | None (OLD `:207`); still disposed+nulled in `PrepareFrame` (`:2116-2119`) | editor-only branch. |
-| 8 | Direct API (prop) | `:102` | `Program.MainViewport` — `public static IGameViewport MainViewport => ViewportRegistry.MainViewport;` | `KSA/Program.cs:485` | Yes | **RETYPED @5402** `Viewport`→`IGameViewport` (OLD `:468` `Viewports[_mainViewportIndex]`) | compile-bound; only `.Mode` is read. |
-| 9 | Direct API (prop/enum) | `:102` | `IViewport.Mode` (`CameraMode Mode { get; }`, impl `ViewportBase.Mode { get; protected set; }`) vs `CameraMode.IVA` | `KSA/IViewport.cs:29`, `KSA/ViewportBase.cs:36`, `KSA/CameraMode.cs:14` | Yes | **RETYPED @5402** — was a public field `Viewport.Mode` (`OLD KSA/Viewport.cs:14`); `CameraMode.cs` byte-identical | field→property is invisible to a compile-bound read. |
-| 10 | Direct API (nested static) | `:105` | `PartModel.ViewportData.Get(PartModel, IViewport)` → `.InstanceList.Add(...)` | `KSA/PartModel.cs:314` (Get), `:310` (InstanceList) | Yes | **RETYPED @5402** param `Viewport`→`IViewport` (OLD `:313`/`:309`); lookup now keyed by `viewport.Id : ViewportId` (`:316,:321`) instead of the viewport object | re-adds internal instance to the per-viewport draw list in the editor. |
-| 11 | Direct API (static field) | `:111` | `PartModel.Instances` — `public static List<PartModel> Instances` | `KSA/PartModel.cs:358` | Yes | None (OLD `:357`) | enumerated by the `Enabled` setter to mutate existing templates. |
+| 1 | Harmony postfix (ctor) | `IvaForceRender.cs:47` (lookup), `:49` (patch), `:98-106` (postfix) | `PartModel..ctor(PartModelModule.Template)` — `protected PartModel(PartModelModule.Template template)` | `KSA/PartModel.cs:435` | Yes | None (body identical, still the only ctor) | `AccessTools.Constructor` finds the **protected** ctor; explicit param-type array. Since 5482 the postfix also marks the editor internal-template cache dirty. |
+| 2 | Harmony prefix + finalizer | `:53-57` (name-only lookup, patch), `:114-125` `ComposePrefix(IViewport inViewport)`, `:127-133` `ComposeFinalizer(Exception? __exception)`, `:135-146` cache rebuild | `PartTreeRenderData.Compose(ref readonly double4x4, bool, IViewport inViewport, int)` — public instance | `KSA/PartTreeRenderData.cs:1258` (raster gate `(!Template.Internal \|\| IVA)` at `:1300`) | Yes | **NEW @5482** — replaces the 5438 postfix on the private `PartModel.AddInstance(PerInstanceData, PerInstanceDent, IViewport, int)` sink (`KSA/PartModel.cs:470`), which static raster parts no longer reach | Resolved by name only (single overload today; an added overload would make the lookup ambiguous). In the editor (`Program.Editor != null`), outside IVA, for viewports with `RenderPartModels`, the prefix sets `Template.Internal = false` on every cached internal non-`ShadowProxy` template that is still internal and records it; the finalizer restores exactly those, even when `Compose` throws. Stock code then appends instance, `DentInstanceList` entry and dent data consistently. The only readers of `Template.Internal` are main-thread render code (`PartTreeRenderData.cs:1300`, `PartModel.cs:486`), so nothing else observes the temporary flip. Coexists with `PartRenderFilter` on the same method. |
+| 3 | Direct API (static field) | `:138` (cache rebuild), `:151` (`Enabled` mutation) | `PartModel.Instances` — `public static List<PartModel> Instances` | `KSA/PartModel.cs:409` | Yes | None | Source of the editor internal-template cache (rebuilt after the ctor postfix or `RestoreInternalHidden` marks it dirty) and of the `Enabled` mutation. |
+| 4 | Direct API (field) | `:102-104,121-122,130,141,153-156,165` | `PartModelModule.Template.Internal` — `public bool Internal = false;` | `KSA/PartModelModule.cs:39` | Yes | None | Cleared permanently by `Enabled`; cleared per `Compose` call and restored in the editor. |
+| 5 | Direct API (field) | `:141` | `PartModelModule.Template.RayTracing` — `public RaytracingMode RayTracing` | `KSA/PartModelModule.cs:31` | Yes | None | |
+| 6 | Direct API (enum) | `:141` | `PartModelModule.RaytracingMode.ShadowProxy` | `KSA/PartModelModule.cs:14` | Yes | None | Never revealed (the raster branch skips shadow proxies too). |
+| 7 | Direct API (field) | `:116` | `Program.Editor` — `public static VehicleEditor? Editor;` | `KSA/Program.cs:227` | Yes | None | editor-only branch. |
+| 8 | Direct API (prop/enum) | `:116` | `IViewport.Mode` of the composed viewport (`CameraMode Mode { get; }`) vs `CameraMode.IVA` | `KSA/IViewport.cs:29`, `KSA/CameraMode.cs:14` | Yes | None | Per-viewport IVA test. (`Program.MainViewport` is no longer read by this helper.) |
+| 9 | Direct API (extension) | `:117` | `IViewport.HasAny(ViewportOptionFlags.RenderPartModels)` | `KSA/ViewportEx.cs:60`; `KSA/ViewportOptionFlags.cs:20` | Yes | None | Mirrors `Compose`'s own early return. |
+| ~~10~~ | ~~Harmony postfix~~ + ~~`PartModel.ViewportData.Get(...).InstanceList` / `DentInstanceList.Add`~~ + ~~`PartModel.PerInstanceData`~~ | — | private `PartModel.AddInstance` sink | `KSA/PartModel.cs:470` | — | **RETIRED @5482** | Replaced by #2. The old postfix's side effect of adding internal meshes to editor thumbnails (`ThumbnailPart` calls `AddInstance` directly) is gone. |
+
+Update-risk findings (5438 → 5482): the editor reveal was silently dead until this fix, because the
+postfix target was no longer called for raster parts (see the 5482 section at the top). Live check:
+internal meshes (with dents) visible in the editor, no duplicates in IVA, `Enabled` toggle in flight.
 
 Update-risk findings (4680→4750):
 - **No breaking deltas detected.** Every IvaForceRender target is byte-for-byte unchanged
@@ -328,6 +424,51 @@ Update-risk findings (4680→4750):
   vehicle-solver prefix behind kitchen-sink's "Flexo Part Test" *Update Physics* button remains
   standalone-only — out of scope here. Note that kitchen-sink's Flexo\* test panels are named after the
   removed flexo mod but are independent of it and were kept.)
+
+### PartRenderFilter.cs
+
+Added @5482 (`ksa-abstractions.lib/PartRenderFilter.cs`, `PartRenderFilter.Batches.cs`). Hides selected
+parts' meshes while the parts stay in their vehicle. Consumers: blinky (`BlinkyPatches.cs:20,26`, owner
+`"blinky"`) and its-so-shiny (`ShinyPatches.cs:20,26`, owner `"its-so-shiny"`); see
+[pixel-grids](pixel-grids-and-render.md). Public API: `Register(Harmony, string owner, Func<Part,bool>
+shouldHide)` / `Unregister(Harmony, string owner)` / `IsInstalled`. The first owner installs one shared
+patch set with its Harmony instance and the last owner removes it; predicates are OR-ed and receive
+`Part.FullPart`.
+
+Why this seam: rev 5456 removed `PartModelModule` / `PartModelDynamicModule` /
+`PartModelGlassModule.UpdateRenderData`. Render data is cached per tree in `PartTreeRenderData`, and the
+three public `Compose*` methods append one contiguous, slot-ordered range per model to the per-viewport
+instance lists every frame. The static raster branch appends without `AddInstance`, so no per-part
+method decides submission. The prefix records each batch's list count; the postfix removes hidden slots
+from the appended range in place (`InstanceList` and `DentInstanceList` together) before
+`PartModelRenderer.UpdateRenderData` uploads. Cached render data is never modified, so predicate
+changes take effect on the next frame without invalidation, and draw counts and shadow bounds stay
+consistent.
+
+| # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
+|---|---|---|---|---|---|---|---|
+| 1 | Harmony prefix + postfix | `PartRenderFilter.cs:63-78` (install), `:93-104` (exact-signature lookup), `:80-89` (uninstall); `PartRenderFilter.Batches.cs:60-98` | `PartTreeRenderData.Compose(ref readonly double4x4, bool, IViewport inViewport, int)` — public instance | `KSA/PartTreeRenderData.cs:1258` (raster `:1300-1319`, RT-IVA `:1284-1298`) | Yes | **NEW @5482** | Prefix `(PartTreeRenderData __instance, IViewport inViewport, out bool __state)`; postfix `(…, bool __state)`. A range is filtered only when exactly `batch.Count` entries were appended and the dent list grew by the same amount; otherwise (RT-IVA, internal meshes outside IVA, anything unexpected) it is left alone. |
+| 2 | Harmony prefix + postfix | `PartRenderFilter.cs:69`; `Batches.cs:102-140` | `PartTreeRenderData.ComposeDynamic(...)` (same signature) | `KSA/PartTreeRenderData.cs:1152` | Yes | **NEW @5482** | Stock calls `PartModelDynamic.AddInstance` per slot, so Engine Emissive's sink prefix sees every instance before compaction. |
+| 3 | Harmony prefix + postfix | `PartRenderFilter.cs:70`; `Batches.cs:144-180` | `PartTreeRenderData.ComposeGlass(...)` (same signature) | `KSA/PartTreeRenderData.cs:899` | Yes | **NEW @5482** | Instance list only (glass has no dent list). |
+| 4 | Private reflection (fields, **string**) | `Batches.cs:38-40` (`FieldRefAccess<PartTreeRenderData, IList>`) | `PartTreeRenderData._batches` / `_dynamicBatches` / `_glassBatches` — `private readonly List<Batch/DynamicBatch/GlassBatch>` | `KSA/PartTreeRenderData.cs:237,243,239` | Yes | **NEW @5482** | Rename or retype fails loudly at the first `Register`. |
+| 5 | Private nested types (**string**) | `Batches.cs:37,52-53` (`AccessTools.Inner`) | `PartTreeRenderData.Batch` / `DynamicBatch` / `GlassBatch` (private sealed classes) | `KSA/PartTreeRenderData.cs:23,73,162` | Yes | **NEW @5482** | Missing type → `MissingMemberException` at install. |
+| 6 | Private reflection (fields, **string**) | `Batches.cs:41-49` (`FieldRefAccess`) | `Batch/DynamicBatch/GlassBatch.Model` (`PartModel` / `PartModelDynamic` / `PartModelGlass`), `.Parts : Part[]`, `.Count : int` | `Batch` `:25,27,45`; `DynamicBatch` `:75,79,99`; `GlassBatch` `:164,166,172` | Yes | **NEW @5482** | Slot `j` of `Parts` is the module parent for slot `j` of the appended range; the filter relies on that ordering (`Compose` writes `span[j]` from slot `j`). |
+| 7 | Direct API | `Batches.cs:72,89,114,131,156,173` | `PartModel.ViewportData.Get(PartModel, IViewport)`, `PartModelDynamic.ViewportData.Get(...)`, `PartModelGlass.ViewportData.Get(...)` → `InstanceList`, `DentInstanceList` | `KSA/PartModel.cs:364` (lists `:358,:362`); `KSA/PartModelDynamic.cs:364` (`:358,:362`); `KSA/PartModelGlass.cs:446` (`:442`) | Yes | **NEW @5482** | Mutated only inside the `Compose*` postfix, i.e. before upload. **Never mutate these lists between `WriteInstancesToGpu` and `PartModelRenderer.ClearFrameData`** (`PartModelRenderer.cs:844`): since 5482 they are cleared at frame start and shadow culling re-reads them after upload (`PartModel.AppendShadowBounds`, `PartModel.cs:533`). |
+| 8 | Direct API | `Batches.cs:55-56`; `PartRenderFilter.cs:57` | `IViewport.HasAny(ViewportOptionFlags.RenderPartModels)`; `Part.FullPart` | `KSA/ViewportEx.cs:60`; `KSA/Part.cs:1171` | Yes | **NEW @5482** | Same early-out as `Compose*`. |
+
+**Failure behaviour.** Install resolves every member first; a missing method, nested type or field throws
+out of `Register` (the host's `TryApply` logs it and that feature's render-skip is unavailable), and a
+partially applied patch set is rolled back. Any exception at runtime sets `_faulted`, is logged once and
+disables filtering for the session (fail-open: everything renders); it never breaks the render loop.
+**Invariant:** exactly one compaction patch set. Two independent postfix pairs would conflict: the
+first compaction changes `InstanceList.Count`, so the second would see `appended != batch.Count` and skip.
+**Known gap vs 5438:** raytraced-IVA submissions (`Compose` RT branch → `PartModel.AddInstance` →
+`RaytracingRenderer.PartRaytracingData*`; `ComposeGlass` → `RayTraceTransforms`) are not filtered.
+**Tests:** `ksa-upgrade.tests/RenderFilterChecks.cs` links the production files against
+`RenderDataFixture.cs`. It covers the no-owner baseline, two owners sharing one compaction, pre-existing
+entries from other vehicles, full-part judgement of sub-parts, dent alignment, non-raster ranges left
+alone, misaligned dents failing open, the no-`RenderPartModels` skip, unregistering one or all owners,
+uninstall, and a throwing predicate failing open. Native rendering is not covered.
 
 ### KsaPaths.cs
 
@@ -576,6 +717,15 @@ bounds preservation. Both channel toggles queue current-session conversion throu
 `VehicleScaleOwnership` prevents two tools from owning source scale; keys are
 weak and release checks the owner name. See vehicle-physics for typed integration and live checks.
 
+Since 5482 the handoff also offers `PhysicsFrameHook.JoinOrbitReaders()` (`PhysicsFrameHook.cs:29-34`): a
+once-per-frame wait on `JobSystems.NearestOrbitAndPerformanceWorker`, whose nearest-orbit job
+(queued at `Program.cs:2188-2192`, before the handoff) reads the flight plans and cached orbit points that
+`Vehicle.Teleport` disposes. It runs automatically before a deferred world change and before draining
+queued mutations (when any), and explicitly before weld teleports (`WeldEngine.cs:120`) and Dent Wizard
+launches (`DentWizardSubmod.cs:48`); idle frames do not wait. The game's new `PartTree.FlushDirtyDerived` /
+`FlushDirtyResourceManagers` calls (`Program.cs:2209-2210`) run after the handoff and before
+`ExecuteNextVehicleSolvers`, so derived data dirtied by handoff mutations is rebuilt in the same frame.
+
 ### Shared media import and BYO Music
 
 `SharedFileLibrary`/`LibraryFileBrowser` generalize the existing PNG copy/catalog/browser flow;
@@ -598,7 +748,9 @@ and wires callbacks before `Patcher.Patch`. It correlates captured DTOs with the
 object using a weak table, displays save/restore diagnostics in the existing toolbox, and disconnects
 callbacks on disposal. Window-layout autosave remains separate. `SceneSaveCoordinator` performs
 reverse reset / ordered replay, preserves failed/unknown records, and offers explicit replacement
-with current setup on future saves. Kitchen Sink persists `IvaForceRender.Enabled`; one-shot editor
+with current setup on future saves. Since 5482 a native write that returns `false` routes to
+`NativeSaveHooks.WriteFailed` (capture discarded, failure reported, no sidecar), and an unreadable save
+is reported through `LoadFailed` instead of passing silently. Kitchen Sink persists `IvaForceRender.Enabled`; one-shot editor
 refresh activity is not replayed; G-load protection saves vehicle IDs in a separate record and rebinds after reset/reconstruction.
 Skittles restores the exact detached scene style and resets
 to startup configured theme between scenes. See [saves](saves.md) for new Harmony/worker seams.
@@ -620,3 +772,5 @@ only gates the selected vehicle's G-load decision; see [UI/customization](ui-cus
 The defunct KitchenSinkSolverPatch/Flexo part-transform diagnostic integration is removed.
 Reverified on 5438: the detector and end-frame caller retain their exact bodies; both hosts
 also retain upstream's shared IVA common-overload/dent-list fix. No new save lifecycle hook.
+Reverified on 5482: detector body still identical (`PhysicsBubble.cs:958`); the shared IVA fix is now the
+`PartTreeRenderData.Compose` prefix/finalizer (see IvaForceRender above).

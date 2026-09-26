@@ -6,6 +6,11 @@ rock-field LODs and materials. `RingDefinitionController` owns applied definitio
 original template references; `RingReferenceBuilder` resolves assets and constructs the
 game ring tree, then `RingRendererRebuilder` recreates native render resources.
 
+`RingRendererRebuilder.SyncDistantSphereShadow` writes `UseRingShadows`, ring radii and
+`RingTextureId` into the private `DistantSphereRenderer._material` struct (KSA 5482; it was `_data`).
+With no rings, it clears `RingTextureId` to 0, matching a renderer built without rings. KSA 5482 also
+reads the ring reference for atmosphere ring shadows every frame, so no extra sync is needed there.
+
 Use the panel to choose a body, edit a ring, and Apply; Remove restores the captured
 original. Named presets remain in `.unscience/bloomin-onion-rings.toml`. See the
 [host usage](../bloomin-onion/README.md) for the complete editor controls.

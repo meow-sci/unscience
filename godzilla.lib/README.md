@@ -60,7 +60,11 @@ is a compile-checked development reference; only Unscience is distributed.
 Visual-only rendering covers the part-tree draw transform and EVA avatar/attachments. Separate
 world-space effects such as exhaust and simulated parachute cloth retain physical placement.
 Picking/camera targeting follow the physical channel, not the visible surface. Visual pixel culling
-uses rendered size independently of the physical radius.
+uses rendered size independently of the physical radius. KSA 5482 moved the vessel's pixel cull into
+`Vehicle.IsLargeEnoughToRender(Camera)`. `VisualScalePatches` now redirects that single call in
+`Vehicle.UpdateRenderData` to a mirror that uses the render radius. Without that change the old
+radius transpiler matched no reads and all visual patches rolled back, which left visual-only and
+collider-only modes unavailable.
 
 Validation: full solution build, `dotnet run --project godzilla.tests` and Garry's Torch regressions.
 Managed fixtures exercise production Harmony hooks, physical/visual/collider transitions, all four

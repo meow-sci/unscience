@@ -5,12 +5,13 @@ plumes). Every game-facing member the mod touches is enumerated with its decompi
 
 **Verified game versions**
 
-- NEW decomp **`2026.9.10.5438`** root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp` (namespace-foldered)
-- OLD decomp **`2026.9.7.5402`** root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
+- NEW decomp **`2026.9.22.5482`** root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp` (namespace-foldered)
+- OLD decomp **`2026.9.10.5438`** root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
 - NEW Content root: `~/repos/meow-sci/ksa-game-assemblies/current/Content`
 - OLD Content root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/Content`
 
-Originally written against 5348; line numbers in the table are **NEW (5438)** unless marked otherwise.
+Originally written against 5348; line numbers in the table are **NEW (5482)** unless marked otherwise
+(refreshed in the 5438 → 5482 pass; see that section below).
 The in-repo `decomp/ksa` copy is **older** and materially different for this area (pre-5348
 `PlumeData`/`ExhaustInstance` layouts) — always check this file's members against the provided tree,
 not the repo copy.
@@ -25,7 +26,7 @@ both hosts identically.
 ## Integration model
 
 1. **One Harmony postfix** on `Vehicle.AddVolumetricExhaustInstances(Camera,
-   VolumetricExhaustRenderer, double)` (`KSA/Vehicle.cs:5518`). The game calls this from
+   VolumetricExhaustRenderer, double)` (`KSA/Vehicle.cs:5683`). The game calls this from
    `Program.OnPreRender` once per visible vehicle, after `VolumetricExhaustRenderer.UpdateFrameData()`
    reset the instance list. pyro's postfix (`PyroPatches.cs:35`) hands the same `camera`/`renderer`/
    `frameDeltaTime` to `PyroSubmod.SubmitPlumes`, which submits every plume welded to `__instance`.
@@ -35,21 +36,21 @@ both hosts identically.
    `renderer.AddInstance(instance, bendTarget, fade, diamondFade)` (`PlumeEmitter.cs`). `LastPlumeData` is
    assigned only while active and `IsLive` gates the direct submission, preserving shutdown tails. The air state
    (`ComputeAirState`)
-   mirrors the game's own derivation in `Vehicle.AddVolumetricExhaustInstances` (`:5524-5531`) — 5438
+   mirrors the game's own derivation in `Vehicle.AddVolumetricExhaustInstances` (`:5689-5696`) — 5438+
    uses it to fold/bend plumes in atmosphere.
 3. **`PlumeData` is synthesised**, not read from an engine: `PlumePhysics.TryCompute` preserves the
    isentropic nozzle model, scales synthetic chamber pressure by throttle, then calls public
    `PlumeData.Compute` and `RocketNozzle.ComputeMinGasVisibilityDensity` from user nozzle settings +
    `PhysicalAtmosphereReference.GetAtmosphericPressure(camera)`.
 4. **Positioning** chain: part-local offset → `Part.MatrixAsmb2VehicleAsmb` / `Part.Asmb2VehicleAsmb`
-   (`KSA/Part.cs:736,720`) → `Vehicle.PosAsmbToBody` (`:1270`) → `Vehicle.Body2Cce` (`:475`) →
+   (`KSA/Part.cs:740,724`) → `Vehicle.PosAsmbToBody` (`:1284`) → `Vehicle.Body2Cce` (`:476`) →
    `Camera.GetPositionEgo(vehicle)` (`KSA/Camera.cs:231`). Base axis is part-local **-X**, matching every
    stock `<ExhaustDirection X="-1">` in `Core/CorePropulsionAGameData.xml`.
 5. **Template Editor** writes the shared `VolumetricExhaustTemplate` sub-objects (same fields and same
    `ColorRgbReference(float3)` + `OnDataLoad(new Mod())` idiom as the game's `VolumetricExhaustRenderer.
-   OnDrawUi`, `:2126-2148`), then `TemplateRefresher` calls `OnSettingsChanged()` on every affected
-   instance and `RecomputeVolumetricExhaustLimits` on every real nozzle — the debug editor's own `changed`
-   path (`:2321-2345`) minus the transient-LUT rebake (pyro does not edit transients).
+   OnDrawUi`, `:2459`, colors `:2595-2619`), then `TemplateRefresher` calls `OnSettingsChanged()` on every
+   affected instance and `RecomputeVolumetricExhaustLimits` on every real nozzle — the debug editor's own
+   `changed` path (`:2812-2813`) minus the transient-LUT rebake (pyro does not edit transients).
 
 **Persistence** — `PlumePresetManager` stores named **presets**
 (`pyro.lib/PlumePresetManager.cs`) reads/writes TOML at
@@ -63,26 +64,26 @@ normalize removed template IDs. See [saves](saves.md) for sidecar identity and l
 
 | # | Kind | Mod code | Game member | Decomp path (5438) | Status | Notes |
 |---|---|---|---|---|---|---|
-| 1 | Harmony postfix | `PyroPatches.cs:19,73` | `Vehicle.AddVolumetricExhaustInstances(Camera camera, VolumetricExhaustRenderer renderer, double frameDeltaTime)` | `KSA/Vehicle.cs:5518` (viewport argument removed) | ✅ | Target is explicitly bound by the three parameter types; postfix names (`camera`, `renderer`, `frameDeltaTime`) remain Harmony-bound and must not drift. The body derives air state (`:5524-5531`) and queues stock plumes for grouped rendering. |
-| 2 | Direct API | `PlumeEmitter.cs` | `VolumetricExhaustRenderer.AddInstance(VolumetricExhaustInstance, in ExhaustBendTarget, in ExhaustAxialFade, in ExhaustDiamondFade) : ExhaustSubmission` | `KSA/VolumetricExhaustRenderer.cs:814` | ✅ **fixed 5438** | Direct submissions use default bend target, `ExhaustAxialFade.NoFadeOut` and `ExhaustDiamondFade.None`; `IsLive` gates the call. Do not open a grouping frame for standalone plumes, or stock pending hierarchy entries are lost. |
-| 3 | Direct API | `PyroSubmod.cs:75` | `VolumetricExhaustRenderer.Disabled` | `:352` (was `:312`) | ✅ | |
-| 4 | Direct API | `PlumeTemplates.cs:53-59` | `VolumetricExhaustReference { Id }`, `.Load()`, `.Template`; `new VolumetricExhaustInstance(ref)` | `KSA/VolumetricExhaustReference.cs`; `KSA/VolumetricExhaustInstance.cs:72` | ✅ | file byte-identical 5348↔5402 |
+| 1 | Harmony postfix | `PyroPatches.cs:19-21,87` | `Vehicle.AddVolumetricExhaustInstances(Camera camera, VolumetricExhaustRenderer renderer, double frameDeltaTime)` | `KSA/Vehicle.cs:5683` (viewport argument removed @5438; signature/body identical @5482) | ✅ | Target is explicitly bound by the three parameter types; postfix names (`camera`, `renderer`, `frameDeltaTime`) remain Harmony-bound and must not drift. The body derives air state (`:5689-5696`) and queues stock plumes for grouped rendering (`Program.cs:2366-2374`: `UpdateFrameData` → `BeginPlumeGrouping` → vehicles → `EndPlumeGrouping`). |
+| 2 | Direct API | `PlumeEmitter.cs` | `VolumetricExhaustRenderer.AddInstance(VolumetricExhaustInstance, in ExhaustBendTarget, in ExhaustAxialFade, in ExhaustDiamondFade) : ExhaustSubmission` | `KSA/VolumetricExhaustRenderer.cs:841` | ✅ **fixed 5438**; identical @5482 | Direct submissions use default bend target, `ExhaustAxialFade.NoFadeOut` and `ExhaustDiamondFade.None`; `IsLive` gates the call. Do not open a grouping frame for standalone plumes, or stock pending hierarchy entries are lost. |
+| 3 | Direct API | `PyroSubmod.cs:78` | `VolumetricExhaustRenderer.Disabled` | `:446` (5438 `:436`) | ✅ | |
+| 4 | Direct API | `PlumeTemplates.cs:53-59` | `VolumetricExhaustReference { Id }`, `.Load()`, `.Template`; `new VolumetricExhaustInstance(ref)` | `KSA/VolumetricExhaustReference.cs`; `KSA/VolumetricExhaustInstance.cs:91` | ✅ | both files byte-identical 5438↔5482 |
 | 5 | Direct API | `PlumeEmitter.cs` | `VolumetricExhaustInstance.UpdateState(double, bool, double, in GasProperties, in GasConditions, float, float3, float3, float3, float3, float, float3, float) : void` | `KSA/VolumetricExhaustInstance.cs:111` | ✅ **fixed 5438** | Stores emitter/rest transforms and air state; `LastPlumeData` remains caller-owned and is updated only while active. `IsLive` replaces the old bool return and gates final submission; 4-slot pulse tracker remains native. |
-| 6 | Direct API | `TemplateRefresher.cs:20,42` | `VolumetricExhaustInstance.OnSettingsChanged()` | `KSA/VolumetricExhaustInstance.cs:243` | ✅ | |
-| 7 | **Harmony prefix (typed, scoped)** | `PyroPatches.cs` / `PlumeEmitter.cs` | `VolumetricExhaustRenderer.AddInstance(ExhaustInstance, int)` final enqueue; `ExhaustInstance.absorptionDensity`, `.refractionIntensity` | `KSA/VolumetricExhaustRenderer.cs:759`; `KSA/ExhaustInstance.cs:25,69` | ✅ **fixed 5438** | AddInstanceCore rebuilds these values from the template (`:1010-1015`), so Pyro applies its override only during its direct submission and restores scope in `finally`. Stock engines/shared templates remain untouched. No `_shaderData` reflection remains. |
+| 6 | Direct API | `TemplateRefresher.cs:20,42` | `VolumetricExhaustInstance.OnSettingsChanged()` | `KSA/VolumetricExhaustInstance.cs:239` | ✅ | |
+| 7 | **Harmony prefix (typed, scoped)** | `PyroPatches.cs` / `PlumeEmitter.cs` | `VolumetricExhaustRenderer.AddInstance(ExhaustInstance, int)` final enqueue; `ExhaustInstance.absorptionDensity`, `.refractionIntensity` | `KSA/VolumetricExhaustRenderer.cs:786`; `KSA/ExhaustInstance.cs:25,69` | ✅ **fixed 5438**; region `:786`–`:1028` identical @5482, prefix parameter `inInstance` still binds | AddInstanceCore (`:1028`) rebuilds these values from the template (`Template.BuildBlendedValues()` `:1037`, written `:1045-1046`), so Pyro applies its override only during its direct submission and restores scope in `finally`. Stock engines/shared templates remain untouched. No `_shaderData` reflection remains. |
 | 8 | Struct layout | `PyroPatches.cs` prefix | `ExhaustInstance` sequential pack-1 layout, 272 → 320 bytes by source field sizes; final submission fields above | `KSA/ExhaustInstance.cs` | ✅ | Twelve floats appended in 5438. Pyro writes named fields only; new fade/shape fields are native initialized by AddInstanceCore. Never copy or hardcode the struct stride. Native `_hasRefractionInstances` remains a 5438 live risk. |
-| 9 | Direct API (object init) | `PlumePhysics.cs` | `PlumeData.Compute(in GasProperties, in GasConditions, float, float, float, float, float, float, float, float, float)` | `KSA/PlumeData.cs:65` | ✅ **fixed 5438** | Calls the public constructor helper so `StagnationPressure`, `CoreVelocity` and `MassFlow` stay coherent with KSA. |
+| 9 | Direct API (object init) | `PlumePhysics.cs` | `PlumeData.Compute(in GasProperties, in GasConditions, float, float, float, float, float, float, float, float, float)` | `KSA/PlumeData.cs:80` | ✅ **fixed 5438** | Calls the public constructor helper so `StagnationPressure`, `CoreVelocity` and `MassFlow` stay coherent with KSA. |
 | 10 | Direct API | `PlumePhysics.cs:30-89` | `GasProperties{Gamma,SpecificGasConstant}.ComputeSpeedOfSound/…PressureAngle/…PressureMach/ComputePrandtlMeyer`; `GasConditions{Pressure,Temperature}.ComputeDensity` | `KSA/GasProperties.cs`; `KSA/GasConditions.cs` | ✅ | pressures **Pa** |
 | 11 | Direct API | `PlumePhysics.cs:33,61` | `RocketDesign.SolveMachNumberFromAreaRatio(GasProperties,double)`, `ComputeAreaRatioFromMachNumber(double,double)` | `KSA/RocketDesign.cs:168,187` | ✅ | |
 | 12 | Direct API | `PlumePhysics.cs:113` | `PhysicalAtmosphereReference.GetAtmosphericPressure(Camera) : double` (**atm**) | `KSA/PhysicalAtmosphereReference.cs:50` | ✅ | ×101325 → Pa |
-| 13 | Direct API | `PlumePhysics.cs` | `RocketNozzle.ComputeMinGasVisibilityDensity(VolumetricExhaustTemplate, double)` | `KSA/RocketNozzle.cs:197` | ✅ **fixed 5438** | Uses KSA's public visibility formula directly. |
-| 14 | Direct API | `PlumeEmitter.cs:69-74` | `Part.MatrixAsmb2VehicleAsmb`, `Part.Asmb2VehicleAsmb`, `Vehicle.PosAsmbToBody(double3)`, `Vehicle.Body2Cce`, `Camera.GetPositionEgo(IPosition)`, `doubleQuat.NormalizedOrZero()` (ext, `KSA/QuaternionEx.cs:280`) | `KSA/Part.cs:736,720`; `KSA/Vehicle.cs:1270,475`; `KSA/Camera.cs:231` | ✅ | line moves only |
-| 15 | Direct API | `PyroSubmod.cs:77-78` | `Universe.GetElapsedSeconds()`, `Universe.GetSimulationSpeed()` | `KSA/Universe.cs:2108,2026` (was `:2054,1972`) | ✅ | |
-| 16 | Direct API | `PyroSubmod.CreateUi.cs:135,148`; `PyroSubmod.cs:187-192`; `PyroUi.cs:12` | `Vehicle.Parts.Parts`, `Part.SubParts`, `Part.PartParent`, `Part.Template.Id`, `Part.Id` | `KSA/Part.cs:1079,660,576,698` | ✅ | anchor pick + dead-anchor pruning |
-| 17 | **Reflection (internal, string)** | `PlumeTemplates.cs` | `VolumetricExhaustTemplate.References : SerializedCollection<T>` → `GetList()` | `KSA/VolumetricExhaustTemplate.cs:38`; `KSA/SerializedCollection.cs:42` | ✅ | Only template cataloging uses reflection; look override's retired `_shaderData` lookup is no longer a dependency. Fallback IDs include current `EngineAAuxiliary`. |
-| 18 | Direct API (read+write) | `PyroSubmod.TemplateUi.cs` | `VolumetricExhaustTemplate.Absorption/Emission/Noise/LengthWeights/Quality` sub-objects; `DoubleReference.Value`, `BoolReference.Value`, `Quality.VolumetricVesselShadows`, `ColorGradient.Color0..3`, `Flow.MachDiamonds.{LeadIn,LeadOut,MiddleRadius}` | `KSA/VolumetricExhaustTemplate.cs:12-27` + sub-type files | ✅ | GPU `ExhaustTemplateData` rebuilt from these each `Render()` (`VolumetricExhaustRenderer.cs:859-866`, was `:1236-1243`); all sub-type files byte-identical |
-| 19 | Direct API | `PyroSubmod.TemplateUi.cs:121-129` | `ColorRgbReference.Value.AsFloat3`, `new ColorRgbReference(float3)`, `.OnDataLoad(new Mod())` | `KSA/ColorRgbReference.cs:22,28,35`; `KSA/Mod.cs` | ✅ | identical to the game editor (`VolumetricExhaustRenderer.cs:2126-2148`) |
-| 20 | Direct API | `TemplateRefresher.cs` | `PartTree.RocketNozzles.ModulesAndAllStates` enumerator → `.FxState.VolumetricExhaust`, `.Module.RecomputeVolumetricExhaustLimits(in …)` | `KSA/PartTree.cs:403`; `KSA/RocketNozzle.cs:190` | ✅ **fixed 5438** | Recomputes real nozzle visibility and maximum extent after shared template edits, in try/catch. |
+| 13 | Direct API | `PlumePhysics.cs` | `RocketNozzle.ComputeMinGasVisibilityDensity(VolumetricExhaustTemplate, double)` | `KSA/RocketNozzle.cs:254` @5482 (file only gained `DrawDesignInfo`) | ✅ **fixed 5438** | Uses KSA's public visibility formula directly. |
+| 14 | Direct API | `PlumeEmitter.cs:69-74` | `Part.MatrixAsmb2VehicleAsmb`, `Part.Asmb2VehicleAsmb`, `Vehicle.PosAsmbToBody(double3)`, `Vehicle.Body2Cce`, `Camera.GetPositionEgo(IPosition)`, `doubleQuat.NormalizedOrZero()` (ext, `KSA/QuaternionEx.cs:280`) | `KSA/Part.cs:740,724`; `KSA/Vehicle.cs:1284,476`; `KSA/Camera.cs:231` | ✅ | line moves only |
+| 15 | Direct API | `PyroSubmod.cs:77-78` | `Universe.GetElapsedSeconds()`, `Universe.GetSimulationSpeed()` | `KSA/Universe.cs:2317,2235` (5438 `:2307,2225`) | ✅ | |
+| 16 | Direct API | `PyroSubmod.CreateUi.cs:135,148`; `PyroSubmod.cs:187-192`; `PyroUi.cs:12` | `Vehicle.Parts.Parts`, `Part.SubParts`, `Part.PartParent`, `Part.Template.Id`, `Part.Id` | `KSA/Part.cs:1127,660,576,702` | ✅ | anchor pick + dead-anchor pruning; `Part.Tree` became nullable @5482 but pyro does not dereference it |
+| 17 | **Reflection (internal, string)** | `PlumeTemplates.cs` | `VolumetricExhaustTemplate.References : SerializedCollection<T>` → `GetList()` | `KSA/VolumetricExhaustTemplate.cs:56`; `KSA/SerializedCollection.cs:62` | ✅ (5482 `SerializedCollection` only adds `Deregister`) | Only template cataloging uses reflection; look override's retired `_shaderData` lookup is no longer a dependency. Fallback IDs include current `EngineAAuxiliary`. |
+| 18 | Direct API (read+write) | `PyroSubmod.TemplateUi.cs` | `VolumetricExhaustTemplate.Absorption/Emission/Noise/LengthWeights/Quality` sub-objects; `DoubleReference.Value`, `BoolReference.Value`, `Quality.VolumetricVesselShadows`, `ColorGradient.Color0..3`, `Flow.MachDiamonds.{LeadIn,LeadOut,MiddleRadius}` | `KSA/VolumetricExhaustTemplate.cs:12-27` + sub-type files | ✅ | GPU `ExhaustTemplateData` rebuilt from these each `Render()` via `BuildShaderData` (`VolumetricExhaustRenderer.cs:1183-1195`, `VolumetricExhaustTemplate.cs:123`); all sub-type files byte-identical |
+| 19 | Direct API | `PyroSubmod.TemplateUi.cs:121-129` | `ColorRgbReference.Value.AsFloat3`, `new ColorRgbReference(float3)`, `.OnDataLoad(new Mod())` | `KSA/ColorRgbReference.cs:22,28,35`; `KSA/Mod.cs` | ✅ | identical to the game editor (`VolumetricExhaustRenderer.cs:2595-2619`) |
+| 20 | Direct API | `TemplateRefresher.cs` | `PartTree.RocketNozzles.ModulesAndAllStates` enumerator → `.FxState.VolumetricExhaust`, `.Module.RecomputeVolumetricExhaustLimits(in …)` | `KSA/PartTree.cs:76`; `KSA/RocketNozzle.cs:220` | ✅ **fixed 5438** | Recomputes real nozzle visibility and maximum extent after shared template edits, in try/catch. |
 | 21 | Asset IDs + migration | `PlumeTemplateIds.cs`, `PlumeTemplates.cs`, presets/save/UI | `EngineALarge`, `EngineAMed`, `EngineACompact`, `EngineAAuxiliary`, `RCS`, `MmuRcsVac`; old `EngineAVernier`/`EngineATurbine` aliases | `Core/ExhaustAssets.xml:1331` / `:1670` (removed), `:1331` (Auxiliary replacement) | ✅ **fixed 5438** | Exact legacy aliases resolve to Auxiliary only when unavailable, preserving user-provided legacy IDs. Unknown IDs remain explicit failures. |
 | 22 | Build refs | `pyro.lib.csproj` | `Brutal.Vulkan`, `Brutal.Vulkan.Abstractions`, `BepuUtilities` | — | ✅ | needed so `VolumetricExhaustRenderer` / `Symmetric3x3` (`Part` matrix API) resolve |
 
@@ -182,6 +183,38 @@ the native renderer still needs an in-game pass.
 - 🔍 **Needs a live pass:** plume anchor following and startup/shutdown tails, full/fractional throttle,
   atmosphere wind bend, absorption isolation from stock engines, old preset/save alias replay, and the native
   refraction pass once KSA enables it.
+
+### KSA 5482 (5438 → 5482) verification (2026-09-25)
+
+Verified against `2026.9.22.5482` (NEW) vs `2026.9.10.5438` (OLD) with both supplied decomp/Content
+trees. Verification is managed/static only: the full solution build passes and `pyro.tests` passes.
+No native run was possible.
+Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
+
+- **No functional change needed.** Every game type Pyro uses is byte-identical:
+  - `VolumetricExhaustInstance`, `VolumetricExhaustReference` and `VolumetricExhaustTemplate`, including
+    all of the template's sub-objects;
+  - `ExhaustInstance`, `PlumeData`, `GasProperties`, `GasConditions` and `RocketDesign`;
+  - `PhysicalAtmosphereReference`, `ColorRgbReference` and `ExhaustTemplateData`;
+  - `ExhaustBendTarget`, `ExhaustAxialFade`, `ExhaustDiamondFade` and `ExhaustSubmission`.
+
+  `RocketNozzle` only gained `DrawDesignInfo`. `Vehicle.AddVolumetricExhaustInstances` has the same
+  signature and body (`:5683`). In `VolumetricExhaustRenderer`, everything from
+  `AddInstance(ExhaustInstance,int)` (`:786`) through `AddInstance(VolumetricExhaustInstance, in…)` (`:841`)
+  and `AddInstanceCore` (`:1028`) is identical. Only the constructor, `Render(…, bool inVolumetricsComposited)`
+  and the OIT push constants changed, and Pyro uses none of them. The table's line numbers were stale
+  since 5438 and have been refreshed above.
+- **Deep compositing (rev 5458) applies automatically.** Pyro supplies no shaders, so the new
+  `outInterval` attachment (`VolumetricExhaust.frag`), `ExhaustOit.comp`, `Upscaling/DepthWrite.frag` and
+  `ComposeWithClouds.glsl` (all under `Core/Shaders/VolumetricExhaust/`) reach Pyro plumes through native code. Expected visible change: Pyro
+  plumes are now occluded by thick clouds and trails, the same as stock plumes. `ExhaustAssets.xml` is
+  unchanged, so the template IDs and migration aliases still hold.
+- **Refraction is still inert (standing, not new).** `_hasRefractionInstances` is still only reset
+  (`:769`) and read (`:1249, 1463, 1509`); nothing ever sets it to true. Pyro's Refraction slider is
+  therefore still a no-op for stock plumes and Pyro plumes alike.
+- **Live checks pending:** plumes compositing behind and inside clouds, trails and explosions, plus
+  the 5438 list above (anchor following, startup/shutdown tails, wind bend, absorption isolation, and
+  replaying aliases from presets and saves).
 
 ## Runtime on/off cycling
 

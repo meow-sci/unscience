@@ -32,6 +32,9 @@ Headless library providing programmatic kitten spawning and per-kitten GPU mater
   - `Despawn(id)` / `DespawnAll()` — remove spawned kittens
   - `RecolorKitten(id, color)` — live tint update
   - `GetAvailableCharacters()` — enumerate character IDs from `ModLibrary`
+  - Backpack part: since KSA 5482 the `Part` constructor no longer creates a part tree. The spawner
+    calls `part.CreateOwnTree()` before configuring the MMH/NTO tanks and refilling them, as
+    `EVADoor.GetBackPackPart` does. Without it, every spawn threw a null reference.
 
 - **`SpawnRequest`** — Input DTO for spawn operations. Key fields: `ReferenceVehicleId`, `OffsetBodyFrame`, `Count`, `CharacterId`, `TintColor`, `UniqueMaterialsPerKitten`, `PerKittenColors`.
 

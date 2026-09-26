@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Brutal.ShaderCApi;
 using Brutal.VulkanApi;
@@ -18,20 +19,22 @@ namespace MeowSci.HumbleArteestLib;
 ///    KSA 4693+, where part pipelines recompile per feature variant straight from disk and never
 ///    consult <c>ShaderReference.Shader</c>.
 ///
-/// 2. <c>PartModelModule/PartModelDynamicModule.UpdateRenderData</c> — records which
-///    <c>Part</c> is about to submit an instance. The normal render-data paths consume this
-///    hand-off immediately; thumbnail calls have no pending part and remain unpainted.
+/// 2. private <c>PartTreeRenderData.WriteState/WriteDynamicState</c> — since KSA 5482 the only
+///    writers of each tree's cached per-slot <c>StateBitFlags</c> for static and dynamic part
+///    models. A postfix ORs the packed paint color into the free high bits, so raster and
+///    raytraced IVA submissions both carry it. Thumbnails do not use these caches and stay unpainted.
 ///
-/// 3. <c>PartModel/PartModelDynamic.AddInstance</c> — ORs the packed paint color into the free
-///    high bits of <c>StateBitFlag</c> on its way to the GPU.
+/// 3. <c>PartTreeRenderData.EnsureBuilt</c> — the cache is only rewritten when dirty, so this prefix
+///    invalidates a tree's states whenever <see cref="VehiclePaint.RenderStateVersion"/> changed.
 /// </summary>
 public static class VehiclePaintPatches
 {
-    /// <summary>Part whose instance data is about to be submitted; set by (2), consumed by (3).</summary>
-    [ThreadStatic] private static Part? _pendingPart;
-
     /// <summary>Number of seams this feature needs; anything less means paint is degraded.</summary>
-    public const int RequiredPatchCount = 5;
+    public const int RequiredPatchCount = 4;
+
+    private static readonly ConditionalWeakTable<PartTreeRenderData, StrongBox<int>> SeenVersions = new();
+    private static AccessTools.FieldRef<object, int[]>? _staticStateFlags;
+    private static AccessTools.FieldRef<object, int[]>? _dynamicStateFlags;
 
     private static readonly PatchRecord[] Records = new PatchRecord[RequiredPatchCount];
     private static int _recordCount;
@@ -46,14 +49,14 @@ public static class VehiclePaintPatches
         _recordCount = 0;
 
         Patch(harmony, ResolveFromFile(), nameof(FromFilePrefix), "ShaderModuleUtils.FromFile");
-        Patch(harmony, AccessTools.Method(typeof(PartModelModule), nameof(PartModelModule.UpdateRenderData)),
-            nameof(PartModelModulePrefix), "PartModelModule.UpdateRenderData");
-        Patch(harmony, AccessTools.Method(typeof(PartModelDynamicModule), nameof(PartModelDynamicModule.UpdateRenderData)),
-            nameof(PartModelDynamicModulePrefix), "PartModelDynamicModule.UpdateRenderData");
-        Patch(harmony, ResolveAddInstance(typeof(PartModel), typeof(PartModel.PerInstanceData)),
-            nameof(AddInstancePrefix), "PartModel.AddInstance");
-        Patch(harmony, ResolveAddInstance(typeof(PartModelDynamic), typeof(PartModelDynamic.PerInstanceData)),
-            nameof(AddInstanceDynamicPrefix), "PartModelDynamic.AddInstance");
+        Patch(harmony, ResolveWriteState("Batch", "WriteState", typeof(Part), out _staticStateFlags),
+            nameof(WriteStatePostfix), "PartTreeRenderData.WriteState", postfix: true);
+        Patch(harmony, ResolveWriteState("DynamicBatch", "WriteDynamicState", typeof(PartModelDynamicModule),
+                out _dynamicStateFlags),
+            nameof(WriteDynamicStatePostfix), "PartTreeRenderData.WriteDynamicState", postfix: true);
+        Patch(harmony, AccessTools.Method(typeof(PartTreeRenderData), nameof(PartTreeRenderData.EnsureBuilt),
+                new[] { typeof(PartTree), typeof(ulong) }),
+            nameof(EnsureBuiltPrefix), "PartTreeRenderData.EnsureBuilt");
 
         Console.WriteLine($"humble-arteest: VehiclePaint patches applied ({_recordCount}/{RequiredPatchCount})");
     }
@@ -66,11 +69,11 @@ public static class VehiclePaintPatches
             catch (Exception ex) { Console.WriteLine($"humble-arteest: unpatch failed for {Records[i].Label}: {ex.Message}"); }
         }
         _recordCount = 0;
-        _pendingPart = null;
         Console.WriteLine("humble-arteest: VehiclePaint patches removed");
     }
 
-    private static void Patch(Harmony harmony, MethodBase? original, string prefixName, string label)
+    private static void Patch(Harmony harmony, MethodBase? original, string patchName, string label,
+        bool postfix = false)
     {
         try
         {
@@ -80,12 +83,13 @@ public static class VehiclePaintPatches
                 return;
             }
 
-            var prefix = typeof(VehiclePaintPatches).GetMethod(prefixName,
+            var patch = typeof(VehiclePaintPatches).GetMethod(patchName,
                 BindingFlags.NonPublic | BindingFlags.Static)
-                ?? throw new MissingMethodException(nameof(VehiclePaintPatches), prefixName);
+                ?? throw new MissingMethodException(nameof(VehiclePaintPatches), patchName);
 
-            harmony.Patch(original, prefix: new HarmonyMethod(prefix));
-            Records[_recordCount++] = new PatchRecord(original, prefix, label);
+            if (postfix) harmony.Patch(original, postfix: new HarmonyMethod(patch));
+            else harmony.Patch(original, prefix: new HarmonyMethod(patch));
+            Records[_recordCount++] = new PatchRecord(original, patch, label);
         }
         catch (Exception ex)
         {
@@ -107,18 +111,17 @@ public static class VehiclePaintPatches
         });
 
     /// <summary>
-    /// Resolves the method that actually appends an instance to the per-viewport lists. Since KSA
-    /// 5438 added a dent-aware public wrapper, resolving by name would be ambiguous and could patch
-    /// only one wrapper. Both wrappers call this private four-argument method, so one prefix sees
-    /// each submission exactly once and the native <c>PerInstanceDent</c> remains untouched.
+    /// Resolves a private <c>PartTreeRenderData</c> state writer <c>(batch, int slot, owner)</c> and
+    /// the <c>StateBitFlags</c> array of its private nested batch type. Null when either is missing.
     /// </summary>
-    private static MethodBase? ResolveAddInstance(Type modelType, Type instanceDataType)
+    private static MethodBase? ResolveWriteState(string batchTypeName, string writerName, Type ownerType,
+        out AccessTools.FieldRef<object, int[]>? stateFlags)
     {
-        MethodBase? submission = AccessTools.Method(modelType, nameof(PartModel.AddInstance), new[]
-        {
-            instanceDataType, typeof(KSA.Deformation.PerInstanceDent), typeof(IViewport), typeof(int)
-        });
-        return submission?.IsPrivate == true ? submission : null;
+        stateFlags = null;
+        Type? batchType = AccessTools.Inner(typeof(PartTreeRenderData), batchTypeName);
+        if (batchType == null || AccessTools.Field(batchType, "StateBitFlags")?.FieldType != typeof(int[])) return null;
+        stateFlags = AccessTools.FieldRefAccess<int[]>(batchType, "StateBitFlags");
+        return AccessTools.Method(typeof(PartTreeRenderData), writerName, new[] { batchType, typeof(int), ownerType });
     }
 
     // ---- (1) Shader compilation ----
@@ -170,50 +173,40 @@ public static class VehiclePaintPatches
         return bytes;
     }
 
-    // ---- (2) Part hand-off ----
+    // ---- (2) Cached per-slot paint ----
 
-    private static void PartModelModulePrefix(PartModelModule __instance)
+    // The batch parameters are private nested types; Harmony binds them as object.
+    private static void WriteStatePostfix(object inBatch, int inSlot, Part inPart)
     {
-        if (!VehiclePaintShaders.Installed) return;
-        _pendingPart = __instance.Parent;
+        if (VehiclePaint.TryGetPaintBits(inPart, out int bits))
+            _staticStateFlags!(inBatch)[inSlot] |= bits;
     }
 
-    private static void PartModelDynamicModulePrefix(PartModelDynamicModule __instance)
+    private static void WriteDynamicStatePostfix(object inBatch, int inSlot, PartModelDynamicModule inModule)
     {
-        if (!VehiclePaintShaders.Installed) return;
-        _pendingPart = __instance.Parent;
+        if (VehiclePaint.TryGetPaintBits(inModule.Parent, out int bits))
+            _dynamicStateFlags!(inBatch)[inSlot] |= bits;
     }
 
-    // ---- (3) Per-instance paint ----
-
-    private static void AddInstancePrefix(ref PartModel.PerInstanceData instanceData)
-    {
-        if (!TryTakePaintBits(out int bits)) return;
-        instanceData.StateBitFlag |= bits;
-    }
-
-    private static void AddInstanceDynamicPrefix(ref PartModelDynamic.PerInstanceData inInstanceData)
-    {
-        if (!TryTakePaintBits(out int bits)) return;
-        inInstanceData.StateBitFlag |= bits;
-    }
+    // ---- (3) Cache invalidation ----
 
     /// <summary>
-    /// Consumes the pending part and resolves its paint. Clearing the slot here keeps a part from
-    /// leaking into an unrelated submission if the game ever gains another AddInstance caller.
+    /// Rewrites a tree's cached states once after any paint change. A tree seen for the first time
+    /// is invalidated too, because its cache may predate the patches or the latest change.
     /// </summary>
-    private static bool TryTakePaintBits(out int bits)
+    private static void EnsureBuiltPrefix(PartTreeRenderData __instance)
     {
-        var part = _pendingPart;
-        _pendingPart = null;
-
-        if (part == null)
+        int version = VehiclePaint.RenderStateVersion;
+        if (SeenVersions.TryGetValue(__instance, out var seen))
         {
-            bits = 0;
-            return false;
+            if (seen.Value == version) return;
+            seen.Value = version;
         }
-
-        return VehiclePaint.TryGetPaintBits(part, out bits);
+        else
+        {
+            SeenVersions.Add(__instance, new StrongBox<int>(version));
+        }
+        __instance.InvalidateStates();
     }
 
     private readonly struct PatchRecord

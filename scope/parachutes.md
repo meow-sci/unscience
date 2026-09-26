@@ -1,8 +1,9 @@
 # Parachutes (free-fallin) — Game Integration Scope
 
 Permanent reference for detecting when KSA game updates break **free-fallin**, the global parachute
-texture/tint/PBR customizer. Cataloged against KSA build **2026.9.10.5438** at
-`../ksa-game-assemblies/current/decomp` and `../ksa-game-assemblies/current/Content`.
+texture/tint/PBR customizer. Cataloged against KSA build **2026.9.22.5482** at
+`../ksa-game-assemblies/current/decomp` and `../ksa-game-assemblies/current/Content` (diffed from
+2026.9.10.5438; see the 5482 verification section).
 
 All logic is in `free-fallin.lib` (`FreeFallinSubmod : ISubmod`,
 `FreeFallinPatches.Apply/Remove`), consumed by both the standalone `free-fallin` host and
@@ -14,8 +15,9 @@ KSA creates one `ChuteRenderable` per live canopy and selects material slot zero
 `Parachute.CanopyMaterial?.Id`. Its `Draw` method updates the cloth pose and calls a private
 `AnimatedRenderable`. Free-fallin prefixes that draw, reflects `_renderable`, then swaps element
 zero of its protected `MaterialIndices` array to a mod-created material handle. The array is read
-by `AnimatedRenderable.Draw` for the main, pre-pass, and shadow submissions, so one substitution
-keeps every pass consistent and follows the skinned cloth automatically.
+by `AnimatedRenderable.Draw(ViewHandle)` for the main, pre-pass, and shadow submissions of every
+view (per-view buckets since 5482), so one substitution keeps every pass consistent and follows the
+skinned cloth automatically.
 
 Full Canopy additionally prefixes `KSA.Rendering.Utils.SetShaderFromMod` and
 `ShaderModuleUtils.FromFile`, then patches `Model.vert`, `Model_Skinned.vert`, and `ModelPbr.frag` in
@@ -55,11 +57,11 @@ selections afresh.
 
 ## Touchpoints
 
-| # | Kind | Mod code | Game member / asset | Decomp/content path (5438) | Risk / invariant |
+| # | Kind | Mod code | Game member / asset | Decomp/content path (5482) | Risk / invariant |
 |---|---|---|---|---|---|
-| 1 | **Harmony prefix** | `FreeFallinPatches.cs` | `ChuteRenderable.Draw(float3[], float[]?, floatQuat[]?, ref readonly double4x4, float, double)` | `KSA/ChuteRenderable.cs:32` | Single overload today. Rename/signature change is loud at patch setup/build. Prefix must run before the nested `_renderable.Draw()`. |
-| 2 | **Private reflection** | `FreeFallinPatches.cs` | `ChuteRenderable._renderable : AnimatedRenderable` | `KSA/ChuteRenderable.cs:13` | String-named private field; rename is a silent-compile/runtime-patch failure. Add to every update's reflection watchlist. |
-| 3 | **Protected reflection** | `FreeFallinPatches.cs` | `AnimatedRenderable.MaterialIndices : int[]` | `KSA/AnimatedRenderable.cs:34` | Slot zero must remain the canopy mesh's material. Rename or material-slot reordering breaks customization/restoration. |
+| 1 | **Harmony prefix** | `FreeFallinPatches.cs:18-20` (lookup by name, no parameter types), `:54` (`BeforeDraw(ChuteRenderable __instance)`) | `ChuteRenderable.Draw(ViewHandle view, float3[], float[]?, floatQuat[]?, ref readonly double4x4, float, double)` | `KSA/ChuteRenderable.cs:34` | **Signature @5482 (compatible):** rev 5474 added the leading `ViewHandle view` and the nested call is now `_renderable.Draw(view)` (`:43`). Still the single overload; the prefix binds only `__instance`, so the new parameter is transparent. Caller chain: `Vehicle.UpdateParachuteRenderData(IViewport)` (`KSA/Vehicle.cs:3743`) → `Parachute.DrawCanopy(ViewHandle, double, ref readonly double4x4)` (`KSA/Parachute.cs:1185`). Rename/extra overload is loud at patch setup. Prefix must run before the nested draw. |
+| 2 | **Private reflection** | `FreeFallinPatches.cs:12-13` | `ChuteRenderable._renderable : AnimatedRenderable` | `KSA/ChuteRenderable.cs:12` | String-named private field; rename is a silent-compile/runtime-patch failure. Add to every update's reflection watchlist. |
+| 3 | **Protected reflection** | `FreeFallinPatches.cs:14-15` | `AnimatedRenderable.MaterialIndices : int[]` | `KSA/AnimatedRenderable.cs:32` (read per draw at `:204`, `:223`) | Slot zero must remain the canopy mesh's material. Rename or material-slot reordering breaks customization/restoration. @5482 colour (MainOpaque) and OpaquePrePass share `ColourMeshBucketHandles`, shadows use `ShadowRenderablePool`; all copy `MaterialIndices[i]` at draw time, so one slot-0 write still covers every pass in every view. |
 | 4 | Direct GPU API | `CanopyMaterialController.cs` | `GpuObjectSystem<MaterialData>.CreateObject`; `GpuMaterialSystem.GetOrLoad` | `KSA/GpuObjectSystem.cs:45`; `KSA/GpuMaterialSystem.cs` | Allocates one immutable material per Apply. `MaterialData` field order is shader ABI. |
 | 5 | Direct GPU API | `CanopyMaterialController.cs` | `GpuTextureSystem.TryAddTexture/GetOrLoad`, sampler/default handles | `KSA/GpuTextureSystem.cs:85` | Adds replacement/composited albedo and optional uniform PBR textures to KSA's bindless table. |
 | 6 | Direct asset API | `CanopyMaterialController.cs` | `ModLibrary.Get<PbrMaterialReference>("ParachuteCanopy_Material_CheckerLongOrange")`; diffuse/normal/PBR references | `KSA/ModLibrary.cs`; `KSA/PbrMaterialReference.cs` | The old `ParachuteCanopy_Material` id was removed in 5438. CheckerLongOrange is an authored native entry and the stable source for the custom material's maps. |
@@ -68,7 +70,7 @@ selections afresh.
 | 9 | **Harmony prefix** | `CanopyProjectionShaders.cs` | `ShaderModuleUtils.FromFile(Device, string, out VkShaderStageFlags, CompileOptions?)` | `RenderCore/ShaderModuleUtils.cs:117` | Intercepts only three exact shader filenames, preserves compile options and original path as debug/include root, and falls back to stock compilation on failure. Parameter names/types are Harmony-binding dependencies. |
 | 10 | **Harmony prefix** | `CanopyProjectionShaders.cs` | `KSA.Rendering.Utils.SetShaderFromMod(SimpleShaderStages, Device, string modId, bool useCustomOptions)` | `KSA.Rendering/Utils.cs:589` | Changes `useCustomOptions` to true only for the three projection shader ids. Without this seam, ordinary model pipelines reuse cached stock modules and Full Canopy renders identically to Replace. Parameter name `useCustomOptions` is load-bearing. |
 | 11 | Shader text + assets | `CanopyProjectionShaders.cs` | `Model.vert`, `Model_Skinned.vert`, `ModelPbr.frag`, `TextureSet.glsl`, `MaterialSet.glsl` | `Content/Core/DefaultAssets.xml:78-80`; `Content/Core/Shaders/Mesh/Model{,_Skinned}.vert`; `Mesh/ModelPbr.frag`; `Common/{TextureSet,MaterialSet}.glsl` | Exact declaration/assignment/call anchors are prevalidated. Varying location 3 must be free and type-compatible in both vertex paths and the shared fragment. Descriptor sets 1/2 must remain texture/material; material storage buffer must retain vertex visibility. |
-| 12 | Direct render API | `CanopyProjectionShaders.cs`; `CanopyMaterialController.cs` | `Program.RendererRebuildNeeded`; `GltfSystemSkinned.GetOrLoad("ParachuteCanopyGlb").Skeleton`; `ChuteCanopyBones.MeasureBindHemRadius` | `KSA/Program.cs:431,2096-2100`; `KSA/GltfPbrAssetRef.cs`; `KSA/ChuteCanopyBones.cs:48` | Shader arm/disarm rebuilds pipelines at the game's frame boundary. Full Canopy projection scale depends on the bind skeleton's X/Z hem radius and axis convention. |
+| 12 | Direct render API | `CanopyProjectionShaders.cs`; `CanopyMaterialController.cs` | `Program.RendererRebuildNeeded`; `GltfSystemSkinned.GetOrLoad("ParachuteCanopyGlb").Skeleton`; `ChuteCanopyBones.MeasureBindHemRadius` | `KSA/Program.cs:430,2141-2145`; `KSA/GltfPbrAssetRef.cs`; `KSA/ChuteCanopyBones.cs:65` | Shader arm/disarm rebuilds pipelines at the game's frame boundary. Full Canopy projection scale depends on the bind skeleton's X/Z hem radius and axis convention. |
 | 13 | Lifecycle | both hosts | StarMap attributes, `ISubmod`, consolidated Harmony, `HotkeyGuard` | `free-fallin/Mod.cs`, `Patcher.cs`; `unscience/Mod.cs`, `Patcher.cs` | Standalone and umbrella hosts must apply/remove exactly once. |
 
 ## Game-update checklist
@@ -102,6 +104,41 @@ unload, including canopies that selected a different authored style.
 **Residual live check:** deploy canopies using multiple native styles, apply and remove a custom
 material, then reload the scene and verify every canopy returns to the style it originally selected.
 The 5438 XML ids and source contract are verified; final build and managed test results are recorded in the upgrade report.
+
+## KSA 5482 (5438 → 5482) verification
+
+Verified 2026-09-25 against `2026.9.22.5482`, diffed from `2026.9.10.5438`. Static/managed only;
+no native KSA run. **No free-fallin code change was needed.** Evidence:
+[KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
+
+- ✅ **`ChuteRenderable.Draw` gained a leading `ViewHandle view` (compatible).** Rev 5474 keyed mesh
+  buckets by render pass and view: `Vehicle.UpdateParachuteRenderData(IViewport)` (`Vehicle.cs:3743`)
+  now passes `ViewForViewport(viewport)` through `Parachute.DrawCanopy(ViewHandle, …)`
+  (`Parachute.cs:1185`) to `ChuteRenderable.Draw(ViewHandle, …)` (`ChuteRenderable.cs:34`), which calls
+  `_renderable.Draw(view)` (`:43`). The name-only lookup still finds the single overload and the prefix
+  binds only `__instance`, so it attaches and still runs before the nested draw.
+- ✅ **Slot-0 swap still reaches every pass and view.** `AnimatedRenderable.Draw(ViewHandle)`
+  (`:187-233`) sends colour and opaque prepass through `ColourMeshBucketHandles` and shadows through
+  `ShadowRenderablePool` / `DepthMeshBucketHandles`; each copies `MaterialIndices[i]` into the instance
+  data at draw time (`:204`, `:223`). `_renderable` (`ChuteRenderable.cs:12`) and `MaterialIndices`
+  (`AnimatedRenderable.cs:32`) keep their names and types.
+- ✅ **Full Canopy shader seam unchanged.** `SetShaderFromMod` is still the path for the static,
+  skinned and skinned two-sided PBR pipelines (`SuperMeshRenderSystem.cs:644-645,886-898`, helper `SetShaders` `:943-951`);
+  `Utils.cs`, `ShaderModuleUtils.cs` and `ShaderReference.cs` are byte-identical. `Model.vert`,
+  `Model_Skinned.vert`, `MaterialSet.glsl`, `TextureSet.glsl`, `DefaultAssets.xml`, `ParachuteAssets.xml`,
+  `ChuteCanopyBones.cs` and `GltfPbrAssetRef.cs` are identical; `ChuteCanopyPose.cs` changed only a log
+  line. All anchors hold; varying location 3 is still free.
+- ⚠️ **BRDF fix (rev 5472, visual).** `ModelPbr.frag:145` now samples the BRDF LUT with `roughness`
+  instead of `1.0 - roughness`; the line is far from every Full Canopy anchor. The in-memory patcher
+  reads the current on-disk source, so it inherits the fix. Roughness *values* keep their meaning
+  (R=AO, G=roughness, B=metallic), but saved roughness/metallic presets render with different
+  fresnel/sheen.
+- ℹ️ Test fidelity: `ksa-upgrade.tests/FreeFallinFixture.cs:37` still mirrors the parameterless
+  `Draw()`. The check still passes because the prefix binds only `__instance`.
+- **Native acceptance pending:** every mode with a deployed canopy in the main and a secondary
+  viewport, including shadows; Full Canopy compiles for `Model_Skinned.vert` and `ModelPbr.frag`;
+  uniform roughness/metallic 0 vs 1 under the corrected BRDF; Restore Stock; the multi-style restore
+  check above (outstanding since 5438).
 
 ## Save/load adapter (feature/saves)
 

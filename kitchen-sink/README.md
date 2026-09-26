@@ -28,16 +28,19 @@ the add button; save restoration reports the failure and retains the saved recor
 
 Open the vehicle editor and click **Refresh Vehicle** to call
 `PartTree.ReinitializeDerivedValues` on the editor's parts. This is a workaround for invisible
-subparts after editing.
+subparts after editing. Since KSA 5482 this call only marks derived data dirty; the game recomputes it
+at the next frame's flush, so the result appears one frame later.
 
 ## Force IVA Rendering
 
 Enable **Always Render IVA Interiors** to show interiors outside IVA camera mode.
 `IvaForceRender` changes loaded model templates and catches newly created models with a
-constructor postfix. Its `PartModel.AddInstance` postfix also keeps internal meshes visible in
-the editor preview. Disabling the switch or unloading restores the changed template flags.
-On KSA 5438, the shared helper targets the common dent-aware submission overload and keeps
-the instance and dent lists aligned, including editor-only interior submissions.
+constructor postfix. Disabling the switch or unloading restores the changed template flags.
+Internal meshes also stay visible in the vehicle editor preview. On KSA 5482 the editor path uses a
+prefix and finalizer on `PartTreeRenderData.Compose`. They reveal internal templates for that one
+call, so stock code appends matching instances and dents. KSA 5482's raster composition no longer
+calls the `PartModel.AddInstance` method that the 5438 postfix used. Editor part thumbnails no
+longer show internal meshes.
 
 ## Scene saves
 
@@ -63,7 +66,7 @@ filter and one-shot editor refresh are transient. The defunct Flexo panels and s
 Build the solution with `dotnet build`. Run `dotnet run --project kitchen-sink.tests` for the
 production patch's managed fixtures. These cover isolation, removal, telemetry, damage thresholds,
 contact causes, cleanup and unpatching. Native ImGui/Bepu cart acceptance remains an in-game check.
-The G-load detector and end-frame caller are unchanged from 5402 to 5438; protection and both
-version-1 save records need no migration. See the [reconciliation record](../plans/KSA_5438_RECONCILIATION.md).
+The G-load detector and end-frame caller are unchanged from 5402 to 5438 and 5482; protection and
+both version-1 save records need no migration. See the [reconciliation record](../plans/KSA_5438_RECONCILIATION.md).
 See [game integration](../scope/ui-customization.md#kitchen-sink) and
 [destruction investigation](../plans/VEHICLE_DESTRUCTION_INVESTIGATION.md).

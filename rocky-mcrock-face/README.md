@@ -14,7 +14,11 @@ Rocky McRock Face lets you swap what that system draws, at runtime, from an ImGu
   (fuel tanks, engines, kittens' chairs...) plus the meshes inside glTF-file assets — the kitten
   itself (`KittenGlb:*`), helmet, visor, and MMU. ~800 entries in a filterable dropdown.
 - **Rock material textures** — diffuse, normal, and AoRoughMetal maps, from every bound game texture.
-- **Ring band texture** — the 2D ring color/alpha strip (also drives the ring shadow on the planet).
+- **Ring band texture** — the 2D ring color/alpha strip (also drives the ring shadow on the planet
+  and, since KSA 5482 (rev 5470), Saturn's atmospheric ring shadow). Both shadows use the band's
+  alpha. A band with no meaningful alpha, such as an opaque part texture, casts a solid dark shadow
+  band. The atmosphere reads the band every frame, so it follows a swap without extra work; this
+  still needs an in-game check.
 - **Rock field settings** — rock size, density (objects/km³), draw distance, and field thickness.
 
 Overrides are **session-only** by design: restarting the game brings the stock ring back, and

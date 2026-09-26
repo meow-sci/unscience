@@ -14,7 +14,13 @@ public sealed partial class PebblesSubmod : ISaveParticipantSource
     }
     public IEnumerable<ISaveParticipant> SaveParticipants
     {
-        get { yield return new SaveParticipant<ClutterSave[]>("pebbles", CaptureClutter, ResetClutter, RestoreClutter, 60, ValidateClutter); }
+        get
+        {
+            yield return new SaveParticipant<ClutterSave[]>("pebbles", CaptureClutter, ResetClutter, RestoreClutter, 60, ValidateClutter);
+            // Separate v1 record (added for KSA 5482 native clutter saves): removed/displaced clutter on override
+            // grids whose spacing differs from stock. Restores after "pebbles" has reapplied the recipes.
+            yield return new SaveParticipant<ClutterBodyState[]>("pebbles.clutter-state", _controller.CaptureGridStates, ResetGridState, RestoreGridState, 61, ClutterGridValidation.Validate);
+        }
     }
     private ClutterSave[] CaptureClutter() => _controller.Live.Select(e => new ClutterSave { BodyId = e.BodyId, Recipe = RecipeCopy.Clone(e.Recipe) }).ToArray();
     private void ResetClutter()
@@ -33,6 +39,14 @@ public sealed partial class PebblesSubmod : ISaveParticipantSource
             if (s == null || string.IsNullOrWhiteSpace(s.BodyId) || !ids.Add(s.BodyId)) throw new InvalidOperationException("Invalid or duplicate clutter body.");
             RecipeValidation.Validate(s.Recipe);
         }
+    }
+    // Grid memory lives on live records, which the "pebbles" reset (ResetForSaveLoad) already discards.
+    private static void ResetGridState() { }
+    private void RestoreGridState(ClutterBodyState[] entries, SaveRestoreContext context)
+    {
+        foreach (var s in entries)
+            try { _controller.RestoreGridState(s); }
+            catch (Exception ex) { context.Warn($"Clutter state on {s.BodyId}: {ex.Message}"); }
     }
     private void RestoreClutter(ClutterSave[] entries, SaveRestoreContext context)
     {

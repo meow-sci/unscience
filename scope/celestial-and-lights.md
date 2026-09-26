@@ -1,17 +1,68 @@
 # Scope: Celestial Welding & Lights (kiwis-marbles, zippo)
 
-## Current verification — 5402 → 5438
+## KSA 5482 (5438 → 5482) verification
+
+No code migration required in kiwis-marbles or zippo. Verified against `2026.9.22.5482` (NEW) vs
+`2026.9.10.5438` (OLD) with both supplied decomp/Content trees; managed/static only (full solution
+build passes). No native KSA run was possible.
+Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
+
+- **kiwis-marbles.** `Celestial.cs`, `IParentBody.cs`, `Astronomical.cs` and `LookupCollection.cs` are
+  byte-identical. `Orbit.CreateFromStateCci` (NEW `Orbit.cs:1581`) has an identical body. Orbit only
+  adds `PeriapsisAltitude`/`ApoapsisAltitude` (`:1182-1184`) and an optional parameter on
+  `TimeOfTrueAnomaly`, neither used. `IOrbiter.cs` only changes a UI readout. `CelestialSystem.DeserializeSave`
+  now restores `IOrbiter` targets (rev 5463), which does not interact with weld replay. The hover
+  rewrite (`OrbitHoverCandidate`, rev 5462) and the removed `CelestialPosition.IsBetterThan` are unused.
+- **Solver window (row 2c), semantic drift only.** NEW `Program.PrepareFrame` sequence:
+  1. waits, starting with `NearestOrbitAndPerformanceWorker` (renamed from `ConcurrentWorkers`, rev 5480);
+  2. `ApplyOrbit/Vehicle/ClothSolvers` (`:2161-2169`);
+  3. the nearest-orbit hover job is queued (`:2188-2192`);
+  4. `GetJobSimStep` (`:2207`), then `ExecuteNextClothSolvers` (`:2208`);
+  5. **new** `PartTree.FlushDirtyDerived` / `FlushDirtyResourceManagers` (`:2209-2210`, rev 5464);
+  6. `ExecuteNextVehicleSolvers` (`:2211`, the weld prefix), then `ExecuteNextOrbitSolvers` (`:2212`).
+
+  The weld therefore still runs on the main thread, after results are applied and before the next
+  `CelestialUpdateTask` snapshot.
+  - `ExecuteNextVehicleSolvers` (`Universe.cs:2034`, still a single overload) lost only
+    `RemoveEligibleVehicles()`. Bubble eviction on a parent change now happens in the vehicle worker after
+    the prefix (rev 5476), so vessels near a re-parented body switch bubbles one step later.
+  - Part-tree mutations made inside the prefix are now recomputed lazily. Kiwis makes none.
+- **Hover job concurrency (pre-existing, benign).** The queued `NearestOrbitPointJob` runs alongside
+  the prefix, as it did at 5438. It only reads `Celestial.Orbit` references, which the weld swaps with a
+  single assignment and never mutates. Rev 5480's new wait applies only at the next frame start. By
+  contrast, vehicle teleports dispose cached orbit points, which is why they join this job first
+  (see [vehicle-physics](vehicle-physics.md)).
+- **zippo.** Every reflection name still resolves and the Disco full-field copy is still complete,
+  because these files are byte-identical: `LightModule.cs`, `ColorRgbReference.cs`, `FloatReference.cs`,
+  `KeyframeAnimationModule.cs`, `KeyframeAnimationData.cs`, `PartTemplate.cs`, `ModuleList.cs`,
+  `IndexedColor.cs` and `KSAColor.cs`.
+  - `LightModule.UpdateRenderData` is still called per viewport per frame from `PartTree.UpdateRenderData`
+    (`PartTree.cs:1174-1179`) and reads `Template` live, so template writes apply on the next frame.
+  - Rev 5456 removed `PartModelModule.UpdateRenderData`. The part light-off state bit (flag 64) is now
+    computed in `PartTreeRenderData.ComputeOwnerDynamicState` (`:623`). That runs every frame from
+    `EnsureBuilt` → `RefreshFullPartDynamicState` (`:444-452,569`), so a `LightIsActive` toggle still repaints.
+  - `Part.IsLightSwitchedOff` (`:1461`) has an identical body. `PowerConsumer.LightIsActive` (`:30`) is
+    unchanged. `PowerManager` became a lazy property, which zippo does not use. `Part.Tree` is now
+    nullable, which zippo does not dereference.
+- **Checked unchanged:** `GameSettings.OnKeyAll :3407` (HotkeyGuard) and `Program.OnDrawUiFrame :3098`.
+  Rows below marked @5482 have refreshed lines; the other rows keep their cited build.
+- **Live checks pending (native):**
+  - Kiwis: a weld chain across parents with vessels nearby (worker-side eviction); pause and warp.
+  - Zippo: on/off repaint and Disco on a multi-light craft (the `PartTreeRenderData` dynamic-state path).
+
+## Verification — 5402 → 5438 (historical)
 
 No code migration required. `Celestial.SetOrbit` (NEW :149), `UpdatePerFrameData`, `IOrbiter`/`IParentBody`, and the solver-prefix ordering retain their contracts. Orbit cache retirement was added for flight plans without changing weld creation/reparenting. `LightModule.TemplateData`, its `ColorRgb`/intensity/cone fields, `FloatReference`, `KeyframeAnimationModule`, and power-switch ownership are unchanged; `ColorRgbReference` only adds XML formatting. Rev 5411 adds authored light/battery mass, so dense light-grid physics deserves a live pass. Disco isolation, actuation and restoration still need native acceptance.
 
 Verified against `2026.9.10.5438` using both supplied source/Content trees.
 See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
-Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+Older catalog tables below retain their explicitly cited build/line numbers unless marked @5482.
 
 Permanent reference cataloging how two unscience mods integrate with the KSA game,
 for detecting when a game update breaks them.
 
 **Versions compared**
+- Current (see top section): NEW = `2026.9.22.5482`, OLD = `2026.9.10.5438`. Catalog baseline below:
 - NEW = `2026.9.7.5402` — decomp root `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
 - OLD = `2026.8.22.5348` — decomp root `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
 - Decomp paths below are relative to `<root>/KSA/` unless noted. Line numbers are NEW (5402); "OLD" = 5348.
@@ -19,7 +70,7 @@ for detecting when a game update breaks them.
 
 **Shared integration (both mods)** — each mod's `Patcher.cs` calls
 `HotkeyGuard.Patch/Unpatch` (`ksa-abstractions.lib/HotkeyGuard.cs`). HotkeyGuard Harmony-patches
-`GameSettings.OnKeyAll(GlfwKeyEvent) : bool` (NEW `GameSettings.cs:3301`, prefix with `ref bool __result`;
+`GameSettings.OnKeyAll(GlfwKeyEvent) : bool` (`GameSettings.cs:3407` @5482, prefix with `ref bool __result`;
 `GameSettings.cs` is byte-identical 5348↔5402).
 Both call `_harmony.PatchAll(...)` but define **no** `[HarmonyPatch]` methods of their own, so PatchAll
 is a no-op aside from HotkeyGuard. Lifecycle is StarMap attributes (`[StarMapMod]`,
@@ -61,21 +112,21 @@ red "Unweld" button. Renders inside the Unscience toolbox via `ISubmod.RenderCon
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|------|----------------------|----------------------------------------|-------------------|---------|----------|------------|
-| 1 | Direct typed | `CelestialWeldEngine.ApplyOrbit` | `Celestial.SetOrbit(Orbit newOrbit)` | `Celestial.cs:153` | Yes | Same | Bare `Orbit = newOrbit`. Does **not** touch `Children` (never did — earlier "auto-reparents" note was wrong); engine re-parents explicitly (#2b). |
+| 1 | Direct typed | `CelestialWeldEngine.ApplyOrbit` | `Celestial.SetOrbit(Orbit newOrbit)` | `Celestial.cs:149` @5482 | Yes | Same (file byte-identical 5438→5482) | Bare `Orbit = newOrbit`. Does **not** touch `Children` (never did — earlier "auto-reparents" note was wrong); engine re-parents explicitly (#2b). |
 | 2 | Direct typed | `CelestialWeldEngine.ApplyOrbit` | `IParentBody.UpdatePerFrameDataTree() : void` (default interface method) | `IParentBody.cs:110` | Yes | Same | Refreshes cached CCI/CCE/ECL data for the body + its subtree after the swap (replaces the old bare `UpdatePerFrameData()` call). |
-| 2b | Direct typed | `CelestialWeldEngine.Reparent` | `IParentBody.Children : List<IOrbiter>`; `Orbit.Parent : IParentBody`; `Celestial.Parent => Orbit.Parent` | `IParentBody.cs:27`; `Orbit.cs:1186`; `Celestial.cs:73` | Yes | Same | Cross-parent weld/restore moves the body between old/new parent lists (drives `UpdatePerFrameDataTree` order + orbit-tree UI). |
-| 2c | Harmony prefix (`Priority.First`) | `KiwisMarblesPatches.cs:24-32` (`AccessTools.Method` by name) | `Universe.ExecuteNextVehicleSolvers(double dtPlayer, SimStep simStep) : static void` | `Universe.cs:1834` | Yes | Body identical (OLD `:1767`) | Sim-step driver for all weld work. Shared keystone with eternal-flame/kitchen-sink; single overload so by-name lookup is safe. Sequence dependency: must stay *after* `ApplyOrbitSolvers`/`ApplyVehicleSolvers` and *before* `ExecuteNextOrbitSolvers` in `Program.PrepareFrame` (`Program.cs:2103-2146`). 5402 inserted the parachute cloth solvers into the same sequence (`ClothSolvers.Wait()`/`ApplyClothSolvers()` before, `ExecuteNextClothSolvers` immediately before this call at `:2144`) — the weld window is unchanged. |
-| 3 | Direct typed | `CelestialWeldEngine.cs:42-48` | `Orbit.CreateFromStateCci(IParentBody, UniverseTime, double3, double3, byte4) : Orbit` (static) | `Orbit.cs:1563` | Yes | **Identical sig** (OLD `:1563`) | 5-arg state-vector → orbit. Arg types must stay (IParentBody/UniverseTime/double3/double3/byte4). `UniverseTime` replaced `SimTime` at rev 5211. |
+| 2b | Direct typed | `CelestialWeldEngine.Reparent` | `IParentBody.Children : List<IOrbiter>`; `Orbit.Parent : IParentBody`; `Celestial.Parent => Orbit.Parent` | `IParentBody.cs:27`; `Orbit.cs:1190`; `Celestial.cs:69` @5482 | Yes | Same | Cross-parent weld/restore moves the body between old/new parent lists (drives `UpdatePerFrameDataTree` order + orbit-tree UI). |
+| 2c | Harmony prefix (`Priority.First`) | `KiwisMarblesPatches.cs:24-32` (`AccessTools.Method` by name) | `Universe.ExecuteNextVehicleSolvers(double dtPlayer, SimStep simStep) : static void` | `Universe.cs:2034` @5482 | Yes | ⚠️ body @5482: `RemoveEligibleVehicles()` removed (eviction moved into the vehicle worker, rev 5476); single overload unchanged | Sim-step driver for all weld work. Shared keystone with eternal-flame (kitchen-sink no longer patches it @5482); single overload so by-name lookup is safe. Sequence dependency: must stay *after* `ApplyOrbitSolvers`/`ApplyVehicleSolvers` and *before* `ExecuteNextOrbitSolvers` in `Program.PrepareFrame` (`Program.cs:2103-2146`). 5402 inserted the parachute cloth solvers into the same sequence (`ClothSolvers.Wait()`/`ApplyClothSolvers()` before, `ExecuteNextClothSolvers` immediately before this call at `:2144`) — the weld window is unchanged. @5482: `Program.cs:2149-2212`; `PartTree.FlushDirtyDerived/FlushDirtyResourceManagers` now run between cloth scheduling (`:2208`) and this call (`:2211`), so part-tree data dirtied inside the prefix recomputes lazily; the nearest-orbit hover job (queued `:2188-2192`) runs concurrently and only reads `Celestial.Orbit` references. |
+| 3 | Direct typed | `CelestialWeldEngine.cs:42-48` | `Orbit.CreateFromStateCci(IParentBody, UniverseTime, double3, double3, byte4) : Orbit` (static) | `Orbit.cs:1581` @5482 | Yes | **Identical sig and body** (5438 `:1577`) | 5-arg state-vector → orbit. Arg types must stay (IParentBody/UniverseTime/double3/double3/byte4). `UniverseTime` replaced `SimTime` at rev 5211. |
 | 4 | Direct typed | `CelestialWeldEngine.cs:47` | `Celestial.OrbitColor : byte4 { get; protected set; }` (via IOrbiter) | `Celestial.cs:77`; `IOrbiter.cs:24` | Yes | Same (OLD `:77`) | Passed as orbit line color to #3. |
 | 5 | Direct typed | `CelestialWeldEngine.cs:32,37` | `IOrbiter.Parent : IParentBody { get; }` (= `Orbit.Parent`) | `IOrbiter.cs:18` | Yes | Same | Null-checked before weld. |
-| 6 | Direct typed | `CelestialWeldEngine.cs:32`; `KiwisMarblesSubmod.cs:483` | `IOrbiter.Orbit : Orbit { get; }` / `Celestial.Orbit { get; set; }` | `IOrbiter.cs:16`; `Celestial.cs:71` | Yes | Same (OLD `:71`) | Source `.Orbit` saved for restore. |
+| 6 | Direct typed | `CelestialWeldEngine.cs:32`; `KiwisMarblesSubmod.cs:483` | `IOrbiter.Orbit : Orbit { get; }` / `Celestial.Orbit { get; set; }` | `IOrbiter.cs:16`; `Celestial.cs:67` @5482 | Yes | Same | Source `.Orbit` saved for restore. |
 | 7 | Direct typed | `CelestialWeldEngine.cs:35` | `IOrbiter.GetPositionCci() : double3` | `IOrbiter.cs:48` | Yes | Same | Target CCI position each frame. |
 | 8 | Direct typed | `CelestialWeldEngine.cs:36` | `IOrbiter.GetVelocityCci() : double3` | `IOrbiter.cs:62` | Yes | Same | Target CCI velocity each frame. |
-| 9 | Direct typed | `KiwisMarblesSubmod.cs:196-197,369,382` | `Celestial.MeanRadius : double` (override) | `Celestial.cs:91` | Yes | Same (OLD `:91`) | Surface-placement helper only. |
-| 10 | Direct typed | `KiwisMarblesSubmod.cs:113,114` (via `CelestialProvider`) | `Universe.CurrentSystem : CelestialSystem? { get; }` → `.All : LookupCollection<Astronomical>` → `.UnsafeAsList()` | `Universe.cs:94`; `CelestialSystem.cs:64`; `LookupCollection.cs:210` | Yes | Same (`All` OLD `:57`) | Source list `OfType<Celestial>()`, target list `OfType<IOrbiter>()`. |
-| 11 | Direct typed | `CelestialWeldEngine.cs:44` (via `SimTimeProvider`) | `Universe.GetElapsedTime() : UniverseTime` (static) | `Universe.cs:2114` | Yes | Same (OLD `:2060`) | State time for #3. (Was `GetElapsedSimTime() : SimTime` before rev 5211.) |
+| 9 | Direct typed | `KiwisMarblesSubmod.cs:196-197,369,382` | `Celestial.MeanRadius : double` (override) | `Celestial.cs:87` @5482 | Yes | Same | Surface-placement helper only. |
+| 10 | Direct typed | `KiwisMarblesSubmod.cs:113,114` (via `CelestialProvider`) | `Universe.CurrentSystem : CelestialSystem? { get; }` → `.All : LookupCollection<Astronomical>` → `.UnsafeAsList()` | `Universe.cs:104`; `CelestialSystem.cs:64`; `LookupCollection.cs:210` @5482 | Yes | Same | Source list `OfType<Celestial>()`, target list `OfType<IOrbiter>()`. |
+| 11 | Direct typed | `CelestialWeldEngine.cs:44` (via `SimTimeProvider`) | `Universe.GetElapsedTime() : UniverseTime` (static) | `Universe.cs:2323` @5482 | Yes | Same | State time for #3. (Was `GetElapsedSimTime() : SimTime` before rev 5211.) |
 | 12 | Cast/type | `CelestialWeldEngine.cs:119`; `KiwisMarblesSubmod.cs:194,257` | `(IOrbiter)Celestial` cast; `IParentBody` as parent type | `IOrbiter.cs`, `IParentBody.cs` | Yes | Same | Celestial implements IOrbiter (topo-sort edge test). |
-| 13 | Lifecycle/Harmony | `Patcher.cs:22,39` | `HotkeyGuard` → `GameSettings.OnKeyAll(GlfwKeyEvent) : bool` | `GameSettings.cs:3301` | Yes | Same | Shared guard; PatchAll defines no own patches. |
+| 13 | Lifecycle/Harmony | `Patcher.cs:22,39` | `HotkeyGuard` → `GameSettings.OnKeyAll(GlfwKeyEvent) : bool` | `GameSettings.cs:3407` @5482 | Yes | Same signature | Shared guard; PatchAll defines no own patches. |
 
 **Game assets referenced** — None. Bodies are discovered live from `Universe.CurrentSystem`; no model/texture/path lookups.
 
@@ -114,16 +165,16 @@ original per-part colors and Disco recipes/phase/ownership baselines. See the pe
 | 3 | **Reflection (string field)** | `LightController.cs:50,71` | `LightModule.TemplateData.Intensity : FloatReference` (field) → `FloatReference.Value : float` | `LightModule.cs:30`; `FloatReference.cs:9` | Yes | Same | Intensity read/write **works**. Field names `"Intensity"`/`"Value"` must persist. |
 | 4 | Reflection (string field) — **FIXED (Phase 4)** | `LightController.cs:59,80` | reads/writes field `"ColorRgb"` on `TemplateData` | `LightModule.cs:33` (`ColorRgbReference ColorRgb`) | Yes | Same | Was `"Color"` (the `[XmlElement("Color")]` XML name, not the C# field) ⇒ `GetField`→null ⇒ color was a silent no-op in both 4680 and 4750. Now `"ColorRgb"`; the C# field name must persist. |
 | 5 | Reflection (string field/method) + **typed enum** | `LightController.cs:61-63,82-89` | `ColorRgbReference.R/G/B : float` + `OnDataLoad(Mod) : void`; write side clears `IndexedColor` to `KSA.IndexedColor.Invalid` | `ColorRgbReference.cs:10,13,16,19,35` | Yes | Same | Now reachable (post-#4). `OnDataLoad` re-derives R/G/B from `IndexedColor` unless it is `Invalid`, so `WriteColor` sets `IndexedColor = KSA.IndexedColor.Invalid` (typed — **compile-checked**, breaks loudly) before `OnDataLoad(null)`. |
-| 6 | Direct typed | `ZippoSubmod.cs:152,441,465` | `Part.LightSwitch : PowerConsumer?` (field) | `Part.cs:686` | Yes | Same (OLD `:678`) | On/off path. Consumer side changed in 5402: `LightModule.IsActive`/`PartModelModule.UpdateRenderData` now read the new `Part.IsLightSwitchedOff()` (`Part.cs:1357-1369` = `!LightIsActive \|\| !IsSwitchedOn()`, plus a `lightSwitch.Parent.Tree != Tree ⇒ not off` precondition). `LightIsActive` is still the first term, so the write still works. |
-| 7 | Direct typed | `ZippoSubmod.cs:152,441,465` | `Part.FullPart : Part { get; }` | `Part.cs:1123` | Yes | Same (OLD `:1056`) | `.FullPart.LightSwitch` fallback. |
+| 6 | Direct typed | `ZippoSubmod.cs:152,441,465` | `Part.LightSwitch : PowerConsumer?` (field) | `Part.cs:688` @5482 | Yes | Same | On/off path. Consumer side changed in 5402: `LightModule.IsActive` and the part light-off render flag read `Part.IsLightSwitchedOff()` (`Part.cs:1461` @5482, body identical = `!LightIsActive \|\| !IsSwitchedOn()`, plus a `lightSwitch.Parent.Tree != Tree ⇒ not off` precondition). `LightIsActive` is still the first term, so the write still works. @5482 the render flag moved from the removed `PartModelModule.UpdateRenderData` to `PartTreeRenderData.ComputeOwnerDynamicState` (`:623`), refreshed every frame by `EnsureBuilt` (`:444-452`). |
+| 7 | Direct typed | `ZippoSubmod.cs:152,441,465` | `Part.FullPart : Part { get; }` | `Part.cs:1171` @5482 | Yes | Same | `.FullPart.LightSwitch` fallback. |
 | 8 | Direct typed | `ZippoSubmod.cs:161,442,467` | `PowerConsumer.LightIsActive : bool` (field) | `PowerConsumer.cs:30` | Yes | Same | On/off toggle. Electrical refactor (4681) didn't touch this field; 5402 added `PowerConsumer.IsSwitchedOn()` (`:50-54`, bounds-checked `StatesIdx`) next to it. |
 | 9 | Direct typed | `LightController.cs:95,98,102,106` | `Part.Template : PartTemplate` (field) | `Part.cs:576` | Yes | Same (OLD `:568`) | Feeds reflection in #1–#5. |
-| 10 | Direct typed | `ZippoSubmod.cs:405`; `LightController.cs:102` (via `PartHelpers`) | `Vehicle.Parts : PartTree` → `PartTree.Parts : ReadOnlySpan<Part>` | `Vehicle.cs:604`; `PartTree.cs:95` | Yes | Same (OLD `:598`; `:95`) | Part enumeration root. |
-| 11 | Direct typed | `LightController.cs:133-134` (recursion); `PartHelpers.cs` | `Part.SubParts : ReadOnlySpan<Part>` | `Part.cs:1079` | Yes | Same (OLD `:1052`) | Recursive light search. |
-| 12 | Direct typed | `ZippoSubmod.cs:444-445` (combo labels) | `Part.Id : string { get; init; }`, `Part.DisplayName : string { get; init; }` | `Part.cs:698,700` | Yes | Same (OLD `:690,692`) | Display/keys. 5402 initialises `DisplayName` from `Template.DisplayName` when it differs from `Template.Id` (`Part.cs:1391`; was `= Id`) — labels may change, keys (`Id`) don't. |
+| 10 | Direct typed | `ZippoSubmod.cs:405`; `LightController.cs:102` (via `PartHelpers`) | `Vehicle.Parts : PartTree` → `PartTree.Parts : ReadOnlySpan<Part>` | `Vehicle.cs:605`; `PartTree.cs:136` @5482 | Yes | Same | Part enumeration root. |
+| 11 | Direct typed | `LightController.cs:133-134` (recursion); `PartHelpers.cs` | `Part.SubParts : ReadOnlySpan<Part>` | `Part.cs:1127` @5482 | Yes | Same | Recursive light search. |
+| 12 | Direct typed | `ZippoSubmod.cs:444-445` (combo labels) | `Part.Id : string { get; init; }`, `Part.DisplayName : string { get; init; }` | `Part.cs:702,704` @5482 | Yes | Same | Display/keys. 5402 initialises `DisplayName` from `Template.DisplayName` when it differs from `Template.Id` (`Part.cs:1391`; was `= Id`) — labels may change, keys (`Id`) don't. |
 | 13 | Reflection (palette) | `ZippoSubmod.cs:253,284` (via `XkcdColorHelper.GetAll`) | `KSAColor.Xkcd` static props → `Color.Preset` | `KSAColor.cs:23` | Yes | Same | Reflects all `Xkcd` static color props; cast `(Color.Preset)`. Rename of `Xkcd`/prop-type change would empty the combo. |
 | 14 | Direct typed | `LightController.cs:20-27` | hard-coded preset float3 (Marine/HotPink/RadioactiveGreen/BabyPurple) | n/a (constants from `KSAColor.cs`) | n/a | n/a | Hard-coded RGB; cosmetic only, no runtime dependency. |
-| 15 | Lifecycle/Harmony | `Patcher.cs:19,31` | `HotkeyGuard` → `GameSettings.OnKeyAll` | `GameSettings.cs:3301` | Yes | Same | Shared. |
+| 15 | Lifecycle/Harmony | `Patcher.cs:19,31` | `HotkeyGuard` → `GameSettings.OnKeyAll` | `GameSettings.cs:3407` @5482 | Yes | Same signature | Shared. |
 
 ### Zippo Disco extension (backported 2026-09-06)
 
@@ -133,9 +184,9 @@ original per-part colors and Disco recipes/phase/ownership baselines. See the pe
 | D2 | Direct typed | `DiscoLight.cs` | `LightModule.TemplateData.{Id,Type,Transform,Range,Intensity,ColorRgb,InnerAngle,OuterAngle,RayTracing,DisableInIva}` | `KSA/LightModule.cs:12-45` | Every field is copied. Color and spotlight angle references become private only for enabled channels; point lights skip cone updates. Field additions to the game require review so the copy remains complete. |
 | D3 | Direct typed | `DiscoLight.cs` | `ColorRgbReference(float3)`, `R/G/B/IndexedColor`, `OnDataLoad(Mod)`; `FloatReference(float)`, `Value` | `KSA/ColorRgbReference.cs`; `KSA/FloatReference.cs` | Per-instance RGB refresh and degree-to-radian half-angle interpolation. No shared part-template mutation or GPU resource is introduced. |
 | D4 | Direct typed | `ZippoSubmod.Disco.cs`; `DiscoLight.cs` | `Part.FullPart.Modules.Get<KeyframeAnimationModule>()`; `Shared.{Duration,PartLookup}`; `TimeGoal` | `KSA/KeyframeAnimationModule.cs:74,76`; `KSA/KeyframeAnimationData.cs:223,225` | Drivers are selected only when their animation targets the light subpart ID. One Disco record owns a shared assembly driver; later starts release the earlier owner. Goals restore only if the last Zippo-written value is still current. KSA's mirrored-part fan-out still needs a live check. |
-| D5 | Direct typed | `DiscoLight.cs`; `ZippoSubmod.Disco.cs` | `Part.LightSwitch`, `Part.FullPart.LightSwitch`, `PowerConsumer.LightIsActive` | `KSA/Part.cs:686,1123`; `KSA/PowerConsumer.cs:30` | Start leaves the switch unchanged. The active inspector may toggle it; stop restores the captured value only if Zippo still owns the last write. |
+| D5 | Direct typed | `DiscoLight.cs`; `ZippoSubmod.Disco.cs` | `Part.LightSwitch`, `Part.FullPart.LightSwitch`, `PowerConsumer.LightIsActive` | `KSA/Part.cs:688,1171` @5482; `KSA/PowerConsumer.cs:30` | Start leaves the switch unchanged. The active inspector may toggle it; stop restores the captured value only if Zippo still owns the last write. |
 | D6 | Direct typed | `ZippoSubmod.cs`; `ZippoSubmod.Disco.cs` | `Part.InstanceId`; live `Vehicle`/`Part` reference identity | `KSA/Part.cs:574` | Ordinary queues use runtime-unique instance keys; active Disco records use reference identity and labels include the instance ID. Each update scans vehicles including debris; disappeared exact references are disposed rather than retargeted. |
-| D7 | StarMap lifecycle | `zippo/Mod.cs`; `unscience/Mod.cs` | `[StarMapBeforeGui]` → `Program.OnDrawUiFrame(double)` | `KSA/Program.cs:2639` | Standalone Zippo now calls `ZippoSubmod.Update(dt)` from its hook; Unscience calls the same method through `UpdateSubmods`. This is essential for ordinary queues and Disco. Unscience also uses `HiddenUiFrameHook` while F2 hides the HUD; standalone playback follows StarMap and pauses while that game UI hook is skipped. |
+| D7 | StarMap lifecycle | `zippo/Mod.cs`; `unscience/Mod.cs` | `[StarMapBeforeGui]` → `Program.OnDrawUiFrame(double)` | `KSA/Program.cs:3098` @5482 | Standalone Zippo now calls `ZippoSubmod.Update(dt)` from its hook; Unscience calls the same method through `UpdateSubmods`. This is essential for ordinary queues and Disco. Unscience also uses `HiddenUiFrameHook` while F2 hides the HUD; standalone playback follows StarMap and pauses while that game UI hook is skipped. |
 
 `DiscoTiming` samples repeating hold/transition phases directly from elapsed time, so skipped frames do
 not require a catch-up loop. Every active light receives independent, stable color/actuation/spread phase

@@ -58,6 +58,12 @@ internal static class Checks
             PhysicsFrameHook.Enqueue(() => throw new InvalidOperationException("fixture mutation failure"));
             game.RunFrame(0.25);
             Require(Universe.Events.IndexOf("scale") < Universe.Events.IndexOf("weld"), "scale before anchors/weld");
+            Require(Universe.Events.Count(e => e == "join orbit readers") == 1
+                && Universe.Events.IndexOf("join orbit readers") > Universe.Events.IndexOf("get step")
+                && Universe.Events.IndexOf("join orbit readers") < Universe.Events.IndexOf("scale"),
+                "queued mutations join the concurrent orbit readers once, after the step and before editing");
+            PhysicsFrameHook.JoinOrbitReaders();
+            Require(Universe.Events.Count(e => e == "join orbit readers") == 1, "orbit readers join once per frame");
             Require(!Universe.Events.Contains("deferred"), "defer reentrant mutations");
             game.RunFrame(0.25);
             Require(Universe.Events.Contains("deferred"), "run deferred mutation next frame");

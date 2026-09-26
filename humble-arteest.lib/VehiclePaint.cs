@@ -52,11 +52,20 @@ public static class VehiclePaint
     private static PaintEntry _global = PaintEntry.From(new float3(1f, 0.25f, 0.2f));
     private static bool _globalEnabled;
     private static PaintBlendMode _blendMode = PaintBlendMode.Multiply;
+    private static int _version;
 
     // ---- Feature state ----
 
     /// <summary>True when the patched part shaders are installed and paint can render.</summary>
     public static bool Active => VehiclePaintShaders.Installed;
+
+    /// <summary>
+    /// Changes whenever the resolved paint of any part may have changed. KSA 5482 caches part
+    /// state flags, so <see cref="VehiclePaintPatches"/> compares this to invalidate them.
+    /// </summary>
+    internal static int RenderStateVersion => (_version << 1) | (VehiclePaintShaders.Installed ? 1 : 0);
+
+    private static void Changed() => _version++;
 
     /// <summary>Last activation / shader error, if any.</summary>
     public static string? LastError => VehiclePaintShaders.LastError;
@@ -91,23 +100,39 @@ public static class VehiclePaint
     public static bool GlobalEnabled
     {
         get => _globalEnabled;
-        set => _globalEnabled = value;
+        set
+        {
+            if (_globalEnabled == value) return;
+            _globalEnabled = value;
+            Changed();
+        }
     }
 
     /// <summary>Fallback color used when <see cref="GlobalEnabled"/> is set.</summary>
     public static float3 GlobalColor
     {
         get => _global.Color;
-        set => _global = PaintEntry.From(value);
+        set
+        {
+            _global = PaintEntry.From(value);
+            Changed();
+        }
     }
 
     // ---- Per-part paint ----
 
     /// <summary>Paints one specific part instance.</summary>
-    public static void SetPart(Part part, float3 color) => ByPart[part] = PaintEntry.From(color);
+    public static void SetPart(Part part, float3 color)
+    {
+        ByPart[part] = PaintEntry.From(color);
+        Changed();
+    }
 
     /// <summary>Removes the paint override for one part instance.</summary>
-    public static void ClearPart(Part part) => ByPart.Remove(part);
+    public static void ClearPart(Part part)
+    {
+        if (ByPart.Remove(part)) Changed();
+    }
 
     /// <summary>Gets the explicit per-part color, if one was set.</summary>
     public static bool TryGetPartColor(Part part, out float3 color)
@@ -127,10 +152,14 @@ public static class VehiclePaint
     {
         if (string.IsNullOrEmpty(templateId)) return;
         ByTemplate[templateId] = PaintEntry.From(color);
+        Changed();
     }
 
     /// <summary>Removes the paint override for a part template.</summary>
-    public static void ClearTemplate(string templateId) => ByTemplate.Remove(templateId);
+    public static void ClearTemplate(string templateId)
+    {
+        if (ByTemplate.Remove(templateId)) Changed();
+    }
 
     /// <summary>Gets the per-part-type color, if one was set.</summary>
     public static bool TryGetTemplateColor(string templateId, out float3 color)
@@ -155,6 +184,7 @@ public static class VehiclePaint
         ByPart.Clear();
         ByTemplate.Clear();
         _globalEnabled = false;
+        Changed();
     }
 
     /// <summary>True when at least one paint source could apply.</summary>
@@ -177,6 +207,7 @@ public static class VehiclePaint
         if (dead == null) return;
         foreach (var part in dead)
             ByPart.Remove(part);
+        Changed();
     }
 
     /// <summary>Uninstalls the shaders and drops all paint state. Call on mod unload.</summary>
@@ -186,7 +217,7 @@ public static class VehiclePaint
         VehiclePaintShaders.Uninstall();
     }
 
-    // ---- Hot path (called from the AddInstance prefixes, once per part per viewport per frame) ----
+    // ---- Hot path (called when KSA rewrites a part's cached render state) ----
 
     /// <summary>
     /// Resolves the state-flag bits to OR into a part instance's <c>StateBitFlag</c>.

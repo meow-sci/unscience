@@ -6,6 +6,13 @@ It breaks physics, moves things around, resizes things, makes noises, changes co
 
 I describe it as a *supermod* that includes a suite of *submods*, each one has a fun unique name tangentially related to what it does, usually from some kind of pop culture reference.
 
+# game compatibility
+
+Built against KSA **2026.9.22.5482** (previously 2026.9.10.5438). This build has passed compilation
+and managed tests only; in-game acceptance is pending. See
+[KSA compatibility](unscience/README.md#ksa-compatibility) for user-visible changes and
+[ISSUES.md](ISSUES.md) for known gaps.
+
 # releases
 
 GitHub Actions uses `1.${GITHUB_RUN_NUMBER}.0` for stable releases from `main`

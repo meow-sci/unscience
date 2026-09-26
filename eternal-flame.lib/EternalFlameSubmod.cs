@@ -27,9 +27,10 @@ public sealed partial class EternalFlameSubmod : ISubmod
         Console.WriteLine("eternal-flame: submod Initialize");
     }
 
-    public void Update(double dt) => _fuelManager.Update(dt);
+    // Refills run at the vehicle-solver handoff, not per UI frame; see FuelManager.RefillBeforeVehicleSolvers.
+    public void Update(double dt) { }
 
-    public void UpdateBeforeVehicleSolvers() => _fuelManager.UpdateElectricityBeforeVehicleSolvers();
+    public void UpdateBeforeVehicleSolvers() => _fuelManager.RefillBeforeVehicleSolvers();
 
     public void RenderContent()
     {

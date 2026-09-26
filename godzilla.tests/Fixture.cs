@@ -72,18 +72,25 @@ namespace KSA
         public virtual double MeanRadius { [MethodImpl(MethodImplOptions.NoInlining)] get => 1; }
         public double4x4 GetMatrixAsmb2Ego(Camera camera) =>
             double4x4.CreateTranslation(camera.Position - CenterOfMassAsmb);
+        // KSA 5482 shape: UpdateRenderData culls through this helper instead of reading MeanRadius.
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public bool IsLargeEnoughToRender(Camera inCamera)
+        {
+            double3 positionEgo = inCamera.GetPositionEgo(this);
+            return !(inCamera.GetObjectDiameterPixels(2.0 * MeanRadius, positionEgo.Length()) < 1.0);
+        }
         [MethodImpl(MethodImplOptions.NoInlining)]
         public virtual void UpdateRenderData(IViewport viewport, int inFrameIndex)
         {
             var camera = viewport.GetCamera();
-            if (camera.GetObjectDiameterPixels(2 * MeanRadius, camera.Position.Length()) < 1) return;
+            if (!IsLargeEnoughToRender(camera)) return;
             var matrix = GetMatrixAsmb2Ego(camera);
             Parts.UpdateRenderData(in matrix, false, viewport, inFrameIndex);
         }
         [MethodImpl(MethodImplOptions.NoInlining)]
         public float4x4? GetWorldMatrix(Camera camera)
         {
-            if (camera.GetObjectDiameterPixels(2 * MeanRadius, camera.Position.Length()) < 1) return null;
+            if (camera.GetObjectDiameterPixels(2 * MeanRadius, camera.GetPositionEgo(this).Length()) < 1) return null;
             return float4x4.CreateTranslation(float3.Pack(camera.Position));
         }
         public double3 CenterOfMassAsmb;
@@ -106,6 +113,7 @@ namespace KSA
         public double3 Position = new(100, 200, 300);
         public double PixelFactor = 1;
         public double GetObjectDiameterPixels(double diameter, double distance) => diameter * PixelFactor;
+        public double3 GetPositionEgo(Vehicle vehicle) => Position;
     }
     public class KittenEva : Vehicle { public KittenRenderable Renderable = new(); }
     public class KittenRenderable { public CharacterAvatar Avatar = new(); public float3 Correction; }

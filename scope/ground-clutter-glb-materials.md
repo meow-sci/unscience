@@ -1,6 +1,10 @@
 # Ground clutter: imported GLB materials
 
-## Current verification — 5402 → 5438
+## Current verification — 5438 → 5482
+
+Checked against `2026.9.22.5482`. Rev 5473 added `GroundClutterMaterialReference.KeepBackfaceNormals` (`KEEP_BACKFACE_NORMALS` in `GroundClutter/Solid.frag`), set on stock Earth tree materials. Imported GLB materials leave the nullable `MaterialRecipe.KeepBackfaceNormals` unset, which resolves to false: double-sided GLB materials keep the native flipped backface normals, as before. The source-color marker, flags bits 31/30 and `GroundClutterGpuMaterial` layout are unchanged. Baked AO now darkens ambient clutter lighting (5477) and the BRDF roughness fix (Lighting.glsl, 5472) changes converted PBR response; both need live visual checks. No GLB conversion change required.
+
+## Previous verification — 5402 → 5438
 
 Material shader anchors, flags, vertex/index layouts and private resource ownership are unchanged. TextureLoader extends formats and changes enum numbering, but imports use named Png/Jpg values and retain decoded-source lifetime through upload. No GLB conversion change required. See ground-clutter.md for Vulkan spelling and staging/physics checks; native texture/alpha/normal rendering remains unverified here.
 

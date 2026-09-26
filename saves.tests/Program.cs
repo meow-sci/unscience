@@ -18,9 +18,10 @@ internal static class Program
         {
             Run("capture and write after native success", CaptureAndWrite);
             Run("failed native capture and write skip sidecar callbacks", FailedSave);
+            Run("native write returning false reports failure without sidecar", WriteReturnsFalse);
             Run("load joins before reset and restores before menus", NormalLoad);
             Run("editor refusal preserves scene", EditorRefusal);
-            Run("read failure only clears load context", ReadFailure);
+            Run("unreadable save reports failure and only clears load context", ReadFailure);
             Run("reconstruction failure never restores and clears context", ReconstructionFailure);
             Run("direct load resets baseline and restores", DirectLoad);
             Run("no system preserves scene", NoSystem);
@@ -48,7 +49,8 @@ internal static class Program
         KSA.Program.IsEditorOpen = false;
         Universe.CurrentSystem = new CelestialSystem();
         NativeSaveHooks.LoadFailed = null;
-        JobSystems.ConcurrentWorkers.Fail = false;
+        NativeSaveHooks.WriteFailed = _ => Trace.Events.Add("write failed");
+        JobSystems.NearestOrbitAndPerformanceWorker.Fail = false;
         NativeSaveHooks.Capturing = _ => Trace.Events.Add("capture");
         NativeSaveHooks.Written = _ => Trace.Events.Add("write");
         NativeSaveHooks.Loading = _ => Trace.Events.Add("preflight");
@@ -73,10 +75,18 @@ internal static class Program
 
     private static void FailedSave()
     {
-        var save = new UncompressedSave { FailCapture = true, FailWrite = true };
+        var save = new UncompressedSave { FailCapture = true, ThrowWrite = true };
         Throws(save.Populate, "native capture failed");
-        Throws(save.Write, "native write failed");
+        Throws(() => save.Write(), "native write failed");
         Equal("native capture", "native write");
+    }
+
+    private static void WriteReturnsFalse()
+    {
+        var save = new UncompressedSave { FailWrite = true };
+        save.Populate();
+        Check(!save.Write(), "native failure result survives the postfix");
+        Equal("native capture", "capture", "native write", "write failed");
     }
 
     private static void NormalLoad()
@@ -84,7 +94,7 @@ internal static class Program
         PhysicsFrameHook.Pending.Enqueue(() => throw new Exception("old action"));
         NativeSaveHooks.Resetting += () => PhysicsFrameHook.Pending.Enqueue(() => { });
         LoadNow(new UncompressedSave());
-        Equal("preflight", "native read", "join orbit", "join vehicle", "join cloth", "join concurrent", "clear pending",
+        Equal("preflight", "native read", "join orbit", "join vehicle", "join cloth", "join nearest-orbit-and-performance", "clear pending",
             "reset", "clear pending", "join orbit", "join vehicle", "join cloth", "native destroy",
             "native reconstructed", "restore", "native menus closed", "finished");
         Check(PhysicsFrameHook.Pending.Count == 0, "old-world and reset-queued edits cleared");
@@ -99,8 +109,13 @@ internal static class Program
 
     private static void ReadFailure()
     {
-        Throws(() => LoadNow(new UncompressedSave { FailRead = true }), "native read failed");
+        int failures = 0;
+        NativeSaveHooks.LoadFailed = ex => { Check(ex is System.IO.InvalidDataException, "unread save reported"); failures++; };
+        LoadNow(new UncompressedSave { FailRead = true });
         Equal("preflight", "native read", "finished");
+        Check(failures == 1 && NativeSaveHooks.LastLoadError is System.IO.InvalidDataException, "unread save visible once");
+        LoadNow(new UncompressedSave());
+        Check(failures == 1 && NativeSaveHooks.LastLoadError == null, "next successful load clears the failure");
     }
 
     private static void ReconstructionFailure()
@@ -135,7 +150,7 @@ internal static class Program
         Universe.LoadSystem("valid");
         Equal();
         PhysicsFrameHook.ReplayPending();
-        Equal("join orbit", "join vehicle", "join cloth", "join concurrent", "clear pending", "reset", "clear pending", "native new system");
+        Equal("join orbit", "join vehicle", "join cloth", "join nearest-orbit-and-performance", "clear pending", "reset", "clear pending", "native new system");
     }
 
     private static void CallbackFailures()
@@ -151,7 +166,8 @@ internal static class Program
         LoadNow(new UncompressedSave());
         foreach (string name in new[] { "preflight", "reset", "restore", "finished" })
             Check(Trace.Events.Contains(name + " survived"), name + " callbacks isolated");
-        Throws(() => LoadNow(new UncompressedSave { FailRead = true }), "native read failed");
+        LoadNow(new UncompressedSave { FailRead = true });
+        Check(NativeSaveHooks.LastLoadError is System.IO.InvalidDataException, "unreadable save still reported");
     }
 
     private static void RepeatedLoads()
@@ -250,7 +266,7 @@ internal static class Program
 
     private static void JoinFailure()
     {
-        JobSystems.ConcurrentWorkers.Fail = true;
+        JobSystems.NearestOrbitAndPerformanceWorker.Fail = true;
         int failures = 0;
         NativeSaveHooks.LoadFailed = _ => failures++;
         Throws(() => LoadNow(new UncompressedSave()), "join failed");

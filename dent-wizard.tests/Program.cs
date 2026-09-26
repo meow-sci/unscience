@@ -99,9 +99,11 @@ internal static class Entry
         Check(PhysicsFrameHook.Subscribers == 1, "Repeated initialization registered twice");
         pending.SetValue(submod, terrain);
         launches = source.Teleports;
+        int joins = PhysicsFrameHook.OrbitReaderJoins;
         PhysicsFrameHook.Dispatch(time);
         PhysicsFrameHook.Dispatch(time);
         Check(source.Teleports == launches + 1, "A queued click did not fire exactly once");
+        Check(PhysicsFrameHook.OrbitReaderJoins == joins + 1, "A shot did not join the orbit readers before teleporting, or an idle frame did");
         pending.SetValue(submod, terrain);
         submod.ResetState();
         Check(submod.FormSpeed == 5f, "Scene reset did not restore default speed");

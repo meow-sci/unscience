@@ -22,7 +22,7 @@ public static class VisualScalePatches
         if (IsApplied) return;
         try
         {
-            Install(harmony, typeof(Vehicle), nameof(Vehicle.UpdateRenderData), nameof(RenderRadiusTranspiler), true);
+            Install(harmony, typeof(Vehicle), nameof(Vehicle.UpdateRenderData), nameof(RenderCullTranspiler), true);
             Install(harmony, typeof(Vehicle), nameof(Vehicle.GetWorldMatrix), nameof(RenderRadiusTranspiler), true);
             Install(harmony, typeof(Vehicle), nameof(Vehicle.GetWorldMatrix), nameof(WorldMatrixPostfix), false, true);
             Install(harmony, typeof(PartTree), nameof(PartTree.UpdateRenderData), nameof(PartsPrefix), false);
@@ -64,8 +64,35 @@ public static class VisualScalePatches
             finalizer: finalizer ? method : null);
     }
 
-    // Replace only the radius reads inside these two draw methods. A global MeanRadius override
-    // would leak straight back into physics-bubble sizing, camera positioning and terrain logic.
+    // KSA 5482 moved UpdateRenderData's pixel cull into Vehicle.IsLargeEnoughToRender. Redirect that
+    // one call site instead of patching the tiny public helper: the JIT may inline it, and any future
+    // caller must keep native culling.
+    private static IEnumerable<CodeInstruction> RenderCullTranspiler(IEnumerable<CodeInstruction> instructions)
+    {
+        var cull = AccessTools.Method(typeof(Vehicle), nameof(Vehicle.IsLargeEnoughToRender), new[] { typeof(Camera) });
+        int matches = 0;
+        foreach (var instruction in instructions)
+        {
+            if (instruction.Calls(cull))
+            {
+                instruction.opcode = OpCodes.Call;
+                instruction.operand = AccessTools.Method(typeof(VisualScalePatches), nameof(IsLargeEnoughToRenderScaled));
+                matches++;
+            }
+            yield return instruction;
+        }
+        if (matches != 1) throw new InvalidOperationException($"Expected one render cull call; found {matches}.");
+    }
+
+    /// <summary>Mirrors <c>Vehicle.IsLargeEnoughToRender</c> using the visual render radius.</summary>
+    private static bool IsLargeEnoughToRenderScaled(Vehicle vehicle, Camera camera)
+    {
+        double3 positionEgo = camera.GetPositionEgo(vehicle);
+        return !(camera.GetObjectDiameterPixels(2.0 * RenderRadius(vehicle), positionEgo.Length()) < 1.0);
+    }
+
+    // Replace only the radius read inside GetWorldMatrix. A global MeanRadius override would
+    // leak straight back into physics-bubble sizing, camera positioning and terrain logic.
     private static IEnumerable<CodeInstruction> RenderRadiusTranspiler(IEnumerable<CodeInstruction> instructions)
     {
         int matches = 0;

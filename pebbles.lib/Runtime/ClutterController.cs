@@ -8,28 +8,8 @@ using KSA;
 
 namespace MeowSci.PebblesLib;
 
-public sealed class ClutterLiveRecord
-{
-    public string BodyId { get; internal set; } = "";
-    public PebblesRecipe Recipe { get; internal set; } = new();
-    public string Status { get; internal set; } = "Waiting";
-    public long VertexCount => Resources?.Graph.Geometry.VertexCount ?? 0;
-    public int MaterialCount => Resources?.Graph.Materials.Count ?? 0;
-    public int EcotypeCount => Recipe.Ecotypes.Count;
-    internal Celestial Body = null!;
-    internal GroundClutterRenderer? Owner;
-    internal CelestialTemplate? OriginalTemplate;
-    internal CelestialTemplate? OwnedTemplate;
-    internal GroundClutterPlacementData[] OriginalPlacement = [];
-    internal ClutterEcotypeRenderData[] OriginalRender = [];
-    internal ClutterEcotypePhysicalData[] OriginalPhysical = [];
-    internal float OriginalRadius;
-    internal readonly Dictionary<string, Dictionary<CubeCellGrid.Cell, GroundClutterRenderer.ExclusionData>> Exclusions = new(StringComparer.Ordinal);
-    internal ClutterResources? Resources;
-}
-
 /// <summary>Queued, per-body transactions. All mutations happen after CPU solvers and GPU work complete.</summary>
-public sealed class ClutterController : IDisposable
+public sealed partial class ClutterController : IDisposable
 {
     private readonly ClutterAssets _assets;
     private readonly Dictionary<string, Celestial> _bodies = new(StringComparer.Ordinal);
@@ -155,8 +135,9 @@ public sealed class ClutterController : IDisposable
             DrainExclusions(body, owner);
             var before = owner.PlanetPlacementData[body.Hash];
             var sourceGraph = body.BodyTemplate.GroundClutterReference!;
-            RememberMasks(record, sourceGraph, before);
-            ReplayMasks(record, next.Graph.Reference, next.Placement, next.Render, next.Physical);
+            // A live override's placement was replayed from this memory, so its displaced records are authoritative.
+            RememberGrids(record, sourceGraph, before, authoritative: record.Owner != null);
+            ReplayGrids(record, next.Graph.Reference, next.Placement, next.Render, next.Physical);
             ClearStatics(body);
             if (record.Owner == null)
             {
@@ -194,8 +175,8 @@ public sealed class ClutterController : IDisposable
     {
         var owner = record.Owner!; var body = record.Body; var resources = record.Resources!;
         DrainExclusions(body, owner);
-        RememberMasks(record, resources.Graph.Reference, resources.Placement);
-        ReplayMasks(record, record.OriginalTemplate!.GroundClutterReference!, record.OriginalPlacement, record.OriginalRender, record.OriginalPhysical);
+        RememberGrids(record, resources.Graph.Reference, resources.Placement, authoritative: true);
+        ReplayGrids(record, record.OriginalTemplate!.GroundClutterReference!, record.OriginalPlacement, record.OriginalRender, record.OriginalPhysical);
         ClearStatics(body);
         SetTemplate(body, record.OriginalTemplate!);
         owner.PlanetPlacementData[body.Hash] = record.OriginalPlacement; owner.PlanetEcotypeRenderData[body.Hash] = record.OriginalRender; owner.PlanetPhysicalData[body.Hash] = record.OriginalPhysical;
@@ -287,46 +268,4 @@ public sealed class ClutterController : IDisposable
     }
     private static void ClearStatics(Celestial body)
     { foreach (var bubble in Bubbles()) if (ReferenceEquals(bubble.Parent, body)) bubble.GroundClutterStatics.Clear(bubble.ConstraintSim); }
-    private static void DrainExclusions(Celestial body, GroundClutterRenderer renderer)
-    {
-        var bubbles = Bubbles(); var events = new List<BubbleClutterStatics.ClutterInstanceKey>();
-        foreach (var bubble in bubbles) if (ReferenceEquals(bubble.Parent, body)) bubble.PopulatePendingExclusions(events);
-        foreach (var e in events)
-        {
-            renderer.ExcludeInstance(e.CelestialHash, (uint)e.EcotypeIndex, e.Cell, e.SubCellId);
-            foreach (var bubble in bubbles) bubble.RemoveExcludedClutterInstance(in e);
-        }
-    }
-    private static string GridKey(ClutterEcotypeReference ecotype) => ecotype.Name + "|" + ecotype.Placement.ObjectSeparation.InMeters().ToString("R", System.Globalization.CultureInfo.InvariantCulture);
-    private static Dictionary<CubeCellGrid.Cell, GroundClutterRenderer.ExclusionData> Masks(GroundClutterPlacementData placement)
-        => (Dictionary<CubeCellGrid.Cell, GroundClutterRenderer.ExclusionData>)Field(typeof(GroundClutterPlacementData), "_exclusionCache").GetValue(placement)!;
-    private static void RememberMasks(ClutterLiveRecord record, GroundClutterReference graph, GroundClutterPlacementData[] placement)
-    {
-        for (var i = 0; i < placement.Length; i++)
-        {
-            var key = GridKey(graph.Ecotypes[i]);
-            if (!record.Exclusions.TryGetValue(key, out var saved)) record.Exclusions[key] = saved = [];
-            foreach (var pair in Masks(placement[i]))
-            {
-                var mask = saved.GetValueOrDefault(pair.Key, GroundClutterRenderer.ExclusionData.AllIncluded);
-                for (var word = 0; word < 8; word++) mask[word] &= pair.Value[word];
-                saved[pair.Key] = mask;
-            }
-        }
-    }
-    private static void ReplayMasks(ClutterLiveRecord record, GroundClutterReference graph, GroundClutterPlacementData[] placement,
-        ClutterEcotypeRenderData[] render, ClutterEcotypePhysicalData[] physics)
-    {
-        for (var i = 0; i < placement.Length; i++)
-        {
-            if (!record.Exclusions.TryGetValue(GridKey(graph.Ecotypes[i]), out var saved)) continue;
-            var destination = Masks(placement[i]);
-            foreach (var pair in saved)
-            {
-                var mask = destination.GetValueOrDefault(pair.Key, GroundClutterRenderer.ExclusionData.AllIncluded);
-                for (var word = 0; word < 8; word++) mask[word] &= pair.Value[word];
-                destination[pair.Key] = mask; render[i].QueueExclusionUpload(pair.Key); physics[i].QueueExclusionUpload(pair.Key);
-            }
-        }
-    }
 }

@@ -25,6 +25,10 @@ Standalone KSA mod providing visual customization features. Toggle with F11.
 - Nothing on disk is modified. The game's shader files are read, patched **in memory**, and compiled.
 - Paint is not saved; it lives for the session and is cleared on unload.
 - Windows (glass parts) are deliberately not painted.
+- KSA 5482 caches part render state per vehicle. Paint is written into that cache, and each paint
+  change invalidates it once, so a change appears on the next frame. Paint also shows in raytraced
+  IVA; part thumbnails stay unpainted. The four paint hooks (previously five) and the per-view visor
+  draw hook have only compile and managed checks on 5482; they still need an in-game pass.
 
 ## Architecture
 

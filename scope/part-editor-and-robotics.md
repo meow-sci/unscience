@@ -1,12 +1,99 @@
 # Part Editor & Robotics — Game Integration Scope
 
-## Current verification — 5402 → 5438
+## KSA 5482 (5438 → 5482) verification
+
+Verified against `2026.9.22.5482` (NEW) vs `2026.9.10.5438` (OLD) using both supplied decomp/Content
+trees. Managed/static only: the full solution build passes, and `ksa-upgrade.tests` passes. No
+native KSA run was possible.
+Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
+
+- **Don't Stifle Me: `Part.Tree` is now nullable (compile break, fixed).**
+  - Revs 5456 and 5464 changed `Part.Tree` to `PartTree?` (`Part.cs:662`). They also removed the eager
+    single-part tree that the `Part` constructor used to build (5438 `Part.cs:1440`); the replacement is
+    `Part.CreateOwnTree()` (`:1456`).
+  - The fix is `selected.Tree?.RefreshStaticMass()` at `dont-stifle-me.lib/PerAxisScaleDrag.cs:75`.
+    Without it the build failed with CS8602, because warnings are treated as errors.
+  - Behavior is unchanged. Every editor path that creates a selectable part gives it a tree immediately
+    (`VehicleEditor.cs:2945-2946,6085-6086`; symmetry parts go through `AddChild`), and stock
+    `UpdateSelectedScale` still dereferences the tree unguarded (`:4005`).
+  - `PartTree.RefreshStaticMass()` is still public and still recomputes immediately (`PartTree.cs:1019`
+    → private `RecomputeStaticMass :1024`). It does not clear the new lazy static-mass dirty bit, which is
+    harmless: a later read recomputes it.
+- **Don't Stifle Me targets are unchanged.** Each by-name target still has exactly one declaration, the
+  same parameter names and a byte-identical body:
+  - `UpdateSelectedScale :3973`, `ScaleBoundsFor :4009`, `ForEachPartWithSymmetry :4014`, `QuantizeScale :4039`;
+  - `UpdateScaleGizmo :3746`, `DrawParachuteSection :1933`;
+  - consts `:803/:805`; fields `Selected :551`, `ScaleGizmo :573`, `GizmoGrabbed :581`.
+
+  `GenericGizmo.cs` and `ChuteTuning.cs` are byte-identical. `Parachute.SetDiameter` (`:395`) has an
+  identical body. `Program.DrawProgramMenusHook` is at `:3961`, called from `:3948`.
+- **Picking drift.** `Part.RayCastEgo` now rejects a ray early if it misses a bounding sphere
+  (`Part.cs:2544-2549`). `RefreshScaleAndReposition` (`:1695`) now calls `UpdateBounds()`, so the bounds
+  follow per-axis drags.
+- **Parts Now: `SerializedCollection<T>.Deregister(T)` was added (rev 5466).**
+  - This makes U4's premise false: the game now has a removal API.
+  - Current layout of `SerializedCollection.cs`: `_lock :12`; `_collection :14` (unchanged: private
+    `ConcurrentDictionary<KeyHash,T>`); `Register :20`; new `bool Deregister(T) :37-55`; `Find :57`;
+    `GetList :62`.
+  - How `Deregister` behaves:
+    - it takes `_lock`;
+    - it removes the dictionary entry by `item.Hash` (by key, with no identity check);
+    - it removes the item from `_all` only if that dictionary removal succeeded, using swap-remove, so
+      list order is not preserved.
+  - Parts Now is unchanged. `GameRegistry.Unregister` (`parts-now.lib/Runtime/GameRegistry.cs:144-165`)
+    still removes from the live `GetList()` list and from the reflected `_collection`, and that reflection
+    still resolves.
+  - Adopting `Deregister` is optional. It would need an identity guard first
+    (`ReferenceEquals(collection.Find(item.Hash), item)`), and it would reorder the editor part browser
+    after an unload.
+  - The game only calls `Deregister` for runtime-generated distant glints; it never touches `ModLibrary`
+    registries.
+- **Content, rev 5475.** Seven `CoreFairingA` parts are now fuel tanks: `InterstageBridge2W1WB`,
+  `InterstageBridge3W2WB` and `NoseconeC/E/F/G/H`.
+  - Each gained a `<Tank>`: either `CylindricalTank` or the new `<ConicalTank>` (`ConicalTankTemplate`).
+  - Each gained a `BulkFluid` connector.
+  - The two InterstageBridges lost their `<Decoupler>`.
+  - Their editor tags are now "Fuel Tanks".
+
+  No mod in this area references these parts. `<ConicalTank>` is nested inside `<Tank>` and handled by
+  the game's serializer. `AssetBundle.cs` is byte-identical, so there is no new top-level asset kind and
+  V8 needs nothing. The editor-tag set is identical, so V7 and U11 are unaffected.
+- **Parts Now: checked unchanged.**
+  - `ModLibrary.cs` is byte-identical: all six `All*` fields, plus `Loaders`, `Binders`, `Manifest`,
+    `Find`, `Get` and `LocalModsFolderPath`.
+  - `VehicleEditor` members: `_editorTagLookup :537`, `DynamicThumbnail :707`,
+    `MarkEditorTagDefinitionsLoaded :7084`, `ResetPartDiameterCache :7213`.
+  - Byte-identical files: `AssetBundle`, `XmlHelper`, `DeviceMeshInterleaved` (U2), `FileReference` (U9),
+    `MeshAtlasFileReference` (U8), `MeshReference`, `TextureReference`, `PbrMaterialReference`, `Mod`,
+    `ModManifest`, `ModEntry`, `PartTemplate`, `PartInstance`, `ThumbnailCreator`, and every
+    `KSA.Rendering.Thumbnails` file (U6, U12).
+  - U1 holds: `LoadAll :939` → `Bind :975` → Part Validation `:1253`. The validation pass now uses
+    `CreateOwnTree`.
+  - U3 holds: `WriteInstancesToGpu` still dereferences the materials unguarded.
+  - U7 holds: `Loading.OnFrame` still early-returns on the worker thread as its first statement.
+  - Since rev 5456, render batches are cached per part tree (`PartTreeRenderData`). The unload gate
+    (row 39) refuses a purge while any live vehicle or the editor holds the mod's parts, so a cached batch
+    cannot reference a purged `PartModel`.
+- **Pre-existing, unchanged:** `PartArchetypes.FindOrBuild` caches one `Part` per last-inspected
+  template (`PartArchetypes.cs:21-37`), and the unload gate does not see it.
+- **Live checks pending (native).**
+  - Don't Stifle Me:
+    - per-axis drag with symmetry siblings, confirming the mass refresh;
+    - picking and selecting a heavily non-uniformly scaled part;
+    - the 2–1000 m parachute slider.
+  - Parts Now:
+    - runtime load, reload and unload of a part mod;
+    - generated thumbnails;
+    - a part with `<ConicalTank>` pasted as XML;
+    - part-browser order after an unload.
+
+## Verification — 5402 → 5438 (historical)
 
 Parts Now V8 now rejects top-level `<Explosion>` and `<ExplosionVolume>` definitions introduced by AssetBundle (NEW :70–71). Their registries (`ModLibrary.AllExplosions` and `ExplosionVolumeTemplate.References`) are absent from loader snapshot/rollback/unload ownership; nested references remain allowed. This is a new schema hazard, prevented before registration. Existing registry fields/private collection, editor tags, mesh headroom and LoadAll-before-Bind ordering remain. Native ThumbnailRenderResources gained deformation bindings and is already used directly, so it supplies the required descriptor update. Don't Stifle Me scale/diameter targets retain their bodies. Native runtime thumbnails and scale/parachute editing remain acceptance items.
 
 Verified against `2026.9.10.5438` using both supplied source/Content trees.
 See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
-Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
+Older catalog tables below retain their explicitly cited build/line numbers unless marked @5482.
 
 Permanent reference for how the **parts-now** (runtime Part/SubPart loading) and **dont-stifle-me**
 (editor scale un-limiter) mods bind to the Kitten Space Agency (KSA) game, so that future game updates
@@ -15,12 +102,13 @@ that break them can be detected and root-caused quickly.
 > With flexo gone this area has **no robotics implementation** — the title is kept for the game
 > surface it maps. Historical findings live in git history and the dated upgrade plans.
 
-- **Current baseline:** `2026.9.7.5402` (NEW), diffed from `2026.8.22.5348` (OLD). See
+- **Current verification:** `2026.9.22.5482` vs `2026.9.10.5438` (top section). **Catalog baseline:** `2026.9.7.5402` (NEW), diffed from `2026.8.22.5348` (OLD). See
   [`FULL_SCOPE.md`](FULL_SCOPE.md) for the version block. Revisions 5349–5400 are **unlogged** in any
   changelog (only rev 5401 "Fixed crash for incorrect data stride for thumbnail rendering" is logged),
   so the decomp diff is the only evidence for this span.
-- **Build status against 5402:** `parts-now.lib` and `dont-stifle-me.lib` both **compile clean**
-  after the `Viewport` → `IViewport` fixes (whole solution: 52/52 projects, 0 warnings, 0 errors).
+- **Build status against 5482:** whole solution 74 projects, 0 warnings, 0 errors after the
+  dont-stifle-me `Part.Tree?` fix; `parts-now.lib` compiled unchanged. (5402: both libs compiled clean
+  after the `Viewport` → `IViewport` fixes, 52/52 projects.)
 - **Decomp (source of truth):** `~/repos/meow-sci/ksa-game-assemblies/current/decomp` (NEW, 5402) and
   `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp` (OLD, 5348); Content under the sibling
   `…/current/Content` folders.
@@ -75,20 +163,20 @@ red notice in the UI), not at compile time. Every one is also listed in
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|------|----------------------|----------------------------------------|-------------------|---------|----------|------------|
-| 1 | Harmony (postfix, by-name) | `EditorScalePatches.cs:56,89` | `VehicleEditor.ScaleBoundsFor(Part)` **private static `(double Min, double Max)`** | `KSA/VehicleEditor.cs:3995` | ✅ | none @5402 (moved from `:3877`; body identical; **single overload**) | Postfix rewrites `__result` to `(1e-6, +inf)`. Return type is `ValueTuple<double,double>` — a change to a struct/record breaks the `ref __result` binding at patch time. Consumers: `UpdateSelectedScale:3981`, `QuantizeScale:4033`. |
-| 2 | Harmony (prefix, by-name) | `EditorScalePatches.cs:58,124` | `VehicleEditor.UpdateSelectedScale(ref readonly double4x4 matrixVehicleAsmb2Ego, IViewport inViewport)` **private void** | `KSA/VehicleEditor.cs:3959` | ✅ | ⚠️ **signature @5402** — `Viewport` → `IViewport` (param names unchanged; body line-identical to 5348; **single overload**, so the by-name `AccessTools.Method` cannot hit `AmbiguousMatchException`). Compile break fixed in `EditorScalePatches.cs:124` / `PerAxisScaleDrag.cs:28`. | Prefix param `ref double4x4 matrixVehicleAsmb2Ego` binds to the `ref readonly` original **by name** — parameter rename = patch failure. Returns `false` to skip stock. |
-| 3 | Harmony (postfix, by-name) | `EditorScalePatches.cs:60,113` | `VehicleEditor.UpdateScaleGizmo(ref readonly double4x4, doubleQuat, IViewport, double)` **public void** | `KSA/VehicleEditor.cs:3732` | ✅ | ⚠️ signature @5402 (`Viewport` → `IViewport`; body identical; single overload) | Only `__instance` injected; reads `GizmoGrabbed` to end the per-axis drag session. Single overload assumed. |
-| 4 | Harmony (prefix, by-name) **+** delegate | `EditorScalePatches.cs:48,52,62,103` | `VehicleEditor.QuantizeScale(Part, double rawScale) : private static double` | `KSA/VehicleEditor.cs:4025` | ✅ | none @5402 (moved from `:3907`; single overload; still `0.25 / FindLargestDiameter()`) | Prefix: when `Snap` is off, `__result = Clamp(rawScale, ScaleBoundsFor(part))`, return false — param `rawScale` bound **by name**. Delegate (`MethodDelegate<Func<Part,double,double>>`) is what the per-axis drag calls, so it sees the prefix too. Snap-on path keeps the 0.25 m step (`SCALE_DIAMETER_INCREMENT_M` / `PartTemplate.FindLargestDiameter`). |
-| 4b | Reflection (private static → delegate) | `EditorScalePatches.cs:53` | `VehicleEditor.ScaleBoundsFor(Part)` (same target as #1) | `KSA/VehicleEditor.cs:3995` | ✅ | none @5402 | `MethodDelegate<Func<Part,(double,double)>>` used by the snap-off prefix to clamp; goes through the patched body, so it returns the widened bounds. |
-| 5 | Reflection (private static → delegate) | `EditorScalePatches.cs:50,54` | `VehicleEditor.ForEachPartWithSymmetry(Part, Action<Part>)` | `KSA/VehicleEditor.cs:4000` | ✅ | none @5402 (moved from `:3881`; single overload — the new generic `ForEachModuleWithSymmetry<TModule>` at `:1363` is a different name) | `AccessTools.MethodDelegate<Action<Part,Action<Part>>>`; propagates the axis scale to symmetry siblings exactly like stock. |
+| 1 | Harmony (postfix, by-name) | `EditorScalePatches.cs:56,89` | `VehicleEditor.ScaleBoundsFor(Part)` **private static `(double Min, double Max)`** | `KSA/VehicleEditor.cs:4009` @5482 | ✅ | none (body identical 5402→5482; **single overload**) | Postfix rewrites `__result` to `(1e-6, +inf)`. Return type is `ValueTuple<double,double>` — a change to a struct/record breaks the `ref __result` binding at patch time. Consumers: `UpdateSelectedScale`, `QuantizeScale`. |
+| 2 | Harmony (prefix, by-name) | `EditorScalePatches.cs:58,124` | `VehicleEditor.UpdateSelectedScale(ref readonly double4x4 matrixVehicleAsmb2Ego, IViewport inViewport)` **private void** | `KSA/VehicleEditor.cs:3973` @5482 | ✅ | ⚠️ **signature @5402** — `Viewport` → `IViewport` (param names unchanged; body line-identical to 5348; **single overload**, so the by-name `AccessTools.Method` cannot hit `AmbiguousMatchException`). Compile break fixed in `EditorScalePatches.cs:124` / `PerAxisScaleDrag.cs:28`. | Prefix param `ref double4x4 matrixVehicleAsmb2Ego` binds to the `ref readonly` original **by name** — parameter rename = patch failure. Returns `false` to skip stock. |
+| 3 | Harmony (postfix, by-name) | `EditorScalePatches.cs:60,113` | `VehicleEditor.UpdateScaleGizmo(ref readonly double4x4, doubleQuat, IViewport, double)` **public void** | `KSA/VehicleEditor.cs:3746` @5482 | ✅ | ⚠️ signature @5402 (`Viewport` → `IViewport`; body identical; single overload) | Only `__instance` injected; reads `GizmoGrabbed` to end the per-axis drag session. Single overload assumed. |
+| 4 | Harmony (prefix, by-name) **+** delegate | `EditorScalePatches.cs:48,52,62,103` | `VehicleEditor.QuantizeScale(Part, double rawScale) : private static double` | `KSA/VehicleEditor.cs:4039` @5482 | ✅ | none (body identical through 5482; single overload; still `0.25 / FindLargestDiameter()`) | Prefix: when `Snap` is off, `__result = Clamp(rawScale, ScaleBoundsFor(part))`, return false — param `rawScale` bound **by name**. Delegate (`MethodDelegate<Func<Part,double,double>>`) is what the per-axis drag calls, so it sees the prefix too. Snap-on path keeps the 0.25 m step (`SCALE_DIAMETER_INCREMENT_M` / `PartTemplate.FindLargestDiameter`). |
+| 4b | Reflection (private static → delegate) | `EditorScalePatches.cs:53` | `VehicleEditor.ScaleBoundsFor(Part)` (same target as #1) | `KSA/VehicleEditor.cs:4009` @5482 | ✅ | none | `MethodDelegate<Func<Part,(double,double)>>` used by the snap-off prefix to clamp; goes through the patched body, so it returns the widened bounds. |
+| 5 | Reflection (private static → delegate) | `EditorScalePatches.cs:50,54` | `VehicleEditor.ForEachPartWithSymmetry(Part, Action<Part>)` | `KSA/VehicleEditor.cs:4014` @5482 | ✅ | none (body identical through 5482; single overload — the new generic `ForEachModuleWithSymmetry<TModule>` at `:1363` is a different name) | `AccessTools.MethodDelegate<Action<Part,Action<Part>>>`; propagates the axis scale to symmetry siblings exactly like stock. |
 | 6 | Typed API (editor state) | `PerAxisScaleDrag.cs:32-43` | `VehicleEditor.{Selected, HighlightedGizmoSegmentIndex, ScaleGizmo, CursorPositionScreen, CursorPositionScreenLastFrame, GizmoGrabbed}` (public fields) | `KSA/VehicleEditor.cs:551,579,573,681,683,581` | ✅ | none | Segment index → axis `0=X,1=Y,2=Z` is an **invariant of `ScaleGizmo`'s 3-segment construction** (`:1179`), not checkable by grep. |
 | 7 | Typed API (math) | `PerAxisScaleDrag.cs:36-49` | `IViewport.GetCamera()`, `Camera.ScreenToEgoNearPlane(double2)`, `GenericGizmo.GetSegmentDataByViewport(IViewport)` / `PerSegmentData.Body2Cce`, `Part.PositionEgo(in double4x4)` | `KSA/IViewport.cs:51`, `KSA/Camera.cs:684`, `KSA/GenericGizmo.cs:277,176`, `KSA/Part.cs:1155` | ✅ | ⚠️ @5402: `KSA.Viewport` deleted → `IViewport`; `GetSegmentDataByViewport` now keys its lookup by `ViewportId` (`GenericGizmo.cs:206,279,298` use `inViewport.Id`) — transparent to the caller | Mirrors stock `UpdateSelectedScale` math line-for-line; **semantic drift** in the stock routine (e.g. a different depth heuristic) would leave per-axis drags feeling different from uniform ones without any symbol change. |
-| 8 | Typed API (apply) | `PerAxisScaleDrag.cs:69-74` | `Part.Scale { get; set; }` (`double3`), `Part.RefreshScaleAndReposition()`, `Part.Tree`, `PartTree.RefreshStaticMass()` | `KSA/Part.cs:815,1592,662`, `KSA/PartTree.cs:773` | ✅ | none @5402 (`RefreshScale :1571` / `RefreshScaleAndReposition :1592` bodies untouched) | 🔶 **Standing limitation:** `Part.RefreshScale` collapses `double3` to `new ScaleFactors(max axis)` for connectors, `IRescale` modules and mass. Non-uniform parts keep a non-uniform *mesh* but uniform connector offsets. If the game ever re-derives `Part.Scale` from `ScaleFactors` (uniformizes on load/refresh), per-axis scaling silently stops sticking. |
-| 8a | Harmony (prefix, by-name) | `EditorValueLimitPatches.cs:29-35,73-83` | `VehicleEditor.DrawParachuteSection(Part, ReadOnlySpan<Parachute>) : private void` | `KSA/VehicleEditor.cs:1932` | ✅ | new dont-stifle-me consumer @5402 | Before the stock diameter slider reads `parachute.Tuning.MinDiameterM` / `MaxDiameterM` (`:1977-1985`), expands every chute in the selected subtree to 2 / 1000 while the toggle is on. The prefix intentionally binds only `part`, avoiding a Harmony patch parameter for the byref-like `ReadOnlySpan`. |
-| 8b | Harmony (prefix, typed signature) | `EditorValueLimitPatches.cs:31-37,85-92` | `Parachute.SetDiameter(float diameterM) : public void` | `KSA/Parachute.cs:369` | ✅ | new dont-stifle-me consumer @5402 | Expands all chute modules on the receiving part before the stock method calls `Tuning.ClampDiameter`; required because `VehicleEditor.ForEachModuleWithSymmetry` invokes `SetDiameter` on counterparts whose slider was not drawn. Original per-instance min/max pairs are tracked and restored on toggle-off/unload. |
+| 8 | Typed API (apply) | `PerAxisScaleDrag.cs:69-75` | `Part.Scale { get; set; }` (`double3`), `Part.RefreshScaleAndReposition()`, `Part.Tree` (**`PartTree?` @5482**), `PartTree.RefreshStaticMass()` | `KSA/Part.cs:819,1695,662`, `KSA/PartTree.cs:1019` @5482 | ✅ | ⚠️ @5482 `Part.Tree` nullable (rev 5456/5464; ctor no longer builds a tree) → call is `selected.Tree?.RefreshStaticMass()` (`:75`); `RefreshScale :1674` body untouched; `RefreshScaleAndReposition` now also refreshes bounds | 🔶 **Standing limitation:** `Part.RefreshScale` collapses `double3` to `new ScaleFactors(max axis)` for connectors, `IRescale` modules and mass. Non-uniform parts keep a non-uniform *mesh* but uniform connector offsets. If the game ever re-derives `Part.Scale` from `ScaleFactors` (uniformizes on load/refresh), per-axis scaling silently stops sticking. |
+| 8a | Harmony (prefix, by-name) | `EditorValueLimitPatches.cs:29-35,73-83` | `VehicleEditor.DrawParachuteSection(Part, ReadOnlySpan<Parachute>) : private void` | `KSA/VehicleEditor.cs:1933` @5482 | ✅ | new dont-stifle-me consumer @5402; body identical @5482 | Before the stock diameter slider reads `parachute.Tuning.MinDiameterM` / `MaxDiameterM` (`:1977-1985`), expands every chute in the selected subtree to 2 / 1000 while the toggle is on. The prefix intentionally binds only `part`, avoiding a Harmony patch parameter for the byref-like `ReadOnlySpan`. |
+| 8b | Harmony (prefix, typed signature) | `EditorValueLimitPatches.cs:31-37,85-92` | `Parachute.SetDiameter(float diameterM) : public void` | `KSA/Parachute.cs:395` @5482 | ✅ | new dont-stifle-me consumer @5402; body identical @5482 (Parachute only gained `DrawsUi`/`DrawCanopy(ViewHandle,…)`) | Expands all chute modules on the receiving part before the stock method calls `Tuning.ClampDiameter`; required because `VehicleEditor.ForEachModuleWithSymmetry` invokes `SetDiameter` on counterparts whose slider was not drawn. Original per-instance min/max pairs are tracked and restored on toggle-off/unload. |
 | 8c | Typed API (runtime bounds) | `EditorValueLimitPatches.cs:63-70,94-106` | `Parachute.Tuning : ChuteTuning`; `ChuteTuning.{MinDiameterM, MaxDiameterM, DiameterM, ClampDiameter(float)}`; `Part.SubtreeModules` / `Part.Modules` | `KSA/Parachute.cs:140,369-378`; `KSA/ChuteTuning.cs:5,33-35,61`; `KSA/Part.cs` | ✅ | new dont-stifle-me consumer @5402 | Only the bounds are changed; stock `SetDiameter`, symmetry propagation, inert-mass refresh, save data, drag physics, cloth and rendering continue to consume `Tuning.DiameterM`. Disabling does not retroactively clamp a value already chosen, matching the scale feature's non-destructive toggle behavior. |
 
-| 9 | Harmony (postfix, `nameof`) — standalone only | `dont-stifle-me/MenuBarPatch.cs:15,20` | `Program.DrawProgramMenusHook() : public void` (empty hook called inside the main menu bar) | `KSA/Program.cs:3876` (call site `:3863`) | ✅ | none | Same target as unscience's `MenuBarPatch`; draws `ImGui.BeginMenu("Don't Stifle Me")`. |
+| 9 | Harmony (postfix, `nameof`) — standalone only | `dont-stifle-me/MenuBarPatch.cs:15,20` | `Program.DrawProgramMenusHook() : public void` (empty hook called inside the main menu bar) | `KSA/Program.cs:3961` (call site `:3948`) @5482 | ✅ | none | Same target as unscience's `MenuBarPatch`; draws `ImGui.BeginMenu("Don't Stifle Me")`. |
 
 ### Watch items
 - `MINIMUM_SCALE`/`MAXIMUM_SCALE` are **consts inlined** into `ScaleBoundsFor`; if a later build
@@ -131,8 +219,8 @@ by hand.
 
 **Still live elsewhere, keep verifying:**
 
-- `Universe.ExecuteNextVehicleSolvers(double, SimStep)` — eternal-flame, kiwis-marbles, kitchen-sink and
-  the unscience supermod all prefix it (by `nameof`, not by string), see
+- `Universe.ExecuteNextVehicleSolvers(double, SimStep)` — eternal-flame, kiwis-marbles and the unscience
+  supermod prefix it (by `nameof`, not by string; kitchen-sink no longer does, repo grep @5482), see
   [`vehicle-physics.md`](vehicle-physics.md) and [`celestial-and-lights.md`](celestial-and-lights.md).
 - `GenericGizmo` — **dont-stifle-me** uses `VehicleEditor.ScaleGizmo.GetSegmentDataByViewport(Viewport)`
   (see its section above).
@@ -199,9 +287,9 @@ one shared interleaved vertex/index buffer**, and a **single reflection choke po
 | 4 | Reflection (internal static field, string) | `Runtime/GameRegistry.cs:75,292` | `ModLibrary.AllMaterials : SerializedCollection<PbrMaterialReference>` | `KSA/ModLibrary.cs:70` | ✅ | new | Literal `"AllMaterials"`. Fatal. |
 | 5 | Reflection (internal static field, string) | `Runtime/GameRegistry.cs:76,292` | `ModLibrary.AllPartGameDataReferences : SerializedCollection<PartGameDataReference>` | `KSA/ModLibrary.cs:78` | ✅ | new | Literal `"AllPartGameDataReferences"` — note the plural `References` suffix, unlike its siblings. Fatal. |
 | 6 | Reflection (internal static field, string) | `Runtime/GameRegistry.cs:77,292` | `ModLibrary.AllEditorTagDefinitions : SerializedCollection<EditorTagDefinition>` | `KSA/ModLibrary.cs:144`; `KSA/EditorTagDefinition.cs:5` | ✅ | new | Literal `"AllEditorTagDefinitions"`. Fatal. Feeds V7's known-tag set. |
-| 7 | Reflection (private instance field, string) | `Runtime/GameRegistry.cs:356-357` (`CollectionFields<T>`), used `:154-165` | `SerializedCollection<T>._collection : private readonly ConcurrentDictionary<KeyHash,T>` | `KSA/SerializedCollection.cs:14` | ✅ | new | Literal `"_collection"`, `Instance\|NonPublic`, probed once per closed generic at static-ctor time (`:83`). **The whole unload/reload story depends on it** — `SerializedCollection<T>` has no removal API (U4). Also type-checked: a non-`ConcurrentDictionary<KeyHash,T>` throws a descriptive error rather than corrupting the registry. |
+| 7 | Reflection (private instance field, string) | `Runtime/GameRegistry.cs:356-357` (`CollectionFields<T>`), used `:154-165` | `SerializedCollection<T>._collection : private readonly ConcurrentDictionary<KeyHash,T>` | `KSA/SerializedCollection.cs:14` | ✅ | ⚠️ @5482 public `Deregister(T)` added (`:37-55`); field unchanged | Literal `"_collection"`, `Instance\|NonPublic`, probed once per closed generic at static-ctor time (`:83`). **The whole unload/reload story depends on it** — until parts-now adopts the 5482 `Deregister` (optional; see U4). Also type-checked: a non-`ConcurrentDictionary<KeyHash,T>` throws a descriptive error rather than corrupting the registry. |
 | 8 | Reflection (private static field, string) | `Runtime/GameRegistry.cs:320` | `VehicleEditor._editorTagLookup : private static Dictionary<uint,string>` | `KSA/VehicleEditor.cs:537` | ✅ | new | Literal `"_editorTagLookup"`, type-checked against `Dictionary<uint,string>`. **Degraded, not fatal**: V7 falls back to the six built-in tags + `AllEditorTagDefinitions` ids. |
-| 9 | Direct API (registry read/write) | `Runtime/GameRegistry.cs:151-152,170-194`; `Runtime/RuntimeModLoaderDeltas.cs:30-35,262` | `SerializedCollection<T>.{GetList() : List<T>, Find(KeyHash) : T?}` + `KeyHash.Make(ReadOnlySpan<char>)` | `KSA/SerializedCollection.cs:42,37`; `KSA/KeyHash.cs:15` | ✅ | new | `GetList()` returns the **live** backing list, which is what makes `.Remove(item)` a real unregister. `KeyHash.Make` lowercases → all parts-now id indexes are `OrdinalIgnoreCase`. |
+| 9 | Direct API (registry read/write) | `Runtime/GameRegistry.cs:151-152,170-194`; `Runtime/RuntimeModLoaderDeltas.cs:30-35,262` | `SerializedCollection<T>.{GetList() : List<T>, Find(KeyHash) : T?}` + `KeyHash.Make(ReadOnlySpan<char>)` | `KSA/SerializedCollection.cs:62,57` @5482; `KSA/KeyHash.cs:15` | ✅ | lines moved @5482 (names unchanged) | `GetList()` returns the **live** backing list, which is what makes `.Remove(item)` a real unregister. `KeyHash.Make` lowercases → all parts-now id indexes are `OrdinalIgnoreCase`. |
 | 10 | Direct API (mesh budget) | `Runtime/MeshBudget.cs:93-96,141-145,187-188,240-241` | `DeviceMeshInterleaved.Shared.{RunningVertexBufferSize, RunningIndexBufferSize} : public static uint` | `KSA/DeviceMeshInterleaved.cs:25,27` | ✅ | new | Written directly (inflate at reserve, rewind on the first frame, rewind again on rollback). Must stay **public static settable `uint`**. |
 | 11 | Direct API (mesh budget) | `Runtime/MeshBudget.cs:87,90` | `DeviceMeshInterleaved.Shared.{VertexAllocation, IndexAllocation} : public static BufferEx` → `BufferEx.BufferSize` | `KSA/DeviceMeshInterleaved.cs:19,21`; `Brutal.VulkanApi.Abstractions/BufferEx.cs:90` | ✅ | new | Authoritative allocated size (as opposed to the running cursor). Sized from the running counters inside `BuildBuffers` (`KSA/DeviceMeshInterleaved.cs:55,63`). |
 | 12 | Direct API (tripwire) | `Runtime/MeshBudget.cs:131,180` | `DeviceMeshInterleaved.Shared.IsBuilt : public static bool` | `KSA/DeviceMeshInterleaved.cs:31` | ✅ | new | Read as a **tripwire for U1**: must be `false` at `Reserve()` and `true` on the first frame. Both mismatches log a WARNING and keep going. |
@@ -326,14 +414,20 @@ like every other game DLL reference in the repo.
   Validation rule **V9** exists solely to stop the player authoring a part that takes the whole game
   down at the first thumbnail. **If KSA ever null-guards them, V9 becomes an unnecessary
   restriction worth relaxing** — check `AddDraw` and `WriteInstancesToGpu` on every update.
-- 🔶 **U4 (blocks unload, silent) — `SerializedCollection<T>` must keep having no removal API.** It
-  exposes `Register`/`Find`/`GetList` only (`KSA/SerializedCollection.cs:20,37,42`), so
-  `GameRegistry.Unregister` removes from the live `GetList()` list **and** reflects into the private
-  `_collection` `ConcurrentDictionary<KeyHash,T>` (`:14`) that backs `Find`. Removing from only one
-  leaves `Find` resolving a purged item. **If KSA ever adds a real removal API, replace the
-  reflection with it** and delete the `"_collection"` string. Also note parts-now deliberately does
-  **not** take the collection's private `Lock` (`:12`) — single-threaded, game-thread-only access is
-  what makes that safe.
+- 🔶 **U4 (blocks unload, silent) — unregistering must clear both the list and the `_collection`
+  dictionary.** Through 5438 `SerializedCollection<T>` exposed `Register`/`Find`/`GetList` only, so
+  `GameRegistry.Unregister` (`parts-now.lib/Runtime/GameRegistry.cs:144-165`) removes from the live
+  `GetList()` list **and** reflects into the private `_collection` `ConcurrentDictionary<KeyHash,T>`
+  (`KSA/SerializedCollection.cs:14`) that backs `Find`. Removing from only one leaves `Find` resolving a
+  purged item. **@5482 KSA added a real removal API** — `public bool Deregister(T)` (`:37-55`, rev 5466):
+  under `_lock` it `TryRemove`s by `item.Hash` (key-based, no identity check) and, only if that
+  succeeded, swap-removes the item from `_all` (order not preserved). parts-now has **not** adopted it
+  (the reflection still resolves and preserves browser order). Adoption is an optional simplification:
+  guard with `ReferenceEquals(collection.Find(item.Hash), item)` so a key collision never evicts a boot
+  entry, call `Deregister`, delete the `"_collection"` string, and accept a reordered part browser
+  (`ModLibrary.AllParts.GetList()` order drives the editor list). Until then parts-now deliberately does
+  **not** take the collection's private `Lock` (`:12`) — single-threaded, game-thread-only access is what
+  makes that safe.
 - 🔶 **U5 (silent corruption) — `ModuleBase.TemplateDataBase.Id` stays optional and non-unique.** It
   is a plain `[XmlAttribute] public string Id = ""` (`KSA/ModuleBase.cs:10-11`). The purge therefore
   matches model templates by **object identity**, never by id: an id match would miss every id-less
@@ -392,8 +486,8 @@ like every other game DLL reference in the repo.
 
 dont-stifle-me / shared part surface:
 
-1. `Universe.ExecuteNextVehicleSolvers` still a **single overload** — eternal-flame, kiwis-marbles, kitchen-sink and the unscience supermod all resolve it with `AccessTools.Method(typeof(Universe), nameof(…))` and **no param array**, so a second overload would make resolution ambiguous.
-2. `PartTree.RecomputeStaticMass` still present and still **private** — kitchen-sink `Traverse`s it by string. A public `PartTree.RefreshStaticMass()` wrapper exists as of 5348 (available simplification).
+1. `Universe.ExecuteNextVehicleSolvers` still a **single overload** (`Universe.cs:2034` @5482) — eternal-flame, kiwis-marbles and the unscience supermod resolve it with `AccessTools.Method(typeof(Universe), nameof(…))` and **no param array**, so a second overload would make resolution ambiguous.
+2. `PartTree.RefreshStaticMass()` still **public** (`PartTree.cs:1019` @5482; wraps private `RecomputeStaticMass :1024`) — dont-stifle-me calls it after per-axis drags (via `Part.Tree?`, nullable since 5482). No unscience code reflects on `RecomputeStaticMass` any more (the old kitchen-sink `Traverse` is gone; repo grep @5482).
 3. `GenericGizmo` ctor / `PerSegmentData` / `Static.GenericGizmoRenderData`, and `VehicleEditor.ScaleGizmo.GetSegmentDataByViewport(IViewport)` (`GenericGizmo.cs:277`, keyed by `ViewportId` since 5402) (dont-stifle-me per-axis drag).
 4. Editor scaling is **uniform and clamped 0.5×–2×** as of rev 5329 (was triaxial), and modules implement `IRescale.SetScale(in ScaleFactors)` — dont-stifle-me exists to undo exactly this, so re-check `MINIMUM_SCALE`/`MAXIMUM_SCALE`/`ScaleBoundsFor`/`UpdateSelectedScale`/`QuantizeScale` on every build, and that each of the five by-name `VehicleEditor` targets still has **exactly one** declaration (a second overload turns the by-name `AccessTools.Method` into `AmbiguousMatchException` at `Apply()`). `UpdateSelectedScale`/`UpdateScaleGizmo` take `IViewport` since 5402.
 
@@ -408,7 +502,7 @@ parts-now (all silent at runtime — see *Update-risk findings* above for the fu
 
 8. **U1** — `Program.cs` still calls `ModLibrary.LoadAll()` **before** `ModLibrary.Bind(_renderer)` (`LoadAll` at `Program.cs:942`, `Bind` at `:978` @5402), and StarMap still implements `[StarMapAllModsLoaded]` as a postfix on `LoadAll` (`StarMap.Core/Patches/ModLibraryPatches.cs:17`). As of rev 5340 a `Loading.Task("Part Validation")` pass (`:1256-1258`) instantiates **every** registered part after `Bind` — watch its warnings for parts-now-generated parts.
 12. **U2** — `DeviceMeshInterleaved.Shared.Build()` still one-shot; `Rebuild()` still cannot grow; `RunningVertex/IndexBufferSize` still public static settable `uint`; `IsBuilt` still readable.
-13. Reflection names: `ModLibrary.{AllParts, AllMeshes, AllFiles, AllMaterials, AllPartGameDataReferences, AllEditorTagDefinitions}`, `SerializedCollection<T>._collection`, `VehicleEditor._editorTagLookup` — plus **U4** (still no removal API on `SerializedCollection<T>`).
+13. Reflection names: `ModLibrary.{AllParts, AllMeshes, AllFiles, AllMaterials, AllPartGameDataReferences, AllEditorTagDefinitions}`, `SerializedCollection<T>._collection`, `VehicleEditor._editorTagLookup` — plus **U4** (@5482 `SerializedCollection<T>.Deregister(T)` exists; re-check its key-only removal and swap-remove semantics if parts-now adopts it, otherwise keep verifying `_collection`).
 14. **U3** — `ThumbnailRenderResources.AddDraw` + `PartModel(.Glass/.Dynamic).WriteInstancesToGpu` still dereference `Material.DiffuseReference`/`.NormalReference`/`.PBRMap` unguarded (if not, relax V9).
 15. **U6** — `ThumbnailDynamic.Render`'s `ResetRootPart`/`AddPart`/`MoveRootPart` block is still outside its try/catch; **U7** — `Loading.OnFrame()` still early-returns on `!Program.IsMainThread()`.
 16. Thumbnail surface: `ThumbnailCreator.{ResetRootPart,AddPart,MoveRootPart,CollectDraws,CreateThumbnailReference}`, `ThumbnailRenderer.{SIZE,ColorFormat,RecordPartRender,*DescriptorSetLayout,Sampler}`, `ThumbnailReference.ImageView`, `ThumbnailDynamic.{UpdateGlobalCameraData(IViewport,Camera),SetSelectedPart}`, `Program.ThumbnailViewport : IViewport`, `IViewport.{GetCamera,Size,ShaderSlot}`, `Camera.Unfollow(bool)`.

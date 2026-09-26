@@ -45,6 +45,14 @@ cloth, vehicle and orbit solvers after it. The patch validates those seven calls
 and in that order; an unexpected layout rejects installation with a logged error. Patching the
 caller also avoids depending on solver calls that may already have been inlined before mod loading.
 
+KSA 5482 keeps the seven calls in the same order. It adds `PartTree.FlushDirtyDerived`/
+`FlushDirtyResourceManagers` before the vehicle solvers, and the transpiler tolerates those calls.
+It also queues the nearest-orbit job (`JobSystems.NearestOrbitAndPerformanceWorker`) just before
+this handoff. That job reads flight plans and cached orbit points, and `Vehicle.Teleport` disposes
+them. `WeldEngine` therefore calls `PhysicsFrameHook.JoinOrbitReaders()` before each teleport; the
+hook waits at most once per frame. This race is a candidate cause of the reported weld error spam
+and still needs in-game confirmation.
+
 The old UI callback waited for workers, then teleported the source **before their results were
 applied**. `Vehicle.Teleport` removes it from its physics bubble, so `ApplyResultsToVehicles` skipped
 its module-state commit. A light actuator repeatedly started from the same `TimeCurrent` instead

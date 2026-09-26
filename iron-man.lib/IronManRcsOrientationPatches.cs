@@ -50,7 +50,7 @@ public static class IronManRcsOrientationPatches
         {
             var root = controller.Parent.FullPart;
             if (root.Template.Id == IronManConnectors.BackpackTemplateId
-                && root.Tree.OwningVehicle is KittenEva kitten
+                && root.Tree?.OwningVehicle is KittenEva kitten
                 && ReferenceEquals(kitten.Parts.Root, root)
                 && IronManSubmod.Instance?.IsEnabled(kitten) == true)
             {

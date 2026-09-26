@@ -39,6 +39,9 @@ internal static class ClutterHooks
         harmony.Patch(Required(typeof(Universe), nameof(Universe.ExecuteNextClothSolvers)), prefix: Method(nameof(BeforeCloth)));
         harmony.Patch(Required(typeof(GroundClutterRenderer), nameof(GroundClutterRenderer.RebuildFrameResources)), postfix: Method(nameof(RebuildOriginals)));
         harmony.Patch(Required(typeof(GroundClutterRenderer), nameof(GroundClutterRenderer.Dispose)), prefix: Method(nameof(BeforeDispose)));
+        var serializeSave = AccessTools.Method(typeof(GroundClutterRenderer), nameof(GroundClutterRenderer.SerializeSave), [typeof(List<ClutterEcotypeSaveData>)])
+            ?? throw new MissingMethodException(typeof(GroundClutterRenderer).FullName, nameof(GroundClutterRenderer.SerializeSave));
+        harmony.Patch(serializeSave, postfix: Method(nameof(AfterSerializeSave)));
         harmony.Patch(Required(typeof(ClutterEcotypeRenderData), nameof(ClutterEcotypeRenderData.RebuildFrameResources)), prefix: Method(nameof(BeforeRebuild)), finalizer: Method(nameof(AfterRebuild)));
         harmony.Patch(Required(typeof(ShaderReference), nameof(ShaderReference.CompileVariantWithCustomOptions)), prefix: Method(nameof(CompileColor)));
     }
@@ -81,6 +84,8 @@ internal static class ClutterHooks
     { try { _controller?.Process(); } catch (Exception ex) { _controller?.Report(ex); } }
     private static void RebuildOriginals(GroundClutterRenderer __instance, DeviceEx __0) => _controller?.RebuildOriginals(__instance, __0);
     private static void BeforeDispose(GroundClutterRenderer __instance) => _controller?.RendererDisposing(__instance);
+    private static void AfterSerializeSave(GroundClutterRenderer __instance, List<ClutterEcotypeSaveData> __0)
+    { try { _controller?.WriteNativeSave(__instance, __0); } catch (Exception ex) { _controller?.Report(ex); } }
     private static void BeforeRebuild(ClutterEcotypeRenderData __instance, out IDisposable? __state)
         => __state = Owned.TryGetValue(__instance, out var resources) ? Enter(resources) : null;
     private static Exception? AfterRebuild(Exception? __exception, IDisposable? __state) { __state?.Dispose(); return __exception; }

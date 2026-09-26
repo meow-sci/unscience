@@ -1,6 +1,42 @@
 # UI / Customization Mods — Game Integration Scope
 
-## Current verification — 5402 → 5438
+## KSA 5482 (5438 → 5482) verification
+
+Verified 2026-09-25 against `2026.9.22.5482` (revs 5439–5481), diffed from `2026.9.10.5438`.
+Static/managed only: the whole solution builds and `kitchen-sink.tests` passes; no native KSA run was
+possible. **No skittles or kitchen-sink code change was needed**; Kitchen Sink inherits the shared
+`IvaForceRender` fix in ksa-abstractions.lib. Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
+
+- ✅ **G-load protection target intact.** Private static
+  `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState)` moved OLD :873 → NEW `PhysicsBubble.cs:958`
+  with a byte-identical body and still exactly one `StructuralLoad.GLoadFraction` read (`:975`). Its
+  caller `FullPhysicsEndFrame` (`:1595`, call `:1622`) is identical and is reached via `EndStepFrame`.
+  `StructuralLoad.cs` and `VehicleStructuralLimits.cs` are byte-identical; `VehicleUpdateState.ReadOnlyVehicle`
+  (`:14`), `Vehicle.IsDisposed` (`Vehicle.cs:618`) and `Astronomical.Id` (`:104`) are unchanged. Rev
+  5452 physics islands run `ContactIsland` batch jobs on `VehicleWorkerPool` (the old `BubbleStepJob`
+  was already parallel), so the concurrent registry remains the right structure.
+- ✅ **Force IVA Rendering (Kitchen Sink toggle) — editor reveal fixed in ksa-abstractions.** Since
+  rev 5456 the static raster path (`PartTreeRenderData.Compose`, `:1300`) applies the
+  `(!Template.Internal || IVA)` gate itself and never calls the private `PartModel.AddInstance` sink,
+  so the 5438 sink postfix (rows 7–10 below) went silently dead and internal meshes vanished from the
+  editor. `IvaForceRender` now reveals cached internal, non-`ShadowProxy` templates for the duration
+  of each editor `Compose` call (prefix + finalizer). The flight `Enabled` toggle (template mutation)
+  is unchanged. Side effect: internal meshes no longer appear in editor thumbnails (the old postfix
+  also reached the thumbnail path). Current rows: [00-architecture → IvaForceRender](00-architecture-and-abstractions.md#ivaforcerendercs).
+- ℹ️ **Editor refresh (rows 1–5) unchanged, now lazy underneath.** `Program.Editor` (`Program.cs:227`),
+  `VehicleEditor.EditingSpace` (`:545`), `VehicleEditingSpace.Parts` (`:16`), `PartTree.States`
+  (`PartTree.cs:64`) and `PartTree.ReinitializeDerivedValues(ModuleStateList)` (`:425`, same signature
+  and body). Its trailing `RecomputeAllDerivedData()` now only marks derived data dirty (rev 5464), so
+  recomputation happens on first read or at the next `PrepareFrame` flush (`Program.cs:2209-2210`).
+  The button still works; derived values can settle a frame later.
+- ✅ **skittles unchanged.** The Brutal decomp folders (`Brutal.ImGuiApi`, `.Abstractions`,
+  `Brutal.GlfwApi`, `Brutal.Concurrency.Jobs`) are identical and the Brutal DLLs differ only by
+  rebuild hash; `KSAColor.cs` is byte-identical. Only `KSA.dll` and `Planet.Render.Core.dll` changed.
+- **Native acceptance pending:** G-load protection under island-parallel crashes; Force IVA in the
+  editor (internal meshes with dents, no duplicates in IVA) and in flight; Kitchen Sink "Refresh
+  Vehicle" in the editor; skittles theme apply/restore.
+
+## Verification — 5402 → 5438 (historical)
 
 Skittles and Kitchen Sink remain source-compatible with the shipped Brutal ImGui types.
 Kitchen Sink's local Flexo removal retires its solver callback and RecomputeStaticMass reflection.
@@ -21,12 +57,13 @@ touch is enumerated and verified against decompiled sources.
 
 **Verified game versions**
 
-- NEW decomp `2026.9.7.5402` root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
-- OLD decomp `2026.8.22.5348` root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
+- NEW decomp `2026.9.22.5482` root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
+- OLD decomp `2026.9.10.5438` root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
 
 Paths in the **Decomp path (NEW)** column are relative to the NEW decomp root
-(namespace-foldered, e.g. `KSA/GaugeCanvas.cs`, `Brutal.ImGuiApi/ImGuiStyle.cs`); line numbers are
-**@5402** unless a cell says otherwise. **Mod code** paths are relative to the repo root
+(namespace-foldered, e.g. `KSA/GaugeCanvas.cs`, `Brutal.ImGuiApi/ImGuiStyle.cs`); table line numbers
+are **@5402** unless a cell or heading says otherwise (the G-load table is @5482; 5482 lines for the
+editor rows are in the section above). **Mod code** paths are relative to the repo root
 `~/repos/meow-sci/unscience`.
 
 **How these mods are hosted (both)**
@@ -155,7 +192,9 @@ patch unavailability fails restoration visibly. Legacy/vanilla saves without the
 protection empty. Dispose/unpatch clears live references. No new native lifecycle hook.
 
 **Historical editor/IVA integration points** (game baseline 5402; the 5438 common-overload and
-paired dent-list correction above supersedes rows 7–9):
+paired dent-list correction above superseded rows 7–9, and at 5482 rows 7–10 were retired in favour
+of a `PartTreeRenderData.Compose` prefix/finalizer — the current IvaForceRender table is in
+[00-architecture](00-architecture-and-abstractions.md#ivaforcerendercs); rows 1–5 remain current):
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
 |---|---|---|---|---|---|---|---|
@@ -177,12 +216,12 @@ paired dent-list correction above supersedes rows 7–9):
 
 **G-load integration points (added 2026-09-13):**
 
-| Kind | Mod code | Game target | Decompiled source @5438 | Contract |
+| Kind | Mod code | Game target | Decompiled source @5482 | Contract |
 |---|---|---|---|---|
-| Harmony transpiler / string method lookup | `GLoadProtectionPatches.Apply/Remove/Transpile` | private static `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState) : void` | `KSA/PhysicsBubble.cs:873` | Unchanged from 5402:782. Exact parameter signature, static/void validation, exactly one GLoadFraction getter required; installation fails explicitly on missing/ambiguous layouts. |
-| Typed getter / IL injection point | `GLoadProtectionPatches.Transpile` | `StructuralLoad.GLoadFraction : double` | `KSA/StructuralLoad.cs:15`; detector `PhysicsBubble.cs:890` | Unchanged from 5402:799. Inject `(fraction, vehicleState) -> fraction or 0` after the getter. Only the destruction comparison sees the filtered value; stored telemetry is not modified. |
-| Typed identity | `GLoadProtectionPatches.FilterGLoadFraction` | `VehicleUpdateState.ReadOnlyVehicle : Vehicle` | `KSA/VehicleUpdateState.cs:14` | Look up exact vehicle reference in concurrent registry on solver worker. |
-| Typed liveness / labels | `GLoadProtection`, `KitchenSinkSubmod.GLoadProtection.cs` | `Vehicle.IsDisposed`; inherited `Vehicle.Id`; `VehicleProvider.GetAllVehicles` | `KSA/Vehicle.cs:617`; `KSA/Astronomical.cs:104`; `ksa-abstractions.lib/VehicleProvider.cs` | Picker excludes debris; pruning includes live debris and never retargets by name. |
+| Harmony transpiler / string method lookup | `GLoadProtectionPatches.Apply/Remove/Transpile` | private static `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState) : void` | `KSA/PhysicsBubble.cs:958` (caller `FullPhysicsEndFrame` `:1595`, call `:1622`) | Body byte-identical to 5438:873 and 5402:782. Exact parameter signature, static/void validation, exactly one GLoadFraction getter required; installation fails explicitly on missing/ambiguous layouts. |
+| Typed getter / IL injection point | `GLoadProtectionPatches.Transpile` | `StructuralLoad.GLoadFraction : double` | `KSA/StructuralLoad.cs:15`; detector `PhysicsBubble.cs:975` | Unchanged (5438:890, 5402:799; `StructuralLoad.cs` byte-identical). Inject `(fraction, vehicleState) -> fraction or 0` after the getter. Only the destruction comparison sees the filtered value; stored telemetry is not modified. |
+| Typed identity | `GLoadProtectionPatches.FilterGLoadFraction` | `VehicleUpdateState.ReadOnlyVehicle : Vehicle` | `KSA/VehicleUpdateState.cs:14` | Look up exact vehicle reference in concurrent registry on solver worker (5482 island jobs run in parallel on `VehicleWorkerPool`). |
+| Typed liveness / labels | `GLoadProtection`, `KitchenSinkSubmod.GLoadProtection.cs` | `Vehicle.IsDisposed`; inherited `Vehicle.Id`; `VehicleProvider.GetAllVehicles` | `KSA/Vehicle.cs:618`; `KSA/Astronomical.cs:104`; `ksa-abstractions.lib/VehicleProvider.cs` | Picker excludes debris; pruning includes live debris and never retargets by name. |
 | Shared host / reset | both `Patcher.cs` hosts; `KitchenSinkSubmod.Saves.cs` | shared Harmony instance; `ISaveParticipantSource`, `ISubmod.Update/Dispose` | local abstraction contracts | Add disabled if patch unavailable. Reset/unload discard live registrations; save replay rebinds recorded IDs after reconstruction. HotkeyGuard stays installed. |
 
 The protected vehicle's G-failure boolean stays false for every contact situation, including
@@ -197,7 +236,7 @@ Check native contact/part-failure precedence and pressure cause selection on gam
 No game assets, shader dependencies, or new Bepu mutations are added.
 
 **Validation:** full solution compilation and `kitchen-sink.tests` exercise the production
-registry/transpiler against managed 5438 decision fixtures (unchanged from 5402): multiple targets, same-name isolation,
+registry/transpiler against managed 5438 decision fixtures (unchanged from 5402; the detector is still byte-identical at 5482): multiple targets, same-name isolation,
 G/pressure thresholds, contact causes, telemetry, pending events, removal/pruning/reset,
 concurrent reads, unpatch restoration and missing/duplicate getter rejection. Another 26 checks
 exercise the real save adapter/resolver/coordinator for JSON round-trip, legacy/vanilla loads,

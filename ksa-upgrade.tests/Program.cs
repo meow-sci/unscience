@@ -3,4 +3,6 @@ using System;
 PropellantFeedChecks.Run();
 BundleValidatorChecks.Run();
 FreeFallinChecks.Run();
-Console.WriteLine("PASS: KSA 5438 managed upgrade regressions");
+RenderFilterChecks.Run();
+VehiclePaintChecks.Run();
+Console.WriteLine("PASS: KSA 5438/5482 managed upgrade regressions");
