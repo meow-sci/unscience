@@ -38,6 +38,7 @@
     <ProjectReference Include="..\zippo.lib\zippo.lib.csproj" />
     <ProjectReference Include="..\humble-arteest.lib\humble-arteest.lib.csproj" />
     <ProjectReference Include="..\kitchen-sink.lib\kitchen-sink.lib.csproj" />
+    <ProjectReference Include="..\the-tick.lib\the-tick.lib.csproj" />
     <ProjectReference Include="..\thug-life.lib\thug-life.lib.csproj" />
     <ProjectReference Include="..\parts-now.lib\parts-now.lib.csproj" />
     <ProjectReference Include="..\dont-stifle-me.lib\dont-stifle-me.lib.csproj" />

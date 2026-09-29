@@ -828,3 +828,32 @@ Kitchen Sink adds an opt-in, scene-saved vehicle registry and a guarded transpil
 It gates only the GLoadFraction comparison (5482:975; 5438:890; 5402:799), preserving contacts, part damage, pressure damage and real
 load telemetry. Both hosts install it. Full surface/lifecycle map and native acceptance limits:
 [UI/customization](ui-customization.md#kitchen-sink).
+
+## The Tick per-vessel indestructibility
+
+The Tick (`the-tick` / `the-tick.lib`, bundled in Unscience) adds an opt-in, scene-saved vehicle
+registry (`TickProtection`, exact reference identity, concurrent) and two guarded Harmony patches in
+`the-tick.lib/TheTickPatches.cs`, installed by both hosts:
+
+| Game surface | Kind | Source @5482 | Contract |
+|---|---|---|---|
+| `Part.CrashTolerancePascals` getter (public instance `double`) | Harmony prefix, typed `AccessTools.PropertyGetter` | `KSA/Part.cs:858` → `PartStructuralLimits.ResolveCrashTolerance(Template.CrashTolerance, …)` | If `Part.Tree?.OwningVehicle` (fallback `FullPart.Tree?.OwningVehicle`) is registered, return `double.MaxValue` and skip the native resolution. Consumers: `PartFailure.Detect` (`PartFailure.cs:58`), `FxDeformation` dents (`FxDeformation.cs:330-335`, ratio becomes ~0), `PartContactLoadDebug` rated column. Shared `PartTemplate.CrashTolerance` (`PartTemplate.cs:18`) is never written. |
+| `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState)` private static void | Harmony prefix (`out bool __state` = event already present) + postfix | `KSA/PhysicsBubble.cs:958-997`; event created `:989`; only other writer nulls it `:926` | Postfix nulls `vehicleState.DestructionEvent` only when the detector created it this call and `ReadOnlyVehicle` is registered. Suppresses both the G-load (`:975`) and dynamic-pressure (`:976`) kills; `NewStructuralLoad` telemetry, `PartFailureEvent`, kitten 2.5× and debris exemptions stay native. Composes with Kitchen Sink's transpiler on the same method. |
+| `Part.Tree : PartTree?` (field), `Part.FullPart`, `PartTree.OwningVehicle : Vehicle?` (field), `PartTree.Count` | direct API | `Part.cs:662,1171`; `PartTree.cs:46,134` | Owner resolution on physics workers; sub-parts also receive `Tree` (`PartTree.cs:1579`). `Count` is a UI label only. |
+| `VehicleUpdateState.DestructionEvent`, `.ReadOnlyVehicle` (public fields) | direct API (write / identity) | `VehicleUpdateState.cs:78,14` | Written only in the postfix described above. |
+| `Vehicle.IsDisposed`, inherited `Vehicle.Id`, `Vehicle.Parts` | liveness, labels, part count | `Vehicle.cs:618,605`; `Astronomical.cs:85` | Disposed targets lose protection immediately; prune each frame via `VehicleProvider.GetAllVehicles(includeDebris: true)`. |
+
+Not covered by design: anything that is not force-based destruction (explicit delete/recover,
+`Universe.DestroyVehicle` callers other than the structural event handler, kitten death paths).
+Debris shed by other vehicles is a new `Vehicle` and is never protected.
+
+Saves: version-1 `the-tick` string-array record (order 20), same lifecycle as Kitchen Sink's
+`kitchen-sink-g-load` (see [saves](saves.md#the-tick-indestructibility-saves)). Managed checks:
+`the-tick.tests` (87 damage/lifecycle + 24 save/restore). Native acceptance (terrain ram, vehicle
+collision, dense-atmosphere dive, save/reload, vanilla load) is open.
+
+**Update risk:** the getter is compile-checked (`nameof`), the detector is a string lookup with an
+exact signature (watchlist). If KSA ever caches `CrashTolerancePascals` per part, or moves the
+destruction decision out of `DetectStructuralFailure`, protection silently stops; recheck both
+consumers' call sites on every game update.
+

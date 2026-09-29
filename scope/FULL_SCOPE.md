@@ -46,7 +46,7 @@ Scene-save adapters extend native saves; imported files remain external dependen
 | [`game-integration-surface.md`](game-integration-surface.md) | **Master cross-reference index** — every game type/member touched, merged across mods | Start here for "does the game still have X?"; includes the string-reflection watchlist + shader/asset table |
 | [`saves.md`](saves.md) | Native scene save/load extension across all bundled features | Ordered cleanup/replay, deferred world replacement, native save directory sidecars and stable part references |
 | [`00-architecture-and-abstractions.md`](00-architecture-and-abstractions.md) | unscience supermod shell (`Mod.cs`/`Patcher.cs`/`MenuBarPatch`/`UnscienceState`) + `ksa-abstractions.lib` | StarMap lifecycle map, consolidated-Harmony cross-ref, `HotkeyGuard`, `IvaForceRender`, providers |
-| [`vehicle-physics.md`](vehicle-physics.md) | dent-wizard, eternal-flame, garrys-torch, godzilla, i-feel-seen | `Universe.ExecuteNextVehicleSolvers` (Eternal Flame fuel + electricity refills since 5482), `Battery.Refill`, `Vehicle.Teleport` (+ `PhysicsFrameHook.JoinOrbitReaders`), KittenEva reflection, Godzilla's `IsLargeEnoughToRender` cull redirect; **Godzilla separates visual, collider and nominal physics size; garrys-torch preserves actuator results; default-off source collisions use scoped Bepu shape suppression** |
+| [`vehicle-physics.md`](vehicle-physics.md) | dent-wizard, eternal-flame, garrys-torch, godzilla, i-feel-seen, the-tick | `Universe.ExecuteNextVehicleSolvers` (Eternal Flame fuel + electricity refills since 5482), `Battery.Refill`, `Vehicle.Teleport` (+ `PhysicsFrameHook.JoinOrbitReaders`), KittenEva reflection, Godzilla's `IsLargeEnoughToRender` cull redirect; **Godzilla separates visual, collider and nominal physics size; garrys-torch preserves actuator results; default-off source collisions use scoped Bepu shape suppression**; The Tick prefixes `Part.CrashTolerancePascals` and prefix/postfixes `PhysicsBubble.DetectStructuralFailure` for per-vessel indestructibility |
 | [`celestial-and-lights.md`](celestial-and-lights.md) | kiwis-marbles, zippo | `Celestial.SetOrbit`, `IParentBody.Children`/`UpdatePerFrameDataTree`, `Universe.ExecuteNextVehicleSolvers` prefix (kiwis-marbles sim-step timing, fixed 2026-08-23), `IOrbiter`, `LightModule`/`LightSwitch`; Zippo Disco's per-instance templates, cone angles and `KeyframeAnimationModule.TimeGoal` ownership |
 | [`camera.md`](camera.md) | camera-controller-override, glass, hot-pursuit | `OrbitController/FlyController/FixedController.OnFrame`, `Camera._fovRadians`; four public secondary-viewport leases under the sealed 8-slot registry; part-raycast camera mounts; Hot Pursuit nearby-celestial sync and stock secondary-render omissions |
 | [`pixel-grids-and-render.md`](pixel-grids-and-render.md) | blinky, its-so-shiny, thug-life | shared `PartRenderFilter` on `PartTreeRenderData.Compose*` (replaced the removed `*Module.UpdateRenderData` prefixes @5482), `PartTree.CreateFromNewPartTree`, `RocketCore.FeedConnectors` (blinky ignition), `SuperMeshRenderSystem.RenderMainPass`, UnlitMesh shaders |
@@ -62,10 +62,10 @@ Scene-save adapters extend native saves; imported files remain external dependen
 | [`ui-customization.md`](ui-customization.md) | skittles, kitchen-sink | `ImGui` style surface, editor refresh/IVA rendering, and selected-vehicle G-load protection via `PhysicsBubble.DetectStructuralFailure`; Flexo diagnostics removed |
 | [`audio.md`](audio.md) | byo-music | Shared sound imports, FMOD stream/channel ownership, vessel-relative 3D playback and repeat/gaps |
 
-Bundled in the unscience supermod (29): blinky, bloomin-onion, byo-music, camera-controller-override, dent-wizard, doh,
+Bundled in the unscience supermod (30): blinky, bloomin-onion, byo-music, camera-controller-override, dent-wizard, doh,
 dont-stifle-me, eternal-flame, free-fallin, garrys-torch, glass, godzilla, graffiti, hot-pursuit, humble-arteest,
 i-feel-seen, iron-man, its-so-shiny, kitchen-sink, kitten-animations, kiwis-marbles, parts-now, pebbles, pyro,
-rocky-mcrock-face, skittles, sphinx, thug-life, zippo. (jplrepo is a development reference and is not loaded by the supermod.)
+rocky-mcrock-face, skittles, sphinx, the-tick, thug-life, zippo. (jplrepo is a development reference and is not loaded by the supermod.)
 
 ---
 
@@ -92,6 +92,13 @@ transpiler; collisions, part damage, pressure damage and telemetry retain native
 The combined Dent Wizard/upstream integration passes all **74 projects and 15 managed suites**,
 including G-load isolation, save replay and protection preserved across launch. Its detector is unchanged from 5402; native cart/UI/load acceptance remains open.
 See [UI/customization](ui-customization.md#kitchen-sink).
+
+The Tick (added 2026-09-28 against 5482) makes exact registered vessels indestructible by forces:
+a prefix on `Part.CrashTolerancePascals` reports `double.MaxValue` for parts owned by a protected
+vehicle (shared `PartTemplate` XML is untouched), and a prefix/postfix pair on
+`PhysicsBubble.DetectStructuralFailure` discards the G-load / dynamic-pressure destruction event while
+keeping telemetry. Version-1 `the-tick` save record; `the-tick.tests` passes; native ram/dive/save
+acceptance is open. See [vehicle physics](vehicle-physics.md#the-tick-per-vessel-indestructibility).
 
 Unscience now extends native save/load with versioned scene-state sidecars and explicit feature
 adapters. World replacement is scheduled before new solver work and UI drawing; cleanup restores

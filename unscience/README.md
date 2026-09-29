@@ -4,7 +4,7 @@ Unscience is the only distributed mod. `dotnet build` deploys one `unscience/` f
 feature libraries remain separate projects with explicit references. Former standalone hosts are
 retained for development and are not deployed or published. See [distribution](../README.md#distribution).
 
-A unified supermod that consolidates 29 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
+A unified supermod that consolidates 30 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
 
 ## Included Submods
 
@@ -37,6 +37,7 @@ A unified supermod that consolidates 29 KSA feature libraries into a single ImGu
 | Pyro | Customizes volumetric engine exhaust plumes |
 | Skittles — Theme Manager | Applies and saves ImGui themes with a built-in style editor |
 | Sphinx | Places imported textured GLB statics with terrain alignment, XYZ transforms and shared PNG overrides |
+| The Tick | Makes chosen vessels indestructible by forces: unbreakable parts plus suppressed G-load / aero-pressure destruction |
 | Thug Life | Renders a custom textured quad through KSA's main render pass |
 | Zippo — Light Control | Controls light appearance and queued transitions, plus repeating Disco color, actuation, and spotlight-spread cycles |
 
@@ -154,6 +155,15 @@ Reconciled with KSA 5438: no G-load/save migration is needed, and the consolidat
 upstream's shared dent-aware IVA patch. [Build and test evidence](../plans/KSA_5438_RECONCILIATION.md).
 On KSA 5482 the G-load detector is unchanged. The shared IVA helper now reveals editor interiors
 through `PartTreeRenderData.Compose`.
+
+## The Tick indestructibility
+
+[The Tick](../the-tick/README.md) protects exact registered vessels from every force-based
+destruction path: parts owned by the vessel report an unbreakable crash tolerance (per-vessel,
+without touching shared part templates), and the whole-vehicle G-load / dynamic-pressure destruction
+event is discarded while telemetry stays native. Its active list is saved in the Unscience sidecar as
+the version-1 `the-tick` record and rebound after reconstruction. Protected vessels do not dent.
+It is independent of Kitchen Sink's G-load-only protection; both patches may be installed together.
 
 ## KSA compatibility
 

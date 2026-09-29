@@ -31,9 +31,9 @@ the native `universe.xml`, bound to that file's SHA-256. The native save owns ve
 full-part geometry, native module records, camera pose and game time. The sidecar supplies
 Unscience recipes, target ownership, original baselines and the continuation state listed below.
 The integration is wired by [UnscienceSaves](../unscience/UnscienceSaves.cs) for the
-[29 registered submods](../unscience/Mod.cs). There are **31 feature records**: Pyro separates
-shared template edits from plume instances, and Kitchen Sink keeps G-load registrations in a
-separate backward-compatible record alongside its original IVA boolean. Standalone mod entrypoints do not acquire
+[30 registered submods](../unscience/Mod.cs). There are **32 feature records**: Pyro separates
+shared template edits from plume instances, Kitchen Sink keeps G-load registrations in a
+separate backward-compatible record alongside its original IVA boolean, and The Tick adds `the-tick`. Standalone mod entrypoints do not acquire
 this host workflow merely because their shared library exposes a participant.
 
 This is durable scene setup restoration, not a complete simulation checkpoint. Native objects
@@ -84,6 +84,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [Rocky McRockFace](../rocky-mcrock-face.lib/RockyMcRockFaceSubmod.Saves.cs) | Applied ring overlays still owning their target ring: LOD mesh/material/band selections and field overrides. | Reapplies after Bloomin' Onion. Superseded overlays and unapplied selection drafts are omitted. Referenced assets must remain available. |
 | [Skittles](../skittles.lib/SkittlesSubmod.Saves.cs) | Effective ImGui theme colors and style values. | A scene can restore its theme; native saves without a sidecar reset to the captured startup-theme baseline. Global theme library/default preference and window layout autosave are separate. |
 | [Sphinx](../sphinx.lib/SphinxSubmod.Saves.cs) | Applied body-local statics, GLB/PNG identity, anchor position/normal, scale/rotation/offset, UV mapping, visibility/alignment and collision mode. | Recreates render resources and colliders under existing limits (32 statics and aggregate vertex budget). Pending placement actions are cleared. Assets are not bundled; collision behavior requires native verification. |
+| [The Tick](../the-tick.lib/TheTickSubmod.Saves.cs) | Indestructible vehicle IDs in a version-1 `the-tick` record (order 20). | Clears old references before reconstruction and rebinds exact IDs through the shared resolver; missing/ambiguous targets warn and retain the record; unavailable patches fail visibly. Vanilla and record-less saves restore nothing; picker/filter are transient; patch installation is global. |
 | [Thug Life](../thug-life.lib/ThugLifeSubmod.Persistence.cs) | Anchored sunglasses quads, local position/rotation, size and visibility. | An entrance slide saves its current pose and stays stopped after load. Its remaining animation is not replayed. |
 | [Zippo](../zippo.lib/ZippoSubmod.Persistence.cs) | Edited shared light component originals/current values; per-part default color baselines; Disco draft and active recipes, paused state, phase/seed, switch and actuator originals; active/queued light transitions. | Disco and queued transitions continue from saved phase/elapsed values. Restores actuator ownership using current module ordinals; conflicts/layout changes warn. Shared-template edits retain their original shared scope. GPU light/material objects and live queue keys are never serialized. |
 

@@ -24,6 +24,7 @@ using MeowSci.HumbleArteestLib;
 using MeowSci.DohLib;
 using MeowSci.KitchenSinkLib;
 using MeowSci.PartsNowLib;
+using MeowSci.TheTickLib;
 using MeowSci.ThugLifeLib;
 using MeowSci.DontStifleMeLib;
 using MeowSci.GraffitiLib;
@@ -98,6 +99,7 @@ public class Mod
             _submods.Add(new RockyMcRockFaceSubmod());
             _submods.Add(skittles);
             _submods.Add(new SphinxSubmod());
+            _submods.Add(new TheTickSubmod());
             _submods.Add(new ThugLifeSubmod());
             _submods.Add(new ZippoSubmod());
 

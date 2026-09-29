@@ -210,6 +210,17 @@ GLoadFraction read `:975`): the detector, readonly vehicle identity and shared r
 remain compatible. Both version-1 records are unchanged. All 14 managed suites pass, including
 26 Kitchen Sink adapter checks; see [the reconciliation record](../plans/KSA_5438_RECONCILIATION.md).
 
+## The Tick indestructibility saves
+
+`TheTickSubmod` registers `the-tick`, a version-1 string-array record of protected vehicle IDs
+(restore order 20), following the Kitchen Sink G-load lifecycle above: capture validates unique live
+identities (10,000 nonblank unique IDs max) and refuses ambiguous ones; reset clears the registry and
+picker before native reconstruction; replay binds exact reconstructed targets through
+`VehicleProvider.FindVehicle` before solvers resume. Missing/disposed/ambiguous targets warn, patch
+unavailability fails visibly and the record is retained. Saves without the record and vanilla saves
+restore no protection. Patch installation is process-global and is not scene state. No new native
+hook. Managed checks: `the-tick.tests` (24 adapter checks). Native save/load acceptance is open.
+
 Kitchen Sink's managed checks link its real adapter, JSON helpers, vehicle resolver and coordinator
 for round-trip, A-B-A/repeated loads, legacy/vanilla cleanup, invalid targets and retained-state
 recovery. Native cart collision and save/load acceptance remain in-game.

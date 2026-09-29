@@ -79,4 +79,7 @@
     <Project Path="dent-wizard/dent-wizard.csproj" />
     <Project Path="dent-wizard.lib/dent-wizard.lib.csproj" />
     <Project Path="dent-wizard.tests/dent-wizard.tests.csproj" />
+    <Project Path="the-tick/the-tick.csproj" />
+    <Project Path="the-tick.lib/the-tick.lib.csproj" />
+    <Project Path="the-tick.tests/the-tick.tests.csproj" />
 </Solution>

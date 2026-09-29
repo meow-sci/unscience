@@ -18,6 +18,7 @@ using MeowSci.KsaAbstractions.Persistence;
 using MeowSci.SphinxLib;
 using MeowSci.IronManLib;
 using MeowSci.KiwisMarblesLib;
+using MeowSci.TheTickLib;
 using MeowSci.ThugLifeLib;
 using MeowSci.DontStifleMeLib;
 using MeowSci.GraffitiLib;
@@ -85,6 +86,7 @@ internal static class Patcher
         TryApply("kitten-visor", () => KittenVisorPatches.Apply(_harmony!));
         TryApply("iva-force-render", () => IvaForceRender.Patch(_harmony!));
         TryApply("kitchen-sink G-load protection", () => GLoadProtectionPatches.Apply(_harmony!));
+        TryApply("the-tick indestructibility", () => TheTickPatches.Apply(_harmony!));
         TryApply("dont-stifle-me", () => EditorScalePatches.Apply(_harmony!));
         TryApply("dont-stifle-me editor limits", () => EditorValueLimitPatches.Apply(_harmony!));
         TryApply("kitten-animations", () => KittenAnimationPatches.Apply(_harmony!));
@@ -139,6 +141,7 @@ internal static class Patcher
                 TryRemove("thug-life", () => ThugLifeRenderPatches.Remove(_harmony!));
                 TryRemove("iva-force-render", () => IvaForceRender.Unpatch(_harmony!));
                 TryRemove("kitchen-sink G-load protection", () => GLoadProtectionPatches.Remove(_harmony!));
+                TryRemove("the-tick indestructibility", () => TheTickPatches.Remove(_harmony!));
                 TryRemove("kitten-animations", () => KittenAnimationPatches.Remove(_harmony!));
                 TryRemove("iron-man", () => IronManPatches.Remove(_harmony!));
                 TryRemove("sphinx", () => SphinxPatches.Remove(_harmony!));

@@ -1139,6 +1139,7 @@ on every game update FIRST.
 | Type.Member (string) | Mod(s) | Why string-based | Historical status (see 5438 summary above) |
 |---|---|---|---|
 | `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState)` | kitchen-sink | Exact-signature private static method lookup; transpiler requires one GLoadFraction getter | Verified @5438:873, unchanged from 5402:782; managed patch/restore checks pass, native acceptance pending. |
+| `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState)` | the-tick | Same exact-signature private static lookup; prefix/postfix pair (no IL matching) discards the event created for registered vehicles | Added @5482:958; managed checks pass, native acceptance pending. See [The Tick surface](#the-tick-per-vessel-indestructibility-2026-09-28-5482). |
 | `KSA.NarrowPhaseCallbacks.AllowContactGeneration(int,CollidableReference,CollidableReference,ref float)` / `Sim` | sphinx | Internal callback type/method + field lookup; transpiler requires exactly one `BepuHandles.IsGroundSurface` call. [Physics contract](statics.md#physics--collider-contract) | Added @5402; source inspected, native acceptance open |
 | `Camera.OnFrame` (`OrbitController`/`FlyController.OnFrame`) | camera-controller-override | `AccessTools.Method(…, "OnFrame")` | OK |
 | ~~`Controller.___Transform`~~ (field injector) | ~~camera-controller-override~~ | ~~Harmony field-injection by name~~ | **RETIRED @5261** — the prefix now reads the public `__instance.Camera` (`CameraControllerOverridePatches.cs:42-54`), so the injector is gone and this can no longer fail at `Apply` time. ((no `Transform` member exists on `KSA.Controller` in either tree), but `Camera` is the field that actually carries the view.) |
@@ -1395,6 +1396,23 @@ asset ID is introduced by the persistence foundation.
 - Native dependency preflight reads `UniverseData.CelestialSystems`, vehicle parent/character/root,
   `PartInstance.InstanceOf/Children/SubPartInstances`, and resolves `ModLibrary.Get<PartTemplate>` /
   `Get<CharacterReference>` before reset. Full lifecycle/identity rules: [saves](saves.md).
+
+## The Tick per-vessel indestructibility (2026-09-28, 5482)
+
+Opt-in, scene-saved registry of exact vehicle instances that cannot be destroyed by forces.
+Full area detail and update risks: [vehicle physics](vehicle-physics.md#the-tick-per-vessel-indestructibility).
+
+| Game surface | Kind / consumer | Source @5482 | Contract |
+|---|---|---|---|
+| `Part.CrashTolerancePascals` getter | Harmony prefix; `the-tick.lib/TheTickPatches.cs`; both hosts | `KSA/Part.cs:858` | Typed `PropertyGetter`; return-type/instance validation. Registered owner (`Part.Tree?.OwningVehicle ?? FullPart.Tree?.OwningVehicle`) → `double.MaxValue`, skip original. Never writes `PartTemplate.CrashTolerance`. |
+| `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState)` private static void | Harmony prefix + postfix (string lookup, exact signature) | `KSA/PhysicsBubble.cs:958` | Null the `DestructionEvent` created during this call for registered `ReadOnlyVehicle`; pre-existing events and all telemetry preserved. Covers G-load and dynamic-pressure causes. Coexists with Kitchen Sink's transpiler. |
+| `Part.Tree`, `Part.FullPart`, `PartTree.OwningVehicle`, `PartTree.Count` | direct API | `Part.cs:662,1171`; `PartTree.cs:46,134` | Worker-side owner lookup; part count label. |
+| `VehicleUpdateState.DestructionEvent` / `.ReadOnlyVehicle` | direct write / identity | `VehicleUpdateState.cs:78,14` | Only written by the postfix above. |
+| `Vehicle.IsDisposed`, `Vehicle.Id`, `Vehicle.Parts`; `VehicleProvider`, `ISubmod`, `ISaveParticipantSource` | liveness/labels; shared abstractions | `Vehicle.cs:618,605`; `ksa-abstractions.lib` | Prune per frame; version-1 `the-tick` saved ID array, order 20. |
+
+**String-reflection watchlist addition:** `PhysicsBubble.DetectStructuralFailure` now has a second
+consumer (the-tick). Installation validates static/void; a rename fails at `Apply` and is logged.
+Semantic drift (destruction decided elsewhere, cached part tolerances) needs a manual recheck.
 
 ## Kitchen Sink G-load protection (2026-09-13, 5402)
 

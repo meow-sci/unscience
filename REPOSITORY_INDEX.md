@@ -73,6 +73,26 @@ shared velocity boost, spin, speed limits, handoff snapshot/timestamp, changed w
 rejection handling, rotating terrain, one-shot dispatch, scene reset and unload. Also verifies
 Kitchen Sink G-load protection survives launch without changing unrelated targets. No native renderer or collision simulation.
 
+### [the-tick](the-tick) / [the-tick.lib](the-tick.lib)
+Per-vessel indestructibility bundled in Unscience. Filterable vessel picker, **Make Indestructible** and
+**Protect Controlled Vessel** buttons, and an active table with per-row Delete. For exact registered vehicle
+instances, every part reports a `double.MaxValue` crash tolerance (Harmony prefix on `Part.CrashTolerancePascals`,
+owner resolved through `Part.Tree.OwningVehicle`) so contact-pressure part failure never trips, and the
+whole-vehicle G-load / 200 kPa dynamic-pressure destruction event from `PhysicsBubble.DetectStructuralFailure`
+is discarded by a prefix/postfix pair while load telemetry stays native. Shared `PartTemplate` XML data is never
+mutated, so other vessels built from the same parts remain destructible. Protected vessels no longer dent.
+Saves protected IDs in a version-1 `the-tick` record and rebinds them after native reconstruction; vanilla/missing
+records clear it, and missing or ambiguous targets produce diagnostics. Independent of Kitchen Sink's G-load protection.
+- **the-tick.lib**: `TheTickSubmod`, `TickProtection` (public concurrent identity registry), `TheTickPatches`
+  (guarded Apply/Remove installed by both hosts).
+
+### [the-tick.tests](the-tick.tests)
+Managed fixtures link the production registry, patches and adapter: per-part/sub-part tolerance override and
+identity isolation, part-failure and fragment-guard suppression, G/pressure threshold matrix with preserved
+telemetry, pre-existing event preservation, prune/unpatch, concurrency and real-adapter save round-trip,
+rebind, legacy/vanilla and invalid-target cases. Native collision/ImGui acceptance remains in-game; see its
+[README](the-tick.tests/README.md).
+
 ### [eternal-flame](eternal-flame) / [eternal-flame.lib](eternal-flame.lib)
 Infinite fuel and electricity hack. Monitors selected vehicles and periodically refills fuel tanks and battery charge at a configurable interval.
 - Filterable vehicle combo box for selection
