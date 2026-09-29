@@ -494,6 +494,21 @@ Update-risk findings (4680→4750): **No breaking deltas detected** (compiles ag
 
 ---
 
+### GameSaveProvider.cs (added 2026-09-28, 5482)
+
+| # | Kind | Mod code | Game target | Decomp path | In NEW? | Δ vs OLD | Risk/notes |
+|---|---|---|---|---|---|---|---|
+| 1 | Direct API (prop) | `GameSaveProvider.cs:13` | `Universe.CurrentSystem` | `KSA/Universe.cs:104` | Yes | None | world-loaded gate |
+| 2 | Direct API (prop) | `GameSaveProvider.cs:16` | `Program.IsEditorOpen` | `KSA/Program.cs:476` | Yes | None | mirrors `GameSaves.RefusedInEditor` without its alert |
+| 3 | Direct API (const) | `GameSaveProvider.cs:22` | `SaveName.MAX_LENGTH` (64) | `KSA/SaveName.cs:8` | Yes | n/a (new @5453) | name length budget for callers |
+| 4 | Direct API (method) | `GameSaveProvider.cs:33` | `SaveName.TryAccept(string?, out string)` | `KSA/SaveName.cs:60` | Yes | n/a (new @5453) | native sanitising + refusal alert |
+| 5 | Direct API (method) | `GameSaveProvider.cs:35` | `UncompressedSave.Make(string) : GameSave?` | `KSA/UncompressedSave.cs:141` | Yes | `Write()` returns bool since 5482, so `Make` returns null on failure | identical to `GameSaves.MakeUncompressedSave` (terminal `save`); existing `Populate`/`Write` hooks fire |
+
+Consumer: save-yourself. Update-risk: a compile error if `Make`/`TryAccept` change shape; semantic
+drift if KSA adds refusal conditions that `CanSaveNow` does not mirror.
+
+---
+
 ## `unscience/UnscienceState.cs` — persistence
 
 Persistence only; no KSA game internals beyond `KsaPaths` + the ImGui ini API.

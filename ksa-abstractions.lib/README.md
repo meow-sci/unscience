@@ -44,6 +44,16 @@ Static helpers for querying vehicle state from the game.
 
 **Key Pattern**: Provides safe wrappers around KSA's game state queries.
 
+### GameSaveProvider
+Wraps KSA's built-in game-save entry point so mods can write saves through the same path as the
+GAME SAVES window and the terminal `save` command.
+
+- `IsWorldLoaded` / `IsEditorOpen` / `CanSaveNow` - whether KSA would accept a save request right now
+- `TryMakeSave(string name, out string acceptedName)` - `SaveName.TryAccept` sanitising then
+  `UncompressedSave.Make`; false when refused or the files could not be written. Every native save
+  hook (including the Unscience sidecar) fires as for a manual save. Used by save-yourself.
+- `MaxSaveNameLength` - KSA's 64-character save name limit
+
 ### SimTimeProvider
 Wrapper around the KSA universe's simulation time.
 

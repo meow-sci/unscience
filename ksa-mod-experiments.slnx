@@ -82,4 +82,7 @@
     <Project Path="the-tick/the-tick.csproj" />
     <Project Path="the-tick.lib/the-tick.lib.csproj" />
     <Project Path="the-tick.tests/the-tick.tests.csproj" />
+    <Project Path="save-yourself/save-yourself.csproj" />
+    <Project Path="save-yourself.lib/save-yourself.lib.csproj" />
+    <Project Path="save-yourself.tests/save-yourself.tests.csproj" />
 </Solution>

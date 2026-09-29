@@ -43,6 +43,7 @@
     <ProjectReference Include="..\parts-now.lib\parts-now.lib.csproj" />
     <ProjectReference Include="..\dont-stifle-me.lib\dont-stifle-me.lib.csproj" />
     <ProjectReference Include="..\rocky-mcrock-face.lib\rocky-mcrock-face.lib.csproj" />
+    <ProjectReference Include="..\save-yourself.lib\save-yourself.lib.csproj" />
     <ProjectReference Include="..\bloomin-onion.lib\bloomin-onion.lib.csproj" />
   </ItemGroup>
 

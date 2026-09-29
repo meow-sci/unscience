@@ -1414,6 +1414,23 @@ Full area detail and update risks: [vehicle physics](vehicle-physics.md#the-tick
 consumer (the-tick). Installation validates static/void; a rename fails at `Apply` and is logged.
 Semantic drift (destruction decided elsewhere, cached part tolerances) needs a manual recheck.
 
+## Save Yourself timed auto saves (2026-09-28, 5482)
+
+Opt-in, scene-saved timer that writes native saves through KSA's own entry point. No Harmony patches.
+Lifecycle detail: [saves](saves.md#save-yourself-auto-saves).
+
+| Game surface | Kind / consumer | Source @5482 | Contract |
+|---|---|---|---|
+| `SaveName.TryAccept(string?, out string)` / `SaveName.MAX_LENGTH` | direct API; `ksa-abstractions.lib/GameSaveProvider.cs` | `KSA/SaveName.cs:60,8` | Native sanitising (letters/digits/space/`-`/`_`, 64 chars, reserved device names); refusal logs + alerts natively. Prefix cap 48 = 64 − 16-char suffix. |
+| `UncompressedSave.Make(string) : GameSave?` static | direct API; `GameSaveProvider.TryMakeSave` | `KSA/UncompressedSave.cs:141` | Same call `GameSaves.MakeUncompressedSave` (`GameSaves.cs:274`, terminal `save`) makes: `Populate` → `Write`; null when the write fails. Existing hooks on `Populate`/`Write` fire unchanged. |
+| `Program.IsEditorOpen`, `Universe.CurrentSystem` | direct API; `GameSaveProvider.CanSaveNow` | `Program.cs:476`; `Universe.cs:104` | Mirrors `GameSaves.RefusedInEditor` (`GameSaves.cs:198`) without its alert so a waiting timer never spams; no world → no save. |
+| `ISubmod`, `ISaveParticipantSource` | shared abstractions | `ksa-abstractions.lib` | Version-1 `save-yourself` settings record. |
+
+**Update risks:** `Make` becoming void or `TryAccept` changing shape fails at compile time.
+Semantic drift to watch: `Make` no longer refreshing the save list, KSA adding its own overwrite
+confirmation inside `Make`, or `RefusedInEditor` gaining new refusal conditions that
+`CanSaveNow` does not mirror (the timer would then hit KSA's alert every interval).
+
 ## Kitchen Sink G-load protection (2026-09-13, 5402)
 
 Reverified against **5438** during local/upstream reconciliation. The detector and end-frame caller

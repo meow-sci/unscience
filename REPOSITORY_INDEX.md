@@ -41,6 +41,7 @@ Tests do not initialize KSA's native renderer.
 ### [ksa-abstractions.lib](ksa-abstractions.lib)
 Shared library with common abstractions used across multiple mods. Provides utility classes and base functionality.
 - `VehicleProvider` — get all vehicles or the controlled vehicle from `Universe.CurrentSystem`
+- `GameSaveProvider` — `CanSaveNow` + `TryMakeSave(name)` around KSA's built-in save path (`SaveName.TryAccept` → `UncompressedSave.Make`), so mods write saves exactly like the GAME SAVES window; used by save-yourself
 - `CelestialProvider` — get all celestial bodies (`Celestial`) or all orbiters (`IOrbiter`) from `Universe.CurrentSystem`
 - `SimTimeProvider` — wrapper for `Universe.GetElapsedSimTime()`
 - `ReflectionHelpers` — utility for safe field/property access via reflection
@@ -92,6 +93,21 @@ identity isolation, part-failure and fragment-guard suppression, G/pressure thre
 telemetry, pre-existing event preservation, prune/unpatch, concurrency and real-adapter save round-trip,
 rebind, legacy/vanilla and invalid-target cases. Native collision/ImGui acceptance remains in-game; see its
 [README](the-tick.tests/README.md).
+
+### [save-yourself](save-yourself) / [save-yourself.lib](save-yourself.lib)
+Timed auto saves bundled in Unscience. Panel with a **Prefix** text box (alphanumeric, `_`, `-`; empty means
+`autosave_`; max 48 chars), an **Enable auto save** checkbox (off by default), an **Interval (s)** drag (5–300,
+default 30) and **Save Now**. Every N wall-clock seconds it writes a new KSA save named `<prefix>_YYYYMMDDTHHMMSS`
+through the game's own path (`GameSaveProvider.TryMakeSave` → `SaveName.TryAccept` → `UncompressedSave.Make`), so
+native hooks and the Unscience sidecar behave as for a manual save. A due save waits while no world is loaded or the
+vehicle editor is open. Settings persist in a version-1 `save-yourself` record; countdown and history are transient.
+- **save-yourself.lib**: `SaveYourselfSubmod`, `AutoSaveController` (injected game access), `AutoSaveSettings`,
+  `AutoSaveNaming`. No Harmony patches.
+
+### [save-yourself.tests](save-yourself.tests)
+Managed checks for naming, prefix sanitising/validation, interval clamping, countdown/wait/failure behaviour and
+real-adapter save round-trips (A-B-A, vanilla, partial, invalid and unsupported-version records). Native save
+timing/UI acceptance remains in-game; see its [README](save-yourself.tests/README.md).
 
 ### [eternal-flame](eternal-flame) / [eternal-flame.lib](eternal-flame.lib)
 Infinite fuel and electricity hack. Monitors selected vehicles and periodically refills fuel tanks and battery charge at a configurable interval.

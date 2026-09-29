@@ -34,6 +34,7 @@ using MeowSci.DentWizardLib;
 using MeowSci.PyroLib;
 using MeowSci.PebblesLib;
 using MeowSci.RockyMcRockFaceLib;
+using MeowSci.SaveYourselfLib;
 using MeowSci.BloominOnionLib;
 
 namespace MeowSci.Unscience;
@@ -97,6 +98,7 @@ public class Mod
             _submods.Add(pebbles);
             _submods.Add(new PyroSubmod());
             _submods.Add(new RockyMcRockFaceSubmod());
+            _submods.Add(new SaveYourselfSubmod());
             _submods.Add(skittles);
             _submods.Add(new SphinxSubmod());
             _submods.Add(new TheTickSubmod());

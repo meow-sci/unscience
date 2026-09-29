@@ -4,7 +4,7 @@ Unscience is the only distributed mod. `dotnet build` deploys one `unscience/` f
 feature libraries remain separate projects with explicit references. Former standalone hosts are
 retained for development and are not deployed or published. See [distribution](../README.md#distribution).
 
-A unified supermod that consolidates 30 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
+A unified supermod that consolidates 31 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
 
 ## Included Submods
 
@@ -35,6 +35,7 @@ A unified supermod that consolidates 30 KSA feature libraries into a single ImGu
 | Rocky McRock Face | Swaps planetary ring meshes/textures (Saturn's rock field) with any built-in mesh |
 | Pebbles — Ground Clutter | Replaces selected planet clutter types with built-in meshes or GLBs, with scale, collider editing and per-planet restore |
 | Pyro | Customizes volumetric engine exhaust plumes |
+| Save Yourself | Timed auto saves through KSA's own save path, named `<prefix>_YYYYMMDDTHHMMSS` |
 | Skittles — Theme Manager | Applies and saves ImGui themes with a built-in style editor |
 | Sphinx | Places imported textured GLB statics with terrain alignment, XYZ transforms and shared PNG overrides |
 | The Tick | Makes chosen vessels indestructible by forces: unbreakable parts plus suppressed G-load / aero-pressure destruction |
@@ -164,6 +165,14 @@ without touching shared part templates), and the whole-vehicle G-load / dynamic-
 event is discarded while telemetry stays native. Its active list is saved in the Unscience sidecar as
 the version-1 `the-tick` record and rebound after reconstruction. Protected vessels do not dent.
 It is independent of Kitchen Sink's G-load-only protection; both patches may be installed together.
+
+## Save Yourself auto saves
+
+[Save Yourself](../save-yourself/README.md) writes a new KSA save every N real seconds (5–300,
+default 30, off by default) named `<prefix>_YYYYMMDDTHHMMSS` through the same path as the GAME SAVES
+window, so the Unscience sidecar is written with each one. The prefix, toggle and interval are saved
+in the version-1 `save-yourself` record; loading an auto save resumes auto saving, and any other
+load turns it off. Saves wait while no world is loaded or the vehicle editor is open.
 
 ## KSA compatibility
 

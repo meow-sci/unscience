@@ -225,6 +225,24 @@ Kitchen Sink's managed checks link its real adapter, JSON helpers, vehicle resol
 for round-trip, A-B-A/repeated loads, legacy/vanilla cleanup, invalid targets and retained-state
 recovery. Native cart collision and save/load acceptance remain in-game.
 
+## Save Yourself auto saves
+
+`SaveYourselfSubmod` registers `save-yourself`, a version-1 record of `AutoSaveSettings`
+(`Prefix`, `Enabled`, `IntervalSeconds`; default restore order). Capture writes the normalised
+settings; reset returns the controller to defaults (auto save off, countdown cleared) before native
+reconstruction; replay reapplies the settings, which restarts the countdown. Countdown position,
+last-save name, counters and the text box are transient. Validation rejects prefixes outside
+`[A-Za-z0-9_-]{0,48}`, intervals outside 5–300 and wrong JSON types; such records and unsupported
+versions are retained with diagnostics. Record-less and vanilla saves leave auto save off.
+
+The feature is also a **producer** of native saves: every N wall-clock seconds it calls
+`GameSaveProvider.TryMakeSave` (`SaveName.TryAccept` → `UncompressedSave.Make`, the terminal
+`save` path), so `GameSave.Populate` and `UncompressedSave.Write` run and `NativeSaveHooks`
+captures and writes the sidecar exactly as for a manual save. It never calls the hooks directly
+and adds no new native hook. Saving is skipped while `Universe.CurrentSystem` is null or
+`Program.IsEditorOpen` is true, mirroring `GameSaves.RefusedInEditor`. Managed checks:
+`save-yourself.tests` (20 adapter checks). Native save/load acceptance is open.
+
 ## DOH kitten and material-slot saves
 
 `DohSubmod` keeps its version-1 `doh` record (restore order 60). Native KSA saves and rebuilds the
