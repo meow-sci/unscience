@@ -9,11 +9,11 @@ interval clamping; disabled idle, countdown restart on enable, exact-interval fi
 the game refuses and firing as soon as it allows, negative/NaN deltas, reconfiguration, refused and
 throwing writes, manual saves and reset.
 
-Save checks link the real adapter, JSON helpers and `SceneSaveCoordinator`: version-1 round-trip,
-prepare/reset/restore gating, edit capture, A-B-A and repeated loads, record-less and vanilla loads,
-partial records, invalid records retained with diagnostics, unsupported versions and recovery.
+Settings-file checks exercise the real `AutoSaveSettingsStore` against a temporary folder: missing
+file, TOML round-trip, normalisation on save, absent keys, wrong types, out-of-range and huge values,
+missing section, malformed TOML and an unwritable location. Only the shared path helper is stubbed.
 
 Not covered: KSA's own save writing, ImGui and native timing. Native acceptance: enable with a 5 s
 interval, confirm a new `autosave_YYYYMMDDTHHMMSS` folder with `unscience.json` appears in GAME
-SAVES every 5 s, open the vehicle editor and confirm saving pauses then resumes, load an auto save
-and confirm auto saving continues with the saved settings, load a vanilla save and confirm it stops.
+SAVES every 5 s, open the vehicle editor and confirm saving pauses then resumes, load any save and
+confirm auto saving continues unchanged, then restart the game and confirm the settings were kept.

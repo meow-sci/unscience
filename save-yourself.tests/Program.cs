@@ -12,7 +12,7 @@ internal static class Checks
         CheckNaming();
         CheckSettings();
         CheckController();
-        SaveChecks.Run();
+        StoreChecks.Run();
         Console.WriteLine($"PASS: {_checks} Save Yourself checks; native save/UI acceptance remains in-game.");
     }
 

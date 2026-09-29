@@ -103,8 +103,8 @@ acceptance is open. See [vehicle physics](vehicle-physics.md#the-tick-per-vessel
 Save Yourself (added 2026-09-28 against 5482) writes a new native save every N wall-clock seconds
 (5–300, default 30, off by default) named `<prefix>_YYYYMMDDTHHMMSS` through the new
 `GameSaveProvider` (`SaveName.TryAccept` → `UncompressedSave.Make`, the terminal `save` path), so the
-existing save hooks and sidecar run unchanged. No Harmony patches. Version-1 `save-yourself` settings
-record; `save-yourself.tests` passes; native acceptance is open. See
+existing save hooks and sidecar run unchanged. No Harmony patches. Settings are a global
+`.unscience/save-yourself.toml` preference, not scene data; `save-yourself.tests` passes; native acceptance is open. See
 [master index](game-integration-surface.md#save-yourself-timed-auto-saves-2026-09-28-5482).
 
 Unscience now extends native save/load with versioned scene-state sidecars and explicit feature

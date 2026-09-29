@@ -2,8 +2,10 @@
 
 Reusable core of [Save Yourself](../save-yourself/README.md): timed auto saves for KSA.
 
-- `SaveYourselfSubmod` (`ISubmod`, `ISaveParticipantSource`): panel lifecycle, wall-clock ticking,
-  the prefix/enable/interval panel and the version-1 `save-yourself` scene record.
+- `SaveYourselfSubmod` (`ISubmod`): panel lifecycle, wall-clock ticking, the prefix/enable/interval
+  panel; loads settings on init and writes them through on change via `ApplySettings`.
+- `AutoSaveSettingsStore`: global `.unscience/save-yourself.toml` preference file (`Load`/`Save`,
+  defaults for missing/invalid data). Not scene data; nothing is written to game saves.
 - `AutoSaveController`: countdown engine with injected `canSave`/`makeSave`/clock delegates.
   `Configure`, `Tick(elapsedRealSeconds)`, `SaveNow`, `Reset`; exposes `SecondsUntilNextSave`,
   `IsWaitingForGame`, `LastSaveName`, `LastError` and `SaveCount`.

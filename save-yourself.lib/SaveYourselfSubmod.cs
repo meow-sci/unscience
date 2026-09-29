@@ -7,6 +7,7 @@ namespace MeowSci.SaveYourselfLib;
 /// <summary>
 /// Submod for save-yourself: timed auto saves through KSA's built-in save path, named
 /// <c>&lt;prefix&gt;_YYYYMMDDTHHMMSS</c>. Wall-clock timing, independent of time warp and pause.
+/// Settings are a global Unscience preference (<see cref="AutoSaveSettingsStore"/>), not scene data.
 /// </summary>
 public sealed partial class SaveYourselfSubmod : ISubmod
 {
@@ -20,11 +21,13 @@ public sealed partial class SaveYourselfSubmod : ISubmod
         () => GameSaveProvider.CanSaveNow,
         name => WriteSave(name));
 
+    private readonly AutoSaveSettingsStore _store = new();
     private readonly Stopwatch _clock = new();
 
     public void Initialize()
     {
         Instance = this;
+        Controller.Configure(_store.Load());
         _clock.Restart();
     }
 
@@ -47,6 +50,13 @@ public sealed partial class SaveYourselfSubmod : ISubmod
     {
         Controller.Reset();
         if (Instance == this) Instance = null;
+    }
+
+    /// <summary>Applies a settings change and writes it through to the global preference file.</summary>
+    public void ApplySettings(AutoSaveSettings settings)
+    {
+        Controller.Configure(settings);
+        _store.Save(Controller.Settings);
     }
 
     private static bool WriteSave(string name)

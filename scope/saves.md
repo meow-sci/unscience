@@ -227,13 +227,12 @@ recovery. Native cart collision and save/load acceptance remain in-game.
 
 ## Save Yourself auto saves
 
-`SaveYourselfSubmod` registers `save-yourself`, a version-1 record of `AutoSaveSettings`
-(`Prefix`, `Enabled`, `IntervalSeconds`; default restore order). Capture writes the normalised
-settings; reset returns the controller to defaults (auto save off, countdown cleared) before native
-reconstruction; replay reapplies the settings, which restarts the countdown. Countdown position,
-last-save name, counters and the text box are transient. Validation rejects prefixes outside
-`[A-Za-z0-9_-]{0,48}`, intervals outside 5–300 and wrong JSON types; such records and unsupported
-versions are retained with diagnostics. Record-less and vanilla saves leave auto save off.
+Save Yourself registers **no** save participant. Its prefix, enabled flag and interval are a global
+Unscience preference in `.unscience/save-yourself.toml` (`AutoSaveSettingsStore`, next to the window
+layout), loaded at init and written through on every change; a missing or malformed file yields
+defaults, wrong types are ignored and out-of-range values clamp. This is an intentional exclusion:
+auto saving is a session preference, not scene state, so native loads never change it and the
+countdown continues across loads. Countdown position, last-save name and counters are transient.
 
 The feature is also a **producer** of native saves: every N wall-clock seconds it calls
 `GameSaveProvider.TryMakeSave` (`SaveName.TryAccept` → `UncompressedSave.Make`, the terminal
@@ -241,7 +240,7 @@ The feature is also a **producer** of native saves: every N wall-clock seconds i
 captures and writes the sidecar exactly as for a manual save. It never calls the hooks directly
 and adds no new native hook. Saving is skipped while `Universe.CurrentSystem` is null or
 `Program.IsEditorOpen` is true, mirroring `GameSaves.RefusedInEditor`. Managed checks:
-`save-yourself.tests` (20 adapter checks). Native save/load acceptance is open.
+`save-yourself.tests` (13 settings-file checks). Native save acceptance is open.
 
 ## DOH kitten and material-slot saves
 

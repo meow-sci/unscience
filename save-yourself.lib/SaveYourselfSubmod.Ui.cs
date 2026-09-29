@@ -13,7 +13,7 @@ public sealed partial class SaveYourselfSubmod
     {
         ImGui.SeparatorText("Auto Save"u8);
         ImGui.TextWrapped("Writes a new KSA save every N seconds through the game's own save path, exactly like the GAME SAVES window. Names are <prefix>_YYYYMMDDTHHMMSS in local time."u8);
-        ImGui.TextDisabled("Settings are saved with the Unscience scene. Saving waits while no world is loaded or the vehicle editor is open."u8);
+        ImGui.TextDisabled("Settings are a global Unscience preference (.unscience/save-yourself.toml), not part of any game save. Saving waits while no world is loaded or the vehicle editor is open."u8);
         ImGui.Spacing();
 
         var settings = Controller.Settings;
@@ -21,7 +21,7 @@ public sealed partial class SaveYourselfSubmod
 
         bool enabled = settings.Enabled;
         if (ImGui.Checkbox("Enable auto save##save_yourself_enabled"u8, ref enabled))
-            Controller.Configure(settings with { Enabled = enabled });
+            ApplySettings(settings with { Enabled = enabled });
 
         RenderSettingsTable(settings);
         RenderActions();
@@ -47,7 +47,7 @@ public sealed partial class SaveYourselfSubmod
                 string sanitized = AutoSaveSettings.SanitizePrefix(_prefixInput.ToString());
                 _prefixInput.SetValue(sanitized.AsSpan());
                 _syncedPrefix = sanitized;
-                Controller.Configure(settings with { Prefix = sanitized });
+                ApplySettings(settings with { Prefix = sanitized });
             }
             ImGui.SetItemTooltip("Letters, digits, underscore and hyphen only. Leave empty for 'autosave_'."u8);
 
@@ -59,7 +59,7 @@ public sealed partial class SaveYourselfSubmod
             ImGui.SetNextItemWidth(-1f);
             int interval = settings.IntervalSeconds;
             if (ImGui.DragInt("##save_yourself_interval"u8, ref interval, 1f, AutoSaveSettings.MinIntervalSeconds, AutoSaveSettings.MaxIntervalSeconds))
-                Controller.Configure(settings with { IntervalSeconds = interval });
+                ApplySettings(settings with { IntervalSeconds = interval });
             ImGui.SetItemTooltip("Real seconds between auto saves (5 to 300). Drag, or Ctrl+click to type."u8);
 
             ImGui.TableNextRow();

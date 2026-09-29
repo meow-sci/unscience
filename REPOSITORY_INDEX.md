@@ -100,13 +100,14 @@ Timed auto saves bundled in Unscience. Panel with a **Prefix** text box (alphanu
 default 30) and **Save Now**. Every N wall-clock seconds it writes a new KSA save named `<prefix>_YYYYMMDDTHHMMSS`
 through the game's own path (`GameSaveProvider.TryMakeSave` → `SaveName.TryAccept` → `UncompressedSave.Make`), so
 native hooks and the Unscience sidecar behave as for a manual save. A due save waits while no world is loaded or the
-vehicle editor is open. Settings persist in a version-1 `save-yourself` record; countdown and history are transient.
+vehicle editor is open. Settings are a global preference in `.unscience/save-yourself.toml` (not game-save data);
+countdown and history are transient.
 - **save-yourself.lib**: `SaveYourselfSubmod`, `AutoSaveController` (injected game access), `AutoSaveSettings`,
-  `AutoSaveNaming`. No Harmony patches.
+  `AutoSaveNaming`, `AutoSaveSettingsStore`. No Harmony patches, no save participant.
 
 ### [save-yourself.tests](save-yourself.tests)
 Managed checks for naming, prefix sanitising/validation, interval clamping, countdown/wait/failure behaviour and
-real-adapter save round-trips (A-B-A, vanilla, partial, invalid and unsupported-version records). Native save
+settings-file round-trips (missing, partial, wrong-typed, out-of-range and malformed files). Native save
 timing/UI acceptance remains in-game; see its [README](save-yourself.tests/README.md).
 
 ### [eternal-flame](eternal-flame) / [eternal-flame.lib](eternal-flame.lib)

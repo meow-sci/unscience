@@ -170,9 +170,10 @@ It is independent of Kitchen Sink's G-load-only protection; both patches may be 
 
 [Save Yourself](../save-yourself/README.md) writes a new KSA save every N real seconds (5–300,
 default 30, off by default) named `<prefix>_YYYYMMDDTHHMMSS` through the same path as the GAME SAVES
-window, so the Unscience sidecar is written with each one. The prefix, toggle and interval are saved
-in the version-1 `save-yourself` record; loading an auto save resumes auto saving, and any other
-load turns it off. Saves wait while no world is loaded or the vehicle editor is open.
+window, so the Unscience sidecar is written with each one. The prefix, toggle and interval are a
+global preference in `.unscience/save-yourself.toml`, alongside the window layout, and are never
+part of a game save; loading a game does not change them. Saves wait while no world is loaded or
+the vehicle editor is open.
 
 ## KSA compatibility
 

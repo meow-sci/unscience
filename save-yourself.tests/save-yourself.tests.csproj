@@ -4,15 +4,10 @@
     <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Tomlyn" Version="0.19.0" />
     <Compile Include="../save-yourself.lib/AutoSaveSettings.cs" Link="AutoSaveSettings.cs" />
     <Compile Include="../save-yourself.lib/AutoSaveNaming.cs" Link="AutoSaveNaming.cs" />
     <Compile Include="../save-yourself.lib/AutoSaveController.cs" Link="AutoSaveController.cs" />
-    <Compile Include="../save-yourself.lib/SaveYourselfSubmod.Saves.cs" Link="SaveYourselfSubmod.Saves.cs" />
-    <Compile Include="../ksa-abstractions.lib/Persistence/ISaveParticipant.cs" Link="ISaveParticipant.cs" />
-    <Compile Include="../ksa-abstractions.lib/Persistence/SaveJson.cs" Link="SaveJson.cs" />
-    <Compile Include="../ksa-abstractions.lib/Persistence/FiniteNumberConverters.cs" Link="FiniteNumberConverters.cs" />
-    <Compile Include="../ksa-abstractions.lib/Persistence/SaveDocument.cs" Link="SaveDocument.cs" />
-    <Compile Include="../ksa-abstractions.lib/Persistence/SaveStorage.cs" Link="SaveStorage.cs" />
-    <Compile Include="../ksa-abstractions.lib/Persistence/SceneSaveCoordinator.cs" Link="SceneSaveCoordinator.cs" />
+    <Compile Include="../save-yourself.lib/AutoSaveSettingsStore.cs" Link="AutoSaveSettingsStore.cs" />
   </ItemGroup>
 </Project>

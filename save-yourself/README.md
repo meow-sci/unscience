@@ -26,13 +26,14 @@ Only Unscience is shipped; this standalone project is a development host with an
 - A refused or failed write is reported in the panel and the game log, and the countdown restarts.
 - Every save produces a new folder; nothing is pruned. Delete old auto saves from the GAME SAVES window.
 
-## Scene saves
+## Settings storage
 
-The version-1 `save-yourself` record stores the prefix, the enabled flag and the interval, so loading
-an auto save resumes auto saving with the same settings. Scene teardown (any load, including vanilla
-saves and saves without the record) turns auto save off and restarts the countdown when a record
-re-enables it. The countdown position, last-save name and counters are transient. Invalid records
-(bad prefix, interval outside 5–300, wrong types) are rejected and retained with a diagnostic.
+The prefix, enabled flag and interval are a **global Unscience preference**, stored in
+`.unscience/save-yourself.toml` next to the window layout, and written through on every change.
+They are deliberately not part of any game save: auto saving is a session preference, so loading or
+saving a game never changes it and the countdown keeps running across loads. A missing or malformed
+file yields the defaults; wrong types are ignored and out-of-range values are clamped. The countdown
+position, last-save name and counters are transient.
 
 ## Implementation and checks
 
@@ -40,10 +41,11 @@ re-enables it. The countdown position, last-save name and counters are transient
 - `save-yourself.lib/AutoSaveNaming.cs`: `<prefix>_YYYYMMDDTHHMMSS` name builder.
 - `save-yourself.lib/AutoSaveController.cs`: countdown, wait-for-game and save execution with
   injected game access, so it runs without KSA in the tests.
-- `save-yourself.lib/SaveYourselfSubmod*.cs`: submod lifecycle, panel and `save-yourself` record.
+- `save-yourself.lib/AutoSaveSettingsStore.cs`: the global `.unscience/save-yourself.toml` preference file.
+- `save-yourself.lib/SaveYourselfSubmod*.cs`: submod lifecycle and panel; settings load on init and save on change.
 - `ksa-abstractions.lib/GameSaveProvider.cs`: `CanSaveNow` and `TryMakeSave` around KSA's save entry point.
 
 Build with `dotnet build`. Run `dotnet run --project save-yourself.tests` for the managed checks:
-naming, sanitising, countdown/wait/failure behaviour and real-adapter save round-trips. Native
+naming, sanitising, countdown/wait/failure behaviour and settings-file round-trips. Native
 acceptance (a save appears in GAME SAVES every N seconds and loads with its sidecar) remains in-game.
 See [game integration](../scope/saves.md#save-yourself-auto-saves).
