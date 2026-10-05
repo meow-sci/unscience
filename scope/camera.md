@@ -1,5 +1,39 @@
 # Camera / View Mods — Game Integration Scope
 
+## Kitchen Sink unlocked IVA camera
+
+Added against local **2026.10.7.5541** sources (metadata 2026-10-02). `IvaCameraUnlock` installs
+a delegate to the protected `GameViewport.IvaController` setter and a targeted Harmony postfix
+on private `IVASeat.IsCameraInThisSeat(IViewport)`. While unlocked, an `UnlockedIvaController`
+subclass replaces the main viewport's IVA controller. Its `OnFrame` and input overrides delegate
+to a separate native `FlyController` on the same camera; viewport mode remains `IVA`, and
+`GameViewport.HandleIvaAudioBlend` still sees its exact IVA controller. All stock ray tracing
+gates, renderer resources, IVA state bits, fill-light exclusions and settings remain native.
+
+| Surface | Use / contract |
+|---|---|
+| `GameViewport.IvaController` protected setter | Reflection via `AccessTools.PropertySetter` → typed delegate; must remain writable and accept an IVA subclass. Original controller restored only while our replacement owns the slot. |
+| `IVASeat.IsCameraInThisSeat(IViewport)` private bool | Exact-signature Harmony postfix returns false for our main viewport, revealing the seated head while detached; secondary views untouched. |
+| `IVAController(Camera,string)` / `Controller.Camera` | Subclass and shared live camera; native `Seat`, `LastFollowing`, `LastLocalRotation`, `LastFollowingAsmb2Cce`, `LastCursorDiffs`, `SwitchThisFrame` are initialized/restored for seat return. |
+| `Controller.OnFrame`, `OnKey`, `OnMouseButton`, `OnCursorPos`, `OnScroll`, `GetCursorMode`, `IsMouseDrag`, `CancelMouseDrag`, `OnSwitchOff` | Virtual dispatch remains through the IVA controller. `OnSwitchOff` releases ownership before a native mode transition; no Harmony patches on controller updates/input. |
+| `FlyController(Camera,string)`, `SetSpeed`, `CacheOffset`, inherited input/frame methods, `OnSwitchOff` | Reuses native movement/roll/sprint and mouse look; private instance avoids changing normal Free camera settings. Scroll changes our finite 0.01–100 m/s base speed independently of sprint. Existing Camera Controller Override Fly prefix can still intercept playback. |
+| `Program.MainViewport`, `InputViewport`, `Editor`, `IsWindowOpen`, `ConsoleWindow.IsOpen`; ImGui IO capture flags | Main-flight-only eligibility; skip movement/gamepad and clear held keys when another view or UI owns input. |
+| `Camera.Following`, `LocalPosition`, `LocalRotation`, `PositionCce`, `LookAtRotation`; `Vehicle.Body2Cce`, `Asmb2Cce`, `PosAsmbToBody`, `ClearHeldPlayerInput` | Native LocalPosition is body-relative (`Vehicle.GetBodyFixed2Ecl` returns Body2Cce); orientation is retained in the same frame. Avoids astronomical world-position subtraction. Clears vehicle held input on activation. |
+| `IVASeat.Parent/PositionAsmb/ForwardAxisAsmb/UpAxisAsmb`; `Part.PositionVehicleAsmbOffset/Asmb2VehicleAsmb`; `Parts.Modules.Get<IVASeat>()` | Exact seat validation and stock seat pose math on return. Seat switching is suspended while detached. |
+| `GameViewport.SetCameraMode(Orbit)` | Safe exit if the followed vehicle/seat disappears; avoids native IVA's hovered-viewport fallback and stale seat access. |
+| `VehicleProvider`, `SavedPartReference`, `ISaveParticipantSource` | `kitchen-sink-iva-camera` v1/order 190 stores unlock/speed, exact part/module identity and detached body pose. Native follow/mode must match after reconstruction; failures retain the record with diagnostics. |
+
+Both hosts apply/remove the setter/head integration; submod `Update` prunes invalid ownership,
+and Dispose/reset release controller and input references. Default speed is 0.5 m/s. Native
+terrain clamp and 0.1 m near plane remain in effect. No new camera enum, viewport or GPU object.
+Managed checks link real ownership/controller/save code and identity resolvers; native free-flight
+input, Vulkan output, audio and scene lifecycle acceptance remain pending. See
+[test scope](../kitchen-sink.tests/README.md) and [save acceptance](../plans/saves-acceptance.md).
+
+Validation: full solution build against local 5541 passed with 0 warnings/errors after the
+separately documented Graffiti descriptor migration. `kitchen-sink.tests` passes 47 new camera
+checks plus 80 existing checks; `saves.tests` passes. This is managed evidence only.
+
 ## KSA 5482 (5438 → 5482) verification
 
 No code migration is required in camera-controller-override, glass or hot-pursuit. This pass was

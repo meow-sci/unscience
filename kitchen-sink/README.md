@@ -42,9 +42,36 @@ call, so stock code appends matching instances and dents. KSA 5482's raster comp
 calls the `PartModel.AddInstance` method that the 5438 postfix used. Editor part thumbnails no
 longer show internal meshes.
 
+## Unlock IVA Camera
+
+Enter IVA in flight, then enable **Unlock IVA Camera** in Kitchen Sink. The camera can move
+and turn freely while retaining IVA interiors, lighting, audio and the game's configured
+ray tracing. **Always Render IVA Interiors** is independent and is not required in IVA.
+The feature requires a valid seat on the followed vehicle and applies to the main view only.
+
+Use your normal free cam movement, vertical and sprint bindings. Hold left mouse to look;
+Alt releases the cursor. Scroll or use **Move speed (m/s)** to adjust the base speed from
+0.01 to 100 m/s (default 0.5). Position and orientation follow the vehicle's body frame as
+it moves and rotates. Native terrain clamps still apply; this is a flying camera, with no
+cabin collision or walking simulation. The seated kitten's head becomes visible while detached.
+
+Turn the toggle off or click **Return to Seat** to return to the original seat. Seat switching
+is suspended while unlocked. Switching camera modes, losing the vehicle/seat, loading another
+scene or unloading releases the custom controller. Typing, modal windows and another input
+viewport suspend movement and clear held keys. Ray tracing still requires supported hardware
+and the game's IVA ray tracing setting. Native visual/input acceptance is pending.
+
 ## Scene saves
 
 The existing `kitchen-sink` boolean record still stores the Force IVA Rendering switch.
+A separate version-1 `kitchen-sink-iva-camera` record stores the unlock state, base speed,
+stable seat part/module identity, and detached body-relative camera pose. Native KSA owns
+the followed vehicle and camera mode; replay requires those to match, restores the exact seat,
+and applies the pose once after reconstruction. Missing/ambiguous targets, incompatible mode,
+unavailable patches and invalid payloads are diagnosed and retained for recovery. Vanilla or
+older saves without this record reset the controller and speed. Held input, mouse smoothing,
+controller objects and reflection caches are transient. Native camera pose is also saved by
+KSA; the unlocked pose is explicitly replayed because stock IVA would pin it back to the seat.
 A separate version-1 `kitchen-sink-g-load` record stores the protected vehicle IDs. Reset clears
 old references and picker state before native reconstruction; replay resolves exact, unambiguous
 IDs through VehicleProvider and restores protection before simulation resumes. Missing/disposed
@@ -62,6 +89,9 @@ filter and one-shot editor refresh are transient. The defunct Flexo panels and s
   `StructuralLoad.GLoadFraction` value consumed by the destruction comparison.
 - Both `unscience/Patcher.cs` and the standalone `Patcher.cs` install/remove this patch.
 - `KitchenSinkSubmod.Saves.cs`: backward-compatible IVA record and G-load target capture/reset/replay.
+- `IvaCameraUnlock.cs`, `UnlockedIvaController.cs`: scoped controller replacement, free movement,
+  seat return, focus/input cleanup and the seat head-visibility patch.
+- `IvaCameraUnlock.Persistence.cs`: detached capture, validation and exact target replay.
 
 Build the solution with `dotnet build`. Run `dotnet run --project kitchen-sink.tests` for the
 production patch's managed fixtures. These cover isolation, removal, telemetry, damage thresholds,

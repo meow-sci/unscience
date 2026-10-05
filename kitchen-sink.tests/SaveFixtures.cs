@@ -5,7 +5,14 @@ namespace KSA
     internal static class Program
     {
         public static Vehicle? ControlledVehicle { get; set; }
+        public static IGameViewport MainViewport { get; set; } = new GameViewport(new Camera());
+        public static IGameViewport InputViewport { get; set; } = MainViewport;
+        public static object? Editor { get; set; }
+        public static bool IsWindowOpen { get; set; }
+        public static ConsoleFixture ConsoleWindow { get; } = new();
     }
+
+    internal sealed class ConsoleFixture { public bool IsOpen { get; set; } }
 
     internal static class Universe
     {

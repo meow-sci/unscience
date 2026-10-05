@@ -1,5 +1,16 @@
 # Decals (graffiti) — Game Integration Scope
 
+## KSA 5541 descriptor migration
+
+While building the IVA camera feature against local 5541, compilation exposed removal of
+`GlobalShaderBindings.DynamicOffset` and conversion of `DescriptorSet` to a method. The source
+now allocates ordinary `UniformBuffer` bindings per viewport and in-flight frame
+(`KSA/GlobalShaderBindings.cs:51,104-130`). `DecalRenderer` therefore binds
+`DescriptorSet(Program.MainViewport.ShaderSlot)` with zero dynamic offsets, matching
+`PartModelRenderer.cs:338`. Descriptor-set layout/order stays game-owned; no shader-source or
+save payload change. GPU handles remain transient and recreated by the existing lifecycle.
+Native rendered acceptance is pending; older version notes below describe their historical API.
+
 Permanent reference for detecting when KSA game updates break **graffiti** (click-to-place
 projected PNG decals on vehicles, deployed parachute canopies, and terrain). Every game-facing member the mod touches is
 enumerated with its decompiled-source path.
@@ -78,9 +89,9 @@ against that build. Touchpoint line numbers are @5438 unless a cell is marked `@
    front cloth nodes, then use the canopy attachment-local matrix. Terrain anchors: ENU basis via
    `Vehicle.ComputeEnu2Cce` + terrain radius, positioned
    as body-ego + body-fixed offset (the terrain-debug-overlay idiom).
-5. **Draw** (`DecalRenderer.cs`) — pipeline layout = set 0 `GlobalShaderBindings` (dynamic
-   offset per viewport, `DynamicOffset(Program.MainViewport.ShaderSlot)` since 5402 — was
-   `Viewport.Index`), set 1 own depth sampler, set 2 `Program.Instance.BindlessTextures`
+5. **Draw** (`DecalRenderer.cs`) — pipeline layout = set 0 `GlobalShaderBindings`
+   (`DescriptorSet(Program.MainViewport.ShaderSlot)` since 5541, no dynamic offsets),
+   set 1 own depth sampler, set 2 `Program.Instance.BindlessTextures`
    (UpdateAfterBind|PartiallyBound); 112-byte push block; two GLSL strings compiled at runtime
    with `ShaderModuleUtils.FromString` whose `#include`s resolve next to the shipped `GridFrag`
    asset (`ModLibrary.Get<ShaderReference>("GridFrag").ModPath`). CullFront (camera-inside-box),
@@ -106,7 +117,7 @@ or polling loop. These are mod-authored files, not game assets.
 | 1 | **Harmony postfix** | `GraffitiPatches.cs:27-34,51-59` | `RenderTarget.ResolveAttachments(CommandBuffer inCmdBuffer, bool inResolveDepth = true)` | `KSA.Rendering/RenderTarget.cs:315` (file byte-identical @5482) | ✅ fixed @5438; unchanged @5482 | Explicit `(CommandBuffer, bool)` lookup binds the single method. Param names `inCmdBuffer` and `inResolveDepth` are Harmony dependencies; the postfix returns on the early `false` call and preserves the final normal resolve before `GridPass`. Call sites @5482: early color-only `Program.cs:4821`, final `:4849` → `GridPass.Run` `:4852`; non-main viewports `:4531` and the editor `:4972` are filtered by the identity/`EditorFlag` gates. |
 | 2 | Direct API | `GraffitiPatches.cs:54-60`; `DecalRenderer.cs:360,400,402` | `Program.{EditorFlag, OffscreenTarget, RenderedViewport : IViewport, MainViewport : IGameViewport, SetViewport(CommandBuffer), PointClampedSampler, Instance.ResourceFrameIndex, Instance.ColorFormat, Instance.BindlessTextures, GetRenderer(), GetMainCamera()}` | `KSA/Program.cs:225,456,490,484,4395,468,219,223,111,557,631` @5482 | ✅ retyped @5402; unchanged @5482 | `RenderedViewport`/`MainViewport` were `Viewport` (class, removed @5402); `ReferenceEquals` on the same `GameViewport` object still holds. Main-viewport `OffscreenTarget` == `Program.OffscreenTarget` (`AttachSharedTargets`, `:1523` @5482). Viewport identity checks are load-bearing (editor + portrait/secondary exclusion) |
 | 3 | Direct API | `DecalRenderer.cs:362-390` | `RenderTarget.{DepthImage, ColorImage, Extent}`; `BarrierBatch`; `ImageBarrierInfo.Presets.{DepthSampledReadF, ColorAttachmentReadWrite}` | `KSA.Rendering/RenderTarget.cs:38,36,48`; `KSA.Rendering/BarrierBatch.cs`; `KSA.Rendering/ImageBarrierInfo.cs` | ✅ (all three files byte-identical 5348→5402) | near-verbatim GridPass.Run port; depth left in sampled-read state as the game's own pass does. @5402 `GridPass` itself went per-viewport (`SceneDepthDescriptorSets[8]` indexed by `ShaderSlot`, `UpdateDescriptorSet(IViewport)`, `Run` reads `inViewport.OffscreenTarget` — `KSA/GridPass.cs:43,128,455,486`); graffiti rebuilds its own depth set from `Program.OffscreenTarget.DepthImage` per frame ring, main-only, so nothing changes |
-| 4 | Direct API | `DecalRenderer.cs:402-404` | `GlobalShaderBindings.{DescriptorSetLayout, DescriptorSet, DynamicOffset(int) : ByteSize}` + `IViewport.ShaderSlot` | `KSA/GlobalShaderBindings.cs:55,57,64`; `KSA/IViewport.cs:14` | ✅ (mod-side `Viewport.Index` → `ShaderSlot` @5402) | set 0 — the game-wide Camera/Lighting UBO block; set order is baked into the GLSL. UBO stride/order unchanged; the buffer is now sized for a fixed 8 shader slots (`ViewportRegistry.MAX_VIEWPORTS`) instead of `Program.ViewportCount` (6) — slots are pool-allocated, so always look up `MainViewport.ShaderSlot`, never assume 0 |
+| 4 | Direct API | `DecalRenderer.cs:402` | `GlobalShaderBindings.DescriptorSetLayout`, `DescriptorSet(int viewportIndex)` + `IViewport.ShaderSlot` | `KSA/GlobalShaderBindings.cs:47,51` @5541 | **Migrated @5541** | set 0 selects the viewport/current-frame uniform buffers; zero dynamic offsets. Set order is baked into GLSL; always use MainViewport.ShaderSlot. Historical DynamicOffset was removed. |
 | 5 | Direct API | `DecalRenderer.cs:161,409`; `DecalTextures.cs:156,164` | `BindlessTextureLibrary.{DescriptorSetLayout, DescriptorSet, AddTexture(VkImageView), FreeTexture(int)}` | `RenderCore.Systems/BindlessTextureLibrary.cs:38,40` | ✅ (file byte-identical 5348→5402) | 1024 shared slots; UpdateAfterBind\|PartiallyBound makes live slot writes legal; FreeTexture rewrites the slot to the empty texture. Sampler slot 0 = linear-clamped full-mip (the shader's `SAMPLE_TEXTURE(texId, 0, uv)`) |
 | 6 | Direct API (runtime GLSL) | `DecalRenderer.cs`; `DecalShaders.cs` | `ShaderModuleUtils.FromString(...)`; `ModLibrary.Get<ShaderReference>("GridFrag").ModPath`; GLSL headers `Common/Camera.glsl`, `Common/TextureSet.glsl` | `RenderCore/ShaderModuleUtils.cs:79`; `Content/Core/Shaders/Common/*` | ✅ | debugName must be a NUL-terminated real path next to the game's shaders (relative `#include` root). Shader reads `global.camera.{viewProjection, inverseProjection, inverseView}` and `global.lighting.{sunPosition, sunColor, planetColor}` — GLSL struct drift breaks at shaderc compile (loud console line, feature self-disables) |
 | 7 | Direct API (pipeline) | `DecalRenderer.cs` | `Presets.{InputAssembly.TriangleList, Rasterization.Fill.CullFront}`; `RenderingPresets.{ReverseZDepthStencil.NoDepthTest, BlendState.BlendColorAlphaOver}`; `Renderer.{Device, Allocator, Graphics, GraphicsAndCompute, MaxFramesInFlight, DynamicStateInfo, ViewportState}`; `VkUtils.StageAndUploadToBuffer` | `Brutal.VulkanApi.Abstractions/Presets.cs`; `KSA/RenderingPresets.cs`; `Core/Renderer.cs`; `RenderCore/VkUtils.cs` | ✅ | reverse-Z + CullFront semantics are load-bearing (see risk notes) |

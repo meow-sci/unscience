@@ -193,6 +193,25 @@ action rather than an ongoing scene registration. Kitchen Sink independently own
 protection record; a launch preserves that vessel reference and its protection. World replacement must call reset before the
 next `PhysicsFrameHook.BeforePhysics`; execution also rejects old-world source/target objects.
 
+## Kitchen Sink IVA camera saves
+
+The accompanying Graffiti 5541 descriptor migration only changes transient GPU bindings;
+`graffiti` save ID/version, recipe payload and reset/replay are unchanged.
+
+`kitchen-sink-iva-camera` v1/order 190 captures detached unlock state, base speed, exact
+`SavedPartReference` and seat module index, plus body-relative position/quaternion. The native
+save owns camera follow/mode and its ordinary pose; this record replays unlocked pose because
+native IVA otherwise pins it to a seat. Reset restores the original controller and clears private
+FlyController input before native reconstruction. Replay requires IVA mode and the exact native
+followed vehicle, resolves the seat using shared identity helpers and assigns the saved pose once.
+It never selects the controlled vehicle as a fallback or creates extra cameras. Missing/ambiguous
+targets, topology/seat/mode mismatch, unavailable patches, malformed/future records fail with
+diagnostics and retention. Absent records reset to locked and 0.5 m/s. Disabled records still
+save reusable speed. Held keys, mouse smoothing, controller objects and reflection delegates
+are transient and reconstructed. Legacy `kitchen-sink` and `kitchen-sink-g-load` remain unchanged.
+Managed coverage uses production adapter/reset/rebind, repeated/cross-scene loads, real identity
+resolvers, malformed/missing records and native-boundary fixtures. Native acceptance pending.
+
 ## Kitchen Sink G-load protection saves
 
 KitchenSinkSubmod retains its existing version-1 boolean IVA record (`kitchen-sink`) and adds

@@ -28,7 +28,7 @@ A unified supermod that consolidates 31 KSA feature libraries into a single ImGu
 | I Feel Seen | Forces vehicle render data updates at any distance |
 | Iron Man | EVA/Iron Man flight-mode buttons, upright editing, configurable nodes, rocket controls and upright surface teleports in Iron Man mode |
 | Its So Shiny | Builds and controls Blinky-style pixel grids from built-in light parts |
-| Kitchen Sink | Miscellaneous editor and IVA-rendering experiments |
+| Kitchen Sink | Editor fixes, IVA visibility, unlocked IVA camera and G-load protection |
 | Kitten Animations | Targets any live EVA kitten through a filterable picker, then plays body animations and expressions |
 | Kiwi's Marbles | Welds celestial bodies to other orbiters with CCI offsets |
 | Parts Now | Validates and loads part asset bundles at runtime |
@@ -149,6 +149,12 @@ replacement. Native KSA saves retain the resulting vessel position and velocity.
 
 ## Kitchen Sink G-load protection
 
+Kitchen Sink also provides **Unlock IVA Camera**. Enter IVA and enable the toggle to fly
+around using free cam controls while retaining IVA rendering/audio and configured ray tracing.
+The camera follows the vehicle's body frame. **Return to Seat** or switching the toggle off
+restores the seat. Unlock, speed, exact seat and detached pose are saved in the sidecar.
+See [controls and limitations](../kitchen-sink/README.md#unlock-iva-camera).
+
 Kitchen Sink's **G-load Invincibility** panel protects multiple selected vehicles from whole-vehicle
 G-load destruction while retaining collisions and other damage checks. Its active list is
 saved in the Unscience sidecar and rebound after native vehicle reconstruction. See [Kitchen Sink](../kitchen-sink/README.md).
@@ -177,8 +183,10 @@ the vehicle editor is open.
 
 ## KSA compatibility
 
-Built against KSA **2026.9.22.5482** (the previous baseline was 2026.9.10.5438). Verification is
-compile-time plus managed fixture suites; no native game session has been run on this build.
+The current checkout compiles against KSA **2026.10.7.5541**, including Kitchen Sink's IVA
+camera unlock and the required Graffiti global-descriptor migration. Kitchen Sink and shared
+save suites pass; native acceptance is pending. The last full integration audit remains
+**2026.9.22.5482** (previously 2026.9.10.5438).
 User-visible changes:
 
 - Meshes hidden by Blinky/It's So Shiny still render in raytraced IVA views (known gap).

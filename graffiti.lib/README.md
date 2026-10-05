@@ -1,5 +1,11 @@
 # graffiti.lib
 
+KSA 5541 compatibility: `DecalRenderer` binds
+`GlobalShaderBindings.DescriptorSet(Program.MainViewport.ShaderSlot)` with an empty dynamic-offset
+span, matching the native per-view/per-frame uniform descriptors. It replaces the removed
+`DynamicOffset` API and shared descriptor property. No decal recipe, save ID/version or reset/replay
+behavior changes; descriptor handles remain transient GPU resources. Native visual acceptance pending.
+
 Core implementation for the standalone `graffiti` mod and the `unscience` umbrella mod. It places
 save-aware projected PNG decals on vehicle art meshes, deployed parachute cloth, KittenEva
 avatars, and celestial terrain.

@@ -8,10 +8,16 @@ I describe it as a *supermod* that includes a suite of *submods*, each one has a
 
 # game compatibility
 
-Built against KSA **2026.9.22.5482** (previously 2026.9.10.5438). This build has passed compilation
-and managed tests only; in-game acceptance is pending. See
+The current checkout compiles against KSA **2026.10.7.5541**, including the IVA camera addition
+and Graffiti descriptor migration. Kitchen Sink and shared save checks pass; in-game acceptance
+is pending. The last full integration audit remains **2026.9.22.5482**. See
 [KSA compatibility](unscience/README.md#ksa-compatibility) for user-visible changes and
 [ISSUES.md](ISSUES.md) for known gaps.
+
+Kitchen Sink includes **Unlock IVA Camera**: enter IVA, enable the toggle, and use free cam
+movement while retaining IVA interiors, lighting and configured ray tracing. Turning it off or
+using **Return to Seat** restores the seated camera. Speed and the unlocked view are scene-saved.
+See [Kitchen Sink controls](kitchen-sink/README.md#unlock-iva-camera).
 
 # releases
 
@@ -39,8 +45,6 @@ date-based main and timestamp-based feature formats. Other branches build only.
 ![godzilla 02](docs/media/godzilla_02_sm.webp)
 
 ![free-fallin](docs/media/free-fallin_01_sm.webp)
-
-
 
 
 

@@ -3,7 +3,14 @@
 Feature implementation shared by Unscience and the standalone development host.
 See [Kitchen Sink controls](../kitchen-sink/README.md).
 
-- `KitchenSinkSubmod`: editor refresh, IVA switch and G-load protection UI.
+- `KitchenSinkSubmod`: editor refresh, IVA visibility/camera switches and G-load protection UI.
+- `IvaCameraUnlock` / `UnlockedIvaController`: temporarily replaces the main viewport's IVA
+  controller with an IVA subclass delegating movement to a private native `FlyController`.
+  Preserves IVA mode/audio and vessel-relative pose; restores the original controller on seat
+  return, camera mode change, invalid target, reset and unload. Setter reflection and a targeted
+  `IVASeat.IsCameraInThisSeat` postfix are installed/removed by both hosts. Input focus gates
+  clear held keys and skip gamepad polling while UI owns input.
+- `KitchenSinkSubmod.IvaCamera.cs`: **Unlock IVA Camera**, speed and **Return to Seat** controls.
 - `GLoadProtection`: concurrent live registry using exact vehicle reference identity;
   multiple targets, duplicate prevention, missing/disposed pruning and reset.
 - `GLoadProtectionPatches`: Apply/Remove Harmony helper used by both hosts. The transpiler
@@ -17,6 +24,16 @@ See [Kitchen Sink controls](../kitchen-sink/README.md).
 ## Scene saves
 
 The existing `SaveParticipant<bool>` (`kitchen-sink`, version 1) continues to save IVA visibility.
+`IvaCameraUnlock.Persistence.cs` contributes `kitchen-sink-iva-camera` version 1, order 190:
+unlock state, reusable base speed, `SavedPartReference` plus seat module index, body-frame
+position and orientation. Captures no native object references. Reset restores the old controller
+before native destruction; replay requires the reconstructed native camera's IVA mode and exact
+follow target, then resolves the seat and overwrites the detached pose. Required DTO properties,
+finite/ranged values and unit quaternions are validated. Missing/ambiguous/invalid targets or
+unavailable patches fail with save diagnostics and record retention. Legacy/vanilla saves reset
+unlock and speed. Input state and controller/reflection caches are intentionally transient.
+The native save owns follow/mode and its ordinary pose; this record owns the unlocked pose
+that otherwise would be overwritten by IVA's seat update.
 A second `SaveParticipant<string[]>` (`kitchen-sink-g-load`, version 1, order 20) saves protected
 vehicle IDs. Capture rejects ambiguous/stale identities; validation rejects duplicate, blank or
 oversized target lists. Reset clears registrations and the picker before native reconstruction.

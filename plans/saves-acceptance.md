@@ -8,6 +8,18 @@ change no save ID, version or payload. Against the 5482 reference assemblies, th
 The preceding Kitchen Sink reconciliation passed **71 projects and 14 managed suites** on Windows;
 Kitchen Sink contributes 54 damage/lifecycle checks and 26 real-adapter save/restore checks.
 Both version-1 records remain unchanged. See [reconciliation evidence](KSA_5438_RECONCILIATION.md).
+Kitchen Sink now also registers `kitchen-sink-iva-camera` v1/order 190 (feature inspected against
+local 5541): unlock state, base speed, exact seat and body-relative pose; native follow/mode
+must match. The two earlier Kitchen Sink records retain their payloads. Production camera adapter,
+controller ownership and shared identity resolvers are exercised by `kitchen-sink.tests`;
+free-flight input/rendering/audio remain native acceptance work.
+The accompanying Graffiti 5541 descriptor binding migration changes only transient GPU binding;
+its existing saved decal payload and reset/replay ownership remain unchanged.
+IVA addition validation: `dotnet build -m:1 -p:UseSharedCompilation=false
+-p:UNSCIENCE_DIST_DIR=/private/tmp/unscience-iva-dist` passed against local 5541 with zero
+warnings/errors. `kitchen-sink.tests` passed 47 camera + 26 save + 54 G-load checks;
+`saves.tests` passed, including 16 native-lifecycle fixtures, 24 coordinator/storage and 10
+part-identity checks. Native rendered/input/audio acceptance remains pending.
 This report describes the implemented adapters and their limits. The earlier
 [state inventory](saves-state-inventory.md) is a research assessment of desired coverage,
 not the final implementation specification. See [SAVES.md](SAVES.md) for architecture and
@@ -31,9 +43,10 @@ the native `universe.xml`, bound to that file's SHA-256. The native save owns ve
 full-part geometry, native module records, camera pose and game time. The sidecar supplies
 Unscience recipes, target ownership, original baselines and the continuation state listed below.
 The integration is wired by [UnscienceSaves](../unscience/UnscienceSaves.cs) for the
-[31 registered submods](../unscience/Mod.cs). There are **32 feature records**: Pyro separates
+[31 registered submods](../unscience/Mod.cs). There are **33 feature records**: Pyro separates
 shared template edits from plume instances, Kitchen Sink keeps G-load registrations in a
-separate backward-compatible record alongside its original IVA boolean, and The Tick adds `the-tick`. Save Yourself registers no record: its
+separate backward-compatible record alongside its original IVA boolean and unlocked-camera record,
+and The Tick adds `the-tick`. Save Yourself registers no record: its
 prefix/toggle/interval are a global preference in `.unscience/save-yourself.toml`, and it only
 *produces* native saves through the ordinary path. Standalone mod entrypoints do not acquire
 this host workflow merely because their shared library exposes a participant.
@@ -77,7 +90,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [I Feel Seen](../i-feel-seen.lib/IFeelSeenSubmod.Saves.cs) | Tracked vehicle identities and each force-visibility flag. | Rebuilds tracking on native-restored vehicles. Deleted/missing vehicles warn. |
 | [Iron Man](../iron-man.lib/IronManSubmod.Saves.cs) | Configured kittens, enabled mode, original EVA/control settings needed to disable the mode, current flight-computer preferences. | Mode restores with engines **disarmed**. Existing connectors are configured/reused through the normal code path. Runtime thrust/burn continuation is not promised; the player deliberately arms engines again. |
 | [It's So Shiny](../its-so-shiny.lib/ItsSoShinySubmod.Persistence.cs) | Existing host/light cell addresses, grid ownership/appearance, sparse mask, render flag, scroll recipe/offset and pending deletion. | Rebinds native cells without spawning or forcing ignition/switch state; scrolling resumes. Pending deletion restarts its delay. Shared light-template appearance retains the feature's existing shared-template semantics, with Zippo's template ledger restoring originals. |
-| [Kitchen Sink](../kitchen-sink.lib/KitchenSinkSubmod.Saves.cs) | Global IVA force-render flag plus G-load-protected vehicle IDs in separate version-1 records. | Clears old references before reconstruction and rebinds exact IDs; missing/ambiguous targets warn and retain state. Legacy boolean-only saves remain valid; picker/filter are transient. |
+| [Kitchen Sink](../kitchen-sink.lib/KitchenSinkSubmod.Saves.cs) | Global IVA visibility, G-load target IDs, unlocked IVA camera/speed/exact seat/body pose in three separate v1 records. | Releases original-world controller/input before reconstruction; exact vehicle/part/seat replay requires matching native camera mode/follow. Missing/ambiguous/invalid targets and unavailable patches report and retain state. Absent legacy camera record resets to locked/default speed. Picker, held input and smoothing are transient. |
 | [Kitten Animations](../kitten-animations.lib/KittenAnimationsSubmod.Persistence.cs) | Selected kitten; forced clip by source/label, active/paused state and native clip phase; driver controls/global tuning; expression settings and latched expression clip identity. | Forced looping clips and frozen poses resume, and latched expressions return at their held weight. Unlatched one-shot expressions stay stopped; intermediate expression easing is not checkpointed. Missing/ambiguous clip identity or unavailable native phase fields warn/fail the block. |
 | [Kiwi's Marbles](../kiwis-marbles.lib/KiwisMarblesSubmod.Persistence.cs) | Celestial source/vehicle-or-celestial target/offset and original orbital parent, epoch and state vectors. | Restores ordered welds and their future Unweld baseline. Cycles through both target dependencies and actual parent ancestry are rejected. This is a weld/orbit recipe, not all possible arbitrary celestial-system mutations. |
 | [Parts Now](../parts-now.lib/PartsNowSubmod.Saves.cs) | Runtime mod IDs and declared part-template IDs as dependency records. | Does **not** install, embed, unload or automatically replay arbitrary runtime mods. Required native templates/characters are preflighted before world destruction; install/enable missing dependencies before retrying. |
@@ -236,6 +249,10 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
   duplicated, engines load disarmed, manual arming works, and Disable restores original control settings.
 - [ ] Verify Eternal Flame monitoring, I Feel Seen visibility, IVA rendering, editor flags and Glass FOV
   resume their saved policies, including disabled/false values and missing-target diagnostics.
+- [ ] IVA unlock: save away from the second seat with a changed speed; reload twice and A-B-A across
+  scenes; confirm exact pose/seat/speed, IVA lighting/audio, head visibility and Return to Seat.
+  Vanilla/legacy loads and new scenes release movement/input; missing seats or vehicles report
+  failure without redirecting to another vessel. Verify mode changes, UI focus and unload cleanup.
 
 ### Playback and appearance
 

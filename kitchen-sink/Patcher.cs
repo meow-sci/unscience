@@ -18,6 +18,7 @@ internal static class Patcher
                 HotkeyGuard.Patch(_harmony);
                 IvaForceRender.Patch(_harmony);
                 GLoadProtectionPatches.Apply(_harmony);
+                IvaCameraUnlock.Apply(_harmony);
             }
         }
         catch (Exception ex)
@@ -33,6 +34,7 @@ internal static class Patcher
             if (_harmony != null)
             {
                 HotkeyGuard.Unpatch(_harmony);
+                IvaCameraUnlock.Remove(_harmony);
                 GLoadProtectionPatches.Remove(_harmony);
                 IvaForceRender.Unpatch(_harmony);
             }

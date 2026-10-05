@@ -18,12 +18,17 @@ public sealed partial class KitchenSinkSubmod : ISubmod
 
     public void Initialize() { Instance = this; }
 
-    public void Update(double dt) => GLoadProtection.Prune(VehicleProvider.GetAllVehicles(includeDebris: true));
+    public void Update(double dt)
+    {
+        GLoadProtection.Prune(VehicleProvider.GetAllVehicles(includeDebris: true));
+        IvaCameraUnlock.Update();
+    }
 
     public void RenderContent()
     {
         SubmodUI.BeginContentArea("##ks_content");
         RenderIvaForceRender();
+        RenderIvaCamera();
         RenderFixInvisibleSubparts();
         RenderGLoadProtection();
         SubmodUI.EndContentArea();
@@ -64,6 +69,8 @@ public sealed partial class KitchenSinkSubmod : ISubmod
 
     public void Dispose()
     {
+        IvaCameraUnlock.Disable();
+        IvaCameraUnlock.Reset();
         ResetGLoadProtection();
         if (Instance == this) Instance = null;
     }

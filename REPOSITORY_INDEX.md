@@ -227,6 +227,11 @@ Camera FOV control. Provides 8 lens presets (from super telephoto at 15° to fis
 
 ### [kitchen-sink](kitchen-sink) / [kitchen-sink.lib](kitchen-sink.lib)
 Random collection of one-off hacks and fixes for KSA. F11 window toggle.
+- **Unlock IVA Camera**: main-view IVA toggle delegates free movement to native `FlyController`
+  while preserving IVA mode/audio/ray tracing. Body-relative pose follows the vehicle; speed
+  control and Return to Seat; detached occupant head visible. `IvaCameraUnlock` owns controller
+  replacement/head patch, and a separate `kitchen-sink-iva-camera` record preserves exact seat,
+  unlock, speed and pose through reset/rebind. Native input/rendering acceptance pending.
 - **Fix Invisible Subparts**: button that calls `ReinitializeDerivedValues` on `Program.Editor.EditingSpace.Parts` to restore visibility of invisible subparts in the vehicle editor (workaround for a KSA bug)
 - **Force IVA Rendering**: toggle that directly mutates `Template.Internal` on all `PartModel` instances to force interior parts to render outside IVA camera mode; includes a Harmony constructor patch to catch newly created parts and (KSA 5482) a `PartTreeRenderData.Compose` prefix/finalizer so IVA SubParts remain visible in the vehicle editor
 - **G-load Invincibility**: filtered per-vehicle picker, add button, and multi-vehicle active table with per-row Delete. Exact-instance protection bypasses only whole-vehicle G-load destruction; collisions, part crash tolerance and dynamic-pressure damage stay native. Saves stable vehicle IDs and rebinds protection after native reconstruction; legacy/vanilla loads clear it, and missing targets produce diagnostics.
@@ -238,6 +243,9 @@ Random collection of one-off hacks and fixes for KSA. F11 window toggle.
 ### [kitchen-sink.tests](kitchen-sink.tests)
 Managed fixtures exercise the production G-load patch and registry: target isolation, thresholds,
 contact/pressure causes, telemetry, pending events, cleanup, concurrent access, unpatching and real-adapter save round-trips/legacy/rebind failure cases.
+Also covers production IVA controller ownership/head patch and actual camera adapter/identity
+resolvers: focus cleanup, seat return, repeated/cross-scene replay, missing/invalid targets and
+unload. Free-flight input/rendering is substituted at the native boundary.
 Native cart/ImGui acceptance remains in-game; see its [README](kitchen-sink.tests/README.md).
 
 ## Animation & Visual Effects Mods
@@ -375,6 +383,9 @@ Part painting and visual customization mod. Three features: vehicle part paintin
 - **humble-arteest.lib**: `VehiclePaint` (paint registry + bit encoding), `VehiclePaintShaders` (GLSL injection + install/rebuild), `VehiclePaintPatches`, `PaintTargets` (flight + editor part enumeration), `VehiclePaintSubmod` (+ `VehiclePaintSubmodTables`), `KittenColor` (GPU buffer writes), `KittenColorSubmod`, `EngineEmissive` (temperature state), `EngineEmissivePatches`, `EngineEmissiveSubmod`
 
 ### [graffiti](graffiti) / [graffiti.lib](graffiti.lib)
+
+KSA 5541: projected-decal global descriptors use `DescriptorSet(ShaderSlot)` with no dynamic
+offsets; saved decal payloads are unchanged. Native visual acceptance pending.
 Click-to-place **projected PNG decals** on vehicle hulls, deployed parachute canopies, and terrain. Pick a PNG from a decal library, press Place at Click..., click anywhere in the 3D world — the decal conforms to whatever surface is under the cursor and stays welded to it (part-local on vehicles, barycentric on live canopy cloth, geodetic lat/lon on terrain). A port of the gatOS sticker system with a point-and-click UX.
 - **Shared PNG library** at `My Games/Kitten Space Agency/.unscience/pngs/`: uses `ksa-abstractions.lib`'s common ImGui browser; every import is copied in and auto-uniquified, the dropdown reads the shared catalog also used by free-fallin, and **Rescan PNGs** hot-swaps changed files without background polling
 - **One-shot click placement**: filterable decal dropdown → Place at Click... → cursor-following hint → click places via a `Cursor.GetEgoRay(viewport)` raycast (live cloth-triangle pick for deployed parachutes, mesh-precise `Part.RayCastEgo` on vehicles, bounding-sphere pick for KittenEva kittens, accurate CPU terrain march + bisection behind); Esc cancels; a miss keeps placement armed

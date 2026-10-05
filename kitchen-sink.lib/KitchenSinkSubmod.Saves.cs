@@ -10,6 +10,7 @@ public sealed partial class KitchenSinkSubmod : ISaveParticipantSource
 {
     public IEnumerable<ISaveParticipant> SaveParticipants => new ISaveParticipant[]
     {
+        IvaCameraUnlock.SaveParticipant,
         // Preserve the existing boolean record so older saves still restore IVA visibility.
         new SaveParticipant<bool>("kitchen-sink", () => IvaForceRender.Enabled,
             () => IvaForceRender.Enabled = false, (state, _) => IvaForceRender.Enabled = state, order: 20),

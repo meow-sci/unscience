@@ -4,6 +4,11 @@
     <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Brutal.Core.Numerics"><HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath></Reference>
+    <Compile Include="../kitchen-sink.lib/IvaCameraUnlock*.cs" Link="%(Filename)%(Extension)" />
+    <Compile Include="../kitchen-sink.lib/UnlockedIvaController.cs" Link="UnlockedIvaController.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SavedPartReference.cs" Link="SavedPartReference.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/PartIdentitySnapshot.cs" Link="PartIdentitySnapshot.cs" />
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
     <Compile Include="../kitchen-sink.lib/GLoadProtection.cs" Link="GLoadProtection.cs" />
     <Compile Include="../kitchen-sink.lib/GLoadProtectionPatches.cs" Link="GLoadProtectionPatches.cs" />

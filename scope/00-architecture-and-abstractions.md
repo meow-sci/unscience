@@ -1,5 +1,11 @@
 # 00 — Unscience supermod shell + `ksa-abstractions.lib` game-integration scope
 
+Kitchen Sink IVA unlock is wired by both `unscience/Patcher.cs` and `kitchen-sink/Patcher.cs`
+through `IvaCameraUnlock.Apply/Remove`. It uses the consolidated Harmony instance for one
+seat-head postfix and owns a temporary main IVA controller replacement. It contributes an
+order-190 save participant via the existing Kitchen Sink `ISaveParticipantSource`. See
+[camera integration](camera.md#kitchen-sink-unlocked-iva-camera) and [save scope](saves.md).
+
 ## KSA 5482 (5438 → 5482) verification
 
 Verified 2026-09-25 against `2026.9.22.5482` (revs 5439–5481), diffed from `2026.9.10.5438`.

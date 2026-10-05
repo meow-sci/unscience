@@ -399,11 +399,11 @@ internal sealed unsafe class DecalRenderer : IDisposable
             commandBuffer.BindPipeline(VkPipelineBindPoint.Graphics, _pipeline);
             Program.SetViewport(commandBuffer);
 
-            var globalOffset = (ByteSize32)GlobalShaderBindings.DynamicOffset(Program.MainViewport.ShaderSlot);
-            var globalSet = GlobalShaderBindings.DescriptorSet;
+            // KSA 5541 allocates a global set per viewport/frame with fixed buffer offsets.
+            var globalSet = GlobalShaderBindings.DescriptorSet(Program.MainViewport.ShaderSlot);
             commandBuffer.BindDescriptorSets(VkPipelineBindPoint.Graphics, _pipelineLayout, 0,
                 new ReadOnlySpan<VkDescriptorSet>(ref globalSet),
-                new Span<ByteSize32>(ref globalOffset));
+                default(Span<ByteSize32>));
             commandBuffer.BindDescriptorSets(VkPipelineBindPoint.Graphics, _pipelineLayout, 1,
                 new ReadOnlySpan<VkDescriptorSet>(ref depthSet), default(Span<ByteSize32>));
             if (Program.Instance?.BindlessTextures is { } bindless)

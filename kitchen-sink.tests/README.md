@@ -2,6 +2,26 @@
 
 Run `dotnet run --project kitchen-sink.tests` from the repository root.
 
+Latest managed validation: 47 IVA ownership/persistence checks, 26 existing save checks and
+54 G-load checks passed. The full solution compiles against local KSA 5541 with zero warnings
+or errors; `saves.tests` also passes. Native acceptance below remains pending.
+
+IVA camera checks link `IvaCameraUnlock`, `UnlockedIvaController`, the real Kitchen Sink
+save adapter/coordinator and shared vehicle/part identity resolvers. They exercise the actual
+protected setter delegate and Harmony head patch against matching managed game fixtures:
+main/secondary isolation, input-focus cleanup, body rotation, return to seat, detached JSON
+capture, exact seat rebind, repeated/cross-scene loads, vanilla/legacy records, invalid/future
+payloads, missing/ambiguous/disposed targets, topology/mode mismatches, retained recovery,
+mode transitions and unload. Native FlyController input/motion and ImGui are substituted;
+Brutal quaternion/vector arithmetic is real. No Vulkan, GLFW or audio context is created.
+
+IVA native acceptance: enable game IVA ray tracing, enter a seat, unlock and fly through
+the interior with keyboard/mouse/gamepad; confirm lighting, glass, head visibility and IVA
+audio. Rotate/translate the vessel; adjust speed and sprint; focus text/modals; switch modes
+with keys held; return to the same seat; save/reload the detached pose repeatedly; load a
+vanilla scene and remove/change the followed vessel. Check the ordinary free cam and secondary
+views, plus interaction with Camera Controller Override playback. Native acceptance is pending.
+
 Links the production G-load registry and Harmony transpiler into a native-free
 fixture of KSA 5438's structural-failure decision (source-identical to 5402). Checks multiple targets,
 duplicate adds, same-name identity isolation, contact situations, unchanged load

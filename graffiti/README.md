@@ -54,8 +54,8 @@ Two projects, following the repo's submod pattern:
 - Rows show `[anchor gone]` when the target vehicle despawned (the decal is dormant, not deleted
   — it comes back if the vehicle does) and `[image unavailable]` when the PNG is missing/broken.
 
-Placed decals are session-scoped (not persisted across game restarts); imported PNGs remain in the
-shared library for later runs and for other mods.
+Placed decals are restored by Unscience's native-save sidecar; imported PNGs remain in the
+shared library and must still be available when loading. GPU resources are rebuilt after replay.
 Decals render in the flight scene only (not in the VAB/editor).
 
 ## How it works
@@ -115,5 +115,9 @@ RPC; graffiti raycasts through the clicked cursor position via `Cursor.GetEgoRay
   `Import(path, out error)`, `FullPath(name)`, and the common filesystem picker.
 
 ## Game integration scope
+
+KSA 5541's global shader bindings use a descriptor set selected by viewport and current frame,
+with no dynamic offsets. The decal pass follows that binding contract. This compatibility fix
+changes no saved decal payload; native rendered acceptance remains pending.
 
 See [`scope/decals.md`](../scope/decals.md).

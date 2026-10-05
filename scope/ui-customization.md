@@ -170,7 +170,12 @@ only). Editor window "Skittles — Theme Editor###sk_editor", 700x800, hosts
 
 ## kitchen-sink
 
-**Purpose:** editor refresh, Force IVA Rendering, and selected-vehicle G-load invincibility.
+**Purpose:** editor refresh, Force IVA Rendering, unlocked IVA camera, and selected-vehicle G-load invincibility.
+The **Unlock IVA Camera** checkbox, base-speed field and **Return to Seat** button use a main-view
+IVA controller replacement; native IVA rendering/audio remain selected. Full game member map:
+[camera](camera.md#kitchen-sink-unlocked-iva-camera). Its separate version-1
+`kitchen-sink-iva-camera` record restores exact seat, unlock, speed and body-relative pose after
+native reconstruction; legacy records remain unchanged. Both hosts install/remove this helper.
 The defunct Flexo Part/Subpart Test panels, transform/bounds/mass mutations, and standalone
 `KitchenSinkSolverPatch` / `Universe.ExecuteNextVehicleSolvers` hook are removed.
 

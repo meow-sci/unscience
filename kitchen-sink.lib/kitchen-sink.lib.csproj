@@ -18,6 +18,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="Brutal.Glfw">
+      <HintPath>$(KSAFolder)Brutal.Glfw.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Planet.Render.Core">
+      <HintPath>$(KSAFolder)Planet.Render.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Brutal.Core.Common" Condition="Exists('$(KSAFolder)Brutal.Core.Common.dll')">
       <HintPath>$(KSAFolder)Brutal.Core.Common.dll</HintPath>
       <Private>false</Private>

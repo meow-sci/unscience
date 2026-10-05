@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace KSA;
 
-public sealed class Vehicle(string id)
+public sealed partial class Vehicle(string id)
 {
     public string Id { get; } = id;
     public bool IsDisposed { get; set; }

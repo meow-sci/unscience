@@ -1,3 +1,19 @@
+## Kitchen Sink IVA camera unlock (5541)
+
+The same current-assembly build required Graffiti's
+[`GlobalShaderBindings` descriptor migration](decals.md#ksa-5541-descriptor-migration):
+per-view/current-frame `DescriptorSet(int)` with zero dynamic offsets; no saved payload change.
+
+Authoritative new member map: [camera — unlocked IVA](camera.md#kitchen-sink-unlocked-iva-camera).
+Reflection watchlist: protected `GameViewport.IvaController` setter and private
+`IVASeat.IsCameraInThisSeat(IViewport)` (bool Harmony postfix). Controller inheritance/virtual
+dispatch (`IVAController` with a private `FlyController`) must remain available. Direct members:
+camera local pose/follow target and seat-return fields; vehicle Body2Cce/Asmb2Cce and held-input
+reset; part/seat pose and module collections; main/input viewport, editor/modal/console and
+ImGui capture flags. Both Kitchen Sink hosts own install/remove. Stock IVA mode, ray tracing
+pipeline and audio selection remain native. New record `kitchen-sink-iva-camera` v1/order 190
+uses shared stable vehicle/part resolution; no legacy record changes. Native acceptance pending.
+
 ## Dent Wizard integration (5438)
 
 New `dent-wizard` / `dent-wizard.lib` source launcher is bundled in Unscience; `dent-wizard.tests`
@@ -448,7 +464,7 @@ are recorded separately from native visual acceptance.
 ### KSA.GlobalShaderBindings
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `DescriptorSetLayout : static` · `DescriptorSet : static` · `DynamicOffset(int viewportIndex) : static` | direct API (render) | `KSA/GlobalShaderBindings.cs` | graffiti | `graffiti.lib/DecalRenderer.cs` | OK @5348 | set 0 of the decal pipeline — the game-wide Camera/Lighting UBO block with a dynamic offset per viewport. Set order (0 global / 1 depth / 2 bindless) is baked into the GLSL |
+| `DescriptorSetLayout : static` · `DescriptorSet(int viewportIndex) : static VkDescriptorSet` | direct API (render) | `KSA/GlobalShaderBindings.cs:47,51` | graffiti | `graffiti.lib/DecalRenderer.cs` | Migrated @5541 | set 0 selects the viewport/current-frame uniform buffers with zero dynamic offsets. Removed DynamicOffset/shared DescriptorSet property. Set order (0 global / 1 depth / 2 bindless) is baked into GLSL. |
 
 ### KSA.GltfPbrSystem
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -807,7 +823,7 @@ are recorded separately from native visual acceptance.
 | `Editor : static VehicleEditor?` (field) | direct API | `KSA/Program.cs:202` | IvaForceRender, kitchen-sink, humble-arteest (VehiclePaint), parts-now | `IvaForceRender.cs:100`; `KitchenSinkLib.cs (editor refresh)`; `PaintTargets.cs`; `parts-now.lib/Runtime/RuntimeModUnloadGate.cs:98`, `RuntimeModUnloader.cs:110` | OK | editor-only branch; humble uses it to pick flight vs editor paint targets. parts-now uses it for the unload safety gate and to clear the hover preview before a purge. Disposed+nulled in `Program.PrepareFrame` |
 | `ThumbnailViewport : static IViewport` (a `PartThumbnailViewport` from `ViewportRegistry.CreatePartThumbnailViewport(_renderer, ViewportOptionFlags.RenderPartModels, sampler)`; throws until built) | direct (render) | `KSA/Program.cs:497,949` | parts-now | `Runtime/PartThumbnailGenerator.cs:141` | OK | dedicated offscreen thumbnail viewport — no camera save/restore, no resize, no `UpdateShaderData`. Shared with the part browser's hover preview (see `ThumbnailDynamic`) |
 | `BindlessTextures : BindlessTextureLibrary` (public field) | direct API | `KSA/Program.cs:88,850` | parts-now, graffiti | `Runtime/BundleValidatorRulesIdentity.cs:222`; `Ui/StatusPanel.cs:202-210`; `graffiti.lib/DecalRenderer.cs`, `DecalTextures.cs` | OK | V15 texture-budget rule + the Status panel gauge; graffiti allocates/frees decal slots and binds the table as set 2. Constructed with `maxTextures = 1024` |
-| `{EditorFlag : static bool, OffscreenTarget : static RenderTarget, RenderedViewport : static IViewport / MainViewport : static IGameViewport (`.ShaderSlot` feeds `GlobalShaderBindings.DynamicOffset`), SetViewport(CommandBuffer) : static, PointClampedSampler : static VkSampler, Instance.ResourceFrameIndex : int, Instance.ColorFormat : readonly VkFormat}` | direct API (render seam gates + pass state) | `KSA/Program.cs:224,457,491,485,4293,469,218,222` | graffiti | `graffiti.lib/GraffitiPatches.cs`, `DecalRenderer.cs` | OK @5348 | the decal pass's editor/main-viewport identity checks + GridPass-style pass state (viewport, depth sampler, frame-ring slot, colour format). See `scope/decals.md` #2 |
+| `{EditorFlag : static bool, OffscreenTarget : static RenderTarget, RenderedViewport : static IViewport / MainViewport : static IGameViewport (`.ShaderSlot` selects `GlobalShaderBindings.DescriptorSet(int)` @5541), SetViewport(CommandBuffer) : static, PointClampedSampler : static VkSampler, Instance.ResourceFrameIndex : int, Instance.ColorFormat : readonly VkFormat}` | direct API (render seam gates + pass state) | `KSA/Program.cs:224,457,491,485,4293,469,218,222` | graffiti | `graffiti.lib/GraffitiPatches.cs`, `DecalRenderer.cs` | OK @5348 | the decal pass's editor/main-viewport identity checks + GridPass-style pass state (viewport, depth sampler, frame-ring slot, colour format). See `scope/decals.md` #2 |
 | `IsMainThread() : static bool` | behavior dependency | `KSA/Program.cs:520` | parts-now | (via `Loading.OnFrame`, `KSA/Loading.cs:92`) | OK | 🔶 **U7** — see `KSA.Loading` |
 | `RendererRebuildNeeded : static bool` (field) | direct API | `KSA/Program.cs:431` (consumed `PrepareFrame` :2096) | humble-arteest (VehiclePaint), free-fallin (Full Canopy) | `VehiclePaintShaders.cs`; `CanopyProjectionShaders.cs` | OK | game's **deferred** full-renderer rebuild flag — the safe way for a mod to force shader/pipeline recompilation (same path a graphics-setting change takes) |
 | `MainViewport : static IGameViewport { get; }` (= `ViewportRegistry.MainViewport`) | direct API | `KSA/Program.cs:485` | IvaForceRender, kitchen-sink, graffiti, hot-pursuit | `IvaForceRender.cs`; `DecalPicker.cs`; `DecalRenderer.cs`; `hot-pursuit.lib/HotPursuitPicker.cs`, `HotPursuitPose.cs` | OK @5402 | Hot Pursuit uses it only as the reference ego frame/picking viewport, never as the output target. |
