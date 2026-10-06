@@ -25,11 +25,14 @@ namespace MeowSci.KsaAbstractions;
 public static partial class PartRenderFilter
 {
     private static readonly Dictionary<string, Func<Part, bool>> Owners = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, Func<PartModel, bool>> StaticModelOwners = new(StringComparer.Ordinal);
     private static readonly List<(MethodBase Original, MethodInfo Patch)> Installed = new();
     private static Func<Part, bool>[] _filters = Array.Empty<Func<Part, bool>>();
+    private static Func<PartModel, bool>[] _staticModelFilters = Array.Empty<Func<PartModel, bool>>();
 
     /// <summary>True while the shared compaction patches are attached.</summary>
     public static bool IsInstalled => Installed.Count > 0;
+    public static bool IsOperational => IsInstalled && !_faulted;
 
     /// <summary>
     /// Adds or replaces an owner's predicate. <paramref name="shouldHide"/> receives each full part
@@ -44,12 +47,34 @@ public static partial class PartRenderFilter
         _filters = Owners.Values.ToArray();
     }
 
+    /// <summary>
+    /// Adds a static-model filter, evaluated once per raster batch. This hides only the selected
+    /// model, even when it belongs to a full part containing other models. Dynamic/glass models
+    /// and other owners' full-part predicates keep their existing behavior.
+    /// </summary>
+    public static void RegisterStaticModel(Harmony harmony, string owner, Func<PartModel, bool> shouldHide)
+    {
+        if (!IsInstalled) Install(harmony);
+        StaticModelOwners[owner] = shouldHide;
+        _staticModelFilters = StaticModelOwners.Values.ToArray();
+    }
+
     /// <summary>Removes an owner's predicate; the last owner removes the shared patches.</summary>
     public static void Unregister(Harmony harmony, string owner)
     {
-        if (!Owners.Remove(owner)) return;
+        bool removed = Owners.Remove(owner);
+        removed |= StaticModelOwners.Remove(owner);
+        if (!removed) return;
         _filters = Owners.Values.ToArray();
-        if (Owners.Count == 0) Uninstall(harmony);
+        _staticModelFilters = StaticModelOwners.Values.ToArray();
+        if (Owners.Count == 0 && StaticModelOwners.Count == 0) Uninstall(harmony);
+    }
+
+    private static bool ShouldHideStaticModel(PartModel model)
+    {
+        foreach (var filter in _staticModelFilters)
+            if (filter(model)) return true;
+        return false;
     }
 
     private static bool ShouldHide(Part part)

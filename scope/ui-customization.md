@@ -168,6 +168,35 @@ only). Editor window "Skittles — Theme Editor###sk_editor", 700x800, hosts
 ---
 
 
+## Kitchen Sink capsule glass experiment (5541)
+
+`CapsuleGlassExperiment` is a default-off, scene-saved **See Inside Capsule (Experimental)**
+toggle, registered by both Unscience and the standalone host. First experiment only: hide the
+opaque medium capsule windows, reveal native interiors, and retain existing native IVA glass.
+
+| Dependency | Contract |
+|---|---|
+| `PartRenderFilter.RegisterStaticModel` → `PartTreeRenderData.Compose` shared prefix/postfix | OR a model-scoped predicate with existing full-part owners in the same range compaction. Static instance/dent lists compact together; cached batches and native meshes stay unchanged. No extra Harmony target or reflection lookup. |
+| `PartModel.Template.Id` (`TemplateDataBase.Id`) | Exact ordinal IDs `CoreCommandA_Subpart_MediumCapsuleWindowA_Model` and `CoreCommandA_Subpart_MediumCapsuleWindowB_Model`; never match a full-part/instance name or substring. Those are ordinary static models, with `RayTracing.Disabled` default, in `Content/Core/CoreCommandAAssets.xml:54-71`. Hull/crew doors are distinct model IDs and remain native. |
+| `IvaForceRender.SetRequired(owner, bool)` | Global interior requirement OR-ed with the existing user preference; changes loaded/new `PartModelModule.Template.Internal` flags through existing helper. Final release restores flags; unpatch clears all requirements. `ShadowProxy` templates remain untouched. Editor's per-compose reveal remains independent. |
+| Existing `PartModelGlass` / `ComposeGlass` / main-view glass pass | `CoreIVASpaceA_Subpart_MediumCapsuleAWindowGlass_Model` in `CoreIVASpaceAAssets.xml:20-26` remains submitted natively. Cabin model is `Internal=true`, `RayTracing.Enabled`; native ray blocker is `ShadowProxy` (`:29-44`). No glass material/shader/opacity edits or ray tracing pipeline changes. |
+| Scene adapter | Separate boolean `kitchen-sink-capsule-glass` v1/order 20; reset releases requirement, replay uses normal toggle after reconstruction. Existing three Kitchen Sink records unchanged. See [saves](saves.md#kitchen-sink-capsule-glass-saves). |
+
+`IsAvailable` requires the installed IVA patches and operational shared filter. The UI disables
+enabling when unavailable but permits disabling; enabled restores fail explicitly and retain their
+saved record. Suppression applies to every matching window model in raster viewports. The shared
+filter still does not hide raytraced submissions; the selected exterior window templates currently
+have ray tracing disabled, so their native raster path is covered even in IVA mode.
+
+Validation: 20 managed production filter/IVA ownership checks (`ksa-upgrade.tests`), 17 real
+adapter/coordinator checks (`kitchen-sink.tests`) plus existing tests and solution compilation.
+This is a main exterior view experiment. Native window/glass geometry alignment, tint, depth,
+culling, shadows and exterior lighting remain unverified. Secondary viewports omit the stock
+part-glass pass and may show openings without glass; no secondary renderer work is included.
+KSA's controlled-vehicle seated-crew submission remains unchanged. No installed assets are edited.
+On a game update, recheck those exact XML IDs/ray-tracing modes and the existing compose/glass
+contracts before broadening support to other capsules.
+
 ## kitchen-sink
 
 **Purpose:** editor refresh, Force IVA Rendering, unlocked IVA camera, and selected-vehicle G-load invincibility.
@@ -178,6 +207,8 @@ IVA controller replacement; native IVA rendering/audio remain selected. Full gam
 native reconstruction; legacy records remain unchanged. Both hosts install/remove this helper.
 The defunct Flexo Part/Subpart Test panels, transform/bounds/mass mutations, and standalone
 `KitchenSinkSolverPatch` / `Universe.ExecuteNextVehicleSolvers` hook are removed.
+
+The capsule experiment and its current game/asset contracts are documented [above](#kitchen-sink-capsule-glass-experiment-5541).
 
 **Hosting:** `KitchenSinkSubmod : ISubmod` is shared by Unscience and the standalone development
 host. Both patchers install/remove `IvaForceRender` and `GLoadProtectionPatches`. The standalone

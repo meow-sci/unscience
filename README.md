@@ -19,6 +19,11 @@ movement while retaining IVA interiors, lighting and configured ray tracing. Tur
 using **Return to Seat** restores the seated camera. Speed and the unlocked view are scene-saved.
 See [Kitchen Sink controls](kitchen-sink/README.md#unlock-iva-camera).
 
+Kitchen Sink also offers **See Inside Capsule (Experimental)**, off by default: it hides the
+stock medium capsule's two opaque window surfaces and reveals its existing IVA cabin/glass.
+The switch is scene-saved and reversible; native visual acceptance is pending. See
+[the experiment](kitchen-sink/README.md#capsule-glass-experiment).
+
 # releases
 
 GitHub Actions uses `1.${GITHUB_RUN_NUMBER}.0` for stable releases from `main`

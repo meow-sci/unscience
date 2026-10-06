@@ -28,7 +28,7 @@ A unified supermod that consolidates 31 KSA feature libraries into a single ImGu
 | I Feel Seen | Forces vehicle render data updates at any distance |
 | Iron Man | EVA/Iron Man flight-mode buttons, upright editing, configurable nodes, rocket controls and upright surface teleports in Iron Man mode |
 | Its So Shiny | Builds and controls Blinky-style pixel grids from built-in light parts |
-| Kitchen Sink | Editor fixes, IVA visibility, unlocked IVA camera and G-load protection |
+| Kitchen Sink | Editor fixes, IVA visibility, experimental see-through capsule windows, unlocked IVA camera and G-load protection |
 | Kitten Animations | Targets any live EVA kitten through a filterable picker, then plays body animations and expressions |
 | Kiwi's Marbles | Welds celestial bodies to other orbiters with CCI offsets |
 | Parts Now | Validates and loads part asset bundles at runtime |
@@ -48,6 +48,12 @@ A unified supermod that consolidates 31 KSA feature libraries into a single ImGu
 - **Gear icon (⚙)** — Opens a popup to show/hide individual submods
 - Each submod has a **collapsible header** that can be expanded or collapsed
 - The **Skittles Theme Editor** opens in a separate window via the "Open Theme Editor" button
+
+Kitchen Sink → **See Inside Capsule (Experimental)** tries the stock medium/Gemini capsule
+with its opaque exterior windows hidden and native IVA glass retained. It is off by default,
+reversible, and saved in its own scene record. Interiors are revealed globally while enabled;
+**Always Render IVA Interiors** keeps its independent preference. Native glass alignment, tint
+and exterior lighting remain to be checked in game. [Controls and limits](../kitchen-sink/README.md#capsule-glass-experiment).
 
 ## Architecture
 

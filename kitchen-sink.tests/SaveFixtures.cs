@@ -36,6 +36,16 @@ namespace MeowSci.KsaAbstractions
     internal static class IvaForceRender
     {
         public static bool Enabled { get; set; }
+        public static bool IsInstalled => true;
+        public static bool Required { get; private set; }
+        public static void SetRequired(string owner, bool required) => Required = required;
+    }
+
+    internal static class PartRenderFilter
+    {
+        public static bool IsOperational => true;
+        public static void RegisterStaticModel(HarmonyLib.Harmony harmony, string owner, System.Func<KSA.PartModel, bool> predicate) { }
+        public static void Unregister(HarmonyLib.Harmony harmony, string owner) { }
     }
 }
 

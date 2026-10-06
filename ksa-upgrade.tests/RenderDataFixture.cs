@@ -37,7 +37,11 @@ public enum ViewportOptionFlags
 public interface IViewport
 {
     ViewportOptionFlags Options { get; }
+    CameraMode Mode { get; }
 }
+
+public enum CameraMode { Orbit, IVA }
+public static class Program { public static object? Editor; }
 
 public static class ViewportEx
 {
@@ -48,6 +52,7 @@ public static class ViewportEx
 public sealed class TestViewport(ViewportOptionFlags options) : IViewport
 {
     public ViewportOptionFlags Options { get; } = options;
+    public CameraMode Mode { get; set; } = CameraMode.Orbit;
 }
 
 public class Part(string id, int tag, Part? fullPart = null)
@@ -69,6 +74,16 @@ public sealed class PartModelDynamicModule(Part parent)
 public sealed class PartModel
 {
     private readonly Dictionary<IViewport, ViewportData> _views = new();
+    public static readonly List<PartModel> Instances = new();
+    public PartModelModule.Template Template { get; }
+    public PartModel() : this(new PartModelModule.Template()) { }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public PartModel(PartModelModule.Template template)
+    {
+        Template = template;
+        Instances.Add(this);
+    }
 
     /// <summary>False models the raytraced-IVA / internal-outside-IVA branches, which append nothing.</summary>
     public bool RasterPath = true;
@@ -80,6 +95,17 @@ public sealed class PartModel
 
         public static ViewportData Get(PartModel partModel, IViewport viewport) =>
             partModel._views.TryGetValue(viewport, out var data) ? data : partModel._views[viewport] = new ViewportData();
+    }
+}
+
+public static class PartModelModule
+{
+    public enum RaytracingMode { Disabled, Enabled, ShadowProxy }
+    public sealed class Template
+    {
+        public string Id = "fixture";
+        public bool Internal;
+        public RaytracingMode RayTracing;
     }
 }
 
@@ -199,7 +225,9 @@ public sealed class PartTreeRenderData
         if (!inViewport.HasAny(ViewportOptionFlags.RenderPartModels)) return;
         foreach (Batch batch in _batches)
         {
-            if (batch.Count == 0 || !batch.Model.RasterPath) continue;
+            if (batch.Count == 0 || !batch.Model.RasterPath
+                || batch.Model.Template.RayTracing == PartModelModule.RaytracingMode.ShadowProxy
+                || (batch.Model.Template.Internal && inViewport.Mode != CameraMode.IVA)) continue;
             var data = PartModel.ViewportData.Get(batch.Model, inViewport);
             for (int j = 0; j < batch.Count; j++)
             {

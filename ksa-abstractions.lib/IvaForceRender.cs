@@ -13,6 +13,7 @@ namespace MeowSci.KsaAbstractions;
 public static class IvaForceRender
 {
     private static bool _enabled;
+    private static readonly HashSet<string> Requirements = new(StringComparer.Ordinal);
     private static readonly List<PartModelModule.Template> _mutatedTemplates = new();
     // Editor-only reveal: internal templates known so far, and those revealed for one Compose call.
     private static readonly List<PartModelModule.Template> _internalTemplates = new();
@@ -24,6 +25,8 @@ public static class IvaForceRender
     private static MethodBase? _composeOriginal;
     private static MethodInfo? _composePrefix;
     private static MethodInfo? _composeFinalizer;
+    public static bool IsInstalled { get; private set; }
+    public static bool EffectiveEnabled => _enabled || Requirements.Count > 0;
 
     public static bool Enabled
     {
@@ -31,12 +34,26 @@ public static class IvaForceRender
         set
         {
             if (_enabled == value) return;
+            bool wasEffective = EffectiveEnabled;
             _enabled = value;
-            if (value)
-                ForceInternalVisible();
-            else
-                RestoreInternalHidden();
+            RefreshVisibility(wasEffective);
         }
+    }
+
+    /// <summary>Require interiors without changing the user's independent Enabled preference.</summary>
+    public static void SetRequired(string owner, bool required)
+    {
+        bool wasEffective = EffectiveEnabled;
+        if (required) Requirements.Add(owner);
+        else Requirements.Remove(owner);
+        RefreshVisibility(wasEffective);
+    }
+
+    private static void RefreshVisibility(bool wasEffective)
+    {
+        if (wasEffective == EffectiveEnabled) return;
+        if (EffectiveEnabled) ForceInternalVisible();
+        else RestoreInternalHidden();
     }
 
     /// <summary>
@@ -44,6 +61,7 @@ public static class IvaForceRender
     /// </summary>
     public static void Patch(Harmony harmony)
     {
+        if (IsInstalled) return;
         _ctorOriginal = AccessTools.Constructor(typeof(PartModel), new[] { typeof(PartModelModule.Template) });
         _ctorPostfix = typeof(IvaForceRender).GetMethod(nameof(CtorPostfix), BindingFlags.NonPublic | BindingFlags.Static)!;
         harmony.Patch(_ctorOriginal, postfix: new HarmonyMethod(_ctorPostfix));
@@ -55,6 +73,7 @@ public static class IvaForceRender
         _composePrefix = typeof(IvaForceRender).GetMethod(nameof(ComposePrefix), BindingFlags.NonPublic | BindingFlags.Static)!;
         _composeFinalizer = typeof(IvaForceRender).GetMethod(nameof(ComposeFinalizer), BindingFlags.NonPublic | BindingFlags.Static)!;
         harmony.Patch(_composeOriginal, prefix: new HarmonyMethod(_composePrefix), finalizer: new HarmonyMethod(_composeFinalizer));
+        IsInstalled = true;
 
         Console.WriteLine("ksa-abstractions: IvaForceRender patches applied");
     }
@@ -64,6 +83,10 @@ public static class IvaForceRender
     /// </summary>
     public static void Unpatch(Harmony harmony)
     {
+        _enabled = false;
+        Requirements.Clear();
+        RestoreInternalHidden();
+        IsInstalled = false;
         if (_ctorOriginal != null && _ctorPostfix != null)
             harmony.Unpatch(_ctorOriginal, _ctorPostfix);
         if (_composeOriginal != null && _composePrefix != null)
@@ -98,8 +121,9 @@ public static class IvaForceRender
     private static void CtorPostfix(PartModel __instance)
     {
         _internalTemplatesDirty = true;
-        if (!_enabled) return;
+        if (!EffectiveEnabled) return;
         if (!__instance.Template.Internal) return;
+        if (__instance.Template.RayTracing == PartModelModule.RaytracingMode.ShadowProxy) return;
 
         __instance.Template.Internal = false;
         TrackMutated(__instance.Template);
@@ -113,7 +137,7 @@ public static class IvaForceRender
     /// </summary>
     private static void ComposePrefix(IViewport inViewport)
     {
-        if (Program.Editor == null || inViewport.Mode == CameraMode.IVA
+        if (KSA.Program.Editor == null || inViewport.Mode == CameraMode.IVA
             || !inViewport.HasAny(ViewportOptionFlags.RenderPartModels)) return;
         if (_internalTemplatesDirty) RebuildInternalTemplates();
         foreach (var template in _internalTemplates)
@@ -150,7 +174,7 @@ public static class IvaForceRender
         _mutatedTemplates.Clear();
         foreach (var pm in PartModel.Instances)
         {
-            if (pm.Template.Internal)
+            if (pm.Template.Internal && pm.Template.RayTracing != PartModelModule.RaytracingMode.ShadowProxy)
             {
                 _mutatedTemplates.Add(pm.Template);
                 pm.Template.Internal = false;

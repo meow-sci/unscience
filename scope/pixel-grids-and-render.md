@@ -74,6 +74,16 @@ marked `@5482` and carry 5482 line numbers.
   shiny battery anchors and light power on the frame after a build; thug-life quad in main and portrait
   viewports.
 
+## Shared filter extension for Kitchen Sink (5541)
+
+Kitchen Sink's capsule experiment adds a static-model predicate owner to the same
+`PartRenderFilter` compaction used by Blinky/Shiny. Exact stock WindowA/B models are hidden while
+full-part predicates still control their existing meshes and glass. One shared owner registry
+lifetime prevents duplicate compaction; unregistering the experiment leaves other owners active.
+The predicate reads `PartModel.Template.Id`; no new private batch fields or render targets.
+[Feature/asset scope and native acceptance](ui-customization.md#kitchen-sink-capsule-glass-experiment-5541).
+Production managed coverage is in `ksa-upgrade.tests/CapsuleGlassChecks.cs`.
+
 ## Verification — 5402 → 5438 (historical)
 
 Blinky feed diagnostics now read `ResourceManager.ConsumptionOrder : FlowOrder<Tank>` through

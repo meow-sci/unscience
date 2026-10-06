@@ -14,6 +14,13 @@ public sealed partial class KitchenSinkSubmod : ISaveParticipantSource
         // Preserve the existing boolean record so older saves still restore IVA visibility.
         new SaveParticipant<bool>("kitchen-sink", () => IvaForceRender.Enabled,
             () => IvaForceRender.Enabled = false, (state, _) => IvaForceRender.Enabled = state, order: 20),
+        new SaveParticipant<bool>("kitchen-sink-capsule-glass", () => CapsuleGlassExperiment.Enabled,
+            () => CapsuleGlassExperiment.SetEnabled(false), (state, context) =>
+            {
+                context.Require(!state || CapsuleGlassExperiment.IsAvailable,
+                    "Capsule glass experiment render patches are unavailable; saved toggle could not be restored.");
+                CapsuleGlassExperiment.SetEnabled(state);
+            }, order: 20),
         new SaveParticipant<string[]>("kitchen-sink-g-load", CaptureGLoadVehicles,
             ResetGLoadProtection, (state, context) =>
             {

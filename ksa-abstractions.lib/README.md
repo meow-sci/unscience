@@ -67,9 +67,12 @@ Since KSA 5482, game actions bound to a **mouse button** are dispatched from `Pr
 
 ### PartRenderFilter
 Hides selected parts' meshes while the parts stay in their vehicle and keep working (KSA 5482+).
-Blinky and It's So Shiny register their render toggles here.
+Blinky, It's So Shiny and Kitchen Sink's capsule-glass experiment register their render toggles here.
 
 - `PartRenderFilter.Register(harmony, owner, Func<Part, bool> shouldHide)` adds or replaces an owner's predicate; `Unregister(harmony, owner)` removes it; `IsInstalled` reports the shared patches.
+- `RegisterStaticModel(harmony, owner, Func<PartModel, bool> shouldHide)` hides an exact static
+  model batch, sharing compaction with full-part owners. It never applies to dynamic or glass models.
+  `Unregister` removes both predicate kinds for an owner; `IsOperational` also checks the fault latch.
 - A predicate receives the full part (`Part.FullPart`) once per model instance per viewport per frame, on the main thread. A part is hidden when any owner's predicate returns true.
 - The first owner installs one shared prefix/postfix pair on each of `PartTreeRenderData.Compose`, `ComposeDynamic` and `ComposeGlass`; the last owner removes them. All owners share one patch set because two independent compactions would shift each other's ranges.
 - The prefix records where each batch's range starts in `PartModel.ViewportData.InstanceList`. The postfix removes hidden slots from the range that `Compose*` just appended and removes the matching `DentInstanceList` entries. Cached render data is never modified, so predicate changes apply on the next frame. Hidden parts cast no shadows.
@@ -81,7 +84,12 @@ Blinky and It's So Shiny register their render toggles here.
 ### IvaForceRender
 Shared implementation of Kitchen Sink's **Always Render IVA Interiors**. Hosts call `IvaForceRender.Patch(harmony)` / `Unpatch(harmony)`.
 
-- `Enabled = true` sets `Template.Internal = false` on loaded part-model templates. A `PartModel` constructor postfix catches models created later. Disabling or unpatching restores the changed flags.
+- `Enabled` is the independent user preference. `SetRequired(owner, bool)` lets a feature require
+  interiors without changing that preference; `EffectiveEnabled` ORs all owners. Effective visibility
+  clears `Template.Internal` on loaded and newly constructed non-`ShadowProxy` models. The final
+  owner releasing visibility restores the changed flags; unpatch clears all ownership and restores
+  templates. `IsInstalled` reports whether both patches attached. Kitchen Sink's capsule experiment
+  uses this requirement, and its own scene-save adapter persists that requirement's desired state.
 - **Editor preview:** internal meshes stay visible in the vehicle editor outside IVA while the patch is installed, whether or not `Enabled` is set. KSA 5482 raster-composes static models in `PartTreeRenderData.Compose` and applies the internal/IVA gate there, without calling `PartModel.AddInstance`. The helper therefore uses a prefix on `Compose` for editor, non-IVA viewports that render part models. The prefix temporarily clears `Template.Internal` on internal, non-`ShadowProxy` templates, and a finalizer restores them even when `Compose` throws. Stock code then appends instances and dents consistently. The template list is rebuilt from `PartModel.Instances` after model creation or restoration.
 - Change from 5438: internal meshes no longer appear in editor part thumbnails. The old `AddInstance` postfix also reached thumbnails.
 

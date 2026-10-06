@@ -1,3 +1,20 @@
+## Kitchen Sink capsule glass experiment (5541)
+
+[Authoritative feature/asset map](ui-customization.md#kitchen-sink-capsule-glass-experiment-5541).
+Default-off **See Inside Capsule (Experimental)** uses the existing shared
+`PartTreeRenderData.Compose` batch compaction; static-model predicates OR with Blinky/Shiny's
+full-part filters. New direct dependency: `PartModel.Template.Id` (`TemplateDataBase.Id`), matching
+only `CoreCommandA_Subpart_MediumCapsuleWindowA_Model` / `...WindowB_Model` in
+`Content/Core/CoreCommandAAssets.xml` (ordinary static models, default `RayTracing.Disabled`).
+The native `CoreIVASpaceA_Subpart_MediumCapsuleAWindowGlass_Model` (`CoreIVASpaceAAssets.xml`)
+and main-view `PartModelGlass` path remain untouched. Existing `IvaForceRender` internal-template
+mutation gains independent owner requirements, excludes `ShadowProxy`, and restores on unpatch.
+No new Harmony target, private reflection lookup or shader edit. Both hosts register/remove the
+feature; `kitchen-sink-capsule-glass` boolean v1/order 20 resets/replays through scene saves.
+Managed validation covers rendering ownership and persistence; actual main-view transparency,
+window alignment/depth/tint and exterior lighting remain native acceptance. Secondary feeds
+lack KSA's glass pass; seated crew submission limits remain native.
+
 ## Kitchen Sink IVA camera unlock (5541)
 
 The same current-assembly build required Graffiti's

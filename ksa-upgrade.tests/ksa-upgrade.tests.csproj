@@ -13,6 +13,8 @@
     <Compile Include="../parts-now.lib/Runtime/BundleValidationIssue.cs" Link="BundleValidationIssue.cs" />
     <Compile Include="../ksa-abstractions.lib/PartRenderFilter.cs" Link="PartRenderFilter.cs" />
     <Compile Include="../ksa-abstractions.lib/PartRenderFilter.Batches.cs" Link="PartRenderFilter.Batches.cs" />
+    <Compile Include="../ksa-abstractions.lib/IvaForceRender.cs" Link="IvaForceRender.cs" />
+    <Compile Include="../kitchen-sink.lib/CapsuleGlassExperiment.cs" Link="CapsuleGlassExperiment.cs" />
     <Compile Include="../humble-arteest.lib/VehiclePaint.cs" Link="VehiclePaint.cs" />
     <Compile Include="../humble-arteest.lib/VehiclePaintPatches.cs" Link="VehiclePaintPatches.cs" />
   </ItemGroup>

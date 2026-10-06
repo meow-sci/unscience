@@ -193,6 +193,25 @@ action rather than an ongoing scene registration. Kitchen Sink independently own
 protection record; a launch preserves that vessel reference and its protection. World replacement must call reset before the
 next `PhysicsFrameHook.BeforePhysics`; execution also rejects old-world source/target objects.
 
+## Kitchen Sink capsule glass saves
+
+`kitchen-sink-capsule-glass` is a separate version-1 boolean record, restore order 20. Existing
+`kitchen-sink` (independent IVA preference), `kitchen-sink-g-load` and `kitchen-sink-iva-camera`
+payloads/versions are unchanged. Capture detaches the desired experiment state; typed boolean
+validation rejects malformed values and the coordinator retains unsupported versions. Reset calls
+`SetEnabled(false)` before old-world destruction, releasing only the experiment's global IVA
+requirement. Replay calls the same API after native reconstruction; enabled replay requires both
+the IVA patches and operational render filter or reports a retained failure. Missing legacy/vanilla
+records leave it off. Repeat/cross-scene loads do not compound ownership.
+
+This scene toggle is sidecar-owned, not a global preference or native save field. Exact stock
+model IDs are integration constants, with no per-vehicle registrations to resolve. Template/native
+references, Harmony registrations and per-frame range lists are transient; the adapter never
+serializes them. `kitchen-sink.tests` adds 17 actual adapter/coordinator checks (including invalid,
+legacy, unavailable and retained-record recovery); `ksa-upgrade.tests` separately adds 20 checks
+using the production filter, IVA helper and constructor/compose patches. Native visual/load
+acceptance remains pending; see [feature scope](ui-customization.md#kitchen-sink-capsule-glass-experiment-5541).
+
 ## Kitchen Sink IVA camera saves
 
 The accompanying Graffiti 5541 descriptor migration only changes transient GPU bindings;

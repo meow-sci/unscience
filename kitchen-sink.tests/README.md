@@ -6,6 +6,18 @@ Latest managed validation: 47 IVA ownership/persistence checks, 26 existing save
 54 G-load checks passed. The full solution compiles against local KSA 5541 with zero warnings
 or errors; `saves.tests` also passes. Native acceptance below remains pending.
 
+Capsule glass adds 17 real-adapter checks: detached boolean JSON round-trip, independent legacy
+IVA preference, reset/replay, repeated and cross-scene loads, missing/legacy records, malformed
+and future payloads, unavailable-patch diagnostics/retention/recovery and unload. This suite
+substitutes only renderer access; production filter/IVA-template ownership is separately tested
+in `ksa-upgrade.tests` (20 checks).
+
+Capsule native acceptance: enable the experiment in an exterior view of the stock medium/Gemini
+capsule, inspect both windows and cabin from several angles, then view from IVA with ray tracing
+on/off. Check glass depth/tint, shadows, hull/door-frame isolation, late-spawn capsules, both
+visibility-toggle orders and Blinky/Shiny coexistence. Save/reload each toggle combination, repeat,
+load a vanilla scene and unload; verify exact restoration. Native acceptance remains pending.
+
 IVA camera checks link `IvaCameraUnlock`, `UnlockedIvaController`, the real Kitchen Sink
 save adapter/coordinator and shared vehicle/part identity resolvers. They exercise the actual
 protected setter delegate and Harmony head patch against matching managed game fixtures:

@@ -53,7 +53,8 @@ public static partial class PartRenderFilter
         ?? throw new MissingMemberException(nameof(PartTreeRenderData), name);
 
     private static bool Active(IViewport viewport) =>
-        !_faulted && _filters.Length > 0 && viewport.HasAny(ViewportOptionFlags.RenderPartModels);
+        !_faulted && (_filters.Length > 0 || _staticModelFilters.Length > 0)
+        && viewport.HasAny(ViewportOptionFlags.RenderPartModels);
 
     // ---- Static part models (instance + dent lists) ----
 
@@ -89,7 +90,8 @@ public static partial class PartRenderFilter
                 var data = PartModel.ViewportData.Get(_staticModel!(batch), inViewport);
                 int count = _staticCount!(batch);
                 if (data.DentInstanceList.Count - start != count) continue;
-                if (!MarkHidden(_staticParts!(batch), count, data.InstanceList.Count - start)) continue;
+                if (!MarkHidden(_staticParts!(batch), count, data.InstanceList.Count - start,
+                        ShouldHideStaticModel(_staticModel!(batch)))) continue;
                 Compact(data.InstanceList, start, count);
                 Compact(data.DentInstanceList, start, count);
             }
@@ -182,14 +184,14 @@ public static partial class PartRenderFilter
     // ---- Shared helpers ----
 
     /// <summary>Fills <see cref="_hidden"/> for a complete raster range; false when nothing to remove.</summary>
-    private static bool MarkHidden(Part[] parts, int count, int appended)
+    private static bool MarkHidden(Part[] parts, int count, int appended, bool hideModel = false)
     {
         if (count == 0 || appended != count) return false;
         if (_hidden.Length < count) _hidden = new bool[Math.Max(count, _hidden.Length * 2)];
         bool any = false;
         for (int j = 0; j < count; j++)
         {
-            bool hide = ShouldHide(parts[j]);
+            bool hide = hideModel || ShouldHide(parts[j]);
             _hidden[j] = hide;
             any |= hide;
         }

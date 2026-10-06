@@ -3,7 +3,12 @@
 Feature implementation shared by Unscience and the standalone development host.
 See [Kitchen Sink controls](../kitchen-sink/README.md).
 
-- `KitchenSinkSubmod`: editor refresh, IVA visibility/camera switches and G-load protection UI.
+- `KitchenSinkSubmod`: editor refresh, IVA visibility/camera switches, capsule-glass experiment and G-load protection UI.
+- `CapsuleGlassExperiment`: one shared `PartRenderFilter.RegisterStaticModel` owner hides only
+  `CoreCommandA_Subpart_MediumCapsuleWindowA_Model` and `...WindowB_Model` while enabled.
+  `IvaForceRender.SetRequired` reveals interiors globally without changing the user's independent
+  `Enabled` preference. Native glass remains submitted. Both hosts register/remove the owner;
+  disable/reset/dispose releases its requirement. Ray tracing shadow proxies are not revealed.
 - `IvaCameraUnlock` / `UnlockedIvaController`: temporarily replaces the main viewport's IVA
   controller with an IVA subclass delegating movement to a private native `FlyController`.
   Preserves IVA mode/audio and vessel-relative pose; restores the original controller on seat
@@ -24,6 +29,12 @@ See [Kitchen Sink controls](../kitchen-sink/README.md).
 ## Scene saves
 
 The existing `SaveParticipant<bool>` (`kitchen-sink`, version 1) continues to save IVA visibility.
+A separate boolean `kitchen-sink-capsule-glass` v1/order 20 saves the experiment, default off.
+Reset releases old visibility ownership; replay uses `SetEnabled` after reconstruction and fails
+with diagnostics/record retention if rendering is unavailable. Existing payloads are unchanged.
+Missing legacy records leave the experiment off. No native references are captured: model/template
+caches and shared patch ownership are transient. Managed `CapsuleGlassSaveChecks` exercise the
+real adapter/coordinator; `ksa-upgrade.tests` links the real render filter/IVA helper and feature.
 `IvaCameraUnlock.Persistence.cs` contributes `kitchen-sink-iva-camera` version 1, order 190:
 unlock state, reusable base speed, `SavedPartReference` plus seat module index, body-frame
 position and orientation. Captures no native object references. Reset restores the old controller

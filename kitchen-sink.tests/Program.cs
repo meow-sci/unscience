@@ -91,6 +91,7 @@ internal static class Checks
             Require(GLoadProtection.Snapshot().Length == 0, "session reset clears protection");
             CheckRejectedLayouts();
             SaveChecks.Run(harmony);
+            CapsuleGlassSaveChecks.Run(harmony);
             IvaCameraChecks.Run(harmony);
             GLoadProtection.Add(cradle);
         }

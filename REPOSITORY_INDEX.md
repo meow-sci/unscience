@@ -48,8 +48,8 @@ Shared library with common abstractions used across multiple mods. Provides util
 - `PartHelpers` — recursive part tree helpers
 - `ISubmod` — generic submod interface used by unscience supermod: `Name`, `Initialize()`, `Update(dt)`, `RenderContent()`, `Dispose()`
 - `HotkeyGuard` — mandatory Harmony prefix on `GameSettings.OnKeyAll` that swallows game hotkeys while an ImGui text input has focus (KSA 5482 mouse-button bindings bypass it)
-- `PartRenderFilter` — shared, owner-registered part-mesh hiding for KSA 5482+: one prefix/postfix set on `PartTreeRenderData.Compose`/`ComposeDynamic`/`ComposeGlass` compacts hidden parts out of the per-frame instance and dent lists; fails open; raytraced IVA not filtered. Used by blinky and its-so-shiny
-- `IvaForceRender` — Kitchen Sink's IVA-interior toggle; on 5482 the editor reveal is a prefix/finalizer on `PartTreeRenderData.Compose`
+- `PartRenderFilter` — shared, owner-registered part-mesh hiding for KSA 5482+: one prefix/postfix set on `PartTreeRenderData.Compose`/`ComposeDynamic`/`ComposeGlass` compacts hidden parts out of the per-frame instance and dent lists; fails open; raytraced IVA not filtered. Used by blinky, its-so-shiny and Kitchen Sink; model-scoped registrations hide only exact static models while sharing compaction
+- `IvaForceRender` — Kitchen Sink's independent IVA-interior toggle plus owner requirements (`EffectiveEnabled`); restores non-shadow-proxy template flags when the last owner releases/unpatches. On 5482 editor reveal is a prefix/finalizer on `PartTreeRenderData.Compose`
 - `PhysicsFrameHook` — shared `Program.PrepareFrame` simulation handoff (queued mutations, `BeforePhysics`, deferred world changes); `JoinOrbitReaders()` waits for KSA 5482's nearest-orbit job before vessel moves
 - `HiddenUiFrameHook` — Harmony prefix on `Program.OnDrawUiConsole` that replays a host's registered `BeforeGui`/`AfterGui` per-frame work while the game HUD is hidden (F2), because StarMap's `[StarMapBeforeGui]`/`[StarMapAfterGui]` targets are skipped by the game in that state; used by unscience
 - `PngLibrary` / `PngFileBrowser` — shared `.unscience/pngs` catalog and reusable ImGui filesystem picker; every filesystem PNG import is copied into this one auto-uniquifying library, used by graffiti and free-fallin
@@ -227,6 +227,11 @@ Camera FOV control. Provides 8 lens presets (from super telephoto at 15° to fis
 
 ### [kitchen-sink](kitchen-sink) / [kitchen-sink.lib](kitchen-sink.lib)
 Random collection of one-off hacks and fixes for KSA. F11 window toggle.
+- **See Inside Capsule (Experimental)**: default-off, reversible experiment hides exact stock
+  medium/Gemini WindowA/B exterior models through the shared static-model render filter, retains
+  native IVA glass, and acquires global IVA visibility without changing the independent toggle.
+  Separate v1 `kitchen-sink-capsule-glass` boolean record resets/replays ownership. No shaders/assets
+  changed; native alignment/tint/exterior lighting acceptance remains pending.
 - **Unlock IVA Camera**: main-view IVA toggle delegates free movement to native `FlyController`
   while preserving IVA mode/audio/ray tracing. Body-relative pose follows the vehicle; speed
   control and Return to Seat; detached occupant head visible. `IvaCameraUnlock` owns controller
@@ -245,7 +250,7 @@ Managed fixtures exercise the production G-load patch and registry: target isola
 contact/pressure causes, telemetry, pending events, cleanup, concurrent access, unpatching and real-adapter save round-trips/legacy/rebind failure cases.
 Also covers production IVA controller ownership/head patch and actual camera adapter/identity
 resolvers: focus cleanup, seat return, repeated/cross-scene replay, missing/invalid targets and
-unload. Free-flight input/rendering is substituted at the native boundary.
+unload. Capsule glass adds real-adapter boolean round-trip/reset/replay, independent toggle, legacy/invalid/unavailable-patch retention checks. Free-flight input/rendering is substituted at the native boundary.
 Native cart/ImGui acceptance remains in-game; see its [README](kitchen-sink.tests/README.md).
 
 ## Animation & Visual Effects Mods
@@ -643,5 +648,5 @@ Managed executable linking production Blinky feed diagnostics, Free Fallin mater
 Parts Now V8 validation, and (5482) the shared `PartRenderFilter` and Vehicle Paint patches. Covers empty/selected drain views, per-canopy originals and re-enable behavior,
 external material changes, rejected top-level explosion definitions, retained legacy exclusions,
 permitted nested references and source diagnostics; shared render-filter compaction, owners, dent
-alignment and fail-open cases; paint in cached static/dynamic state flags and single invalidation.
+alignment and fail-open cases; paint in cached static/dynamic state flags and single invalidation. Also links production capsule-glass filtering and shared IVA ownership for exact window isolation, late models, independent toggle orders, shadow-proxy preservation and unpatch cleanup.
 Managed Harmony fixtures avoid native game and GPU initialization; see [README](ksa-upgrade.tests/README.md).

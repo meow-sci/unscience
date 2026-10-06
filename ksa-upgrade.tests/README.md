@@ -73,6 +73,17 @@ run `PartTreeRenderData`'s real batching, GPU upload, shadow culling, raytraced 
 the patched GLSL. Hiding and painting in the main, portrait, shadow and IVA views still need an
 in-game pass on 5482.
 
+## Capsule glass experiment checks (5541)
+
+`CapsuleGlassChecks` links production `CapsuleGlassExperiment`, `IvaForceRender` and
+`PartRenderFilter`. Twenty checks apply actual Harmony constructor/compose patches against
+managed fixtures: exact model IDs despite renamed part instances, both windows on multiple
+capsules, sibling hull/similar ID isolation, native glass retained, instance/dent alignment,
+independent IVA owner orders and preference changes, late-model capture, shadow-proxy isolation,
+coexistence with full-part filter owners and actual unpatch restoration. The fixture models
+native interior/IVA raster gates but has no Vulkan or ray tracing renderer. Native window
+alignment, depth, tint, exterior lighting and live save/load acceptance remain pending.
+
 ## Boundary
 
 The test does not prove native resource graph construction, loader registration, renderer behavior

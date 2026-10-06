@@ -11,6 +11,7 @@
     <Compile Include="../ksa-abstractions.lib/Persistence/PartIdentitySnapshot.cs" Link="PartIdentitySnapshot.cs" />
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
     <Compile Include="../kitchen-sink.lib/GLoadProtection.cs" Link="GLoadProtection.cs" />
+    <Compile Include="../kitchen-sink.lib/CapsuleGlassExperiment.cs" Link="CapsuleGlassExperiment.cs" />
     <Compile Include="../kitchen-sink.lib/GLoadProtectionPatches.cs" Link="GLoadProtectionPatches.cs" />
     <Compile Include="../kitchen-sink.lib/KitchenSinkSubmod.Saves.cs" Link="KitchenSinkSubmod.Saves.cs" />
     <Compile Include="../ksa-abstractions.lib/VehicleProvider.cs" Link="VehicleProvider.cs" />

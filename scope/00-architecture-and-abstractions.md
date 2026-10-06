@@ -230,7 +230,7 @@ Notes:
 - `IFeelSeenPatches.Apply` takes a second argument (`IFeelSeenTracker`, wired at `Mod.cs:124`).
 - `CameraControllerOverridePatches.SequencePlayer` and `MenuBarPatch.ToggleWindow` are wired before
   Apply (Patcher.cs:72, 63).
-- Blinky and its-so-shiny share one `PartRenderFilter` patch set; the first `Register` installs it and
+- Blinky, its-so-shiny and Kitchen Sink capsule glass share one `PartRenderFilter` patch set; the first `Register` installs it and
   the last `Unregister` removes it, so their Apply/Remove order does not matter.
 - `KittenAnimationPatches.Driver` is wired **after** Apply, from `KittenAnimationsSubmod.Initialize()`
   (`Mod.cs` initialises submods after `Patcher.Patch()`). The prefix null-checks it, so the ordering
@@ -396,6 +396,13 @@ Re-verified @5402 with the same shape: `OnFrame` (`:2164`) → `if (DrawUI) {…
 
 ### IvaForceRender.cs
 
+5541 capsule experiment addition: `Enabled` remains the legacy user preference; owner-scoped
+`SetRequired` requests are OR-ed as `EffectiveEnabled`. Effective visibility changes loaded and
+new non-`ShadowProxy` internal templates. Last-owner release restores flags; `Unpatch` now also
+clears all ownership and restores baselines explicitly. `IsInstalled` becomes true only after both
+existing patches attach. Kitchen Sink owns/persists its requirement, while cached template
+references and patch state are transient. No new game member or Harmony target is added here.
+
 Rows re-verified @5482 (mod lines are the current `ksa-abstractions.lib/IvaForceRender.cs`).
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
@@ -432,6 +439,15 @@ Update-risk findings (4680→4750):
   removed flexo mod but are independent of it and were kept.)
 
 ### PartRenderFilter.cs
+
+5541 capsule experiment addition: `RegisterStaticModel(Harmony, owner, Func<PartModel,bool>)`
+adds exact-model predicates evaluated once per static raster batch. These share the existing
+compaction with full-part owners; dynamic/glass paths remain full-part-only. `Unregister` releases
+both predicate kinds and keeps patches while any owner exists. `IsOperational` exposes the
+existing fault latch for UI/save readiness. Kitchen Sink reads `PartModel.Template.Id` and targets
+only two stock window IDs; see [its asset map](ui-customization.md#kitchen-sink-capsule-glass-experiment-5541).
+No additional private field/reflection or Harmony seam. Production managed checks cover owner
+coexistence, sibling-model isolation and dent alignment.
 
 Added @5482 (`ksa-abstractions.lib/PartRenderFilter.cs`, `PartRenderFilter.Batches.cs`). Hides selected
 parts' meshes while the parts stay in their vehicle. Consumers: blinky (`BlinkyPatches.cs:20,26`, owner

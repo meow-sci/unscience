@@ -28,6 +28,7 @@ public sealed partial class KitchenSinkSubmod : ISubmod
     {
         SubmodUI.BeginContentArea("##ks_content");
         RenderIvaForceRender();
+        RenderCapsuleGlassExperiment();
         RenderIvaCamera();
         RenderFixInvisibleSubparts();
         RenderGLoadProtection();
@@ -69,9 +70,26 @@ public sealed partial class KitchenSinkSubmod : ISubmod
 
     public void Dispose()
     {
+        CapsuleGlassExperiment.SetEnabled(false);
         IvaCameraUnlock.Disable();
         IvaCameraUnlock.Reset();
         ResetGLoadProtection();
         if (Instance == this) Instance = null;
+    }
+
+    private static void RenderCapsuleGlassExperiment()
+    {
+        ImGui.SeparatorText("Capsule Glass Experiment"u8);
+        ImGui.TextWrapped("Try viewing the stock medium (Gemini) capsule interior through its windows. Hides the two opaque exterior window surfaces and renders the cabin using its existing IVA glass."u8);
+        var enabled = CapsuleGlassExperiment.Enabled;
+        ImGui.BeginDisabled(!CapsuleGlassExperiment.IsAvailable && !enabled);
+        if (ImGui.Checkbox("See Inside Capsule (Experimental)"u8, ref enabled))
+            CapsuleGlassExperiment.SetEnabled(enabled);
+        ImGui.EndDisabled();
+        if (!CapsuleGlassExperiment.IsAvailable)
+            ImGui.TextDisabled("Capsule glass rendering patches are unavailable."u8);
+        else if (enabled)
+            ImGui.TextDisabled("IVA interiors are shown while this experiment is on."u8);
+        ImGui.TextWrapped("Experimental: stock glass is strongly tinted. Other exterior windows are unchanged."u8);
     }
 }

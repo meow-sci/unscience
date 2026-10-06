@@ -17,6 +17,7 @@ internal static class Patcher
             {
                 HotkeyGuard.Patch(_harmony);
                 IvaForceRender.Patch(_harmony);
+                CapsuleGlassExperiment.Apply(_harmony);
                 GLoadProtectionPatches.Apply(_harmony);
                 IvaCameraUnlock.Apply(_harmony);
             }
@@ -36,6 +37,7 @@ internal static class Patcher
                 HotkeyGuard.Unpatch(_harmony);
                 IvaCameraUnlock.Remove(_harmony);
                 GLoadProtectionPatches.Remove(_harmony);
+                CapsuleGlassExperiment.Remove(_harmony);
                 IvaForceRender.Unpatch(_harmony);
             }
             _harmony?.UnpatchAll("kitchen-sink");

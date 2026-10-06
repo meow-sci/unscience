@@ -42,6 +42,26 @@ call, so stock code appends matching instances and dents. KSA 5482's raster comp
 calls the `PartModel.AddInstance` method that the 5438 postfix used. Editor part thumbnails no
 longer show internal meshes.
 
+## Capsule Glass Experiment
+
+Enable **See Inside Capsule (Experimental)** in Kitchen Sink to try looking into the stock
+medium/Gemini capsule from outside. The switch defaults off and affects every instance of the
+two stock exterior window models. It hides only those opaque window surfaces, reveals IVA
+interiors through the shared visibility helper, and retains the native IVA glass and shader.
+Turning it off restores the exterior windows on the next render frame.
+
+Interiors are revealed globally while the experiment is enabled. **Always Render IVA Interiors**
+keeps its own setting: turning either switch off leaves interiors visible if the other still
+requires them. The existing editor preview reveal remains independent. Hulls, door frames,
+other exterior windows and ray tracing shadow proxies retain native behavior. Newly constructed
+models use the same visibility ownership, and unloading restores changed internal flags.
+
+This is a rendering experiment, not a confirmed visual fix. Stock glass has strong opacity/tint;
+window alignment, depth, culling and exterior lighting require an in-game check. Occupants in
+other vehicles still follow KSA's existing crew-submission limits. No shader, material, mesh asset,
+collision geometry or crew behavior is changed. Use the main exterior view for this test;
+secondary camera feeds omit KSA's glass pass and may show openings without glass.
+
 ## Unlock IVA Camera
 
 Enter IVA in flight, then enable **Unlock IVA Camera** in Kitchen Sink. The camera can move
@@ -64,6 +84,11 @@ and the game's IVA ray tracing setting. Native visual/input acceptance is pendin
 ## Scene saves
 
 The existing `kitchen-sink` boolean record still stores the Force IVA Rendering switch.
+A separate version-1 boolean `kitchen-sink-capsule-glass` record saves the experiment. Reset
+releases its IVA requirement before world replacement; replay reapplies the normal toggle after
+native reconstruction. Legacy/vanilla saves leave it off. Malformed/future records and unavailable
+render patches are diagnosed and retained for recovery. Template references, patch registrations
+and per-frame render lists are transient and never serialized; there are no per-vehicle targets.
 A separate version-1 `kitchen-sink-iva-camera` record stores the unlock state, base speed,
 stable seat part/module identity, and detached body-relative camera pose. Native KSA owns
 the followed vehicle and camera mode; replay requires those to match, restores the exact seat,
@@ -89,6 +114,8 @@ filter and one-shot editor refresh are transient. The defunct Flexo panels and s
   `StructuralLoad.GLoadFraction` value consumed by the destruction comparison.
 - Both `unscience/Patcher.cs` and the standalone `Patcher.cs` install/remove this patch.
 - `KitchenSinkSubmod.Saves.cs`: backward-compatible IVA record and G-load target capture/reset/replay.
+- `CapsuleGlassExperiment.cs`: exact static-model filter and independent IVA visibility ownership; both hosts install/remove it.
+- `ksa-upgrade.tests`: production model filtering and IVA ownership/cleanup checks.
 - `IvaCameraUnlock.cs`, `UnlockedIvaController.cs`: scoped controller replacement, free movement,
   seat return, focus/input cleanup and the seat head-visibility patch.
 - `IvaCameraUnlock.Persistence.cs`: detached capture, validation and exact target replay.

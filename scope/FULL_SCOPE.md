@@ -59,7 +59,7 @@ Scene-save adapters extend native saves; imported files remain external dependen
 | [`ground-clutter.md`](ground-clutter.md) | pebbles; [GLB materials](ground-clutter-glb-materials.md) | Per-body native clutter graphs, private materials, `ExecuteNextClothSolvers` transactions, collider/physics invalidation, shared copied GLB discovery, uploads and independent Workshop preview; shared Harmony ownership |
 | [`statics.md`](statics.md) | sphinx | Body-fixed GLB placement; live transforms and UV scale/offset, private vertex replacement, native static-renderer postfixes, shared GLB/PNG imports, terrain picking and automatic box/mesh colliders with per-bubble contact/lifetime hooks |
 | [`rings.md`](rings.md) | rocky-mcrock-face, bloomin-onion | planetary-ring mesh/texture swap (rocky) and **runtime ring definition on any celestial** (bloomin-onion) via the public `PlanetaryRingsReference` data tree + `Program.RebuildRenderer()`; **no Harmony patches**; `ModLibrary.AllMeshes`/`AllFiles` reflection, `MeshReference.<HostPrimitives>k__BackingField`, ctor-baking invariant in `PlanetaryRingsRenderData`; bloomin-onion adds `PlanetTransparenciesRenderer._anyRings` (load-bearing), `TextureReference.<TextureAsset>k__BackingField` (painted textures) and a cosmetic `DistantSphereRenderer._material` ring-shadow sync (moved from `_data` @5482); ring data also drives atmosphere ring shadows since 5470 |
-| [`ui-customization.md`](ui-customization.md) | skittles, kitchen-sink | `ImGui` style surface, editor refresh/IVA rendering, and selected-vehicle G-load protection via `PhysicsBubble.DetectStructuralFailure`; Flexo diagnostics removed |
+| [`ui-customization.md`](ui-customization.md) | skittles, kitchen-sink | `ImGui` style surface, editor refresh/IVA rendering, **experimental medium-capsule exterior-window reveal** via exact static-model filtering, and selected-vehicle G-load protection via `PhysicsBubble.DetectStructuralFailure`; Flexo diagnostics removed |
 | [`audio.md`](audio.md) | byo-music | Shared sound imports, FMOD stream/channel ownership, vessel-relative 3D playback and repeat/gaps |
 
 Bundled in the unscience supermod (31): blinky, bloomin-onion, byo-music, camera-controller-override, dent-wizard, doh,
@@ -70,6 +70,11 @@ rocky-mcrock-face, save-yourself, skittles, sphinx, the-tick, thug-life, zippo. 
 ---
 
 ## Current status against 5482
+
+Kitchen Sink's **See Inside Capsule (Experimental)** uses exact stock medium-capsule window
+model filtering and an independent shared IVA visibility requirement. Default-off, reversible,
+scene-saved; 20 managed render/ownership + 17 save checks pass. Main-view glass appearance and
+alignment remain native acceptance. [Feature/asset scope](ui-customization.md#kitchen-sink-capsule-glass-experiment-5541).
 
 Kitchen Sink's **Unlock IVA Camera** addition was inspected against local **5541** sources:
 IVA controller replacement with native free-flight delegation, exact-seat/body-pose sidecar
