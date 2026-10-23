@@ -16,7 +16,7 @@ public sealed partial class KitchenSinkSubmod
     {
         ImGui.Spacing();
         ImGui.SeparatorText("G-load Invincibility"u8);
-        ImGui.TextWrapped("Protect selected vehicles from G-load destruction. Collisions, part crash tolerances and fluid-pressure damage still apply."u8);
+        ImGui.TextWrapped("Protect selected vehicles from G-load destruction, including an EVA kitten's hard-landing impact. Collisions, part crash tolerances and fluid-pressure damage still apply."u8);
         ImGui.TextDisabled("Protected vehicles are saved with the Unscience scene."u8);
         var vehicles = VehicleProvider.GetAllVehicles();
         vehicles.RemoveAll(vehicle => vehicle.IsDisposed);

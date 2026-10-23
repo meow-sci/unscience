@@ -29,7 +29,21 @@ patches verify scoped whole-scene editor orientation and pan direction/bounds wi
 assembly geometry; per-root backpack map bypass, unchanged authored maps and global cache reset;
 default-off, disable, unload and reapply. IL checks preserve labels/exception boundaries and reject
 missing/duplicate target patterns. The control getter fixture mirrors the game's nullable control
-selection expression without a `NoInlining` attribute; Debug and Release exercise warmed callers.
+selection expression (`Vehicle.Helm2Body`, KSA 5638) without a `NoInlining` attribute; Debug and
+Release exercise warmed callers.
+
+Helm checks (`HelmFixture.cs`) mirror the 5638 flight-computer frame chain: `Helm2Asmb = Ctrl2Asmb =
+Tnm2Asmb = nav.Helm2Body`, the thrust-aligned TNM frame, `Ctrl2Asmb = IsTnm ? Tnm2Asmb : Helm2Asmb`,
+`CopyFrom` copying `Tnm2Asmb` but not `Helm2Asmb`, and the verbatim thrust tail of
+`Vehicle.UpdateNavBallMarkers`. The production navball postfix puts the marker on the rocket nose
+and on off-axis/explicit-control-part helms for enabled kittens only; other kittens, ordinary
+vessels (including rotated control parts), invalid markers, disable, missing mod state and unload
+keep the stock marker. RCS cache checks (`ThrusterCacheFixture.cs`) mirror the 5638 global state
+(`IsCtrl2BodyCurrent`, `IsCacheValid`, `ResetCache`), the all-zero fresh list, the seven-argument
+`RecomputeDynamicData` and the thruster terms of `Rocket.RocketsNeedUpdate`/`UpdateThrusterCache`.
+They prove invalidation restores the map and authority on enable, on disable back to the Identity
+EVA frame and with an unchanged explicit control frame, that the steady-state cache is kept, and
+that the old `Zero` reset leaves authority dead under the gate. Reverting either fix fails a check.
 
 Surface-teleport checks link the production placement transpiler and adapter. They verify one
 native helper call and the unchanged deferred teleport queue, asymmetric bounds and all eight

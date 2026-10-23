@@ -21,6 +21,16 @@ Pending grid removals are saved as intent and restarted against restored parts; 
 callbacks are cleared during scene reset. Removal delays restart rather than running against stale
 vehicle references.
 
+## KSA 5638 compatibility
+
+`FuelAnchorFinder` chooses the round-robin fuel anchors for `LcdGridBuilder.BuildGrid` and
+`RepairFuelFeeds` (and therefore save restore). It reads the propellant mixes of the first pixel
+part's `PlumbedCore` cores and keeps only parts with a tank for which `Tank.HoldableSubsetOf(mix)`
+is non-null, so a magnetic trap (antimatter only, 5638) never anchors a methalox/hydrolox pixel.
+With no tank-fed core it falls back to any tank-carrying part. `VerifyPropellantFeeds`,
+`ReachesPropellant` and `DiagnoseController` test `PlumbedCore` (5487 base of `Combustor`,
+`ThermalCore`, `AntimatterRamCore`) instead of `Combustor`. No save payload changed.
+
 ## KSA 5482 compatibility
 
 `BlinkyPatches.Apply/Remove` register and unregister the `blinky` owner with

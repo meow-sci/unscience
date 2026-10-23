@@ -446,8 +446,7 @@ public class KeyframeSequencePlayer
         // Capture start offset and rotation on first frame of playback
         if (!_hasStartedSequence)
         {
-            double3 currentTargetPos = AnimationHelpers.GetTargetPosition(controller);
-            _sequenceStartOffset = transform.PositionEcl - currentTargetPos;
+            _sequenceStartOffset = AnimationHelpers.GetTargetOffset(controller, transform);
             _sequenceStartRotation = transform.LocalRotation;
             _hasStartedSequence = true;
             Console.WriteLine($"[KeyframeSequencePlayer] Captured start offset: {_sequenceStartOffset}, rotation: {_sequenceStartRotation}");
@@ -455,22 +454,20 @@ public class KeyframeSequencePlayer
         
         // Handle return-to-start animation
         // Smoothly interpolate BOTH position and rotation:
-        // 1. Get CURRENT target position
-        // 2. Lerp OFFSET from end to start
-        // 3. Slerp ROTATION from end to start
-        // 4. Apply both to transform
+        // 1. Lerp OFFSET (relative to the CURRENT target) from end to start
+        // 2. Slerp ROTATION from end to start
+        // 3. Apply both to transform
         if (_isReturningToStart)
         {
             // Accumulate return time BEFORE using it
             _returnElapsedTime += deltaTime;
             
-            double3 currentTargetPos = AnimationHelpers.GetTargetPosition(controller);
             double t = _returnElapsedTime / _returnToStartDuration;
             double easedT = AnimationHelpers.ApplyEasing(t, _returnToStartEasing, _returnToStartEasingPowerStart, _returnToStartEasingPowerEnd);
             
             // Lerp position offset
             double3 currentOffset = double3.Lerp(_returnFromOffset, _sequenceStartOffset, easedT);
-            transform.PositionEcl = currentTargetPos + currentOffset;
+            AnimationHelpers.SetTargetOffset(controller, transform, currentOffset);
             
             // Slerp rotation (quaternion interpolation)
             doubleQuat currentRotation = doubleQuat.Slerp(_returnFromRotation, _sequenceStartRotation, easedT);
@@ -530,8 +527,7 @@ public class KeyframeSequencePlayer
                 if (_returnToStartEnabled)
                 {
                     // Capture current offset and rotation, then start return-to-start
-                    double3 currentTargetPos = AnimationHelpers.GetTargetPosition(controller);
-                    _returnFromOffset = transform.PositionEcl - currentTargetPos;
+                    _returnFromOffset = AnimationHelpers.GetTargetOffset(controller, transform);
                     _returnFromRotation = transform.LocalRotation;
                     _isReturningToStart = true;
                     _returnElapsedTime = 0.0;

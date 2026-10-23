@@ -89,10 +89,10 @@ public class ZoomInToOffsetAnimation : IKeyframeAnimation
         double frameProgress = currentEasedProgress - _lastEasedProgress;
         _lastEasedProgress = currentEasedProgress;
         
-        // Get CURRENT target position and calculate offset destination
-        double3 targetPos = AnimationHelpers.GetTargetPosition(controller);
-        double3 offsetDestination = targetPos + new double3(OffsetX, OffsetY, OffsetZ);
-        double3 towardDestination = offsetDestination - transform.PositionEcl;
+        // Calculate the offset destination relative to the CURRENT target
+        double3 cameraOffset = AnimationHelpers.GetTargetOffset(controller, transform);
+        double3 offset = new double3(OffsetX, OffsetY, OffsetZ);
+        double3 towardDestination = offset - cameraOffset;
         double distanceToDestination = towardDestination.Length();
         
         // Handle edge case: camera is very close to destination
@@ -114,7 +114,8 @@ public class ZoomInToOffsetAnimation : IKeyframeAnimation
         }
         
         double3 displacement = direction * frameDistance;
-        transform.PositionEcl += displacement;
+        cameraOffset += displacement;
+        AnimationHelpers.SetTargetOffset(controller, transform, cameraOffset);
         
         // Log on first frame to verify correct initialization
         if (elapsedTime < deltaTime * 1.5)
@@ -123,13 +124,12 @@ public class ZoomInToOffsetAnimation : IKeyframeAnimation
         }
         
         // Smoothly transition look-at from target center to offset destination
-        // At progress 0: look at targetPos (current target, no offset)
-        // At progress 1: look at targetPos + offset (current target with full offset)
+        // At progress 0: look at the current target (no offset)
+        // At progress 1: look at the current target + offset (full offset)
         // This correctly tracks moving targets throughout the animation
-        double3 offset = new double3(OffsetX, OffsetY, OffsetZ);
-        double3 currentLookAt = targetPos + offset * currentEasedProgress;
-        double3 lookAtTarget = LookAtTargetProvider?.Invoke(controller) ?? currentLookAt;
-        AnimationHelpers.LookAtTarget(transform, lookAtTarget);
+        double3 lookAtOffset = AnimationHelpers.GetLookAtOffset(LookAtTargetProvider, controller,
+            offset * currentEasedProgress);
+        AnimationHelpers.LookAtOffset(transform, cameraOffset, lookAtOffset);
         
         // Track distance traveled
         _distanceTraveled += displacement.Length();

@@ -42,11 +42,13 @@ internal sealed class ClutterRetirement
         if (value is not (GroundClutterPlacementData or ClutterEcotypeRenderData or ClutterEcotypePhysicalData or ClutterCubeCellGrid or ClutterViewResources or SimpleVkMeshAtlas)) return;
         if (value is ClutterEcotypePhysicalData physical) Try(() => RemoveShapes(physical));
         var fields = value.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        // Persistent maps must be unmapped before their underlying buffers are released.
-        foreach (var field in fields.Where(f => f.FieldType == typeof(MappedMemory) || f.FieldType == typeof(MappedMemory[]))) Clean(field.GetValue(value));
+        // Persistent maps must be unmapped before their underlying buffers are released. KSA 5638 nests
+        // per-viewport/per-frame maps (MappedMemory[][]), so match the element type at any depth.
+        var mapped = fields.Where(f => FieldShapes.Holds(f.FieldType, typeof(MappedMemory))).ToArray();
+        foreach (var field in mapped) Clean(field.GetValue(value));
         foreach (var field in fields)
         {
-            if (field.FieldType == typeof(MappedMemory) || field.FieldType == typeof(MappedMemory[])) continue;
+            if (mapped.Contains(field)) continue;
             if (value is ClutterEcotypePhysicalData && (field.Name == "MeshAtlas" || field.Name == "PlacementData")) continue;
             var item = field.GetValue(value);
             if (item is VkSampler sampler) { if (_handles.Add(sampler)) Try(() => Program.GetRenderer().Device.DestroySampler(sampler, null)); }

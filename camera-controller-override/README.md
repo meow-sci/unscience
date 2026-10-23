@@ -133,6 +133,17 @@ EaseOut:  f(t) = 1-(1-t)^p  (fast start, slow end)
 
 When animation is active, patches return `true` to skip normal camera input, allowing animation to take over.
 
+### Target-relative positioning
+
+All animations, groups and return-to-start work with the camera's offset from its follow target
+(`AnimationHelpers.GetTargetOffset` / `SetTargetOffset`). For a following camera this reads and
+writes KSA's `Camera.PositionCce` directly, the same follow-relative state the stock orbit
+controller writes. Absolute ECL positions are never subtracted. Since KSA 5499 bodies can be
+light-years from the origin, where a double has metre-scale steps, and stock cameras moved to
+follow-relative offsets for the same reason (revs 5485/5486/5518). A camera without a follow
+target falls back to absolute positions. A custom `LookAtTargetProvider` still returns an absolute
+ECL point; it is converted to an offset once per frame.
+
 ## UI (Mod.cs)
 
 Extensive ImGui window organized by animation type:

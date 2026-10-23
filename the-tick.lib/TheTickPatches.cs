@@ -10,13 +10,16 @@ namespace MeowSci.TheTickLib;
 /// <list type="bullet">
 /// <item>Every part owned by a protected vehicle reports <see cref="TickProtection.UnbreakableTolerancePascals"/>
 /// from <c>Part.CrashTolerancePascals</c>, so contact-pressure part failure never trips.</item>
-/// <item>Any structural destruction event (G-load or dynamic pressure) that
-/// <c>PhysicsBubble.DetectStructuralFailure</c> creates for a protected vehicle is discarded, while the
-/// load telemetry it writes is kept.</item>
+/// <item>Any destruction event that <c>PhysicsBubble.DetectStructuralFailure</c> creates for a protected
+/// vehicle is discarded: G-load, dynamic pressure and (since KSA 5638) an EVA kitten's
+/// <c>DetectKittenImpact</c> hard landing. Whatever load telemetry it wrote is kept.</item>
 /// </list>
 /// </summary>
 public static class TheTickPatches
 {
+    /// <summary>Exact parameter list of the private detector (KSA 5638 added the <c>SimStep frame</c>).</summary>
+    internal static readonly Type[] DetectorParameters = { typeof(VehicleUpdateState), typeof(SimStep) };
+
     private static MethodInfo? _toleranceGetter;
     private static MethodInfo? _detector;
     private static readonly MethodInfo ToleranceMethod =
@@ -35,11 +38,7 @@ public static class TheTickPatches
             ?? throw new MissingMethodException(typeof(Part).FullName, nameof(Part.CrashTolerancePascals));
         if (getter.ReturnType != typeof(double) || getter.IsStatic)
             throw new InvalidOperationException("Unexpected KSA part crash-tolerance getter signature.");
-        var detector = AccessTools.Method(typeof(PhysicsBubble), "DetectStructuralFailure",
-            new[] { typeof(VehicleUpdateState) })
-            ?? throw new MissingMethodException(typeof(PhysicsBubble).FullName, "DetectStructuralFailure");
-        if (!detector.IsStatic || detector.ReturnType != typeof(void))
-            throw new InvalidOperationException("Unexpected KSA structural-failure detector signature.");
+        var detector = ResolveDetector();
 
         harmony.Patch(getter, prefix: new HarmonyMethod(ToleranceMethod));
         try
@@ -71,6 +70,16 @@ public static class TheTickPatches
         IsApplied = false;
     }
 
+    /// <summary>Private static <c>PhysicsBubble.DetectStructuralFailure(VehicleUpdateState, SimStep) : void</c>.</summary>
+    internal static MethodInfo ResolveDetector()
+    {
+        var detector = AccessTools.Method(typeof(PhysicsBubble), "DetectStructuralFailure", DetectorParameters)
+            ?? throw new MissingMethodException(typeof(PhysicsBubble).FullName, "DetectStructuralFailure");
+        if (!detector.IsStatic || detector.ReturnType != typeof(void))
+            throw new InvalidOperationException("Unexpected KSA structural-failure detector signature.");
+        return detector;
+    }
+
     /// <summary>Prefix on <c>Part.CrashTolerancePascals</c>: protected owners skip the native resolution.</summary>
     private static bool OverrideCrashTolerance(Part __instance, ref double __result)
     {
@@ -87,7 +96,10 @@ public static class TheTickPatches
     private static void RememberExistingEvent(VehicleUpdateState vehicleState, out bool __state) =>
         __state = vehicleState.DestructionEvent != null;
 
-    /// <summary>Postfix: drop only the event the detector just created for a protected vehicle.</summary>
+    /// <summary>
+    /// Postfix: drop only the event the detector just created for a protected vehicle, whichever
+    /// branch created it (kitten impact, G-load or dynamic pressure). Binds <c>vehicleState</c> by name.
+    /// </summary>
     private static void SuppressStructuralDestruction(VehicleUpdateState vehicleState, bool __state)
     {
         if (__state || vehicleState.DestructionEvent == null) return;

@@ -68,7 +68,8 @@ The current game editor has no undo/redo interface; node changes mark it dirty f
 Equipment is rigidly attached to the body, **not animated foot bones**. Rocket boots can visually
 separate from walking/posed feet. Stock EVA part picking remains specialized, so configure equipment
 in the vehicle editor. The native vessel flight-computer gauges are enabled only for activated
-kittens. Normal vessel collisions, structural failure and G-load rules apply while activated.
+kittens. Normal vessel collisions, structural failure and G-load rules apply while activated; the
+EVA-only kitten landing-impact death (KSA 5638) does not, nor does the kitten G-load allowance.
 Test balanced, low-thrust setups first; this is not a tuned flight assist.
 Only stock `KittenBackPackPart` roots are supported. Shared templates/assets are not modified.
 
@@ -76,8 +77,9 @@ The panel's **Attitude control: X/Y/Z** readout shows the native actuator assign
 `Rcs` needs fueled thrusters, `Tvc` needs thrust from gimballed engines, and `None` means no actuator
 is currently assigned. Autopilot cannot steer without torque. While enabled, the default rocket
 nose points from the feet toward the head: **Up** points the head away from the surface with boots
-below it. Navball, attitude controls and backpack RCS share that frame. An explicitly selected
-control part or docking port keeps its chosen orientation. Disabling restores the EVA frame.
+below it. Navball, attitude controls and backpack RCS share that frame, and the navball thrust
+marker shows the actual thrust direction in it. An explicitly selected control part or docking port
+keeps its chosen orientation. Disabling restores the EVA frame and its RCS authority.
 Existing attachment positions and save coordinates are unchanged. The editor stays upright in
 both modes. See the [mode-switch design](../plans/iron-man/FLIGHT_MODES.md), the
 [orientation correction](../plans/iron-man/ORIENTATION.md) and the
@@ -85,7 +87,7 @@ both modes. See the [mode-switch design](../plans/iron-man/FLIGHT_MODES.md), the
 
 ## Validation
 
-Built against KSA **2026.9.7.5402**. Managed checks exercise real production connector persistence
+Built against KSA **2026.10.19.5638** (originally 5402). Managed checks exercise real production connector persistence
 and Harmony dispatch, native HUD eligibility/button state, and control-settings restoration with
 small game fixtures. They do not run Vulkan/Bepu or simulate rocket flight. **In-game acceptance
 is still required**, especially for the new autopilot panel and physical attitude response.

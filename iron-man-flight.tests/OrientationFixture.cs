@@ -8,6 +8,7 @@ public static class OrientationNumericsExtensions
 {
     public static double3 Transform(this double3 vector, doubleQuat rotation) => double3.Transform(vector, rotation);
     public static doubleQuat Inverse(this doubleQuat rotation) => doubleQuat.Inverse(rotation);
+    public static double3 NormalizeOrZero(this double3 vector) => double3.NormalizeOrZero(vector);
 }
 
 public interface IFollowable { }
@@ -19,7 +20,9 @@ public partial class Vehicle : IFollowable
     public Part? ControlPart;
     public Part.Connector? ControlConnector;
     public Vehicle() { Parts.OwningVehicle = this; Parts.Root.Tree = Parts; }
-    public doubleQuat Ctrl2Body
+    // KSA 5638 Vehicle.cs:613, same expression (formerly Ctrl2Body). Read by navball, rates and
+    // worker navigation (PhysicsBubble.cs:1372,1508,1888); see HelmFixture.cs for the FC chain.
+    public doubleQuat Helm2Body
     {
         get => ControlConnector?.Asmb2VehicleAsmb ?? ControlPart?.Asmb2VehicleAsmb ?? doubleQuat.Identity;
     }
@@ -85,43 +88,4 @@ public class OrbitController
     }
 
     public bool Scroll(double amount) => EditorOnScroll(amount);
-}
-
-[Flags]
-public enum ThrusterMapFlags { None = 0, PitchUp = 1, RollRight = 2, TranslateForward = 4 }
-public struct EmptyStruct { }
-public struct ThrusterControllerState { }
-public struct ThrusterControllerGlobalState
-{
-    public static ThrusterControllerGlobalState Zero => default;
-    public int CacheMarker;
-}
-
-public class ThrusterController(Part root)
-{
-    public class PartParent(Part fullPart) { public Part FullPart = fullPart; }
-    public PartParent Parent = new(root);
-    public ThrusterMapFlags? ManualControlMap;
-    public ThrusterMapFlags GeometricMap;
-    public int GeometricMapCalls;
-    public ThrusterMapFlags ResolvedMap;
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    public void RecomputeDynamicData()
-    {
-        // Exactly the stock nullable-map selection seam; the actual geometry solver is not simulated.
-        ResolvedMap = ManualControlMap ?? GenerateMap();
-    }
-
-    private ThrusterMapFlags GenerateMap() { GeometricMapCalls++; return GeometricMap; }
-}
-
-public static class ModuleStateful<TModule, TState, TGlobal, TFx> where TGlobal : struct
-{
-    public class StateList
-    {
-        public TGlobal Global;
-        public ref TGlobal GetMutableGlobalStateForInitialization() => ref Global;
-    }
-    public static StateList InitializeHotPathList(StateList states) => states;
 }

@@ -51,13 +51,12 @@ public class AnimationGroup : IKeyframeAnimation
 
     public void Initialize(Controller controller, Transform3D transform)
     {
-        double3 targetPos = AnimationHelpers.GetTargetPosition(controller, transform.PositionEcl);
-        _baseOffset = transform.PositionEcl - targetPos;
+        _baseOffset = AnimationHelpers.GetTargetOffset(controller, transform);
         _baseRotation = transform.LocalRotation;
 
         foreach (var entry in _entries)
         {
-            transform.PositionEcl = targetPos + _baseOffset;
+            AnimationHelpers.SetTargetOffset(controller, transform, _baseOffset);
             transform.LocalRotation = _baseRotation;
             entry.Animation.Initialize(controller, transform);
             entry.VirtualOffset = _baseOffset;
@@ -65,7 +64,7 @@ public class AnimationGroup : IKeyframeAnimation
             entry.IsFinalized = false;
         }
 
-        transform.PositionEcl = targetPos + _baseOffset;
+        AnimationHelpers.SetTargetOffset(controller, transform, _baseOffset);
         transform.LocalRotation = _baseRotation;
 
         Console.WriteLine($"[AnimationGroup] Initialize: {_entries.Count} animations, duration={DurationSeconds:F1}s, baseOffset={_baseOffset}");
@@ -73,8 +72,8 @@ public class AnimationGroup : IKeyframeAnimation
 
     public bool Update(Controller controller, Transform3D transform, double deltaTime, double elapsedTime)
     {
-        double3 currentTargetPos = LookAtTargetProvider?.Invoke(controller)
-            ?? AnimationHelpers.GetTargetPosition(controller);
+        // Children run relative to the follow target, or to a custom look-at point when set.
+        double3 referenceOffset = AnimationHelpers.GetLookAtOffset(LookAtTargetProvider, controller);
 
         // Phase 1: Update position-contributing animations in virtual state, collect offset deltas
         double3 totalOffsetDelta = double3.Zero;
@@ -91,13 +90,13 @@ public class AnimationGroup : IKeyframeAnimation
             }
 
             // Set virtual transform relative to current target
-            transform.PositionEcl = currentTargetPos + entry.VirtualOffset;
+            AnimationHelpers.SetTargetOffset(controller, transform, referenceOffset + entry.VirtualOffset);
             transform.LocalRotation = entry.VirtualRotation;
 
             bool complete = entry.Animation.Update(controller, transform, deltaTime, elapsedTime);
 
             // Extract offset from current target
-            entry.VirtualOffset = transform.PositionEcl - currentTargetPos;
+            entry.VirtualOffset = AnimationHelpers.GetTargetOffset(controller, transform) - referenceOffset;
             entry.VirtualRotation = transform.LocalRotation;
 
             if (complete)
@@ -107,11 +106,12 @@ public class AnimationGroup : IKeyframeAnimation
         }
 
         // Phase 2: Apply composed position (target-relative)
-        transform.PositionEcl = currentTargetPos + _baseOffset + totalOffsetDelta;
+        double3 composedOffset = referenceOffset + _baseOffset + totalOffsetDelta;
+        AnimationHelpers.SetTargetOffset(controller, transform, composedOffset);
 
         // Phase 3: Compute LookAt rotation from composed position
         transform.LocalRotation = _baseRotation;
-        AnimationHelpers.LookAtTarget(transform, currentTargetPos);
+        AnimationHelpers.LookAtOffset(transform, composedOffset, referenceOffset);
 
         // Phase 4: Apply rotation animation contributions on top of LookAt
         ApplyRotationContributions(transform, elapsedTime);

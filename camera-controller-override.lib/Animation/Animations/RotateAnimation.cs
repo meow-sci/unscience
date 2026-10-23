@@ -68,8 +68,7 @@ public class RotateAnimation : IKeyframeAnimation
     public void Initialize(Controller controller, Transform3D transform)
     {
         _startRotation = transform.LocalRotation;
-        double3 targetPos = AnimationHelpers.GetTargetPosition(controller, transform.PositionEcl);
-        _startOffset = transform.PositionEcl - targetPos;
+        _startOffset = AnimationHelpers.GetTargetOffset(controller, transform);
         _upAxis = double3.UnitY.Transform(_startRotation);
         _rightAxis = double3.UnitX.Transform(_startRotation);
         _isInitialized = true;
@@ -96,8 +95,7 @@ public class RotateAnimation : IKeyframeAnimation
         var totalRotation = yawQuat * pitchQuat;
 
         transform.LocalRotation = totalRotation * _startRotation;
-        double3 currentTargetPos = AnimationHelpers.GetTargetPosition(controller, transform.PositionEcl);
-        transform.PositionEcl = currentTargetPos + _startOffset;
+        AnimationHelpers.SetTargetOffset(controller, transform, _startOffset);
 
         if (elapsedTime < deltaTime * 1.5)
             Console.WriteLine($"[RotateAnimation] First frame: t={t:F4} easedT={easedT:F4} yawRad={currentYawRad:F4} pitchRad={currentPitchRad:F4}");

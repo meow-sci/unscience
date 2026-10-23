@@ -66,8 +66,7 @@ public class LoopyOrbitAnimation : IKeyframeAnimation
     public void Initialize(Controller controller, Transform3D transform)
     {
         // Get current state to determine orbit axis
-        double3 targetPos = AnimationHelpers.GetTargetPosition(controller);
-        double3 currentOffset = transform.PositionEcl - targetPos;
+        double3 currentOffset = AnimationHelpers.GetTargetOffset(controller, transform);
         
         // Validate radius
         double radius = currentOffset.Length();
@@ -91,7 +90,7 @@ public class LoopyOrbitAnimation : IKeyframeAnimation
         _lastOscillationOffset = 0.0;
         _isInitialized = true;
         
-        Console.WriteLine($"[LoopyOrbitAnimation] Initialize: pos={transform.PositionEcl}, target={targetPos}, radius={radius:F2}");
+        Console.WriteLine($"[LoopyOrbitAnimation] Initialize: offset={currentOffset}, radius={radius:F2}");
     }
     
     public bool Update(Controller controller, Transform3D transform, double deltaTime, double elapsedTime)
@@ -141,9 +140,8 @@ public class LoopyOrbitAnimation : IKeyframeAnimation
         // Apply oscillation to the rotated offset
         double3 finalOffset = rotatedOffset + _verticalAxis * currentOscillationOffset;
         
-        // Get CURRENT target position and update position relative to it
-        double3 currentTargetPos = AnimationHelpers.GetTargetPosition(controller);
-        transform.PositionEcl = currentTargetPos + finalOffset;
+        // Update position relative to the CURRENT target
+        AnimationHelpers.SetTargetOffset(controller, transform, finalOffset);
         
         // Log on first frame
         if (elapsedTime < deltaTime * 1.5)
@@ -152,8 +150,8 @@ public class LoopyOrbitAnimation : IKeyframeAnimation
         }
         
         // Maintain look-at behavior
-        double3 lookAtTarget = LookAtTargetProvider?.Invoke(controller) ?? currentTargetPos;
-        AnimationHelpers.LookAtTarget(transform, lookAtTarget);
+        double3 lookAtOffset = AnimationHelpers.GetLookAtOffset(LookAtTargetProvider, controller);
+        AnimationHelpers.LookAtOffset(transform, finalOffset, lookAtOffset);
         
         // Log on completion
         bool isComplete = elapsedTime >= DurationSeconds;

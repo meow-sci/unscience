@@ -71,6 +71,23 @@ public sealed partial class KiwisMarblesSubmod : ISaveParticipantSource
 
     private static bool Finite(double3 v) => double.IsFinite(v.X) && double.IsFinite(v.Y) && double.IsFinite(v.Z);
 
+    /// <summary>
+    /// Resolves a saved non-vehicle target by exact id from the Target picker's candidates
+    /// (<see cref="CelestialProvider.GetAllOrbiters"/> minus vehicles). Since KSA 5638 that includes
+    /// <c>OrbitingStar</c>, a <c>StellarBody</c> rather than a <c>Celestial</c>. Null when absent or ambiguous.
+    /// </summary>
+    private static IOrbiter? FindBodyTarget(string id)
+    {
+        IOrbiter? match = null;
+        foreach (var orbiter in CelestialProvider.GetAllOrbiters())
+        {
+            if (orbiter is Vehicle || orbiter.Id != id) continue;
+            if (match != null) return null;
+            match = orbiter;
+        }
+        return match;
+    }
+
     private void RestoreSavedWelds(List<SavedCelestialWeld> saved, SaveRestoreContext context)
     {
         var bodies = CelestialProvider.GetAllCelestials();
@@ -79,7 +96,7 @@ public sealed partial class KiwisMarblesSubmod : ISaveParticipantSource
             try
             {
                 var source = bodies.FirstOrDefault(b => b.Id == w.Source);
-                IOrbiter? target = w.TargetIsVehicle ? VehicleProvider.FindVehicle(w.Target) : bodies.FirstOrDefault(b => b.Id == w.Target);
+                IOrbiter? target = w.TargetIsVehicle ? VehicleProvider.FindVehicle(w.Target) : FindBodyTarget(w.Target);
                 var parent = Universe.CurrentSystem?.All.UnsafeAsList().OfType<IParentBody>()
                     .FirstOrDefault(body => ((Astronomical)body).Id == w.OriginalParent);
                 context.Require(source != null && target != null && parent != null, $"Unresolved celestial weld {w.Source} → {w.Target}.");

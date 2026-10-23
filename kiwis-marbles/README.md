@@ -13,7 +13,7 @@ Toggle the window with **F9**.
 
 ## Features
 
-- **Celestial welding**: Weld any planet or moon to any other orbiter (celestial or vehicle)
+- **Celestial welding**: Weld any planet or moon to any other orbiter: a planet, moon, vehicle or, since KSA 5638, an orbiting star such as Alpha Centauri A/B or Proxima
 - **Offset in CCI frame**: Specify an XYZ offset in the CCI (inertial) frame of the target's parent body
 - **Unit scale selector**: Enter offsets in m / km / Mm / Gm for convenience; computed double-precision offset is displayed
 - **Live offset editing**: Adjust the weld offset in real-time from the active welds panel, with a per-weld unit selector
@@ -76,7 +76,8 @@ a no-op; unweld restores are queued and applied in the same window.
 
 ## Notes
 
-- Stars (`StellarBody`) cannot be sources — they have no orbit and always sit at origin.
+- Stars cannot be sources. Since KSA 5638 a system can hold several stars: a root `FixedStar` or `Barycenter`, and `OrbitingStar`s around it (`Content/Core/InterstellarAstronomicals.xml`). An `OrbitingStar` is a `StellarBody` with its own orbit and an `IOrbiter`, so it is offered as a **target**. The surface helper and surface mode use its radius. Roots do not orbit and are neither sources nor targets. A planet welded to an orbiting star moves under that star's parent, for example the Alpha Centauri barycenter.
+- A weld whose target already orbits the source (for example Earth → Luna) is refused: the source would become its own ancestor.
 - Source body's children (moons of the moved planet) automatically follow since their orbits are defined relative to their parent.
 - Weld chains (Moon → Earth → Mars) work correctly: the engine sorts welds topologically so Earth is moved before Moon's weld is applied.
 - Normal KSA saves made with Unscience restore welds and original orbital baselines. Standalone mod hot-reload is not a save/load operation; see [library details](../kiwis-marbles.lib/README.md#scene-saves).

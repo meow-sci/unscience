@@ -5,8 +5,8 @@ using MeowSci.DohLib.Materials;
 using MeowSci.DohLib.Spawning;
 using MeowSci.KsaAbstractions.Persistence;
 
-// Native-free stand-ins. The real DOH save adapter, registry, material set, material release
-// and VehicleProvider are linked unchanged (see doh.tests.csproj).
+// Native-free stand-ins. The real DOH save adapter, registry, material set, material release,
+// spawner teardown and VehicleProvider are linked unchanged (see doh.tests.csproj).
 
 namespace Brutal.Numerics
 {
@@ -20,14 +20,25 @@ namespace Brutal.Numerics
 
 namespace KSA
 {
-    public class Vehicle(string id)
+    internal static class Trace
+    {
+        public static readonly List<string> Events = new();
+    }
+
+    public class Astronomical(string id)
     {
         public string Id { get; } = id;
+    }
+
+    public class Vehicle(string id) : Astronomical(id)
+    {
         public bool IsDisposed { get; set; }
         public bool IsDebris { get; set; }
     }
 
     public sealed class KittenEva(string id) : Vehicle(id);
+
+    public enum CrewDisposition { EndMission, Kill, Boarded }
 
     internal static class Program
     {
@@ -37,17 +48,51 @@ namespace KSA
     internal static class Universe
     {
         public static CelestialSystem? CurrentSystem { get; set; }
+        public static bool FailDestroy { get; set; }
+
+        /// <summary>KSA 5638: crew handling, camera/control/target hand-off, then Dispose, which deregisters.</summary>
+        public static void DestroyVehicle(Vehicle vehicle, CrewDisposition crew = CrewDisposition.EndMission)
+        {
+            Trace.Events.Add($"destroy {vehicle.Id} {crew}");
+            if (FailDestroy) throw new System.InvalidOperationException("teardown failed");
+            if (Program.ControlledVehicle == vehicle) Program.ControlledVehicle = null;
+            vehicle.IsDisposed = true;
+            CurrentSystem?.Deregister(vehicle);
+        }
     }
 
     internal sealed class CelestialSystem
     {
         public VehicleCollection All { get; } = new();
+
+        public void Deregister(Astronomical astronomical)
+        {
+            Trace.Events.Add("deregister " + astronomical.Id);
+            All.UnsafeAsList().RemoveAll(vehicle => ReferenceEquals(vehicle, astronomical));
+        }
     }
 
     internal sealed class VehicleCollection
     {
         private readonly List<Vehicle> _vehicles = new();
         public List<Vehicle> UnsafeAsList() => _vehicles;
+
+        public bool TryGet(string id, out Astronomical? value)
+        {
+            value = _vehicles.Find(vehicle => vehicle.Id == id);
+            return value != null;
+        }
+    }
+
+    public sealed class Jobs(string name)
+    {
+        public void Wait() => Trace.Events.Add("wait " + name);
+    }
+
+    internal static class JobSystems
+    {
+        public static Jobs? VehicleSolver = new("vehicle solver");
+        public static Jobs? NearestOrbitAndPerformanceWorker = new("nearest orbit");
     }
 }
 
@@ -100,8 +145,12 @@ namespace MeowSci.DohLib.Materials
 
 namespace MeowSci.DohLib.Spawning
 {
-    public sealed class KittenSpawner(MaterialFactory factory)
+    /// <summary>The real teardown partial (KittenSpawner.Teardown.cs) is linked; spawning is substituted.</summary>
+    public sealed partial class KittenSpawner(MaterialFactory factory, SpawnedKittenRegistry registry)
     {
+        private readonly MaterialFactory _materialFactory = factory;
+        private readonly SpawnedKittenRegistry _registry = registry;
+
         public int Clones { get; private set; }
 
         /// <summary>Mirrors the production reuse contract: a released set is never reused.</summary>
@@ -114,7 +163,7 @@ namespace MeowSci.DohLib.Spawning
                 return reusable;
             }
             Clones++;
-            return factory.CreateSet(tint);
+            return _materialFactory.CreateSet(tint);
         }
     }
 }
@@ -136,7 +185,7 @@ namespace MeowSci.DohLib
         private int _selectedCharacterIndex = -1;
         private Vehicle? _selectedVehicle;
 
-        public DohSubmod() => _spawner = new KittenSpawner(_materialFactory!);
+        public DohSubmod() => _spawner = new KittenSpawner(_materialFactory!, _registry!);
 
         public MaterialFactory Factory => _materialFactory!;
         public SpawnedKittenRegistry Registry => _registry!;

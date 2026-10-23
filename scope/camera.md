@@ -1,5 +1,65 @@
 # Camera / View Mods — Game Integration Scope
 
+## KSA 5638 (5482 → 5638) verification
+
+Verified 2026-10-22 against `2026.10.19.5638` (ksa-game-assemblies `edda844`; 5541 = `47703f3`,
+5482 = `a2f724f`). Static/managed only: the solution builds with 0 warnings and `camera-saves.tests`
+passes; no native run. Line numbers in this section are @5638.
+
+- 🔧 **camera-controller-override: follow-relative playback (code change).** Revs 5485/5486/5518 moved the
+  stock map, portrait and IVA cameras to follow-relative offsets to stop judder far from the origin, and
+  rev 5499 interstellar systems put bodies light-years away (Alpha Centauri ≈ 4.3 ly ≈ 4×10¹⁶ m,
+  `Content/Core/InterstellarAstronomicals.xml:9-15`, where one double ULP is about 8 m). The animations used
+  to round-trip `transform.PositionEcl - Following.GetPositionEcl()`, which snaps a 10 m camera offset to
+  that grid. `AnimationHelpers.GetTargetOffset/SetTargetOffset` now read and write `Camera.PositionCce`
+  (`KSA/Camera.cs:81`, the exact `PositionEcl - Following.GetPositionEcl()` the camera stores, `:110-128`)
+  whenever the camera follows something. Every animation, `AnimationGroup` and `KeyframeSequencePlayer`
+  (start/return offsets) works in that target-relative space. Without a follow target the offset is the
+  absolute position, as before. A custom absolute `LookAtTargetProvider` is converted once per frame
+  (`GetLookAtOffset`); only the provider's own value is absolute. Targets are unchanged:
+  `OrbitController.OnFrame` `:478`, `FlyController.OnFrame` `:659` (name lookup, single overloads),
+  `Controller.Camera` `Controller.cs:12`, `Camera.LookAtRotation` `:203`. Stock `OrbitController` writes
+  `Camera.PositionCce` the same way (`OrbitController.cs:634,642`). No save payload change: recipes store
+  parameters only.
+- 🔧 **hot-pursuit: nearby-celestial mirror kept, stale value now cleared (code change).**
+  - Secondary viewports now render terrain and atmosphere: `RenderTerrain` was added to the secondary
+    flags (`Program.cs:994`, since 5541). `RenderViewport` (`:4633-4751`) runs the terrain mesh/pre-pass,
+    `_planetRenderer.Render` and `RenderAtmosphereOnly`. Clouds and rings are skipped in atmosphere-only
+    mode (`PlanetTransparenciesRenderer.cs:242-244`), and rev 5534 reuses the main viewport's shadow maps.
+  - Those passes resolve `Camera.GetEffectiveNearbyCelestial()` (`Camera.cs:164-167`: `NearbyCelestial ??
+    Program.FindNearbyCelestial(this)`). The callers are `PlanetViewportData.OnPreRender`
+    (`KSA.Rendering.Planet/PlanetViewportData.cs:122`), `StaticCelestialDistanceRendering.cs:392,397`,
+    `AtmosphereRenderer.BeginFrame` `:463`, `Program.UpdateShaderData` `:3023` and
+    `GroundClutterRenderer.cs:1198`. An unset secondary camera therefore already gets the right body, so
+    the distant-sphere artifact the mirror was written for is now handled by stock.
+  - The mirror cannot diverge from that pick. It writes `FindNearbyCelestial(camera)` (`Program.cs:5427`)
+    for the same final pose (after the clamp), and writes null beyond 80,000 km exactly as
+    `OnFrameCelestials` (`:2833-2864`) does for the main camera, in which case the effective lookup falls
+    back to the same body. It is kept because raw `NearbyCelestial` readers remain, for example the
+    airless-body near/far flag (`AtmosphereRenderer.cs:501`) and the per-camera metrics.
+  - **Fixed:** stock never writes a secondary camera's `NearbyCelestial`, and lease reset does not clear it
+    (`GameViewport.ResetToDefaults` `:72-93`). A value left behind on a released slot would have overridden
+    the next owner's effective lookup, so its terrain, atmosphere and lighting would use the wrong planet.
+    `HotPursuitCelestialState.Clear` now runs whenever Hot Pursuit releases or loses a lease
+    (`HotPursuitSubmod.ReleaseLease`/`DropViewport`).
+  - `FixedController.OnFrame` (`:22`) now skips `CharacterPortrait` viewports only. Hot Pursuit owns
+    `Secondary` slots, so the prefix seam is unchanged. `ViewportRegistry` lease APIs are unchanged
+    (`:18,54,193,225,258`); its new `ViewportRegistered/Unregistered` events are unused.
+- ✅ **glass.** `_fovRadians :53`, `SetFieldOfView :412`, `ChangeFieldOfView :447` (still called only
+  from `Camera.OnKey :865,870`), `UpdateProjection :463`, `GetFieldOfView :771`,
+  `Program.GetMainCamera :670` and `ViewportRegistry.IsMainCamera :101` all hold (decompiler-only diffs).
+- ✅ **Kitchen Sink IVA camera unlock clean.** `IVASeat.IsCameraInThisSeat(IViewport)` `:105` and the
+  protected `GameViewport.IvaController` setter `:46` keep their shapes. `IVASeat`/`IVAController` diffs
+  since 5541 are decompiler-only.
+- ⚠️ **Optimized KSA.dll (rev 5630, live check).** The JIT may inline tiny methods into callers
+  compiled before a Harmony patch is reapplied mid-session. The highest-risk targets here are
+  `IVASeat.IsCameraInThisSeat` (one expression) and glass's `Camera.ChangeFieldOfView`. All are patched
+  at load, before flight rendering. Re-verify after toggling or reloading the features.
+- **Live checks pending (native):** a sequence near another star and at a distant moon (smooth, no
+  stepping); orbit/zoom/pan/groups and return-to-start around a moving craft. For Hot Pursuit: feeds over
+  terrain with atmosphere, closing a feed and opening a stock Add Camera at a different body (correct
+  planet), and night/shadow appearance with the shared shadow maps. Also the 5482 list below.
+
 ## Kitchen Sink unlocked IVA camera
 
 Added against local **2026.10.7.5541** sources (metadata 2026-10-02). `IvaCameraUnlock` installs
@@ -90,7 +150,8 @@ Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
   - camera-controller-override does not patch `MapController.OnFrame`.
   - `CameraControllerOverridePatches.Remove` calls `harmony.UnpatchAll(harmony.Id)`
     (`CameraControllerOverridePatches.cs:38`), which in the supermod unpatches everything at unload.
-  - Hot Pursuit secondary renders still lack the main planet, cloud and particle passes.
+  - Hot Pursuit secondary renders lacked the main planet, cloud and particle passes at 5482 (since 5541
+    they render terrain and atmosphere; see the 5638 section).
 - **Live checks pending (native).**
   - Hot Pursuit:
     - all four leases, with vehicles, kittens, chutes and fur in the feeds under per-view buckets;
@@ -167,9 +228,10 @@ itself instead of letting the game position the camera.
 rendered in `OnAfterUi`. Embedded copy renders as a collapsible section inside the unscience window.
 No game hotkeys are rebound; `HotkeyGuard` is applied to block game keys while typing in ImGui.
 
-**Persistence** — None. Keyframe sequences are built at runtime via the UI and are not saved/loaded
-(README lists save/load as a future idea). The unscience supermod persists only generic submod
-visibility/header state, not animation data.
+**Persistence** — Scene saves store the authored recipes (see the
+[save adapter notes](#hot-pursuit-saveload-adapter-featuresaves) at the end of this file); playback
+restores stopped. Offsets are recomputed from the live camera on replay, so the 5638 follow-relative
+change needs no payload migration.
 
 **Integration points**
 
@@ -180,10 +242,11 @@ visibility/header state, not animation data.
 | 3 | Harmony arg injection (`__instance`) | `camera-controller-override.lib/CameraControllerOverridePatches.cs:42` | `KSA.Controller` (base of both controllers) | `KSA/Controller.cs:8` | Yes | None (`Controller.OnFrame` virtual retyped to `IViewport` at `:62`; class otherwise identical) | Base type unchanged; `__instance` typing OK. |
 | 4 | Harmony arg injection (by param NAME) | `camera-controller-override.lib/CameraControllerOverridePatches.cs:42` | `OnFrame` parameter `double inDeltaTime` | `KSA/OrbitController.cs:487`, `KSA/FlyController.cs:653` | Yes | None | Param name `inDeltaTime` matches in both controllers/versions. The prefix deliberately does not bind `inViewport`, which is why the 5402 `Viewport` → `IViewport` retype needed no mod change. |
 | 5 | Direct field read (`__instance.Camera`) — **FIXED (Phase 4)** | `camera-controller-override.lib/CameraControllerOverridePatches.cs:42,54` | `KSA.Controller.Camera : Camera` (public field; `KSA.Camera : Transform3D`) | `KSA/Controller.cs:12` | Yes | None | Was a Harmony field injector `Transform3D ___Transform` binding to a **non-existent** field (the camera is `Camera`, not `Transform`; `KSA/Controller.cs` contains no `Transform` member in 5348 or 5402 — a `Transform` field exists only on the unrelated `RenderCore.Input.Controllers.CameraController`). Harmony 2.4.2 validates injected field names at patch time, so `harmony.Patch` **threw** → the prefix never attached AND the throw aborted the rest of the supermod chain. Now the prefix reads `__instance.Camera` (a `Transform3D`) directly and passes it to `Update`. |
-| 6 | Direct typed API (read chain) | `camera-controller-override.lib/Animation/AnimationHelpers.cs:33` | `KSA.Controller.Camera` (field) → `KSA.Camera.Following` (`IFollowable?` prop) → `IFollowable.GetPositionEcl() : double3` | `KSA/Controller.cs:12`, `KSA/Camera.cs:158`, `KSA/IPosition.cs:7` | Yes | None (OLD `KSA/Camera.cs:158`; `Following`/`GetPositionEcl` unchanged; `IPosition.cs` byte-identical) | Target-tracking. `GetPositionEcl` is on `IPosition` (base of `IFollowable`). Live since the Phase 4 fix of #5. |
-| 7 | Direct typed API (static) | `AnimationHelpers.cs:46`, `Animation/Animations/SpiralZoomOutAnimation.cs:127`, `Animation/Animations/SpiralZoomInAnimation.cs:136` | `KSA.Camera.LookAtRotation(double3 forwardEcl, double3 upEcl) : doubleQuat` — `public static` | `KSA/Camera.cs:198` | Yes | None (OLD `KSA/Camera.cs:198`) | Static helper, compile-time bound. Signature identical. |
-| 8 | Direct typed API (read/write) | `camera-controller-override.lib/Animation/KeyframeSequencePlayer.cs:450,473` + all `Animation/Animations/*` | `KSA.Transform3D.PositionEcl { get; set; } : double3` — `public virtual` | `KSA/Transform3D.cs:15` | Yes | None (file byte-identical) | Mutates the controller's `Camera` (a `Transform3D`) by reference to move the camera. `Camera` overrides `PositionEcl` (`KSA/Camera.cs:110`). Live since the Phase 4 fix of #5. |
-| 9 | Direct typed API (read/write) | `KeyframeSequencePlayer.cs:451,476,477` + `Animation/Animations/*` | `KSA.Transform3D.LocalRotation : doubleQuat` — `public` field | `KSA/Transform3D.cs:13` | Yes | None (file byte-identical) | Mutates the controller's `Camera` by reference to rotate the camera. Live since the Phase 4 fix of #5. |
+| 6 | Direct typed API (read chain) | `camera-controller-override.lib/Animation/AnimationHelpers.cs:33-34` (fallback for unfollowed cameras and custom look-at providers only) | `KSA.Controller.Camera` (field) → `KSA.Camera.Following` (`IFollowable?` prop) → `IFollowable.GetPositionEcl() : double3` | `KSA/Controller.cs:12`, `KSA/Camera.cs:158` @5638, `KSA/IPosition.cs:7` | Yes | None; **use narrowed @5638** | Absolute target position is no longer subtracted for a following camera (see #6b). Still converts a custom absolute `LookAtTargetProvider` into an offset. |
+| 6b | Direct typed API (read/write) | `AnimationHelpers.cs:43-57` (`GetTargetOffset`/`SetTargetOffset`), used by `KeyframeSequencePlayer`, `AnimationGroup` and all `Animation/Animations/*` | `KSA.Camera.PositionCce { get; set; } : double3` (follow-relative position in ECL axes) + `Camera.Following` | `KSA/Camera.cs:81` @5638 | Yes | **NEW use @5638** | Exactly `PositionEcl - Following.GetPositionEcl()` (`Camera.cs:110-128`) without the absolute round-trip, whose double precision is metres at interstellar distances (rev 5499). Same member stock `OrbitController` writes (`:634,642`). Unfollowed cameras fall back to absolute `PositionEcl`. |
+| 7 | Direct typed API (static) | `AnimationHelpers.cs:77`, `Animation/Animations/SpiralZoomOutAnimation.cs:128`, `Animation/Animations/SpiralZoomInAnimation.cs:137` | `KSA.Camera.LookAtRotation(double3 forwardEcl, double3 upEcl) : doubleQuat` — `public static` | `KSA/Camera.cs:203` @5638 | Yes | None (OLD `KSA/Camera.cs:198`) | Static helper, compile-time bound. Signature identical. |
+| 8 | Direct typed API (read/write) | `AnimationHelpers.cs:47,56` (unfollowed fallback); log lines only elsewhere | `KSA.Transform3D.PositionEcl { get; set; } : double3` — `public virtual` | `KSA/Transform3D.cs:15` | Yes | None; **use narrowed @5638** | Only moves a camera that follows nothing; following cameras are moved through #6b. `ZoomOut`/`SpiralZoomOut` still read it for a direction-only fallback when the camera sits on its target. |
+| 9 | Direct typed API (read/write) | `KeyframeSequencePlayer.cs:450,474,531` + `Animation/Animations/*` | `KSA.Transform3D.LocalRotation : doubleQuat` — `public` field | `KSA/Transform3D.cs:13` | Yes | None (file byte-identical) | Mutates the controller's `Camera` by reference to rotate the camera. Live since the Phase 4 fix of #5. |
 | 10 | Harmony patch (shared, required) | `camera-controller-override/Patcher.cs:20` (+ `unscience/Patcher.cs` via HotkeyGuard) | `MeowSci.KsaAbstractions.HotkeyGuard.Patch(Harmony)` | n/a (abstraction lib; targets game input — see HotkeyGuard scope) | Yes | n/a | Blocks game hotkeys while typing in ImGui. Per-mod requirement. |
 | 11 | Lifecycle (StarMap attributes) | `camera-controller-override/Mod.cs:19,22,38,45,60` | `StarMap.API` `[StarMapMod]`, `[StarMapImmediateLoad]`, `[StarMapAllModsLoaded]`, `[StarMapBeforeGui]`, `[StarMapAfterGui]`, `[StarMapUnload]` | StarMap library | Yes | n/a | Standalone load lifecycle. |
 
@@ -275,8 +338,10 @@ docking cameras, or another mod.
   applies the same public terrain clamp that `Camera.OnFrame` is about to apply, then
   `HotPursuitCelestialState.Synchronize` calls `Program.FindNearbyCelestial` for that secondary
   camera, mirrors KSA's 80,000 km surface-distance rejection, and fills the camera's public
-  distance, terrain-height, and current-altitude fields. This prevents the nearby body from also
-  entering `StaticCelestialDistanceRendering` as a distant sphere. The prefix runs before
+  distance, terrain-height, and current-altitude fields. At 5482 this kept the nearby body out of
+  `StaticCelestialDistanceRendering`'s distant spheres; since 5638 stock resolves the same body through
+  `Camera.GetEffectiveNearbyCelestial()`, and the mirror keeps raw `NearbyCelestial` readers consistent.
+  Releasing or losing a lease clears the mirror so the next owner's lookup is not overridden. The prefix runs before
   `GameViewport.OnFrame` calls `Camera.OnFrame`, so view/frustum data is baked from the current
   part pose without UI-hook lag.
 
@@ -290,7 +355,7 @@ docking cameras, or another mod.
 | 4 | Direct camera API | `HotPursuitSubmod.cs`, `HotPursuitPose.cs`, `HotPursuitCelestialState.cs` | `Camera.{SetFollow(...changeControl:false),SetFieldOfView(float),PositionEcl,WorldRotation,LookAtRotation,ClampCamera,NearbyCelestial,DistanceToNearbyCelestialKm,DistanceToNearbyCelestialSurfaceMeanKm,NearbyCelestialTerrainHeight,CurrentAltitudeKm}` | `KSA/Camera.cs:31-37,71,110,134,198,412,597,628` | `changeControl:false` is load-bearing: true would change the controlled vehicle. Hot Pursuit applies the public 0.5 m AGL terrain clamp before synchronizing celestial metrics; `Camera.OnFrame` repeats the now-idempotent clamp immediately afterward. |
 | 5 | Direct picking API | `HotPursuitPicker.cs:36,41` | `Cursor.GetEgoRay(IViewport)`; `Part.RayCastEgo(...)`; `Vehicle.{BoundingSphereRadiusBody,GetMatrixAsmb2Ego(Camera)}` | `KSA/Cursor.cs:27`; `KSA/Part.cs:2534` @5482; `KSA/Vehicle.cs:527,1270` @5482 | Same-frame main cursor ray. Hit position/normal belong to the returned closest sub-part, not necessarily the top-level part. Terrain is deliberately unsupported. ⚠️ @5482 `RayCastEgo` rejects rays that miss a bounding sphere (`BoundingBoxPartAsmb` × largest `ScaleTotal` axis, `:2544-2549`) before the sub-part loop; bounds refresh on `UpdateBounds` (sub-part attach, keyframe animation). |
 | 6 | Direct part transform/addressing | `HotPursuitCamera.cs`, `HotPursuitPose.cs`, `HotPursuitSubmod.cs` | `Part.{InstanceId,SubParts,MatrixAsmb2Ego}`; `Vehicle.Id`; `Universe.CurrentSystem` via `VehicleProvider` | `KSA/Part.cs:574,1127,1213` @5482; `KSA/Astronomical.cs:85` | Stable id re-resolution makes missing/failed/staged targets dormant rather than dereferencing destroyed objects. Full matrix includes scale and articulated sub-part parents. |
-| 7 | Direct nearby-celestial lookup | `hot-pursuit.lib/HotPursuitCelestialState.cs` | `Program.FindNearbyCelestial(Camera)` | `KSA/Program.cs:5146` @5482 (body identical) | KSA's `OnFrameCelestials` updates only `Program.GetCamera()` (the main/frame camera); Hot Pursuit explicitly performs the equivalent lookup for its owned secondary camera after `PositionEcl`. |
+| 7 | Direct nearby-celestial lookup | `hot-pursuit.lib/HotPursuitCelestialState.cs` | `Program.FindNearbyCelestial(Camera)`; `Camera.GetEffectiveNearbyCelestial()` (stock consumer) | `KSA/Program.cs:5427`, `KSA/Camera.cs:164` @5638 (body identical) | KSA's `OnFrameCelestials` updates only `Program.GetCamera()` (the main/frame camera); Hot Pursuit explicitly performs the equivalent lookup for its owned secondary camera after `PositionEcl`. |
 | 8 | Lifecycle/shared input guard | `hot-pursuit/Mod.cs`, `Patcher.cs`; unscience host | StarMap attributes; `HotkeyGuard` | StarMap / abstraction | No game assets or custom shaders. |
 
 **Compatibility and live-test risks**
@@ -299,9 +364,11 @@ docking cameras, or another mod.
   viewport cameras. This preserves Hot Pursuit's per-camera FOV; re-check both together after camera
   changes.
 - `Camera.OnFrame` calls terrain clamping, so a hull mount below 0.5 m AGL will be raised.
-- Secondary viewports are substantial additional scene renders and expensive, but KSA 5402's
-  `Program.RenderViewport` does not run `ParticleSystem`, `VolumetricExhaustRenderer`, the main
-  planet/ocean/cloud pipeline, part-glass, or overall-bloom passes. Engine plumes and generic
+- Secondary viewports are substantial additional scene renders and expensive. Since 5541/5638
+  `Program.RenderViewport` also renders terrain (depth pre-pass + `_planetRenderer.Render`) and an
+  atmosphere-only transparency pass, without clouds or rings, reusing the main viewport's shadow maps
+  (rev 5534). It still does not run `ParticleSystem`, `VolumetricExhaustRenderer`, the
+  ocean/cloud pipeline, part-glass, or overall-bloom passes. Engine plumes and generic
   particles are therefore absent by design; those game-owned passes bind main-camera
   targets/resources and are not safe to inject from Hot Pursuit. Other effects/shadows are not
   guaranteed identical to the main view; verify the nearby-body artifact, vehicles, night lighting,
@@ -330,8 +397,9 @@ game's own FOV input.
 collapsible section in the unscience window. `HotkeyGuard` applied. The game's own +/- FOV keys (which
 call `Camera.ChangeFieldOfView`, `KSA/Camera.cs:859,864` @5482, from `OnKey`) are suppressed by the prefix while override is active.
 
-**Persistence** — None. `FovController` state (`IsOverrideActive`, `OverrideFovDegrees`) is runtime-only;
-`GlassSubmod.Dispose()` calls `FovController.DisableOverride()` to hand control back to the game on unload.
+**Persistence** — Scene saves reapply the enabled flag and degrees to the reconstructed main camera
+(see the save adapter notes at the end of this file). `GlassSubmod.Dispose()` calls
+`FovController.DisableOverride()` to hand control back to the game on unload.
 
 **Integration points**
 

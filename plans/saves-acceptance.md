@@ -87,7 +87,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [BYO Music](../byo-music.lib/ByoMusicSubmod.Saves.cs) | Unfinished sounds' vehicle targets, filenames, repeat, gap, volume and range. | Every restored sound is paused. Resume starts at the beginning; sample position, current gap progress and former paused/playing distinction are not restored. Finished sounds are omitted. Sound files remain required. |
 | [Camera Controller Override](../camera-controller-override.lib/CameraControllerOverrideSubmod.Saves.cs) | Ordered typed keyframe recipes, parallel groups, pending group recipes, return-to-start duration/easing/powers. | Restores stopped. Current running segment, elapsed time and its captured start pose are not resumed. Native camera pose loads independently. Pressing Play starts the reconstructed sequence through its normal behavior. |
 | [Dent Wizard](../dent-wizard.lib/DentWizardSubmod.cs) | KSA saves the launched vessel's resulting orbit/physical state; v1 `dent-wizard` is an empty lifecycle record. Reset cancels automatic mode, armed and pending shots. Mass labels are read live from native vessel state and are not sidecar data. | Source selection and speed are input for the next one-shot action, not an applied registration or ongoing force; they reset to unselected/5 m/s. Launches never replay on load. Kitchen Sink independently saves any source/target G-load protection. |
-| [DOH](../doh.lib/DohSubmod.Persistence.cs) | Registry of native-restored spawned kittens, character IDs, cloned tint and named material colors, plus an optional per-kitten `MaterialGroup` so a shared batch keeps one material set, and spawn offset/count/character/color options. | Rebinds kittens instead of spawning duplicates; registry ownership supports later Despawn. Missing kittens or changed material identities warn. Legacy records without groups restore one set per kitten. Detached sets nothing rebinds, or left by a vanilla load, are released to KSA's fixed 512-slot GPU material pool. The spawn-target vehicle selection is UI input and resets. Character assets must be installed. Pending spawn actions are not replayed. |
+| [DOH](../doh.lib/DohSubmod.Persistence.cs) | Registry of native-restored spawned kittens, character IDs, cloned tint and named material colors, plus an optional per-kitten `MaterialGroup` so a shared batch keeps one material set, and spawn offset/count/character/color options. | Rebinds kittens instead of spawning duplicates; registry ownership supports later Despawn, which uses `Universe.DestroyVehicle(…, Boarded)` since 5638. Missing kittens or changed material identities warn. Legacy records without groups restore one set per kitten. Detached sets nothing rebinds, or left by a vanilla load, are released to KSA's fixed 512-slot GPU material pool. The spawn-target vehicle selection is UI input and resets. Character assets must be installed. Pending spawn actions are not replayed. |
 | [Don't Stifle Me](../dont-stifle-me.lib/DontStifleMeSubmod.Saves.cs) | Editor scale enable/snap flags and extended-value policy. | Existing part geometry/configuration remains native-owned. Does not serialize an editor undo stack or uncommitted operation. |
 | [Eternal Flame](../eternal-flame.lib/EternalFlameSubmod.Saves.cs) | Monitored vehicles, fuel/electricity switches and refill interval. | Monitoring resumes; interval timing restarts, without offline catch-up. Native save owns the current resource quantities. |
 | [Free Fallin'](../free-fallin.lib/FreeFallinSubmod.Saves.cs) | Applied global canopy material settings and effective albedo. | Recreates appearance, not a cloth simulation checkpoint. Applied state only; external textures remain dependencies. |
@@ -102,8 +102,8 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [It's So Shiny](../its-so-shiny.lib/ItsSoShinySubmod.Persistence.cs) | Existing host/light cell addresses, grid ownership/appearance, sparse mask, render flag, scroll recipe/offset and pending deletion. | Rebinds native cells without spawning or forcing ignition/switch state; scrolling resumes. Pending deletion restarts its delay. Shared light-template appearance retains the feature's existing shared-template semantics, with Zippo's template ledger restoring originals. |
 | [Kitchen Sink](../kitchen-sink.lib/KitchenSinkSubmod.Saves.cs) | Independent IVA visibility, capsule-glass experiment toggle, G-load target IDs, unlocked IVA camera/speed/exact seat/body pose in four separate v1 records. | Releases original-world controller/input before reconstruction; exact vehicle/part/seat replay requires matching native camera mode/follow. Missing/ambiguous/invalid targets and unavailable patches report and retain state. Absent legacy camera record resets to locked/default speed. Capsule glass reset releases its global interior requirement, with exact static-model filtering re-enabled on replay; absent records leave it off. Picker, held input, render/template caches and smoothing are transient. |
 | [Kitten Animations](../kitten-animations.lib/KittenAnimationsSubmod.Persistence.cs) | Selected kitten; forced clip by source/label, active/paused state and native clip phase; driver controls/global tuning; expression settings and latched expression clip identity. | Forced looping clips and frozen poses resume, and latched expressions return at their held weight. Unlatched one-shot expressions stay stopped; intermediate expression easing is not checkpointed. Missing/ambiguous clip identity or unavailable native phase fields warn/fail the block. |
-| [Kiwi's Marbles](../kiwis-marbles.lib/KiwisMarblesSubmod.Persistence.cs) | Celestial source/vehicle-or-celestial target/offset and original orbital parent, epoch and state vectors. | Restores ordered welds and their future Unweld baseline. Cycles through both target dependencies and actual parent ancestry are rejected. This is a weld/orbit recipe, not all possible arbitrary celestial-system mutations. |
-| [Parts Now](../parts-now.lib/PartsNowSubmod.Saves.cs) | Runtime mod IDs and declared part-template IDs as dependency records. | Does **not** install, embed, unload or automatically replay arbitrary runtime mods. Required native templates/characters are preflighted before world destruction; install/enable missing dependencies before retrying. |
+| [Kiwi's Marbles](../kiwis-marbles.lib/KiwisMarblesSubmod.Persistence.cs) | Celestial source/vehicle-or-celestial target/offset and original orbital parent, epoch and state vectors. | Restores ordered welds and their future Unweld baseline. Non-vehicle targets resolve by exact id among the offered orbiters, so orbiting stars restore (5638). Cycles through both target dependencies and actual parent ancestry are rejected. This is a weld/orbit recipe, not all possible arbitrary celestial-system mutations. |
+| Parts Now (**removed @5638**) | Nothing; legacy sidecars may still hold a `parts-now` v1 dependency record. | No participant owns the id: the coordinator reports `parts-now: unsupported feature/version 1`, retains the record and writes it back unchanged; the native load and every other feature proceed. Pinned by `saves.tests` `RetiredFeatureTests`. |
 | [Pebbles](../pebbles.lib/PebblesSubmod.Saves.cs) | Applied per-body clutter recipes, including their imported mesh identities/settings (`pebbles`); removed/displaced clutter on non-stock-spacing grids (`pebbles.clutter-state`, v1, order 61, new @5482). | Recreates applied fields and releases old import ownership. Stock-spacing removed/displaced clutter is saved natively by KSA 5482; Pebbles keeps those native entries stock-grid and restores override grids after recipes (native state wins). Workshop previews and unapplied recipe edits are not captured; pending unsynced hits are lost as natively. A missing record (vanilla/older saves) restores recipes and stock state only. Imported GLB assets remain required; changed content hashes reject the saved selection. |
 | [Pyro](../pyro.lib/PyroSubmod.Persistence.cs) | `pyro.templates`: edited shared plume templates. `pyro`: anchored plume settings, enabled flags and on/off cycling configuration, current phase and remaining interval. | Recreates plume instances after template edits, with cycling resumed without offline catch-up. Does not embed referenced assets or native renderer state; preset catalog remains separate. |
 | [Rocky McRockFace](../rocky-mcrock-face.lib/RockyMcRockFaceSubmod.Saves.cs) | Applied ring overlays still owning their target ring: LOD mesh/material/band selections and field overrides. | Reapplies after Bloomin' Onion. Superseded overlays and unapplied selection drafts are omitted. Referenced assets must remain available. |
@@ -129,12 +129,14 @@ below describes implemented behavior, not an assertion that native acceptance ha
 ## Recovery and portability limits
 
 Kitchen Sink persistence follow-up (2026-09-13): `kitchen-sink.tests` passes 26 additional
-real-adapter/coordinator checks covering G-load registrations, alongside its 54 damage checks.
+real-adapter/coordinator checks covering G-load registrations, alongside its damage checks (54 at 5482;
+108 at 5638, including the kitten hard-landing branch and a real-KSA.dll signature probe).
 The shared `saves.tests` suite and full solution build also pass. Native cart/save/load acceptance
 remains open; the earlier baseline suite run below is not a claim of a new full-suite rerun.
 
 - Copy the **whole native save directory**, including its matching sidecar. PNG, GLB, audio,
-  character and runtime part-mod libraries remain external dependencies. Saves do not bundle their
+  character libraries and installed content mods (including folders the retired Parts Now
+  submod installed) remain external dependencies. Saves do not bundle their
   bytes or guarantee identical output if those files or installed game assets change.
 - PNG and audio references use filenames without content fingerprints. Replacing a same-name file
   changes the media restored by the save; there is no saved hash to detect that substitution. Pebbles/
@@ -143,8 +145,11 @@ remains open; the earlier baseline suite run below is not a claim of a new full-
 - Normal unresolved targets produce feature warnings; references do not fall back to the controlled
   vehicle or a similarly named part. Structural addresses assume compatible native reconstruction.
   They are not a general migration mechanism for edited `universe.xml` files or changed part trees.
-- Native template/character/system preflight can reject a load before destroying the current world.
-  It is not exhaustive native validation and cannot guarantee rollback after any later native fault.
+- Native system/structure preflight can reject a load before destroying the current world. Since
+  KSA 5638 a missing part template, character or parent body no longer refuses it: KSA skips that
+  vehicle (with its own alert), Unscience warns once per vehicle, and features report unresolved
+  targets while keeping their records. It is not exhaustive native validation and cannot guarantee
+  rollback after any later native fault.
 - Missing, corrupt, oversized, hash-mismatched or unsupported whole-document sidecars are ignored
   with diagnostics while native loading proceeds. Old scene setup is cleared. Their raw bytes are
   **not** retained in memory for a later save; preserve the original directory before overwriting it.
@@ -218,6 +223,15 @@ field to the unchanged version-1 `doh` record, and releases detached material se
 `doh.tests` suite (25 checks) and the full solution build pass on macOS. These are managed results
 only; the DOH checklist items below remain open in-game.
 
+KSA 5638 upgrade (October 2026): no save IDs, versions or payloads changed. Native preflight now warns
+for vehicles KSA skips (missing part/character/parent) instead of refusing the load; the reset join is
+`JobSystems.WaitAll()`. Kiwi's Marbles star-target welds restore; DOH despawn uses the native teardown;
+The Tick and Kitchen Sink G-load records restore again (their detector lookup was inert on 5638 until
+fixed). Legacy `parts-now` records are retained and reported. Managed results: `saves.tests` (18
+lifecycle checks incl. skipped-vehicle loads, plus 16 retired-feature checks), `doh.tests` (34),
+`world-saves.tests` (star-target weld), `kitchen-sink.tests` (108 G-load), `the-tick.tests` (108); all
+18 suites and the full build pass. See [KSA_5638_UPGRADE](KSA_5638_UPGRADE.md).
+
 ## Native acceptance checklist
 
 Record KSA build, Unscience commit, OS/architecture, installed mods/assets, pass/fail and observed
@@ -234,8 +248,11 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
   template edits and queued world mutations are cleared; startup theme baseline returns.
 - [ ] Test save overwrite, distinct save names, load from the console, and load while the toolbox is
   hidden with F2. Verify normal gameplay resumes and no current-frame texture reference is invalidated.
-- [ ] Attempt editor-refused load, invalid system, malformed native data and a missing required
-  part/character. Confirm refusal before destructive reset where preflight applies, with useful status.
+- [ ] Attempt editor-refused load, invalid system and malformed native data. Confirm refusal before
+  destructive reset where preflight applies, with useful status.
+- [ ] Load a save with a missing part mod and one with a missing character (5638): KSA alerts and skips
+  the vehicle, Unscience shows one warning per vehicle, crew return to the roster, and feature records
+  for that vehicle are kept across a re-save.
 - [ ] Queue feature changes and a world load in the same frame, including grid deletion and Sphinx
   placement. Confirm stale actions cannot affect the new world; explicitly saved grid deletion still runs.
 - [ ] Inspect game logs and renderer validation output after repeated transitions. No disposed object,
@@ -309,7 +326,7 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
   exhaust secondary viewport slots and confirm recoverable closed-camera setup with an actionable warning.
 - [ ] Copy a complete save to a compatible second installation with matching assets, then repeat with
   missing PNG, GLB, audio, character and part-mod dependencies. Verify the documented distinction between
-  preflight refusal and partial scene restoration; reinstall dependencies and reload the untouched original.
+  structural preflight refusal, natively skipped vehicles and partial scene restoration; reinstall dependencies and reload the untouched original.
 - [ ] Replace a PNG/audio file with different content under the same filename and confirm the documented
   changed-media behavior. Replace a GLB under its saved filename and confirm hash-mismatch rejection.
 

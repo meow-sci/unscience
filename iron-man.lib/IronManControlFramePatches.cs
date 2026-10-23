@@ -35,15 +35,17 @@ public static class IronManControlFramePatches
     private static void FramePostfix(Vehicle __instance, ref doubleQuat __result)
     {
         // A deliberately selected control part/docking port retains its native orientation.
-        // This one shared frame feeds navball, attitude control, body rates and RCS mapping.
+        // This one shared helm frame feeds navball, body rates and the worker flight computer's
+        // Helm2Asmb, from which its thrust-aligned Tnm2Asmb and active Ctrl2Asmb (attitude,
+        // TVC, RCS mapping) are derived.
         if (_applied && __instance is KittenEva kitten
             && kitten.ControlPart == null && kitten.ControlConnector == null
             && IronManSubmod.Instance?.IsEnabled(kitten) == true)
             __result = IronManOrientation.RocketCtrl2Body;
     }
 
-    private static MethodInfo Target() => AccessTools.PropertyGetter(typeof(Vehicle), nameof(Vehicle.Ctrl2Body))
-        ?? throw new MissingMethodException(typeof(Vehicle).FullName, "get_Ctrl2Body");
+    private static MethodInfo Target() => AccessTools.PropertyGetter(typeof(Vehicle), nameof(Vehicle.Helm2Body))
+        ?? throw new MissingMethodException(typeof(Vehicle).FullName, "get_Helm2Body");
 
     private static MethodInfo PatchMethod() =>
         AccessTools.DeclaredMethod(typeof(IronManControlFramePatches), nameof(FramePostfix))!;

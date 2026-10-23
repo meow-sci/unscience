@@ -5,6 +5,7 @@ plumes). Every game-facing member the mod touches is enumerated with its decompi
 
 **Verified game versions**
 
+- Re-verified **`2026.10.19.5638`** (see the 5638 section; table line numbers remain 5482 unless noted there)
 - NEW decomp **`2026.9.22.5482`** root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp` (namespace-foldered)
 - OLD decomp **`2026.9.10.5438`** root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
 - NEW Content root: `~/repos/meow-sci/ksa-game-assemblies/current/Content`
@@ -215,6 +216,38 @@ Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
 - **Live checks pending:** plumes compositing behind and inside clouds, trails and explosions, plus
   the 5438 list above (anchor following, startup/shutdown tails, wind bend, absorption isolation, and
   replaying aliases from presets and saves).
+
+### KSA 5638 (5482 → 5638) verification (2026-10-22)
+
+Verified statically against `2026.10.19.5638` (`ksa-game-assemblies` `edda844`) vs `2026.9.22.5482`
+(`a2f724f`); the full solution build passes, with no native run. **No Pyro change is needed.**
+
+- **Byte-identical:** `ExhaustInstance`, `VolumetricExhaustInstance` (ctor `:91`, `UpdateState` `:111`,
+  `OnSettingsChanged` `:239`), `ExhaustAssets.xml`, and the bend/fade/submission structs.
+- **Decompiler churn only (no semantic change):**
+  - `PlumeData` (`Compute` `:80`), `GasProperties`, `RocketDesign` and `PhysicalAtmosphereReference`;
+  - `ColorRgbReference`, `VolumetricExhaustReference` and `VolumetricExhaustTemplate`
+    (`References` `:56`), and `SerializedCollection` (`GetList` `:62`).
+- **`Vehicle.AddVolumetricExhaustInstances(Camera, VolumetricExhaustRenderer, double)`** keeps its
+  parameter names and moves to `:5696`. `Program` still calls `UpdateFrameData` →
+  `BeginPlumeGrouping` → vehicles (`Program.cs:2510-2515`).
+- **`VolumetricExhaustRenderer`:** the `AddInstance` region is unchanged apart from line moves:
+  - `AddInstance(ExhaustInstance, int)` (`:782`; prefix parameter `inInstance` still binds);
+  - `AddInstance(VolumetricExhaustInstance, in…)` (`:837`) and `AddInstanceCore` (`:1023`), which
+    still rebuilds blended template values (`:1032`), writes `refractionIntensity`/`absorptionDensity`
+    (`:1040-1041`) and enqueues through the typed `AddInstance` (`:1130`);
+  - `Disabled` (`:446`).
+- **`RocketNozzle`:** `ComputeMinGasVisibilityDensity` (`:256`) and `RecomputeVolumetricExhaustLimits`
+  (`:222`) keep their signatures.
+- **Native churn that does not touch Pyro.** The large plume-trail, grouping and segment rework does
+  not reach Pyro:
+  - `PlumeTrail*`, `PlumeEmitterGroup*`, `PlumeSegment*` and the new `PlumeVertex`;
+  - the new `MagneticNozzle`/`MagneticNozzleTemplate`.
+
+  Pyro references none of these and opens no grouping frame for standalone plumes.
+- **Refraction is still inert (standing).** `_hasRefractionInstances` is only reset (`:765`) and read
+  (`:1243, 1452, 1494`).
+- Live checks are unchanged from the 5482 list.
 
 ## Runtime on/off cycling
 

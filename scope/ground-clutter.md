@@ -1,6 +1,87 @@
 # Ground clutter: Pebbles
 
-## Current verification — 5438 → 5482
+## Current verification — 5482 → 5638
+
+Verified statically against `2026.10.19.5638` (`ksa-game-assemblies` `edda844`, revs 5483–5638) from
+`2026.9.22.5482` (`a2f724f`). The full solution builds and the `pebbles.tests` checks pass. Native
+acceptance is open.
+
+Rev 5629 added per-viewport cell residency. Each `ClutterEcotypeRenderData` now owns:
+
+- eight per-slot viewport `CubeCellGrid`s (`ClutterEcotypeRenderData.cs:60,293-297`);
+- `_viewportCellData` (`:62`), a `(cell, owner)` → `CellResidence` map holding a viewport mask and a
+  pooled buffer slot;
+- pending release, allocation and regeneration lists, and per-slot fade blocks.
+
+`GroundClutterRenderer` tracks the body seen by each shader slot (`_viewportCelestials`, `:221`). It
+releases a viewport only on the arrays currently stored in `PlanetEcotypeRenderData`:
+
+- `OnViewportUnregistered` (`:413-428`) calls `ReleaseViewport` then `ResolvePendingReleases`;
+- `AccumulateViewportCells` (`:1185-1265`) releases on a body change (`:1203-1211`) or when out of
+  range (`:1245-1248`), then calls `ResolveCellResidency` for the active bodies (`:1256-1262`).
+
+Pebbles changes:
+
+- **Residency leak — fixed.** Apply swapped `PlanetEcotypeRenderData[body]` without releasing the
+  outgoing arrays. Retained originals therefore kept mask bits and pooled cell slots for viewports that
+  closed or changed body during an override, and leaked them after restore. The new
+  `ClutterResidency.ReleaseDetached` runs from Apply, after `ClearStatics` and before the swap. For
+  every viewport in `ViewportRegistry.Views` (`ViewportRegistry.cs:48`) it calls the renderer's own
+  sequence:
+  - `ReleaseViewport` (`ClutterEcotypeRenderData.cs:974`) and `ResolvePendingReleases` (`:993`);
+  - then it clears `GenerationViewport` (`:90`), which the renderer consumes and clears each frame
+    (`GroundClutterRenderer.cs:1464-1465`).
+
+  Hidden secondary viewports are covered too: they are registered but not passed to
+  `AccumulateViewportCells` (`PlanetRenderer.cs:2069-2082`). This applies to retained originals and to
+  replaced override bundles. Restore needs no release: the outgoing override arrays are retired, and the
+  originals were released when they were detached. `_viewportCelestials` is unchanged, so reattached
+  arrays see empty viewport grids. `EvaluateCells` then re-evaluates fully because the loaded-cell count
+  is 0 (`ClutterEcotypeRenderData.cs:940`). All calls are public; no new reflection.
+- **Retirement ordering — fixed.** Five `ClutterCubeCellGrid` fields are now nested:
+  - `_cellAnchorEgoMemory`, `_viewportCellSlotMemory`, `_generateUboMemory` and `GenerateCellDataMemory`
+    are `MappedMemory[][]` (`ClutterCubeCellGrid.cs:284-304`; all `MappedMemory[]` in 5482);
+  - the matching buffers are `BufferEx[][]`.
+
+  The partial-retirement pre-unmap pass matched only `MappedMemory`/`MappedMemory[]`, so failure-path
+  cleanup could dispose buffers before unmapping. `FieldShapes.Holds` now matches mapped memory at any
+  array, nullable, sequence or dictionary-value depth. `ClutterEcotypePhysicalData` maps remain
+  `MappedMemory[]` (`:138-144`).
+- **VRAM (document only).** The shared cell pool is now sized for eight viewports:
+  `MaxCellSlots = NumCells × 8` and `MaxInstanceCount = MaxCellSlots × 256` (`ClutterCubeCellGrid.cs:318-320`;
+  5482 used `NumCells × 256`). There are also per-slot × frames-in-flight anchor, slot-list and
+  generate buffers (`:388-440`). Each Pebbles bundle and the retained originals therefore hold about
+  8× the 5482 per-ecotype instance storage (`ObjectData` 32 B). `RecipeValidation`/`CandidateBudget`
+  do not count it.
+- **Unchanged contracts (re-verified).** These still hold:
+  - each transpiler target has exactly one match: `SortMaterialIds` → `GetMaterialIndex`;
+    `CreateColorRenderer`, `CreateDepthPrePassRenderer` and `CreateShadowDepthRenderer` → `MaterialBuffer`;
+  - reflection names: `_renderPassInfo` (`GroundClutterRenderer.cs:195`), `_planetClutterMaxBoundingRadius`
+    (`:317`), `PlanetRenderer._groundClutterRendererCreated` (`:316`), `Universe._vehicleUpdateTask`
+    (`:44`), physical `_primitiveShapes`/`_compoundShapes` (`:90,92`), and `StagingPool._commandBufferIndex`/`_submitted`
+    (`Brutal.VulkanApi.Abstractions/StagingPool.cs:29,31`);
+  - hook signatures: `RebuildFrameResources(DeviceEx)` (`:2034`), `SerializeSave(List<…>)` (`:2145`),
+    `Dispose` (`:2167`), ecotype `RebuildFrameResources(DeviceEx)` (`:1250`), and
+    `CompileVariantWithCustomOptions(CompileOptions)` (`ShaderReference.cs:128`);
+  - `Universe.SyncGroundClutter` (`:2156-2192`) is logic-identical to the `DrainExclusions` mirror;
+  - the `Solid.frag` source-color marker occurs once (`:324`). The injected identifiers still exist:
+    `textureSampler` `:63`, `inUv` `:46`, `materialData` `:274`, and
+    `GroundClutterMaterialData.flags` (`Common/GroundClutterCommon.glsl:507`).
+
+  The clutter shaders churned heavily (15 files), but Pebbles uses native pipelines/shaders except
+  the one-line color injection.
+
+Native acceptance still required:
+
+- apply an override, then open, close and move secondary viewports, including to another body or out
+  of range;
+- restore and reapply, and confirm that clutter reloads in every viewport without "Ground clutter
+  cell pool exhausted" errors;
+- cause a deliberate preparation failure, and check that it unmaps before buffer release;
+- check VRAM with several overridden ecotypes;
+- complete the 5482 list below.
+
+## Previous verification — 5438 → 5482
 
 Verified statically against `2026.9.22.5482` (revs 5439–5481) using both supplied source/Content trees; managed checks pass, native acceptance is open.
 Rev 5447 turned clutter hits into displacement: `BubbleClutterStatics` queues `ClutterRemoval` (key, `ClutterExclusionType`, `GroundClutterPlacementData.DisplacedObject`) and adds a live dynamic Bepu body; `Universe.SyncGroundClutter` (Universe.cs:2064-2098) records it with `AddDisplacedObject` / `RemoveDisplacedObject`. Rev 5447/5459 made KSA save live `PlanetPlacementData` natively (`GroundClutterRenderer.SerializeSave`/`DeserializeSave`, GroundClutterRenderer.cs:1827-1895; CelestialSystem.cs:641/778; `Universe.DeserializeSave` resets clutter at :2371). Pebbles changes:
@@ -80,7 +161,8 @@ Targets:
 - `ModLibrary.AllMeshes`, `AllFiles`, `AllGltfs`; `SerializedCollection<T>.GetList`; glTF model/named mesh indexes and `MeshReference.Load(..., createDeviceMesh: false)`.
 - `StagingPool._submitted`, `_commandBufferIndex`: discard the outer transaction's unsubmitted command buffers after preparation failure before pool disposal.
 - `ClutterEcotypePhysicalData._compoundShapes`, `_primitiveShapes`: reachable partial-shape retirement; `ConstraintSim.UnlockShapes`, Bepu shape ownership/removal.
-- Partial retirement inspects direct public/nonpublic instance fields only on the six captured native ownership classes. It recognizes `BufferEx`, `BufferPartitionInfo`, mapped memories, descriptor pools/layouts, samplers/image views, `SimpleVkTexture`, `SimpleComputePipeline`, `SimpleGraphicsPipeline`, and their collections. Physical `MeshAtlas`/`PlacementData` references are borrowed and skipped. Resource field layout changes require re-audit.
+- Partial retirement inspects direct public/nonpublic instance fields only on the six captured native ownership classes. It recognizes `BufferEx`, `BufferPartitionInfo`, mapped memories, descriptor pools/layouts, samplers/image views, `SimpleVkTexture`, `SimpleComputePipeline`, `SimpleGraphicsPipeline`, and their collections. Fields holding `MappedMemory` at any nesting (`FieldShapes.Holds`; 5638 `MappedMemory[][]`) are unmapped before any other field is released. Physical `MeshAtlas`/`PlacementData` references are borrowed and skipped. Resource field layout changes require re-audit.
+- KSA 5629+ residency surface (public, no reflection): `ViewportRegistry.Views`, `IViewport.ShaderSlot`, `ClutterEcotypeRenderData.ReleaseViewport(IViewport)`, `ResolvePendingReleases()`, `GenerationViewport`. The release sequence must keep mirroring `GroundClutterRenderer.OnViewportUnregistered`; if residency moves to the renderer or gains other per-viewport state, `ClutterResidency` needs review.
 - `GroundClutterGpuMaterial` native layout, texture bindless IDs, flags bits 31/30 reserved by Pebbles, and the shader's `materialData.flags`, `diffuseTextureId`, `globalTextures`, `textureSampler`, `inUv`, diffuse conversion and terrain modulation statement.
 - Native 256 candidates/cell, 16 physical scale buckets, five LODs, uint object/material indirection and transformed position/normal/UV layout; `CubeCellGrid.GetCellWidth` call convention follows the renderer's actual MeanRadius argument.
 

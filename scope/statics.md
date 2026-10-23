@@ -112,6 +112,13 @@ Alpha textures never change collision topology. Per-entry geometry is limited to
 `ConstraintSim.UnlockShapes()` / `ShapesUnlock.{Shapes,BufferPool}`, `Shapes.Add`, `BufferPool.Take`,
 `Mesh(Buffer<Triangle>,Vector3,BufferPool)`, and `Shapes.RemoveAndDispose`. The game-provided
 `MeshColliderTemplate.CreateShapeInto` is unsupported at this baseline and is deliberately bypassed.
+@5638 it still throws `NotSupportedException` (`KSA/MeshColliderTemplate.cs:48-50`). Only the
+`ConvexHullColliderTemplate` subclass builds a shape (a uniformly scaled hull copy,
+`ConvexHullColliderTemplate.cs:102-107`). Stock parts started using it with the rev-5542 re-import of
+CoreCommandA / CoreStructuralA / CoreFairingA, whose `<ConvexHull>` colliders read `_ColMesh_…` meshes
+from new `HostOnly="true"` collision atlases (see
+[part-editor-and-robotics.md](part-editor-and-robotics.md)). Sphinx builds its own Box/Mesh shapes
+and never goes through `ColliderTemplate`, so the re-import does not affect it.
 Mesh triangles bake the same grounded local XYZ transform as rendering, relative to a local center;
 boxes use scaled dimensions, transformed center and decomposed rotation. `GroundPlacement.FrameCcf`
 is shared with rendering to preserve Y-up/slope basis. Bubble translation subtracts double-precision
@@ -182,7 +189,12 @@ Shaders: `Core/Shaders/Mesh/StaticObject.vert`, `StaticObject.frag`,
 
 The feature deliberately avoids `DeviceMeshInterleaved.Shared`'s fixed allocation and SuperMesh's
 linear shared pools. Do not replace private buffers with those pools without a capacity/reclamation
-plan. Conservative waits can hitch but avoid freeing referenced native resources.
+plan. Conservative waits can hitch but avoid freeing referenced native resources. @5638 the shared
+buffer's raytracing-usage gate reads `Program.Instance.IsRaytracingActive`
+(`KSA/DeviceMeshInterleaved.cs:47,73`; `Program.cs:869`) instead of the raw `IVARayTracing` setting.
+Since parts-now was removed (@5638) no unscience feature reserves headroom in that buffer or writes
+its size counters. HostOnly mesh atlases (`MeshAtlasFileReference.cs:47`) keep host primitives
+without any device upload.
 
 ## Shared import boundary
 

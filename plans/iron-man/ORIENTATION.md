@@ -6,8 +6,9 @@ Up target displaced by 90 degrees. This corrects the limitation recorded in the 
 
 ## Flight frame
 
-[Vehicle.Ctrl2Body](../../../ksa-game-assemblies/current/decomp/KSA/Vehicle.cs) (584) defaults to
-identity. Rockets point along assembly +X, but the kitten's headward axis is -Z and its face is +X.
+[Vehicle.Helm2Body](../../../ksa-game-assemblies/current/decomp/KSA/Vehicle.cs) (613; named
+`Ctrl2Body` before KSA 5638) defaults to identity. Since 5638 the flight computer derives its `Tnm`
+(thrust-aligned) and active `Ctrl` frames from this helm frame. Rockets point along assembly +X, but the kitten's headward axis is -Z and its face is +X.
 `IronManControlFramePatches` postprocesses that getter for enabled kittens without an explicit
 control part/port. `RotY(+pi/2)` maps control X to body -Z, Y to Y, and Z to X. The basis is
 right-handed; body transforms, orbit, physical pose, part coordinates and saves are untouched.

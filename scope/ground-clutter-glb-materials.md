@@ -1,10 +1,28 @@
 # Ground clutter: imported GLB materials
 
-## Current verification — 5438 → 5482
+## Current verification — 5482 → 5638
+
+Checked against `2026.10.19.5638` (`edda844`); there is no GLB conversion change.
+
+- The clutter shaders were reworked heavily, but the GLB material conventions hold:
+  - `Solid.frag` samples diffuse with the same terrain-alpha convention (`:316-324`) and reads AO,
+    roughness and metal from R/G/B (`:331-333`);
+  - opacity is still the red channel (`SolidDepth.frag:62`, `SolidShadow.frag:56`).
+- The clutter pipelines now bind the bindless library at set 2: `Solid.frag:7` `SET_TEXTURE 2`, and
+  `BindlessTextureSet = 2` at `ClutterEcotypeRenderData.cs:565,610,663`. Pebbles builds these
+  pipelines natively, so this follows automatically.
+- The texture seams hold:
+  - `TextureReference.Texture` and `ImageView` keep protected setters (`:64,67`), and `BindlessHandle`
+    keeps its private setter (`:70`); the diff is decompiler churn only;
+  - `BindlessTextureLibrary.AddTexture(VkImageView, …)` and `FreeTexture(int)` are at `:185` and `:211`.
+- The residency fix and the 8-viewport VRAM note are in [ground-clutter](ground-clutter.md).
+  Native visual acceptance is unchanged from below.
+
+## Previous verification — 5438 → 5482
 
 Checked against `2026.9.22.5482`. Rev 5473 added `GroundClutterMaterialReference.KeepBackfaceNormals` (`KEEP_BACKFACE_NORMALS` in `GroundClutter/Solid.frag`), set on stock Earth tree materials. Imported GLB materials leave the nullable `MaterialRecipe.KeepBackfaceNormals` unset, which resolves to false: double-sided GLB materials keep the native flipped backface normals, as before. The source-color marker, flags bits 31/30 and `GroundClutterGpuMaterial` layout are unchanged. Baked AO now darkens ambient clutter lighting (5477) and the BRDF roughness fix (Lighting.glsl, 5472) changes converted PBR response; both need live visual checks. No GLB conversion change required.
 
-## Previous verification — 5402 → 5438
+## Earlier verification — 5402 → 5438
 
 Material shader anchors, flags, vertex/index layouts and private resource ownership are unchanged. TextureLoader extends formats and changes enum numbering, but imports use named Png/Jpg values and retain decoded-source lifetime through upload. No GLB conversion change required. See ground-clutter.md for Vulkan spelling and staging/physics checks; native texture/alpha/normal rendering remains unverified here.
 

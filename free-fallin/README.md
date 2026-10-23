@@ -46,7 +46,10 @@ The setting is session-only; imported PNG files remain in the library for later 
 
 ## Compatibility
 
-Cataloged against KSA `2026.9.10.5438`. The mod depends on the native canopy material ids
+Verified against KSA `2026.10.19.5638`. The mod depends on the native canopy material ids
 (with `ParachuteCanopy_Material_CheckerLongOrange` as the stable source for custom materials),
 `ChuteRenderable.Draw`, its private `_renderable` field, and
-`AnimatedRenderable.MaterialIndices`. See [`../scope/parachutes.md`](../scope/parachutes.md).
+`AnimatedRenderable.MaterialIndices`. Full canopy also depends on the model shader anchors and reads
+the texture/material descriptor sets from the game's `ModelPbr.frag`; if they cannot be read it is
+disabled (logged to the console) and the other modes keep working. See
+[`../scope/parachutes.md`](../scope/parachutes.md).

@@ -116,16 +116,37 @@ namespace KSA
     {
         public static CelestialSystem? CurrentSystem = new();
 
+        /// <summary>Vehicle ids the last native load reconstructed.</summary>
+        public static readonly List<string> LoadedVehicles = new();
+
+        // KSA 5638: joins every scheduler, destroys the old vehicles, then skips (rather than throws on)
+        // vehicles with a missing parent, missing part templates or a failed build such as a missing character.
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void DeserializeSave(UniverseData universeData)
         {
             if (CurrentSystem == null) throw new InvalidOperationException("no system");
-            JobSystems.OrbitSolvers.Wait();
-            JobSystems.VehicleSolver.Wait();
-            JobSystems.ClothSolvers.Wait();
+            JobSystems.WaitAll();
             Trace.Events.Add("native destroy");
+            LoadedVehicles.Clear();
             if (universeData.FailReconstruction) throw new InvalidOperationException("native reconstruction failed");
+            foreach (var vehicle in universeData.CelestialSystems[0].Vehicles)
+            {
+                if (CurrentSystem.Get(vehicle.ParentBody.Id) is not IParentBody || !Installed<CharacterReference>(vehicle.Character)
+                    || (vehicle.RootPartInstance != null && !Installed(vehicle.RootPartInstance)))
+                    Trace.Events.Add("native skipped " + vehicle.Id);
+                else LoadedVehicles.Add(vehicle.Id);
+            }
             Trace.Events.Add("native reconstructed");
+        }
+
+        private static bool Installed(PartInstance part) => Installed<PartTemplate>(part.InstanceOf)
+            && (part.Children ?? new()).TrueForAll(Installed) && (part.SubPartInstances ?? new()).TrueForAll(Installed);
+
+        private static bool Installed<T>(string id) where T : new()
+        {
+            if (string.IsNullOrEmpty(id) && typeof(T) == typeof(CharacterReference)) return true;
+            try { ModLibrary.Get<T>(id); return true; }
+            catch (InvalidOperationException) { return false; }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -158,6 +179,15 @@ namespace KSA
         public static readonly Jobs VehicleSolver = new("vehicle");
         public static readonly Jobs ClothSolvers = new("cloth");
         public static readonly Jobs NearestOrbitAndPerformanceWorker = new("nearest-orbit-and-performance");
+
+        // KSA 5638 join order.
+        public static void WaitAll()
+        {
+            NearestOrbitAndPerformanceWorker.Wait();
+            OrbitSolvers.Wait();
+            VehicleSolver.Wait();
+            ClothSolvers.Wait();
+        }
     }
 }
 

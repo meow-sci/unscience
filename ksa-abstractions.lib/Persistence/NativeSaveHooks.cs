@@ -23,6 +23,8 @@ public static class NativeSaveHooks
     public static Action? Restoring { get; set; }
     public static Action? LoadFinished { get; set; }
     public static Action<Exception>? LoadFailed { get; set; }
+    /// <summary>Non-fatal load diagnostics, such as vehicles native reconstruction will skip. Raised after reset.</summary>
+    public static Action<string>? LoadWarning { get; set; }
     public static Exception? LastLoadError { get; private set; }
 
     public static void Apply(Harmony harmony)
@@ -146,9 +148,17 @@ public static class NativeSaveHooks
             return false;
         }
         if (_fileLoadDepth == 0) LastLoadError = null;
-        NativeSavePreflight.Validate(universeData);
+        IReadOnlyList<string> skippedVehicles = NativeSavePreflight.Validate(universeData);
         __state = ResetAtJoinedBoundary();
+        // After reset: a direct load starts its diagnostics transaction there.
+        foreach (string warning in skippedVehicles) Warn(warning);
         return true;
+    }
+
+    private static void Warn(string message)
+    {
+        if (LoadWarning == null) Console.WriteLine($"unscience saves: {message}");
+        else Invoke(LoadWarning, message, "load warning");
     }
 
     private static void RestoreAfterLoad(bool __state, bool __runOriginal)
@@ -182,12 +192,10 @@ public static class NativeSaveHooks
     {
         try
         {
-            JobSystems.OrbitSolvers.Wait();
-            JobSystems.VehicleSolver.Wait();
-            JobSystems.ClothSolvers.Wait();
-            // PrepareFrame queues nearest-orbit work before this handoff; it traverses
-            // the current universe and must finish before vehicle destruction as well.
-            JobSystems.NearestOrbitAndPerformanceWorker.Wait();
+            // The same scheduler set native DeserializeSave joins (KSA 5638), but our reset callbacks
+            // run in this prefix, before the original's own join. It includes the nearest-orbit job
+            // that PrepareFrame queues before this handoff, which traverses the current universe.
+            JobSystems.WaitAll();
             PhysicsFrameHook.ClearPending();
             Invoke(Resetting, "reset");
             // Cleanup callbacks can themselves enqueue old-world edits. They cannot survive

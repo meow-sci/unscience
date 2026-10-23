@@ -5,9 +5,10 @@
     <ProjectReference Include="../free-fallin.lib/free-fallin.lib.csproj" />
     <ProjectReference Include="../graffiti.lib/graffiti.lib.csproj" />
     <ProjectReference Include="../hot-pursuit.lib/hot-pursuit.lib.csproj" />
+    <ProjectReference Include="../kiwis-marbles.lib/kiwis-marbles.lib.csproj" />
     <ProjectReference Include="../sphinx.lib/sphinx.lib.csproj" />
     <Reference Include="KSA"><HintPath>$(KSAFolder)KSA.dll</HintPath><Private>true</Private></Reference>
-    <Reference Include="Brutal.Core.Common"><HintPath>$(KSAFolder)Brutal.Core.Common.dll</HintPath><Private>true</Private></Reference>
-    <Reference Include="Brutal.Core.Numerics"><HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="Brutal.Core"><HintPath>$(KSAFolder)Brutal.Core.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="Brutal.Numerics"><HintPath>$(KSAFolder)Brutal.Numerics.dll</HintPath><Private>true</Private></Reference>
   </ItemGroup>
 </Project>

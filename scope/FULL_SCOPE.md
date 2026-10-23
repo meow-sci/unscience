@@ -5,22 +5,24 @@ contracts. Update the owning area and master index in the same change as an inte
 
 ## Version baseline
 
-- **Cataloged against:** KSA **2026.9.22.5482**, metadata date **2026-09-24**.
-- **Diffed from:** **2026.9.10.5438**, which matches the previous recorded baseline.
-- **Authoritative inputs:** sibling `ksa-game-assemblies/current/{dll,decomp,Content}` and
-  `ksa-game-assemblies_prev/current/{dll,decomp,Content}`. The in-repo `decomp/ksa` is historical.
+- **Cataloged against:** KSA **2026.10.19.5638**, metadata date **2026-10-20**.
+- **Diffed from:** the recorded baseline **2026.9.22.5482** (not the on-disk PREVIOUS 5554), using
+  `ksa-game-assemblies` git history `a2f724f..edda844`; 5541 (`47703f3`) and 5554 (`935a32b`) only
+  date changes. The in-repo `decomp/ksa` is historical.
 - **Build references:** explicitly set `KSAFolder` to CURRENT's `dll/` (macOS; no separate native
   install). Distribution was redirected during all checks.
-- **Changelog coverage:** 43 entries, revisions **5439–5481**; the window ends at **5482** without a
-  separate 5482 entry. No intermediate baseline gap. Source/Content comparison covers the complete pair:
-  133 changed/25 added/1 removed KSA C# files; 33 changed/3 added Content files. Only `KSA.dll` and
-  `Planet.Render.Core.dll` changed.
-- **Verification:** whole-solution compilation (74 projects, 0 warnings) and 15 managed suites, plus
-  eight area audits of reflection, Harmony signatures/bodies/IL anchors, render/GPU, shader/asset and
-  byte layouts. Evidence and the native acceptance matrix are in [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
+- **Changelog coverage:** revisions 5483–5540, 5542–5553 and 5603–5637 are logged; **5555–5602 appear in
+  no `version.json`** (the Helm control frame, `DetectStructuralFailure(…, SimStep)` and other changes
+  landed there). Source/Content comparison covers the full span: 819 KSA C# files (99 added, 4 removed),
+  211 Content files. Brutal went open source (rev 5618) and renamed its assemblies
+  (`Brutal.Core.Common` → `Brutal.Core`, `Brutal.Core.{Numerics,Strings,Memory,Collections,Logging,Maths}` →
+  `Brutal.{…}`); `KSA.dll` is now built with optimizations (rev 5630).
+- **Verification:** whole-solution compilation (0 warnings) and 18 managed suites, plus eight area audits
+  of reflection, Harmony signatures/bodies/IL anchors, render/GPU, shader/descriptor/asset and byte
+  layouts. Evidence and the native acceptance matrix are in [KSA_5638_UPGRADE](../plans/KSA_5638_UPGRADE.md).
   This is a **static/managed baseline; live game validation remains pending**.
-- Dated area tables retain historical build/line citations; their 5482 verification sections and the
-  upgrade report record the 5438 → 5482 deltas.
+- Dated area tables retain historical build/line citations; their 5638 sections and the upgrade report
+  record the 5482 → 5638 deltas. Earlier reports: [5482](../plans/KSA_5482_UPGRADE.md), [5438](../plans/KSA_5438_UPGRADE.md).
 
 ## How to use on a game update
 
@@ -51,7 +53,7 @@ Scene-save adapters extend native saves; imported files remain external dependen
 | [`camera.md`](camera.md) | camera-controller-override, glass, hot-pursuit, kitchen-sink IVA unlock | `OrbitController/FlyController/FixedController.OnFrame`, `Camera._fovRadians`; Kitchen Sink temporarily replaces `GameViewport.IvaController` and patches seat head visibility; four public secondary-viewport leases under the sealed 8-slot registry; part-raycast camera mounts |
 | [`pixel-grids-and-render.md`](pixel-grids-and-render.md) | blinky, its-so-shiny, thug-life | shared `PartRenderFilter` on `PartTreeRenderData.Compose*` (replaced the removed `*Module.UpdateRenderData` prefixes @5482), `PartTree.CreateFromNewPartTree`, `RocketCore.FeedConnectors` (blinky ignition), `SuperMeshRenderSystem.RenderMainPass`, UnlitMesh shaders |
 | [`character-and-materials.md`](character-and-materials.md) | doh, humble-arteest, kitten-animations | `KittenRenderable.UpdateRenderData` visor draw gate (Humble Arteest), `GpuMaterialSystem.BigBuffer`, `KittenEva`/`EVADoor` (**doh @5402**: spawn/despawn now `JobSystems.VehicleSolver.Wait()` before touching the shapes registry), `PerInstanceData` `StateBitFlag` free-bit paint written through private `PartTreeRenderData.WriteState/WriteDynamicState` (5482) + `ShaderModuleUtils.FromFile` shader patch; visor `Draw(ViewHandle)`; **kitten-animations** — filterable selection of any live EVA kitten by `Vehicle.Id`, Harmony prefix on `AnimatedRenderable.UpdateAnimation`, 17 private `KittenRenderable` animation fields, and a mod-owned `CatExpressionAnim` |
-| [`part-editor-and-robotics.md`](part-editor-and-robotics.md) | parts-now, dont-stifle-me | parts-now's `ModLibrary` reflection + `DeviceMeshInterleaved.Shared` headroom invariant; **dont-stifle-me** scale patches on `VehicleEditor.ScaleBoundsFor` / `UpdateSelectedScale` / `QuantizeScale`, plus configurable editor-limit patches on `DrawParachuteSection` / `Parachute.SetDiameter` (2–1000 m diameter). **flexo removed @5348** — compiled clean, but the robotics approach never worked and will not be reattempted; `OrbitLinePass` remains unowned; `PartModelRenderer.UpdateRenderData` is now used by Iron Man |
+| [`part-editor-and-robotics.md`](part-editor-and-robotics.md) | dont-stifle-me | **dont-stifle-me** scale patches on `VehicleEditor.ScaleBoundsFor` / `UpdateSelectedScale` / `QuantizeScale`, plus configurable editor-limit patches on `DrawParachuteSection` / `Parachute.SetDiameter` (2–1000 m diameter). **flexo removed @5348** — compiled clean, but the robotics approach never worked and will not be reattempted; `OrbitLinePass` remains unowned; `PartModelRenderer.UpdateRenderData` is now used by Iron Man. **parts-now removed @5638** (user decision; its `ModLibrary` reflection and `DeviceMeshInterleaved.Shared` headroom invariant are retired; legacy `parts-now` save records are retained by the coordinator); 5638 notes on the CoreCommandA/Structural/Fairing convex-hull re-import, `PlumbedCore` and the `Interstellar` tag |
 | [`iron-man.md`](iron-man.md) | iron-man | EVA/Iron Man mode selector with upright editor support in both modes, private connectors/save reconstruction, conditional worker `IsKitten` routing, rocket controls/gauges/RCS, active-only upright surface teleports, early equipment / late avatar rendering; **default EVA, native acceptance pending** |
 | [`exhaust-plumes.md`](exhaust-plumes.md) | pyro (including runtime On/Off cycles) | `Vehicle.AddVolumetricExhaustInstances` postfix, `VolumetricExhaustRenderer.AddInstance`, `VolumetricExhaustInstance` (+ private `_shaderData`), internal `VolumetricExhaustTemplate.References`, `PlumeData`/`ExhaustInstance` layout drift (new @5348) |
 | [`decals.md`](decals.md) | graffiti | `RenderTarget.ResolveAttachments` postfix (GridPass-window projected-decal pass), `GlobalShaderBindings` + `BindlessTextureLibrary` descriptor sets, runtime GLSL vs `Common/*.glsl` headers, `Part.RayCastEgo` + live `Parachute.ClothPositionsFront` triangle picking + `Cursor.GetEgoRay`, CPU terrain march; **no string reflection** (new @5348; canopy picking added @5402) |
@@ -62,14 +64,32 @@ Scene-save adapters extend native saves; imported files remain external dependen
 | [`ui-customization.md`](ui-customization.md) | skittles, kitchen-sink | `ImGui` style surface, editor refresh/IVA rendering, **experimental medium-capsule exterior-window reveal** via exact static-model filtering, and selected-vehicle G-load protection via `PhysicsBubble.DetectStructuralFailure`; Flexo diagnostics removed |
 | [`audio.md`](audio.md) | byo-music | Shared sound imports, FMOD stream/channel ownership, vessel-relative 3D playback and repeat/gaps |
 
-Bundled in the unscience supermod (31): blinky, bloomin-onion, byo-music, camera-controller-override, dent-wizard, doh,
+Bundled in the unscience supermod (30): blinky, bloomin-onion, byo-music, camera-controller-override, dent-wizard, doh,
 dont-stifle-me, eternal-flame, free-fallin, garrys-torch, glass, godzilla, graffiti, hot-pursuit, humble-arteest,
-i-feel-seen, iron-man, its-so-shiny, kitchen-sink, kitten-animations, kiwis-marbles, parts-now, pebbles, pyro,
+i-feel-seen, iron-man, its-so-shiny, kitchen-sink, kitten-animations, kiwis-marbles, pebbles, pyro,
 rocky-mcrock-face, save-yourself, skittles, sphinx, the-tick, thug-life, zippo. (jplrepo is a development reference and is not loaded by the supermod.)
 
 ---
 
-## Current status against 5482
+## Current status against 5638
+
+Two compile breaks: the Brutal assembly renames (every csproj HintPath) and `Vehicle.Ctrl2Body` →
+`Helm2Body` (Iron Man; the flight computer now derives `Tnm`/`Ctrl` frames from the helm). Silent
+breaks fixed: **free-fallin** Full Canopy injected pre-5530 descriptor-set numbers into the shared
+skinned vertex shader (now derived from live `ModelPbr.frag`, fails closed); **The Tick** and **Kitchen
+Sink G-load** missed `DetectStructuralFailure(VehicleUpdateState, SimStep)` and were inert (both now
+also cover the new EVA-kitten hard-landing branch; `KsaAssemblyProbe` checks real signatures); save
+**preflight** refused saves KSA now loads by skipping missing-part vehicles (now warns); **kiwis-marbles**
+dropped star-target welds on load (`OrbitingStar : IOrbiter`); **doh** despawn now uses
+`Universe.DestroyVehicle`; **Iron Man** navball thrust marker and RCS cache gate; **pebbles** per-viewport
+clutter residency and nested `MappedMemory[][]` retirement; **blinky** skips tanks that cannot hold its
+propellant (magnetic traps); **camera-controller-override** plays back relative to the follow target;
+**Hot Pursuit** clears its celestial mirror on release. Crew portraits now render interiors
+(`RendersInterior()`); filters still align. **parts-now removed** (legacy save records retained).
+Live checks added: optimized-KSA inlining after mid-session reapply, convex-hull collider scaling,
+secondary-viewport terrain/atmosphere. See [KSA_5638_UPGRADE](../plans/KSA_5638_UPGRADE.md).
+
+## Earlier status (5482)
 
 Kitchen Sink's **See Inside Capsule (Experimental)** uses exact stock medium-capsule window
 model filtering and an independent shared IVA visibility requirement. Default-off, reversible,

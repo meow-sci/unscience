@@ -55,8 +55,9 @@ public interface IKeyframeAnimation
     double EasingPowerEnd { get; }
     
     /// <summary>
-    /// Optional override for look-at target position.
-    /// If null, uses the controller's Following target.
+    /// Optional override for look-at target position (absolute ECL).
+    /// If null, uses the controller's Following target. Animations convert it into an offset from
+    /// the follow target each frame, so only the provider's own position is absolute.
     /// </summary>
     Func<Controller, double3>? LookAtTargetProvider { get; set; }
     

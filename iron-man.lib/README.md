@@ -39,13 +39,20 @@ Iron Man development host. See [player controls](../iron-man/README.md) and the 
   launchpad clearance, then convert orientation/rates back into unchanged body coordinates.
   EVA mode, ordinary vessels, general teleports and other placement-helper callers remain stock.
   See [surface teleport](../plans/iron-man/SURFACE_TELEPORT.md).
-- `IronManControlFramePatches` supplies headward default rocket controls through `Vehicle.Ctrl2Body`;
-  explicit control parts/ports keep their native frame. `IronManEditorOrientationPatches` changes
-  the orbit camera basis and vertical pan/bounds for the complete editor scene, preserving geometry.
+- `IronManControlFramePatches` supplies headward default rocket controls through `Vehicle.Helm2Body`
+  (named `Ctrl2Body` before KSA 5638); explicit control parts/ports keep their native frame. The
+  worker flight computer derives its thrust-aligned and active control frames from that helm.
+  `IronManNavballPatches` corrects the navball thrust marker for enabled kittens only: stock
+  divides by a main-thread `Helm2Asmb` that `FlightComputer.CopyFrom` never copies, so it would
+  be drawn about 90 degrees off the rocket nose. A missing target logs and keeps the stock marker.
+  `IronManEditorOrientationPatches` changes the orbit camera basis and vertical pan/bounds for the
+  complete editor scene, preserving geometry.
   `IronManRcsOrientationPatches` lets native geometry remap enabled root-backpack jets without
   changing authored maps. Membership is published as immutable snapshots for worker reads;
-  mode changes invalidate thruster authority at the joined handoff. Editor hooks use `IsConfigured`;
-  physics/input/HUD/control-frame/RCS hooks use `IsEnabled` (active Iron Man mode).
+  mode changes invalidate thruster authority at the joined handoff with the all-zero global state,
+  which always trips KSA 5638's control-frame change gate (`Zero` caches Identity and may not).
+  Editor hooks use `IsConfigured`; physics/input/HUD/control-frame/navball/RCS hooks use `IsEnabled`
+  (active Iron Man mode).
   See [orientation](../plans/iron-man/ORIENTATION.md) and [mode transitions](../plans/iron-man/FLIGHT_MODES.md).
 
 `Apply(Harmony)` / `Remove(Harmony)` use the caller's Harmony owner. Unscience supplies the shared

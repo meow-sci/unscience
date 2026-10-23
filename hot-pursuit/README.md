@@ -40,16 +40,20 @@ and the requested FOV. No custom Vulkan render path or texture registration is u
 KSA renders the normal secondary scene directly in its stock window.
 
 Hot Pursuit also synchronizes the mounted camera's nearby-celestial state immediately
-after each pose update. KSA 5402 only populates that state for the main camera; without
-the sync, the nearby body can also be submitted as a distant sphere, producing a large
-dark-grey plane/sphere across the secondary view. The sync mirrors KSA's 80,000 km
-surface-distance cutoff and its distance, terrain-height, and current-altitude fields.
+after each pose update. KSA only populates that state for the main camera. Before 5638 the
+nearby body could therefore also be submitted as a distant sphere, producing a large
+dark-grey plane/sphere across the secondary view. Since 5638 stock falls back to the same lookup
+(`Camera.GetEffectiveNearbyCelestial()`), and the sync keeps the camera's raw state consistent. It
+mirrors KSA's 80,000 km surface-distance cutoff and its distance, terrain-height and current-altitude
+fields. Hot Pursuit clears the state when it releases or loses a viewport, so a stock camera opened in
+that slot later is not pinned to a previous body.
 
 ## KSA secondary-renderer limitation
 
-KSA 5402's `Program.RenderViewport` path does not run the `ParticleSystem`,
-`VolumetricExhaustRenderer`, main planet/ocean/cloud, part-glass, or overall-bloom passes
-for secondary viewports. Engine plumes and generic particles therefore do not appear in
+Since 5541/5638 secondary viewports render terrain and an atmosphere-only pass, without clouds
+or rings. KSA's `Program.RenderViewport` path still does not run the `ParticleSystem`,
+`VolumetricExhaustRenderer`, ocean/cloud, part-glass or overall-bloom passes for secondary
+viewports. Engine plumes and generic particles therefore do not appear in
 Hot Pursuit feeds. These are KSA-owned passes with main-camera/target/resource bindings,
 and Hot Pursuit does not inject them into secondary rendering; camera settings cannot
 enable them safely. The feed remains the stock secondary path rather than a second copy

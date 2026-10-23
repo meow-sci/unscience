@@ -15,7 +15,8 @@ namespace MeowSci.DohLib.Spawning;
 ///   - Batch spawning with offset chains
 ///   - Optional per-kitten material customization
 ///
-/// Partial files: Positioning (spawn frame), Materials (per-kitten cloning), Catalog (game lookups).
+/// Partial files: Positioning (spawn frame), Materials (per-kitten cloning), Catalog (game lookups),
+/// Teardown (despawn, prune and native vehicle destruction).
 /// MUST be called on the game thread (not from HTTP handlers directly).
 /// </summary>
 public sealed partial class KittenSpawner
@@ -48,67 +49,6 @@ public sealed partial class KittenSpawner
             Console.WriteLine($"doh: Spawn error: {ex}");
             return SpawnResult.Failure($"Spawn error: {ex.Message}");
         }
-    }
-
-    /// <summary>Despawns a kitten by ID and releases its materials when no other kitten shares them.</summary>
-    public bool Despawn(string kittenId)
-    {
-        try
-        {
-            var entry = _registry.Get(kittenId);
-            if (entry == null) return false;
-
-            // Use the kitten object captured at registration so a renamed kitten still resolves;
-            // never fall back to a non-kitten vehicle that merely shares the name.
-            var kitten = entry.Vehicle as KittenEva ?? VehicleProvider.FindVehicle(kittenId) as KittenEva;
-            if (kitten != null && !kitten.IsDisposed)
-            {
-                // Match game's two-phase removal (EVADoor ingress / docking pattern).
-                // Dispose releases physics shapes (same registry lock as spawn), so the
-                // vehicle solver must be idle first.
-                WaitForVehicleSolverIdle();
-                Universe.CurrentSystem?.Deregister(kitten);
-                kitten.Dispose();
-            }
-
-            // Also reached when the game already destroyed the kitten, so the entry and its
-            // GPU material slots are never stranded.
-            _registry.Unregister(kittenId);
-            ReleaseIfUnused(entry.MaterialSet);
-            Console.WriteLine($"doh: Despawned '{kittenId}'");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"doh: Despawn error for '{kittenId}': {ex.Message}");
-            return false;
-        }
-    }
-
-    /// <summary>Despawns all kittens spawned by this mod.</summary>
-    public void DespawnAll()
-    {
-        var ids = _registry.KittenIds.ToList();
-        foreach (var id in ids)
-            Despawn(id);
-    }
-
-    /// <summary>
-    /// Drops registry entries whose kitten the game already destroyed (e.g. it boarded a vehicle)
-    /// and returns their GPU material slots to the pool. Returns the number of entries pruned.
-    /// </summary>
-    public int PruneDisposed()
-    {
-        var disposed = _registry.GetDisposed();
-        if (disposed == null) return 0;
-
-        foreach (var entry in disposed)
-        {
-            _registry.Unregister(entry.KittenId);
-            ReleaseIfUnused(entry.MaterialSet);
-        }
-        Console.WriteLine($"doh: Pruned {disposed.Count} kitten(s) the game already removed");
-        return disposed.Count;
     }
 
     /// <summary>Updates the tint color on a previously spawned kitten's materials.</summary>
@@ -284,32 +224,6 @@ public sealed partial class KittenSpawner
             "'Unique Each', or spawn fewer.";
     }
 
-    private void ReleaseIfUnused(KittenMaterialSet? set)
-    {
-        if (set != null && !_registry.IsMaterialSetInUse(set))
-            _materialFactory.Release(set);
-    }
-
-    /// <summary>
-    /// The Vehicle base constructor registers the kitten in system.All before KittenEva builds its
-    /// renderable, so a throw there leaves a registered kitten without a renderable, which the game
-    /// then updates and draws every frame. Remove it again.
-    /// </summary>
-    private static void RemoveOrphanedKitten(CelestialSystem system, string kittenName)
-    {
-        if (!system.All.TryGet(kittenName, out Astronomical? orphan) || orphan == null) return;
-
-        try { system.Deregister(orphan); }
-        catch (Exception ex) { Console.WriteLine($"doh: Failed to deregister orphaned '{kittenName}': {ex.Message}"); }
-
-        if (orphan is Vehicle vehicle)
-        {
-            try { vehicle.Dispose(); }
-            catch (Exception ex) { Console.WriteLine($"doh: Failed to dispose orphaned '{kittenName}': {ex.Message}"); }
-        }
-        Console.WriteLine($"doh: Removed partially constructed kitten '{kittenName}'");
-    }
-
     private static SpawnResult Stopped(List<SpawnedKittenInfo> spawned, int requested, string reason)
     {
         Console.WriteLine($"doh: Spawn stopped: {reason} ({spawned.Count}/{requested} spawned)");
@@ -319,18 +233,6 @@ public sealed partial class KittenSpawner
             Error = $"{reason} ({spawned.Count} of {requested} spawned).",
             SpawnedKittens = spawned.ToArray()
         };
-    }
-
-    /// <summary>
-    /// Blocks until the game's background vehicle physics step (VehicleUpdateTask, kicked
-    /// from Program.PrepareFrame and running concurrently with the UI pass) has finished.
-    /// Constructing or disposing a Vehicle mutates the shared shapes registry, which the
-    /// game locks while that step runs. PrepareFrame would wait on this same scheduler
-    /// next frame anyway, so this only moves the wait earlier.
-    /// </summary>
-    private static void WaitForVehicleSolverIdle()
-    {
-        JobSystems.VehicleSolver?.Wait();
     }
 
     private string GenerateUniqueName(CelestialSystem system)

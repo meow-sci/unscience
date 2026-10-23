@@ -8,9 +8,9 @@ I describe it as a *supermod* that includes a suite of *submods*, each one has a
 
 # game compatibility
 
-The current checkout compiles against KSA **2026.10.7.5541**, including the IVA camera addition
-and Graffiti descriptor migration. Kitchen Sink and shared save checks pass; in-game acceptance
-is pending. The last full integration audit remains **2026.9.22.5482**. See
+The current checkout compiles against KSA **2026.10.19.5638**, and the full integration audit was
+run against that build (diffed from 2026.9.22.5482). The build and all 18 managed test suites pass;
+in-game acceptance is pending. Parts Now was removed in this upgrade. See
 [KSA compatibility](unscience/README.md#ksa-compatibility) for user-visible changes and
 [ISSUES.md](ISSUES.md) for known gaps.
 

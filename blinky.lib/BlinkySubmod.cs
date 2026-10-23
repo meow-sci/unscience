@@ -649,7 +649,7 @@ public sealed partial class BlinkySubmod : ISubmod
     /// Console.WriteLine, which surfaces in the game's log / debug console.
     ///
     /// A pixel lights only when all of these hold: the vehicle is ignited with a non-zero
-    /// throttle, the EngineController is active, and the engine's Combustor resolved a
+    /// throttle, the EngineController is active, and the engine's tank-fed core (PlumbedCore) resolved a
     /// ResourceManager whose ConsumptionOrder reaches at least one tank. That last one is
     /// the usual failure — it needs a connection on a declared feed connector.
     /// </summary>
@@ -700,7 +700,7 @@ public sealed partial class BlinkySubmod : ISubmod
         Console.WriteLine("blinky: ===== END DIAGNOSE =====");
     }
 
-    /// <summary>True when any Combustor core of this controller resolved a tank to draw from.</summary>
+    /// <summary>True when any tank-fed (PlumbedCore) core of this controller resolved a tank to draw from.</summary>
     private static bool ReachesPropellant(EngineController controller)
     {
         var cores = controller.Cores;
@@ -708,8 +708,8 @@ public sealed partial class BlinkySubmod : ISubmod
 
         for (int i = 0; i < cores.Length; i++)
         {
-            if (cores[i] is not Combustor combustor) continue;
-            if (PropellantFeedDiagnostics.CountTanks(combustor.ResourceManager) > 0)
+            if (cores[i] is not PlumbedCore plumbed) continue;
+            if (PropellantFeedDiagnostics.CountTanks(plumbed.ResourceManager) > 0)
                 return true;
         }
         return false;
@@ -734,26 +734,26 @@ public sealed partial class BlinkySubmod : ISubmod
         {
             for (int i = 0; i < cores.Length; i++)
             {
-                // Since KSA 2026.7.9.5018 the ResourceManager lives on Combustor, not on the
-                // RocketCore base; SolidMotor cores legitimately have none.
-                if (cores[i] is not Combustor combustor)
+                // The ResourceManager lives on PlumbedCore (KSA 5487), the tank-fed base of
+                // Combustor, ThermalCore and AntimatterRamCore; SolidMotor cores legitimately have none.
+                if (cores[i] is not PlumbedCore plumbed)
                 {
-                    Console.WriteLine($"blinky:     core[{i}] '{cores[i].TemplateId}' is not a Combustor (no resource manager)");
+                    Console.WriteLine($"blinky:     core[{i}] '{cores[i].TemplateId}' is not tank-fed (no resource manager)");
                     continue;
                 }
 
-                var rm = combustor.ResourceManager;
+                var rm = plumbed.ResourceManager;
                 if (rm == null)
                 {
-                    Console.WriteLine($"blinky:     core[{i}] '{combustor.TemplateId}': ResourceManager is null");
+                    Console.WriteLine($"blinky:     core[{i}] '{plumbed.TemplateId}': ResourceManager is null");
                     continue;
                 }
 
                 var order = rm.ConsumptionOrder;
                 int tanks = PropellantFeedDiagnostics.CountTanks(rm);
-                Console.WriteLine($"blinky:     core[{i}] '{combustor.TemplateId}': FlowRule={rm.FlowRule}, levels={order.LevelCount}, tanks={tanks}, feedConnectors={combustor.FeedConnectors.Length}");
+                Console.WriteLine($"blinky:     core[{i}] '{plumbed.TemplateId}': FlowRule={rm.FlowRule}, levels={order.LevelCount}, tanks={tanks}, feedConnectors={plumbed.FeedConnectors.Length}");
 
-                var feeds = combustor.FeedConnectors;
+                var feeds = plumbed.FeedConnectors;
                 for (int f = 0; f < feeds.Length; f++)
                 {
                     var conn = feeds[f].Connection;

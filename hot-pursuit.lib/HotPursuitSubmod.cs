@@ -128,7 +128,7 @@ public sealed partial class HotPursuitSubmod : ISubmod
             if (!ViewportRegistry.TryGetOwned(entry.Owner, out var ownedViewport) ||
                 !ReferenceEquals(ownedViewport, viewport))
             {
-                entry.Viewport = null;
+                DropViewport(entry);
                 entry.LeaseLost = true;
                 return false;
             }
@@ -190,13 +190,13 @@ public sealed partial class HotPursuitSubmod : ISubmod
             {
                 // GameViewport.DrawImGui releases the registry lease when the stock window closes.
                 // Do not retain or use that stale reference.
-                entry.Viewport = null;
+                DropViewport(entry);
                 entry.LeaseLost = true;
             }
         }
         catch (Exception ex)
         {
-            entry.Viewport = null;
+            DropViewport(entry);
             entry.LeaseLost = true;
             Console.WriteLine($"hot-pursuit: viewport lease check failed for camera #{entry.Id}: {ex.Message}");
         }
@@ -232,6 +232,14 @@ public sealed partial class HotPursuitSubmod : ISubmod
         {
             Console.WriteLine($"hot-pursuit: failed to release camera #{entry.Id} viewport: {ex.Message}");
         }
+        DropViewport(entry);
+    }
+
+    /// <summary>Forgets a viewport Hot Pursuit no longer drives and clears the celestial mirror it wrote.</summary>
+    private static void DropViewport(HotPursuitCamera entry)
+    {
+        if (entry.Viewport is { } viewport)
+            HotPursuitCelestialState.Clear(viewport.BaseCamera);
         entry.Viewport = null;
     }
 

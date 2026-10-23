@@ -67,11 +67,10 @@ public class PanAnimation : IKeyframeAnimation
 
     public void Initialize(Controller controller, Transform3D transform)
     {
-        double3 targetPos = AnimationHelpers.GetTargetPosition(controller, transform.PositionEcl);
-        _startOffset = transform.PositionEcl - targetPos;
+        _startOffset = AnimationHelpers.GetTargetOffset(controller, transform);
         _cameraRight = double3.UnitX.Transform(transform.LocalRotation);
         _cameraUp = double3.UnitY.Transform(transform.LocalRotation);
-        _cameraForward = double3.Normalize(targetPos - transform.PositionEcl);
+        _cameraForward = double3.Normalize(-_startOffset);
         Console.WriteLine($"[PanAnimation] Initialize: startOffset={_startOffset}, offset=({OffsetX:F1}, {OffsetY:F1}, {OffsetZ:F1}), duration={DurationSeconds:F1}s, easing={Easing}");
     }
 
@@ -90,11 +89,10 @@ public class PanAnimation : IKeyframeAnimation
                         + _cameraUp      * (OffsetY * easedT)
                         + _cameraForward * (OffsetZ * easedT);
 
-        var lookAtTarget = LookAtTargetProvider != null
-            ? LookAtTargetProvider(controller)
-            : AnimationHelpers.GetTargetPosition(controller, transform.PositionEcl);
-        transform.PositionEcl = lookAtTarget + _startOffset + worldOffset;
-        AnimationHelpers.LookAtTarget(transform, lookAtTarget);
+        double3 lookAtOffset = AnimationHelpers.GetLookAtOffset(LookAtTargetProvider, controller);
+        double3 cameraOffset = lookAtOffset + _startOffset + worldOffset;
+        AnimationHelpers.SetTargetOffset(controller, transform, cameraOffset);
+        AnimationHelpers.LookAtOffset(transform, cameraOffset, lookAtOffset);
 
         if (elapsedTime < deltaTime * 1.5)
         {

@@ -7,6 +7,7 @@ using Brutal.Numerics;
 using KSA;
 using MeowSci.DohLib;
 using MeowSci.DohLib.Materials;
+using MeowSci.DohLib.Spawning;
 using MeowSci.KsaAbstractions.Persistence;
 
 internal static class Checks
@@ -100,7 +101,54 @@ internal static class Checks
         Load(coordinator, bad, Kittens(Ids));
         Require(coordinator.RetainedCount == 1 && submod.Registry.Count == 0, "a blank material group is rejected and retained");
 
-        Console.WriteLine($"PASS: {_checks} DOH save/restore and material release checks.");
+        TeardownChecks(submod);
+
+        Console.WriteLine($"PASS: {_checks} DOH save/restore, teardown and material release checks.");
+    }
+
+    /// <summary>The real KittenSpawner teardown routes every removal through Universe.DestroyVehicle.</summary>
+    private static void TeardownChecks(DohSubmod submod)
+    {
+        var batch = Kittens("Kitten_doh_7", "Kitten_doh_8");
+        var boarded = new KittenEva("Kitten_doh_9");
+        var rocket = new Vehicle("Kitten_doh_6"); // a non-kitten that merely shares a registered name
+        SetWorld(batch.Cast<Vehicle>().Append(boarded).Append(rocket).ToArray());
+        var batchSet = submod.Factory.CreateSet(Red);
+        var boardedSet = submod.Factory.CreateSet(Blue);
+        submod.Track(batch[0], "Calico", batchSet);
+        submod.Track(batch[1], "Calico", batchSet);
+        submod.Track(boarded, "Tabby", boardedSet);
+        submod.Registry.Register(rocket.Id, "Calico", null);
+        Program.ControlledVehicle = batch[0];
+        Trace.Events.Clear();
+
+        Require(submod.Spawner.Despawn(batch[0].Id), "despawn succeeds");
+        Require(Trace.Events.SequenceEqual(new[] { "wait vehicle solver", "wait nearest orbit", "destroy Kitten_doh_7 Boarded",
+            "deregister Kitten_doh_7" }), "despawn joins the world readers, then uses DestroyVehicle without touching crew records: "
+            + string.Join(", ", Trace.Events));
+        Require(batch[0].IsDisposed && Program.ControlledVehicle == null && submod.Registry.Get(batch[0].Id) == null,
+            "the game teardown releases control and doh drops the entry");
+        Require(!batchSet.IsReleased, "a set the rest of the batch still renders with is kept");
+        Require(submod.Spawner.Despawn(batch[1].Id) && batchSet.IsReleased, "the last kitten of a batch releases the shared set");
+
+        Trace.Events.Clear();
+        boarded.IsDisposed = true; // destroyed by the game, e.g. it boarded a vessel
+        Require(submod.Spawner.Despawn(boarded.Id) && Trace.Events.Count == 0 && boardedSet.IsReleased
+            && submod.Registry.Get(boarded.Id) == null, "a kitten the game destroyed is not torn down twice, but its slots are freed");
+
+        Require(submod.Spawner.Despawn(rocket.Id) && !rocket.IsDisposed && Trace.Events.Count == 0,
+            "a non-kitten vehicle with a registered name is never destroyed");
+
+        var orphan = new KittenEva("Kitten_doh_10");
+        var stubborn = new KittenEva("Kitten_doh_11");
+        Universe.CurrentSystem!.All.UnsafeAsList().AddRange(new[] { orphan, stubborn });
+        KittenSpawner.RemoveOrphanedKitten(Universe.CurrentSystem, orphan.Id);
+        Require(orphan.IsDisposed && !Universe.CurrentSystem.All.TryGet(orphan.Id, out _)
+            && Trace.Events.Contains("destroy Kitten_doh_10 Boarded"), "a half-built kitten is removed through the game teardown");
+        Universe.FailDestroy = true;
+        KittenSpawner.RemoveOrphanedKitten(Universe.CurrentSystem, stubborn.Id);
+        Universe.FailDestroy = false;
+        Require(!Universe.CurrentSystem.All.TryGet(stubborn.Id, out _), "a half-built kitten is deregistered even when the teardown throws");
     }
 
     private static KittenEva[] Kittens(params string[] ids) => ids.Select(id => new KittenEva(id)).ToArray();

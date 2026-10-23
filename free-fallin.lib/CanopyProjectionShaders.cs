@@ -15,17 +15,22 @@ namespace MeowSci.FreeFallinLib;
 
 /// <summary>
 /// Adds one optional bind-pose projection varying to KSA's model PBR shaders. The path is selected
-/// by a marker in MaterialData.ExtraData, so every non-Free-Fallin material remains stock.
+/// by a marker in MaterialData.ExtraData, so every non-Free-Fallin material remains stock. Text
+/// transforms live in <see cref="CanopyShaderSource"/>; this class owns the game seams.
 /// </summary>
 internal static class CanopyProjectionShaders
 {
-    internal const float MaterialMarker = 31415f;
+    internal const float MaterialMarker = CanopyShaderSource.MaterialMarker;
 
     private const string StaticVertex = "Model.vert";
     private const string SkinnedVertex = "Model_Skinned.vert";
     private const string PbrFragment = "ModelPbr.frag";
+    private const string LayoutSourceId = "ModelPbrFrag";
 
-    private static readonly string[] ShaderIds = { "ModelVert", "ModelSkinnedVert", "ModelPbrFrag" };
+    private static readonly string[] ShaderIds = { "ModelVert", "ModelSkinnedVert", LayoutSourceId };
+    // Fragment shaders that KSA also pairs with ModelSkinnedVert (skinned pre-pass, kitten eyes). The
+    // patched vertex shader joins their pipelines, so their declared sets must agree with ModelPbr.frag.
+    private static readonly string[] PartnerFragmentIds = { "ModelNormalFrag", "ModelTranslucentFrag" };
     private static readonly Dictionary<string, byte[]> SourceCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly MethodInfo FromFile = AccessTools.Method(typeof(ShaderModuleUtils), nameof(ShaderModuleUtils.FromFile),
         new[] { typeof(Device), typeof(string), typeof(VkShaderStageFlags).MakeByRefType(), typeof(CompileOptions?) })
@@ -38,6 +43,7 @@ internal static class CanopyProjectionShaders
 
     private static bool _skinnedVertexCompiled;
     private static bool _pbrFragmentCompiled;
+    private static CanopyDescriptorSets _descriptorSets;
 
     internal static bool Available { get; private set; }
     internal static string? LastError { get; private set; }
@@ -51,7 +57,7 @@ internal static class CanopyProjectionShaders
         Available = ValidateSources();
         if (!Available)
         {
-            Console.WriteLine($"free-fallin: full-canopy projection unavailable: {LastError}");
+            Console.WriteLine($"free-fallin: full-canopy projection unavailable (stock shaders untouched): {LastError}");
             return;
         }
 
@@ -121,24 +127,48 @@ internal static class CanopyProjectionShaders
         }
     }
 
+    /// <summary>
+    /// Derives the texture/material sets from the live ModelPbr.frag and pre-patches all three targets.
+    /// Any failure leaves Available false, so no prefix is installed and every stock shader is untouched.
+    /// </summary>
     private static bool ValidateSources()
     {
-        foreach (string shaderId in ShaderIds)
+        try
         {
-            try
+            _descriptorSets = ResolveDescriptorSets();
+            foreach (string shaderId in ShaderIds)
             {
-                string path = ModLibrary.Get<ShaderReference>(shaderId).ModPath;
-                if (!File.Exists(path)) throw new FileNotFoundException($"Could not locate shader '{shaderId}'.", path);
+                string path = ResolveShaderPath(shaderId);
                 SourceCache[path] = PatchSource(path, File.ReadAllText(path));
             }
-            catch (Exception ex)
-            {
-                LastError = ex.Message;
-                SourceCache.Clear();
-                return false;
-            }
+            Console.WriteLine($"free-fallin: full-canopy projection uses {_descriptorSets} from {PbrFragment}");
+            return true;
         }
-        return true;
+        catch (Exception ex)
+        {
+            LastError = ex.Message;
+            SourceCache.Clear();
+            return false;
+        }
+    }
+
+    private static CanopyDescriptorSets ResolveDescriptorSets()
+    {
+        CanopyDescriptorSets sets = CanopyShaderSource.ParseDescriptorSets(
+            File.ReadAllText(ResolveShaderPath(LayoutSourceId)), PbrFragment);
+        foreach (string partnerId in PartnerFragmentIds)
+        {
+            string path = ResolveShaderPath(partnerId);
+            CanopyShaderSource.RequireSameDescriptorSets(sets, File.ReadAllText(path), Path.GetFileName(path));
+        }
+        return sets;
+    }
+
+    private static string ResolveShaderPath(string shaderId)
+    {
+        string path = ModLibrary.Get<ShaderReference>(shaderId).ModPath;
+        if (!File.Exists(path)) throw new FileNotFoundException($"Could not locate shader '{shaderId}'.", path);
+        return path;
     }
 
     private static bool IsTarget(string path)
@@ -162,62 +192,12 @@ internal static class CanopyProjectionShaders
         string name = Path.GetFileName(path);
         string patched = name switch
         {
-            StaticVertex => PatchStaticVertex(source),
-            SkinnedVertex => PatchSkinnedVertex(source),
-            PbrFragment => PatchFragment(source),
+            StaticVertex => CanopyShaderSource.PatchStaticVertex(source),
+            SkinnedVertex => CanopyShaderSource.PatchSkinnedVertex(source, _descriptorSets),
+            PbrFragment => CanopyShaderSource.PatchFragment(source),
             _ => throw new InvalidOperationException($"Unsupported shader target '{name}'.")
         };
         return new UTF8Encoding(false).GetBytes(patched);
-    }
-
-    private static string PatchStaticVertex(string source)
-    {
-        source = InsertAfter(source,
-            "layout (location = 2) out flat ivec4 outInstanceID;",
-            "layout (location = 3) out vec2 outFreeFallinUv;");
-        return InsertAfter(source,
-            "outWorldPosV = vec4(worldPos.xyz, inUv.y);",
-            "    outFreeFallinUv = inUv;");
-    }
-
-    private static string PatchSkinnedVertex(string source)
-    {
-        source = InsertAfter(source, "#version 450",
-            "\n#define SET_TEXTURE 1\n#include \"../Common/TextureSet.glsl\"\n\n#define SET_MATERIAL 2\n#include \"../Common/MaterialSet.glsl\"");
-        source = InsertAfter(source,
-            "layout (location = 2) out flat ivec4 outInstanceID;",
-            "layout (location = 3) out vec2 outFreeFallinUv;");
-        return InsertAfter(source,
-            "outWorldPosV = vec4(worldPos.xyz, inUv.y);",
-            "    Material ffMaterial = materialData[outInstanceID.x];\n" +
-            "    vec2 ffSource = vec2(inPos.x, -inPos.z) * ffMaterial.extraData.x;\n" +
-            "    outFreeFallinUv = vec2(\n" +
-            "        ffMaterial.extraData.y * ffSource.x - ffMaterial.extraData.z * ffSource.y,\n" +
-            "        ffMaterial.extraData.z * ffSource.x + ffMaterial.extraData.y * ffSource.y) + vec2(0.5);");
-    }
-
-    private static string PatchFragment(string source)
-    {
-        source = InsertAfter(source,
-            "layout (location = 2) in flat ivec4 inInstanceID;",
-            "layout (location = 3) in vec2 inFreeFallinUv;");
-        return InsertAfter(source,
-            "GetMaterialData(materialID, uv, albedo, normalMap, roughness, metallic, ao, emissive);",
-            "    if (abs(materialData[materialID].extraData.w - 31415.0) < 0.25)\n" +
-            "    {\n" +
-            "        Material ffMaterial = materialData[materialID];\n" +
-            "        albedo = ffMaterial.albedoColor * texture(\n" +
-            "            sampler2D(globalTextures[ffMaterial.albedoIndex], samplers[ffMaterial.samplerIndex]),\n" +
-            "            inFreeFallinUv);\n" +
-            "    }");
-    }
-
-    private static string InsertAfter(string source, string anchor, string insertion)
-    {
-        int index = source.IndexOf(anchor, StringComparison.Ordinal);
-        if (index < 0) throw new InvalidOperationException($"Shader changed shape; anchor not found: {anchor}");
-        index += anchor.Length;
-        return source.Insert(index, "\n" + insertion);
     }
 
     private static byte[] NullTerminated(string value)

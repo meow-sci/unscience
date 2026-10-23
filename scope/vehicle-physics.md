@@ -655,9 +655,7 @@ the decomp diff. Solution builds clean against 5402.
   enumerates through `VehicleProvider.GetAllVehicles()`, so shed fragments would have appeared in all of
   them. `GetAllVehicles` now takes `bool includeDebris = false` and filters on `IsDebris` by default
   (`ksa-abstractions.lib/VehicleProvider.cs:14-24`); `FindVehicle` passes `true` so an id held from
-  before a part failure still resolves. Two callers opt back in deliberately:
-  `parts-now.lib/Runtime/RuntimeModUnloadGate.cs:78` (a fail-closed gate — a debris fragment still
-  holding a runtime part template must keep the mod pinned) and `graffiti.lib/DecalPicker.cs:82`
+  before a part failure still resolves. `graffiti.lib/DecalPicker.cs:82` opts back in deliberately
   (the pick should hit whatever is visible under the cursor).
 - ℹ️ `Universe.DestroyVehicle` gained an optional `CrewDisposition` parameter and now hands cameras off
   (`HandOffCameras`, `Universe.cs:1778`); `Vehicle.Split` gained a `(Connection, IConnector, …)` overload;
@@ -824,10 +822,23 @@ along that tangent indefinitely. Long, slow, or thrusting-target shots can miss.
 ## Kitchen Sink selective G-load protection
 
 Kitchen Sink adds an opt-in, scene-saved vehicle registry and a guarded transpiler on
-`PhysicsBubble.DetectStructuralFailure(VehicleUpdateState)` (5482:958, body identical to 5438:873 and 5402:782).
-It gates only the GLoadFraction comparison (5482:975; 5438:890; 5402:799), preserving contacts, part damage, pressure damage and real
+`PhysicsBubble.DetectStructuralFailure(VehicleUpdateState, SimStep)` (5638:1080, called from
+`FullPhysicsEndFrame` `:1777`; 5482:958 had only the `VehicleUpdateState` parameter, identical to 5438:873 and 5402:782).
+It gates the GLoadFraction comparison (5638:1110; 5482:975) and, since 5638, the result of the
+EVA-kitten hard-landing check `DetectKittenImpact(VehicleUpdateState, SimStep) : bool` (5638:1057-1078,
+consumed `:1086`), preserving contacts, part damage, pressure damage, the kitten velocity sample and real
 load telemetry. Both hosts install it. Full surface/lifecycle map and native acceptance limits:
 [UI/customization](ui-customization.md#kitchen-sink).
+
+**KSA 5638 (from 5482/5554):** the detector gained `SimStep frame` and a kitten-only branch that,
+when `DetectKittenImpact` sees ≥ 20 m/s of downward speed lost on terrain/ocean contact (not on a
+ladder, tracked through new `VehicleUpdateState.KittenSurfaceVelocity`/`KittenSurfaceVelocityTime`
+`:90-92`), creates a `GroundImpact`/`OceanImpact` event (`:1089`) and returns before the load
+telemetry and G-load check. At 5482 kitten hard landings died only through G-load ×2.5. Both Kitchen
+Sink and The Tick looked the detector up with the 1-arg signature, so `Apply` threw
+`MissingMethodException` (logged by the patchers), both features were inert and their saved records
+failed `Require`; both lookups now use `(VehicleUpdateState, SimStep)`. Managed fixtures mirror the
+5638 body and `KsaAssemblyProbe` checks fixture signatures and anchors against the real `KSA.dll`.
 
 ## The Tick per-vessel indestructibility
 
@@ -835,25 +846,32 @@ The Tick (`the-tick` / `the-tick.lib`, bundled in Unscience) adds an opt-in, sce
 registry (`TickProtection`, exact reference identity, concurrent) and two guarded Harmony patches in
 `the-tick.lib/TheTickPatches.cs`, installed by both hosts:
 
-| Game surface | Kind | Source @5482 | Contract |
+| Game surface | Kind | Source @5638 | Contract |
 |---|---|---|---|
-| `Part.CrashTolerancePascals` getter (public instance `double`) | Harmony prefix, typed `AccessTools.PropertyGetter` | `KSA/Part.cs:858` → `PartStructuralLimits.ResolveCrashTolerance(Template.CrashTolerance, …)` | If `Part.Tree?.OwningVehicle` (fallback `FullPart.Tree?.OwningVehicle`) is registered, return `double.MaxValue` and skip the native resolution. Consumers: `PartFailure.Detect` (`PartFailure.cs:58`), `FxDeformation` dents (`FxDeformation.cs:330-335`, ratio becomes ~0), `PartContactLoadDebug` rated column. Shared `PartTemplate.CrashTolerance` (`PartTemplate.cs:18`) is never written. |
-| `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState)` private static void | Harmony prefix (`out bool __state` = event already present) + postfix | `KSA/PhysicsBubble.cs:958-997`; event created `:989`; only other writer nulls it `:926` | Postfix nulls `vehicleState.DestructionEvent` only when the detector created it this call and `ReadOnlyVehicle` is registered. Suppresses both the G-load (`:975`) and dynamic-pressure (`:976`) kills; `NewStructuralLoad` telemetry, `PartFailureEvent`, kitten 2.5× and debris exemptions stay native. Composes with Kitchen Sink's transpiler on the same method. |
-| `Part.Tree : PartTree?` (field), `Part.FullPart`, `PartTree.OwningVehicle : Vehicle?` (field), `PartTree.Count` | direct API | `Part.cs:662,1171`; `PartTree.cs:46,134` | Owner resolution on physics workers; sub-parts also receive `Tree` (`PartTree.cs:1579`). `Count` is a UI label only. |
+| `Part.CrashTolerancePascals` getter (public instance `double`) | Harmony prefix, typed `AccessTools.PropertyGetter` | `KSA/Part.cs:875` → `PartStructuralLimits.ResolveCrashTolerance(Template.CrashTolerance, …)` (`PartStructuralLimits.cs:40`, decompiler-only reshuffle @5638) | If `Part.Tree?.OwningVehicle` (fallback `FullPart.Tree?.OwningVehicle`) is registered, return `double.MaxValue` and skip the native resolution. Consumers: `PartFailure.Detect` (`PartFailure.cs:45-74`, read `:57`, kittens/on-rails skipped `:47`), `FxDeformation` dents (`FxDeformation.cs:333`, ratio becomes ~0), `PartContactLoadDebug` rated column. Shared `PartTemplate.CrashTolerance` (`PartTemplate.cs:18`) is never written. |
+| `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState vehicleState, SimStep frame)` private static void | Harmony prefix (`out bool __state` = event already present) + postfix; string lookup with exact `(VehicleUpdateState, SimStep)` types; prefix/postfix bind `vehicleState` by name | `KSA/PhysicsBubble.cs:1080-1131` (call `:1777` in `FullPhysicsEndFrame` `:1750`); events created `:1089` (kitten impact) and `:1124`; only other writer nulls it after `Apply` `:1020` | Postfix nulls `vehicleState.DestructionEvent` only when the detector created it this call and `ReadOnlyVehicle` is registered. Deliberately suppresses all three kills: the 5638 EVA-kitten hard landing (`DetectKittenImpact` `:1057-1078`, ≥ 20 m/s downward speed lost on terrain/ocean, cause `GroundImpact`/`OceanImpact`), G-load (`:1110`) and dynamic pressure (`:1111`). `DetectKittenImpact` still runs, so the kitten velocity sample (`VehicleUpdateState.cs:90-92`) stays current. `NewStructuralLoad` telemetry, `PartFailureEvent`, kitten 2.5× and debris exemptions stay native; on a suppressed kitten-impact frame KSA has already returned before writing telemetry, so that one frame's gauge reads its per-frame reset (`VehicleUpdateState.cs:347`). Composes with Kitchen Sink's transpiler on the same method. |
+| `Part.Tree : PartTree?` (field), `Part.FullPart`, `PartTree.OwningVehicle : Vehicle?` (field), `PartTree.Count` | direct API | `Part.cs:655,1176`; `PartTree.cs:46,134` | Owner resolution on physics workers; sub-parts also receive `Tree`. `Count` is a UI label only. |
 | `VehicleUpdateState.DestructionEvent`, `.ReadOnlyVehicle` (public fields) | direct API (write / identity) | `VehicleUpdateState.cs:78,14` | Written only in the postfix described above. |
-| `Vehicle.IsDisposed`, inherited `Vehicle.Id`, `Vehicle.Parts` | liveness, labels, part count | `Vehicle.cs:618,605`; `Astronomical.cs:85` | Disposed targets lose protection immediately; prune each frame via `VehicleProvider.GetAllVehicles(includeDebris: true)`. |
+| `Vehicle.IsDisposed`, inherited `Vehicle.Id`, `Vehicle.Parts` | liveness, labels, part count | `Vehicle.cs:676,663`; `Astronomical.cs:102` | Disposed targets lose protection immediately; prune each frame via `VehicleProvider.GetAllVehicles(includeDebris: true)`. |
 
 Not covered by design: anything that is not force-based destruction (explicit delete/recover,
-`Universe.DestroyVehicle` callers other than the structural event handler, kitten death paths).
-Debris shed by other vehicles is a new `Vehicle` and is never protected.
+`Universe.DestroyVehicle` callers other than the structural event handler, kitten boarding).
+Every force-based kitten death @5638 goes through the detector above and is covered for registered
+kittens; unregistered kittens keep native limits. Debris shed by other vehicles is a new `Vehicle`
+and is never protected.
 
 Saves: version-1 `the-tick` string-array record (order 20), same lifecycle as Kitchen Sink's
-`kitchen-sink-g-load` (see [saves](saves.md#the-tick-indestructibility-saves)). Managed checks:
-`the-tick.tests` (87 damage/lifecycle + 24 save/restore). Native acceptance (terrain ram, vehicle
-collision, dense-atmosphere dive, save/reload, vanilla load) is open.
+`kitchen-sink-g-load` (see [saves](saves.md#the-tick-indestructibility-saves)); no payload change
+@5638. Managed checks: `the-tick.tests` (108 damage/lifecycle incl. kitten landings and the real
+`KSA.dll` signature probe + 24 save/restore, 5638). Native acceptance (terrain ram, vehicle
+collision, dense-atmosphere dive, registered kitten > 20 m/s ground/water landing, save/reload,
+vanilla load) is still pending on 5638.
 
 **Update risk:** the getter is compile-checked (`nameof`), the detector is a string lookup with an
-exact signature (watchlist). If KSA ever caches `CrashTolerancePascals` per part, or moves the
-destruction decision out of `DetectStructuralFailure`, protection silently stops; recheck both
-consumers' call sites on every game update.
+exact signature (watchlist; 5638 broke it by adding `SimStep`). A lookup failure is logged and
+leaves the feature unavailable rather than silently half-working; `KsaAssemblyProbe` in the managed
+suites now fails if the fixture signature drifts from the real `KSA.dll`. If KSA ever caches
+`CrashTolerancePascals` per part, adds another `DestructionEvent` writer outside the detector, or
+moves a destruction decision out of `DetectStructuralFailure`, protection silently stops; recheck
+both consumers' call sites on every game update.
 

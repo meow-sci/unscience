@@ -16,12 +16,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Brutal.Core.Common" Condition="Exists('$(KSAFolder)Brutal.Core.Common.dll')">
-      <HintPath>$(KSAFolder)Brutal.Core.Common.dll</HintPath>
+    <Reference Include="Brutal.Core" Condition="Exists('$(KSAFolder)Brutal.Core.dll')">
+      <HintPath>$(KSAFolder)Brutal.Core.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="Brutal.Core.Numerics" Condition="Exists('$(KSAFolder)Brutal.Core.Numerics.dll')">
-      <HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath>
+    <Reference Include="Brutal.Numerics" Condition="Exists('$(KSAFolder)Brutal.Numerics.dll')">
+      <HintPath>$(KSAFolder)Brutal.Numerics.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Brutal.ImGui" Condition="Exists('$(KSAFolder)Brutal.ImGui.dll')">
@@ -32,8 +32,8 @@
       <HintPath>$(KSAFolder)Brutal.ImGui.Abstractions.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="Brutal.Core.Strings" Condition="Exists('$(KSAFolder)Brutal.Core.Strings.dll')">
-      <HintPath>$(KSAFolder)Brutal.Core.Strings.dll</HintPath>
+    <Reference Include="Brutal.Strings" Condition="Exists('$(KSAFolder)Brutal.Strings.dll')">
+      <HintPath>$(KSAFolder)Brutal.Strings.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Planet.Core" Condition="Exists('$(KSAFolder)Planet.Core.dll')">

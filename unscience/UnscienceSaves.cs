@@ -30,6 +30,7 @@ internal sealed class UnscienceSaves : IDisposable
         NativeSaveHooks.Restoring = Restore;
         NativeSaveHooks.LoadFinished = _coordinator.FinishLoad;
         NativeSaveHooks.LoadFailed = error => _coordinator.MarkFailure($"Load failed: {error.Message}");
+        NativeSaveHooks.LoadWarning = _coordinator.Report;
     }
 
     private void Capture(GameSave save)
@@ -90,7 +91,7 @@ internal sealed class UnscienceSaves : IDisposable
         if (ImGui.SmallButton(_details ? "Hide save details" : "Scene save details")) _details = !_details;
         if (!_details) return;
         ImGui.TextWrapped("Use KSA's Save / Load. Scene setups are stored with each save. Window layout autosave is separate. Sounds and camera sequences restore stopped or paused."u8);
-        ImGui.TextWrapped("Keep imported PNG, GLB and sound libraries and runtime part mods installed. Copy those dependencies when moving saves to another computer."u8);
+        ImGui.TextWrapped("Keep imported PNG, GLB and sound libraries installed. Copy those dependencies when moving saves to another computer."u8);
         ImGui.Text($"Registered state adapters: {_coordinator.ParticipantCount}. Retained incompatible records: {_coordinator.RetainedCount}.");
         if (_coordinator.RetainedCount > 0)
         {
@@ -116,6 +117,7 @@ internal sealed class UnscienceSaves : IDisposable
         NativeSaveHooks.Restoring = null;
         NativeSaveHooks.LoadFinished = null;
         NativeSaveHooks.LoadFailed = null;
+        NativeSaveHooks.LoadWarning = null;
         _coordinator.FinishLoad();
         _captures.Clear();
     }

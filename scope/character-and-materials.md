@@ -8,6 +8,9 @@ sources **and** the Content shader tree, in both game builds.
 
 **Verified game versions**
 
+- @5638: the top section below was verified against `2026.10.19.5638` (`ksa-game-assemblies` `edda844`;
+  OLD = `a2f724f`, read with `git show`). Only rows marked `@5638` were refreshed. The list below records
+  the 5482 pass.
 - NEW decomp `2026.9.22.5482` root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
 - OLD decomp `2026.9.10.5438` root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
 - NEW Content root: `~/repos/meow-sci/ksa-game-assemblies/current/Content`
@@ -21,6 +24,69 @@ decomps and (for shaders) BOTH Content trees; "Δ vs OLD" records the real delta
 are not deltas). Rows marked `@5482` carry 5482 line numbers; other table line numbers were last
 refreshed against **5438**. Earlier per-pass sections keep the line numbers of the build they were
 written against.
+
+## KSA 5638 (5482 → 5638) verification
+
+Verified against `2026.10.19.5638` (NEW, `ksa-game-assemblies` `edda844`), diffed from `2026.9.22.5482`
+(OLD, `a2f724f`). Static/managed only: the full solution builds with 0 warnings, and `doh.tests`
+(34 checks) links the production DOH teardown. No native KSA run was possible. Line numbers are NEW.
+
+- 🔴 **doh teardown bypassed the game's vehicle destruction (fixed).** `Despawn` and
+  `RemoveOrphanedKitten` called `CurrentSystem.Deregister(kitten)` + `kitten.Dispose()` directly.
+  `Universe.DestroyVehicle(Vehicle, CrewDisposition)` (`KSA/Universe.cs:2016-2050`) also does the
+  following:
+  - hands off every camera following the vehicle (`HandOffCameras`, `:2065-2095`), including the
+    character-portrait camera (new `ReleasePortraitCamera`, `:2052`, rev 5486);
+  - clears `Program.ControlledVehicle` and every other vessel's `Target`;
+  - hands the vehicle's particle emitters to the parent body (`Vehicle.HandOffEmitters`,
+    `Vehicle.cs:768-786`);
+  - finally calls `Dispose(crew != Boarded)`, which deregisters it (`Vehicle.cs:3800-3822`).
+
+  Rev 5607 made kitten boarding use `DestroyVehicle(this, CrewDisposition.Boarded)`
+  (`KittenEva.cs:914`) as a crash fix. doh now does the same (`doh.lib/Spawning/KittenSpawner.Teardown.cs:80-88`).
+  - **Disposition** (`CrewDisposition.cs:3-8`). `EndMission` calls `EndAllCrewMissions` (seats only),
+    then `Dispose(true)`, which ends the roster entry named after the kitten. `Kill` calls `KillCrew`,
+    which kills that roster entry and raises a KIA alert. `Boarded` performs no crew action and calls
+    `Dispose(false)`. doh kittens are not roster crew, so `Boarded` is the only disposition that cannot
+    touch crew records. None of the three adds roster entries.
+  - Before the call doh still waits on `JobSystems.VehicleSolver`. It now also joins
+    `JobSystems.NearestOrbitAndPerformanceWorker`, because the hover job walks `CurrentSystem.All`
+    (`CelestialSystem.cs:499-509`). KSA's own destruction runs in `InputEvents.ApplyInputEvents`
+    (`Program.cs:2315`), before that job is queued (`:2330-2335`), whereas doh's UI buttons fire after.
+  - Orphan removal (`KittenSpawner.Teardown.cs:95-112`) uses the same teardown. It still deregisters
+    directly if the half-built kitten throws inside it.
+  - Material-set release, the prune/unload order and stale-restore release are unchanged.
+  - `doh.lib/Spawning/KittenSpawner.cs` keeps spawning only.
+- ✅ **Engine Emissive (C1–C4) still works; the temperature LUT moved to bindless (revs 5530/5546).**
+  `MeshIndirect.frag` no longer declares `layout (set = 0, binding = 9) uniform sampler2D temperatureLut`.
+  The heat sample (`:296-302`) now reads `TEMPERATURE_LUT_SAMPLER`. That macro (`Common/TextureSet.glsl:53`)
+  expands to `TEXTURE_SAMPLER(globalConstants.temperatureLutHandle, globalConstants.clampSamplerHandle)`.
+  The thin-film LUT and frost textures moved the same way (`THIN_FILM_LUT_TEXTURE`, `FROST_*_TEXTURE`).
+  `inTemperature` is still location 7 (`MeshIndirect.frag:47-48`; vert `:20-21,54-55,96-97`). Engine
+  Emissive writes only `PerInstanceData.Temperature`/`TfiThickness` and binds no descriptor, so it is
+  unaffected.
+- ✅ **Kitten (character) pipeline sets renumbered; no mod binds them.** `ModelPbr.frag` and `Fur.frag`
+  changed from `SET_TEXTURE 1 / MATERIAL 2 / CSM 3 / LIGHTING 4 / GLOBAL 5` to
+  `SET_MATERIAL 1 / CSM 2 / LIGHTING 3 / GLOBAL 4 / TEXTURE 5` (`ModelPbr.frag:4-20`, `Fur.frag:4-19`;
+  `SET_AO 6`, `SET_RAYTRACED_OUTPUT 7`/`6` unchanged). `TextureSet.glsl` now `#error`s without
+  `SET_TEXTURE`. `MaterialSet.glsl` includes it and marks material indices `nonuniformEXT`. The
+  `Material` struct (`MaterialSet.glsl:12-21`) is unchanged, so doh's and Kitten Color's `handle*80+16`
+  albedo writes still land on `albedoColor`. Vehicle Paint anchors are intact:
+  `vec3 sampledColor` (`MeshIndirect.frag:109`, `MeshIndirectRaytraced.frag:157`), `inStateFlags`
+  (`:32`/`:23`) and `gammaToLinear` (`Common/Shared.glsl:203`).
+- 📝 **Stale note corrected.** Earlier passes describe `KittenEva` as "compared by type-name string".
+  No mod in this area does that any more. doh (`KittenSpawner.Teardown.cs:22`, `DohSubmod.Persistence.cs`)
+  and kitten-animations (`KittenAvatarAccessor.cs:16,34`) use typed `is KittenEva` / `as KittenEva`
+  tests. A rename of `KittenEva` is now a compile error, not a silent runtime miss.
+- ✅ **doh reflection names still resolve** (name check only): `CharacterRenderSystem._resources`
+  (`CharacterRenderSystem.cs:7`), `FurTexture`, `FurSampler`, `CatFurMaskTexture`, `BindlessHandle`/`BindlessIndex`,
+  `SamplerRepeatHandle`, `DefaultBlack/WhiteTexture`, `BlankMaterialTexture`, `Character{Body,Head,Eye}Material`,
+  `AssetMap`, `BigBuffer`, `BigBufferAllocator`, `DeviceCtx`, `CreateObject`, `GetOrLoad`, `ModLibrary.AllParts`/`AllCharacters`.
+- **Native acceptance pending:** despawn a doh kitten that is controlled, followed by the main and
+  portrait cameras, targeted by another vessel and emitting particles. Confirm the camera falls back,
+  control clears, the target clears, no roster change happens and there is no crash. Run a failed
+  spawn (orphan path). Check Engine Emissive glow with the bindless LUT, and that the doh/Kitten Color
+  tint renders after the set renumbering.
 
 ## KSA 5482 (5438 → 5482) verification
 
@@ -192,16 +258,16 @@ free for the game, and releases sets on despawn, prune, unload and after restore
 | 25 | Typed | KittenSpawner.cs:145; KittenSpawner.Positioning.cs:61 | `Universe.CurrentSystem : CelestialSystem?`; `Universe.GetElapsedTime() : UniverseTime` | KSA/Universe.cs:94,2114 | ✅ | none (was `:2060` @5348) | `GetElapsedSimTime` was renamed at 5211 — fixed then |
 | 26 | Typed | KittenSpawner.Positioning.cs:31-45 | `Vehicle.GetAsmb2Cci()`; `.Body2Cce`; `.BodyRates`; `.Parent`; `.Orbit.StateVectors`(`.PositionCci/.VelocityCci/.StateTime`); `Vehicle.IsDisposed`; `double3.Transform(doubleQuat)` | KSA/Vehicle.cs:3110,475,510,372,618; StateVectors.cs:8-12 | ✅ | none (line moves) | spawn positioning. The anchor is the selected `Vehicle` object (unambiguous `VehicleProvider.FindVehicle` for ID-only callers). The orbit epoch is the same state's `StateTime`, as `EVADoor.CreateKittenEva` does (`EVADoor.cs:212,224`), never a separately read clock. |
 | 27 | Typed | KittenSpawner.cs:221,224,225 | `KittenEva.Teleport(Orbit?,doubleQuat?,double3?)`; `IParentBody.Children.Add` (`IParentBody.cs:27`); `Vehicle.UpdatePerFrameData()` (override) | KSA/Vehicle.cs:2209,2613 | ✅ | none (line moves) | |
-| 28 | Typed | KittenSpawner.cs:70-71,300-307,342 | `CelestialSystem.All.TryGet(string,out Astronomical)` (`All :64`); `CelestialSystem.Deregister(Astronomical)` (`:91`, takes the `Vehicle` by upcast); `Vehicle.Dispose()` | KSA/CelestialSystem.cs:64,91; Vehicle.cs | ✅ | none (5402 `CelestialSystem.cs` diff is the internal `AstronomicalRef` lookup only) | Despawn uses the registered `KittenEva` object, falling back to an unambiguous ID lookup restricted to `KittenEva`. Also used for unique names and orphan cleanup (#37). |
+| 28 | Typed | KittenSpawner.Teardown.cs:80-112 @5638; KittenSpawner.cs (`GenerateUniqueName`) | `CelestialSystem.All.TryGet(string,out Astronomical)` (`All :64`); **@5638 `Universe.DestroyVehicle(Vehicle, CrewDisposition.Boarded)`** (`Universe.cs:2016`, `CrewDisposition.cs:3`) replaces direct `Deregister` + `Vehicle.Dispose()`; `CelestialSystem.Deregister(Astronomical)` (`:101`) remains only as the orphan fallback | KSA/CelestialSystem.cs:64,101; Universe.cs:2016-2095; Vehicle.cs:768,3800 | ✅ | **CHANGED @5638 (fixed)**: the game's teardown now also releases the portrait camera (rev 5486) and hands off emitters; boarding uses it since rev 5607 | Despawn uses the registered `KittenEva` object, falling back to an unambiguous ID lookup restricted to `KittenEva`. `Boarded` leaves crew records untouched (doh kittens are not crew). Also used for unique names and orphan cleanup (#37). |
 | 29 | Reflection | KittenSpawner.Materials.cs:169,176 | `KittenEva._renderable : KittenRenderable` (`KittenEva.cs:15`) → `._characterAvatar : CharacterAvatar` (both private) | KSA/KittenEva.cs:15; KSA/KittenRenderable.cs:12 | ✅ | none | avatar root |
 | 30 | Reflection (field path) | KittenSpawner.Materials.cs:39-59,186-199 | `CharacterAvatar.Core.CharacterModel.MaterialIndices`; `.Fur.CatFurRenderable.MaterialIndices`; `.Attachments.Helmet.HelmetMesh/.VisorMesh.MaterialIndices`; `.Attachments.Mmu.MmuMesh.MaterialIndices` | KSA/CharacterAvatar.cs:211,32,219/61,213/107,109,128; AnimatedRenderable.cs:34; CatFurRenderable.cs:22; StaticMeshRenderable.cs:31 | ✅ | 5402 additive only: `CharacterCore.HeadMeshIndices : List<int>` (`CharacterAvatar.cs:46`, from `CharacterCoreReference.HeadMeshIndices` `:21-22` / `CharacterAssets.xml:244-251`); `AnimatedRenderable.{PrePassIgnoreMeshIndices,MaskedMeshIndices,HideMaskedMeshes}` (`:62-66`) | `MaterialIndices` is `protected readonly int[]` on each renderable; in-place handle swap. ℹ️ `KittenRenderable.HideHead` (`:98`, set by `IVASeat.cs:103` when the camera is in that seat) masks the head meshes and skips the fur draw (`:355-360`) — cosmetic, the handle swap is untouched |
 | 31 | Typed (context) | — (not referenced) | `KittenEva.IsControllable => true` / `Vehicle.IsControllable` (virtual) | KSA/KittenEva.cs:63; Vehicle.cs:588 | ✅ | **ADDED (rev 4699)** | informational: spawned kittens now controllable; not a break |
-| 32 | Typed | KittenSpawner.cs:69,196,331-334 | `JobSystems.VehicleSolver : JobScheduler` (public static, `Brutal.Concurrency.Jobs`); `JobScheduler.Wait()` (spins until all runners idle) | KSA/JobSystems.cs:16; Brutal.Concurrency.Jobs/JobScheduler.cs:51 | ✅ | **ADDED (5402 fix)**; unchanged @5482 (only `ConcurrentWorkers` was renamed; rev 5452 island jobs run on `VehicleWorkerPool` inside the VehicleSolver job, so `Wait()` still covers them; `PrepareFrame` waits/applies at `Program.cs:2149-2168`, queues at `:2211`) | Guards `new KittenEva` and `Vehicle.Dispose()` against `ConstraintSim.UnlockShapes()` (`ConstraintSim.cs:116`) throwing while `VehicleUpdateTask.Run` (`:176`, `BeginVehicleUpdate`/`EndVehicleUpdate`) is stepping on the solver thread. Depends on frame ordering in `Program.PrepareFrame` (`Program.cs:2102-2145`): `VehicleSolver.Wait()` → `ApplyVehicleSolvers` → `ExecuteNextVehicleSolvers` queues the next step; nothing re-queues mid-frame. `doh.lib.csproj` now references `Brutal.Concurrency.dll`. Game's own equivalent is staging via `InputEvents.EvaSpawnBuffer` (`InputEvents.cs:992`, applied `:1072`) |
+| 32 | Typed | KittenSpawner.cs:136; KittenSpawner.Teardown.cs:85-86,121-124 @5638 | `JobSystems.VehicleSolver : JobScheduler` (public static, `Brutal.Concurrency.Jobs`); `JobScheduler.Wait()` (spins until all runners idle) | KSA/JobSystems.cs:16; Brutal.Concurrency.Jobs/JobScheduler.cs:51 | ✅ | **ADDED (5402 fix)**; unchanged @5482 (only `ConcurrentWorkers` was renamed; rev 5452 island jobs run on `VehicleWorkerPool` inside the VehicleSolver job, so `Wait()` still covers them; `PrepareFrame` waits/applies at `Program.cs:2149-2168`, queues at `:2211`) | Guards `new KittenEva` and `Vehicle.Dispose()` against `ConstraintSim.UnlockShapes()` (`ConstraintSim.cs:116`) throwing while `VehicleUpdateTask.Run` (`:176`, `BeginVehicleUpdate`/`EndVehicleUpdate`) is stepping on the solver thread. Depends on frame ordering in `Program.PrepareFrame` (`Program.cs:2102-2145`): `VehicleSolver.Wait()` → `ApplyVehicleSolvers` → `ExecuteNextVehicleSolvers` queues the next step; nothing re-queues mid-frame. `doh.lib.csproj` now references `Brutal.Concurrency.dll`. Game's own equivalent is staging via `InputEvents.EvaSpawnBuffer` (`InputEvents.cs:992`, applied `:1072`) @5638 teardown also joins `JobSystems.NearestOrbitAndPerformanceWorker` (`JobSystems.cs:12`): its hover job walks `CurrentSystem.All` (`CelestialSystem.cs:499-509`), and KSA destroys vehicles in `ApplyInputEvents` (`Program.cs:2315`) before queuing it (`:2330-2335`). |
 | 33 | Reflection (protected field) | MaterialSystemAccessor.cs:85; MaterialSystemAccessor.Pool.cs:34-47 | `GpuObjectSystem<T>.BigBufferAllocator : FreeListIndexPool` (protected readonly) → public `FreeListIndexPool.Capacity` | KSA/GpuObjectSystem.cs:14,24; Brutal.Collections/FreeListIndexPool.cs:17; KSA/Program.cs:999 (`capacity 512`) | ✅ | **ADDED** (pool-exhaustion fix) | Pool size for doh's material budget; falls back to 512 if the field disappears. The pool never grows (`allowResize: false`) and `SendToBuffer` (`GpuObjectSystem.cs:57-64`) throws `InvalidOperationException("Failed to allocate handle for GPU object.")` when full. That throw hit the native `CharacterRenderResources.CreateFurMaterial` inside every `new KittenEva` once doh clones had filled the pool, which crashed the game. doh keeps `ReservedSlots` (64) free for the game (`CreateMaterial` refuses below it) and preflights each tinted spawn against `EstimatedSlotsPerSet` (10). |
 | 34 | Typed | MaterialSystemAccessor.Pool.cs:54-72 | AssetMap values as `GpuObjectAssetRef` (`.Handle`, `LoadedAssetRef.IsValid`); used slots = distinct live handles | KSA/GpuObjectAssetRef.cs; KSA/LoadedAssetRef.cs | ✅ | **ADDED** | Assumes every persistent allocation is a named AssetMap entry: `CreateObject` frees the slot again when the name is taken, and `GpuMaterialSystem.CreateAsset` only runs through `GetOrLoad`. A future unnamed allocation path would make the free count optimistic; the reserve absorbs small drift. |
 | 35 | Typed + reflection | MaterialSystemAccessor.Pool.cs:87-110; MaterialFactory.Lifetime.cs:20-34 | Release: `AssetMap.Remove(AssetName)` (non-generic `IDictionary` over the `ConcurrentDictionary`), then `LoadedAssetRef.Dispose()` → `GpuObjectAssetRef.Destroy()` → `GpuObjectSystem.Free(int)` | KSA/LoadedAssetRef.cs:21-26; KSA/GpuObjectAssetRef.cs:18-22; KSA/GpuObjectSystem.cs:77-81 | ✅ | **ADDED** | Returns doh's clone slots on despawn, prune (kitten destroyed by the game), unload and after restore for detached sets nothing rebound. Only doh-owned names (`doh_NNNN_*`, tracked per `KittenMaterialSet.AssetNames`) are removed. `MaterialColorState.Forget(handle)` runs before the slot can be reused. |
 | 36 | Typed (semantics) | DohSubmod.cs:30,234; KittenSpawner.Positioning.cs:25 | `CelestialSystem.All : LookupCollection<Astronomical>`: `Deregister` swap-removes (the last element moves into the freed slot) | KSA/LookupCollection.cs:148-161 | ✅ | behavior | **Why doh holds the spawn anchor as a `Vehicle` object, not a list index.** Removing debris, a recovered craft or a despawned kitten shifted the filtered `VehicleProvider.GetAllVehicles()` index onto another vehicle, often a spawned kitten. Later spawns then followed that vehicle and its body frame, so the selected vehicle and XYZ offset were ignored. |
-| 37 | Typed (semantics) | KittenSpawner.cs:196-215,298-311 | The `Astronomical` base ctor registers `this` in `system.All` (`register: true`) before `KittenEva` builds `_renderable` | KSA/Vehicle.cs:1431-1432; KSA/KittenEva.cs:78-83 | ✅ | behavior | If the `KittenRenderable` ctor throws, a registered kitten with a null renderable is left behind, and the game updates and draws it every frame. doh deregisters and disposes it (`RemoveOrphanedKitten`) and reports a partial spawn. |
+| 37 | Typed (semantics) | KittenSpawner.cs:136-155; KittenSpawner.Teardown.cs:95-112 @5638 | The `Astronomical` base ctor registers `this` in `system.All` (`register: true`) before `KittenEva` builds `_renderable` | KSA/Vehicle.cs:1431-1432; KSA/KittenEva.cs:78-83 | ✅ | behavior | If the `KittenRenderable` ctor throws, a registered kitten with a null renderable is left behind, and the game updates and draws it every frame. @5638 doh removes it through `DestroyVehicle(…, Boarded)` and deregisters directly only if that throws (`RemoveOrphanedKitten`), then reports a partial spawn. |
 
 ### Game assets referenced
 
@@ -345,7 +411,7 @@ rebuild, which is what recompiles the part pipelines.
 | C1 | Harmony PREFIX | EngineEmissivePatches.cs:46-47,76-84 | **Private** `PartModelDynamic.AddInstance(PerInstanceData inInstanceData, KSA.Deformation.PerInstanceDent dentInstance, IViewport viewport, int inFrameIndex) : void` (prefix `ref … inInstanceData`) | KSA/PartModelDynamic.cs:474 (public wrappers :463,:469) @5482 | ✅ | 5438 added a dent-aware public wrapper; the old by-name lookup was ambiguous and could patch only one wrapper. **@5482 still reached per slot per frame per viewport** from `PartTreeRenderData.ComposeDynamic` (`:1183-1190`) | Explicit four-type lookup binds the shared private sink once; `inInstanceData` matches and `dentInstance` is preserved by stock code. Unlike the static sink (retired for Vehicle Paint/IvaForceRender), the dynamic sink still sees every dynamic instance. |
 | C2 | Struct reinterpret (`Unsafe.As`) | EngineEmissivePatches.cs:34-42,83-86 | `PartModelDynamic.PerInstanceData` — writes `Temperature`@**68**, `TfiThickness`@**72** | KSA/PartModelDynamic.cs:342-353 | ✅ | **none** (struct byte-identical; game use of bytes 68–79 unchanged: `MeshIndirect.vert:82 outTemperature = instanceData.Temperature`) | ✅ mirror struct matches **exactly** |
 | C3 | Typed | EngineEmissive.cs:123,129,159 | `Part.Modules.Get<PartModelDynamicModule>()`; `PartModelDynamicModule.PartModelDynamic` (`required`) | KSA/PartModelDynamicModule.cs:32 | ✅ | none | engine discovery via `PartHelpers.GetAllParts` |
-| C4 | Shader path (read-only) | (effect) — no mod edit | Temperature→emissive LUT logic, formerly `DynamicMeshIndirect.frag`, now `MeshIndirect.frag` under `#ifdef ENABLE_TEMPERATURE` | Content/Core/Shaders/Mesh/MeshIndirect.frag:46-48 (decl: `inTemperature`@loc7, `temperatureLut` binding 9), :297-304 (LUT sample); vert:46-47,81-82 | ✅ | **MOVED** (4693): `DynamicMeshIndirect.frag/.vert` files **removed**; dynamic pipeline now compiles `MeshIndirectVert/Frag` with `ENABLE_TEMPERATURE` (PartModelRenderer.cs:197,209). Both shader files byte-identical 5348↔5402 | ✅ feature still works — game still reads `PerInstanceData.Temperature` |
+| C4 | Shader path (read-only) | (effect) — no mod edit | Temperature→emissive LUT logic, formerly `DynamicMeshIndirect.frag`, now `MeshIndirect.frag` under `#ifdef ENABLE_TEMPERATURE` | Content/Core/Shaders/Mesh/MeshIndirect.frag:46-48 (decl: `inTemperature`@loc7, `temperatureLut` binding 9), :297-304 (LUT sample); vert:46-47,81-82 | ✅ | **MOVED** (4693): `DynamicMeshIndirect.frag/.vert` files **removed**; dynamic pipeline now compiles `MeshIndirectVert/Frag` with `ENABLE_TEMPERATURE` (PartModelRenderer.cs:197,209). Both shader files byte-identical 5348↔5402 | ✅ feature still works — game still reads `PerInstanceData.Temperature` @5638 the `temperatureLut` set-0 binding is gone; the sample (`MeshIndirect.frag:296-302`) uses bindless `TEMPERATURE_LUT_SAMPLER` (`Common/TextureSet.glsl:53`, `globalConstants.temperatureLutHandle`, revs 5530/5546); `inTemperature` still loc 7 (`:47-48`). |
 
 ### Game assets referenced
 

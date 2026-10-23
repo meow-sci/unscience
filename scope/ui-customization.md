@@ -177,7 +177,7 @@ opaque medium capsule windows, reveal native interiors, and retain existing nati
 | Dependency | Contract |
 |---|---|
 | `PartRenderFilter.RegisterStaticModel` → `PartTreeRenderData.Compose` shared prefix/postfix | OR a model-scoped predicate with existing full-part owners in the same range compaction. Static instance/dent lists compact together; cached batches and native meshes stay unchanged. No extra Harmony target or reflection lookup. |
-| `PartModel.Template.Id` (`TemplateDataBase.Id`) | Exact ordinal IDs `CoreCommandA_Subpart_MediumCapsuleWindowA_Model` and `CoreCommandA_Subpart_MediumCapsuleWindowB_Model`; never match a full-part/instance name or substring. Those are ordinary static models, with `RayTracing.Disabled` default, in `Content/Core/CoreCommandAAssets.xml:54-71`. Hull/crew doors are distinct model IDs and remain native. |
+| `PartModel.Template.Id` (`TemplateDataBase.Id`) | Exact ordinal IDs `CoreCommandA_Subpart_MediumCapsuleWindowA_Model` and `CoreCommandA_Subpart_MediumCapsuleWindowB_Model`; never match a full-part/instance name or substring. Those are ordinary static models, with `RayTracing.Disabled` default, in `Content/Core/CoreCommandAAssets.xml:55-72` (model IDs at `:56`, `:68` @5638; rev 5542 only swapped the capsule box colliders for a host-only convex-hull collision atlas). Hull/crew doors are distinct model IDs and remain native. |
 | `IvaForceRender.SetRequired(owner, bool)` | Global interior requirement OR-ed with the existing user preference; changes loaded/new `PartModelModule.Template.Internal` flags through existing helper. Final release restores flags; unpatch clears all requirements. `ShadowProxy` templates remain untouched. Editor's per-compose reveal remains independent. |
 | Existing `PartModelGlass` / `ComposeGlass` / main-view glass pass | `CoreIVASpaceA_Subpart_MediumCapsuleAWindowGlass_Model` in `CoreIVASpaceAAssets.xml:20-26` remains submitted natively. Cabin model is `Internal=true`, `RayTracing.Enabled`; native ray blocker is `ShadowProxy` (`:29-44`). No glass material/shader/opacity edits or ray tracing pipeline changes. |
 | Scene adapter | Separate boolean `kitchen-sink-capsule-glass` v1/order 20; reset releases requirement, replay uses normal toggle after reconstruction. Existing three Kitchen Sink records unchanged. See [saves](saves.md#kitchen-sink-capsule-glass-saves). |
@@ -188,8 +188,21 @@ saved record. Suppression applies to every matching window model in raster viewp
 filter still does not hide raytraced submissions; the selected exterior window templates currently
 have ray tracing disabled, so their native raster path is covered even in IVA mode.
 
-Validation: 20 managed production filter/IVA ownership checks (`ksa-upgrade.tests`), 17 real
-adapter/coordinator checks (`kitchen-sink.tests`) plus existing tests and solution compilation.
+**KSA 5638.** Stock now gates internal models on `IViewport.RendersInterior()` (IVA mode or
+`ViewportStateFlags.InsideVehicle`, `KSA/ViewportEx.cs:88-95`) instead of `Mode == IVA`
+(`PartTreeRenderData.cs:1271`, `PartModel.cs:486`). Crew portraits of seated kittens set
+`InsideVehicle` (`CrewPortraitPanel.cs:270`), so they raster the native cabin even with the experiment
+off. With it on, a portrait matches the IVA result: windows hidden, cabin and glass instances
+submitted. Portraits run through `RenderViewport`, which has no part-glass pass (the glass pass is
+main-only, `Program.cs:5085`), so a portrait may show the window openings without glass. Raytraced
+cabin/glass submissions stay gated on `Mode == IVA` (`PartTreeRenderData.cs:1290`,
+`PartModelGlass.cs:536`). The window model IDs and `CoreIVASpaceAAssets.xml:20-44` modes are unchanged.
+No code change was needed for the experiment; `IvaForceRender`'s editor prefix now uses the same
+`RendersInterior()` gate.
+
+Validation: 24 managed production filter/IVA ownership checks (`ksa-upgrade.tests`, including
+inside-vehicle portrait and editor reveal cases at 5638), 17 real adapter/coordinator checks
+(`kitchen-sink.tests`) plus existing tests and solution compilation.
 This is a main exterior view experiment. Native window/glass geometry alignment, tint, depth,
 culling, shadows and exterior lighting remain unverified. Secondary viewports omit the stock
 part-glass pass and may show openings without glass; no secondary renderer work is included.
@@ -205,6 +218,9 @@ IVA controller replacement; native IVA rendering/audio remain selected. Full gam
 [camera](camera.md#kitchen-sink-unlocked-iva-camera). Its separate version-1
 `kitchen-sink-iva-camera` record restores exact seat, unlock, speed and body-relative pose after
 native reconstruction; legacy records remain unchanged. Both hosts install/remove this helper.
+Re-verified clean at 5638 (`IVASeat.IsCameraInThisSeat` `:105`, protected `GameViewport.IvaController`
+setter `:46`; decompiler-only diffs). The one-expression head-hide target is an inlining candidate
+in the optimized KSA.dll (rev 5630), so a mid-session reapply needs a live check.
 The defunct Flexo Part/Subpart Test panels, transform/bounds/mass mutations, and standalone
 `KitchenSinkSolverPatch` / `Universe.ExecuteNextVehicleSolvers` hook are removed.
 
@@ -250,31 +266,49 @@ of a `PartTreeRenderData.Compose` prefix/finalizer — the current IvaForceRende
 | 14 | 3 | `IvaForceRender.cs:100` | `Program.Editor` (null check, editor-preview gate) | `KSA/Program.cs:226` | Yes | None | |
 | 15 | 3 | `IvaForceRender.cs:102` | `Program.MainViewport : IGameViewport` `.Mode : CameraMode { get; }` `== CameraMode.IVA` | `KSA/Program.cs:485`; `IViewport.cs:29` (impl `ViewportBase.cs:36`); `CameraMode.cs:14` | Yes | **RETYPED @5402** — `MainViewport` was `Viewport` (OLD Program:468), `Mode` was a public field (OLD `Viewport.cs:14`); `CameraMode.cs` identical | compile-bound read; no code change |
 
-**G-load integration points (added 2026-09-13):**
+**G-load integration points (added 2026-09-13; current @5638):**
 
-| Kind | Mod code | Game target | Decompiled source @5482 | Contract |
+KSA 5638 changed the detector to `DetectStructuralFailure(VehicleUpdateState vehicleState, SimStep frame)`
+(landed after 5554, unlogged). Until the lookup was fixed the 1-arg `AccessTools.Method` returned null,
+`Apply` threw `MissingMethodException` (logged by both patchers), protection was unavailable and saved
+`kitchen-sink-g-load` records failed `Require`. 5638 also kills EVA kittens on a hard landing through a new
+`DetectKittenImpact` branch that returns before the G-load check; at 5482 that death was a G-load ×2.5 kill
+that protection already prevented, so the transpiler now filters that result too. No save payload change.
+Managed: `kitchen-sink.tests` 108 G-load checks (incl. kitten landings and the real `KSA.dll` probe) pass;
+native acceptance (cart collisions, protected kitten > 20 m/s ground/water landing) is pending on 5638.
+
+| Kind | Mod code | Game target | Decompiled source @5638 | Contract |
 |---|---|---|---|---|
-| Harmony transpiler / string method lookup | `GLoadProtectionPatches.Apply/Remove/Transpile` | private static `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState) : void` | `KSA/PhysicsBubble.cs:958` (caller `FullPhysicsEndFrame` `:1595`, call `:1622`) | Body byte-identical to 5438:873 and 5402:782. Exact parameter signature, static/void validation, exactly one GLoadFraction getter required; installation fails explicitly on missing/ambiguous layouts. |
-| Typed getter / IL injection point | `GLoadProtectionPatches.Transpile` | `StructuralLoad.GLoadFraction : double` | `KSA/StructuralLoad.cs:15`; detector `PhysicsBubble.cs:975` | Unchanged (5438:890, 5402:799; `StructuralLoad.cs` byte-identical). Inject `(fraction, vehicleState) -> fraction or 0` after the getter. Only the destruction comparison sees the filtered value; stored telemetry is not modified. |
-| Typed identity | `GLoadProtectionPatches.FilterGLoadFraction` | `VehicleUpdateState.ReadOnlyVehicle : Vehicle` | `KSA/VehicleUpdateState.cs:14` | Look up exact vehicle reference in concurrent registry on solver worker (5482 island jobs run in parallel on `VehicleWorkerPool`). |
-| Typed liveness / labels | `GLoadProtection`, `KitchenSinkSubmod.GLoadProtection.cs` | `Vehicle.IsDisposed`; inherited `Vehicle.Id`; `VehicleProvider.GetAllVehicles` | `KSA/Vehicle.cs:618`; `KSA/Astronomical.cs:104`; `ksa-abstractions.lib/VehicleProvider.cs` | Picker excludes debris; pruning includes live debris and never retargets by name. |
+| Harmony transpiler / string method lookup | `GLoadProtectionPatches.Apply/Remove/ResolveDetector/Transpile` | private static `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState, SimStep) : void` | `KSA/PhysicsBubble.cs:1080-1131` (caller `FullPhysicsEndFrame` `:1750`, call `:1777`); 5482:958 had `(VehicleUpdateState)` only | Exact `(VehicleUpdateState, SimStep)` signature, static/void validation; exactly one GLoadFraction getter and one DetectKittenImpact call required, else installation fails explicitly. `ldarg.0` is `vehicleState`. `KsaAssemblyProbe` checks the fixture against the real `KSA.dll`. |
+| Typed getter / IL injection point | `GLoadProtectionPatches.Transpile` | `StructuralLoad.GLoadFraction : double` | `KSA/StructuralLoad.cs:15`; detector `PhysicsBubble.cs:1110` | Getter body reshaped by the decompiler only. Inject `(fraction, vehicleState) -> fraction or 0` after the getter. Only the destruction comparison sees the filtered value; stored telemetry is not modified. |
+| String method lookup / IL injection point (new @5638) | `GLoadProtectionPatches.ResolveKittenImpact/Transpile` | private static `PhysicsBubble.DetectKittenImpact(VehicleUpdateState, SimStep) : bool` | `KSA/PhysicsBubble.cs:1057-1078`, consumed `:1086` (`IsKitten && …` → event `:1089`, `return` `:1095`); state `VehicleUpdateState.KittenSurfaceVelocity`/`KittenSurfaceVelocityTime` `:90-92` | Inject `(impact, vehicleState) -> impact && !protected` after the call. The check still runs, so the kitten velocity sample stays current; a protected kitten falls through to the telemetry write and the filtered G-load check, while dynamic-pressure destruction still applies. |
+| Typed identity | `GLoadProtectionPatches.FilterGLoadFraction/FilterKittenImpact` | `VehicleUpdateState.ReadOnlyVehicle : Vehicle` | `KSA/VehicleUpdateState.cs:14` | Look up exact vehicle reference in concurrent registry on solver worker (island jobs run in parallel on `VehicleWorkerPool`). `IsKitten` (`:102`) is set for `KittenEva` (`:305`). |
+| Typed liveness / labels | `GLoadProtection`, `KitchenSinkSubmod.GLoadProtection.cs` | `Vehicle.IsDisposed`; inherited `Vehicle.Id`; `VehicleProvider.GetAllVehicles` | `KSA/Vehicle.cs:676`; `KSA/Astronomical.cs:102`; `ksa-abstractions.lib/VehicleProvider.cs` | Picker excludes debris but offers EVA kittens; pruning includes live debris and never retargets by name. |
 | Shared host / reset | both `Patcher.cs` hosts; `KitchenSinkSubmod.Saves.cs` | shared Harmony instance; `ISaveParticipantSource`, `ISubmod.Update/Dispose` | local abstraction contracts | Add disabled if patch unavailable. Reset/unload discard live registrations; save replay rebinds recorded IDs after reconstruction. HotkeyGuard stays installed. |
 
 The protected vehicle's G-failure boolean stays false for every contact situation, including
-terrain/ocean impacts. The native dynamic-pressure branch still runs and assigns its normal
-cause when both loads would exceed limits. PartFailure.Detect, contact solving, measured peaks,
-StructuralLoad values, and VehicleStructuralLimits/FlightComputer limits are untouched.
-The detector's existing pending-event early return remains intact.
+terrain/ocean impacts, and a protected kitten's hard-landing result stays false. The native
+dynamic-pressure branch still runs and assigns its normal cause when both loads would exceed
+limits. PartFailure.Detect, contact solving, measured peaks, StructuralLoad values, the kitten
+surface-velocity sample and VehicleStructuralLimits/FlightComputer limits are untouched.
+The detector's existing pending-event early return remains intact. Unprotected kittens keep the
+native 20 m/s hard-landing death and 2.5× G limit.
 
-**Update risk:** recheck the detector's getter/comparison relationship and that its single static
-argument still identifies the evaluated vehicle. An extra GLoadFraction read rejects installation.
-Check native contact/part-failure precedence and pressure cause selection on game updates.
+**Update risk:** recheck the detector's getter/comparison relationship, the kitten-impact call
+and that its first static argument still identifies the evaluated vehicle. An extra or missing
+GLoadFraction read or DetectKittenImpact call rejects installation, as does any signature change
+(5638 added `SimStep`). Check native contact/part-failure precedence, any new kitten/vehicle death
+branch inside or outside the detector, and pressure cause selection on game updates.
 No game assets, shader dependencies, or new Bepu mutations are added.
 
 **Validation:** full solution compilation and `kitchen-sink.tests` exercise the production
-registry/transpiler against managed 5438 decision fixtures (unchanged from 5402; the detector is still byte-identical at 5482): multiple targets, same-name isolation,
+registry/transpiler against managed 5638 decision fixtures (5482 body plus `SimStep` and the
+kitten-impact branch), checked against the real `KSA.dll` signatures and anchors by
+`KsaAssemblyProbe`: multiple targets, same-name isolation,
 G/pressure thresholds, contact causes, telemetry, pending events, removal/pruning/reset,
-concurrent reads, unpatch restoration and missing/duplicate getter rejection. Another 26 checks
+concurrent reads, unpatch restoration, missing/duplicate anchor rejection, and kitten hard
+landings (native ground/ocean deaths at 20 m/s, ladder/non-kitten exemptions, protected survival
+with telemetry and velocity sampling, pressure still applying). Another 26 checks
 exercise the real save adapter/resolver/coordinator for JSON round-trip, legacy/vanilla loads,
 A-B-A/repeated rebind, invalid targets and retained-record recovery. Native picker,
 HUD-hidden behavior and actual Bepu cart collisions remain in-game acceptance checks.

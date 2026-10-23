@@ -181,7 +181,7 @@ public sealed partial class KiwisMarblesSubmod : ISubmod
                 }
                 ImGui.EndCombo();
             }
-            ImGui.SetItemTooltip("Target: any orbiter (vehicle or another celestial) that the source will follow.");
+            ImGui.SetItemTooltip("Target: any orbiter (vehicle, another planet or moon, or an orbiting star) that the source will follow.");
 
             ImGui.EndTable();
         }
@@ -190,10 +190,10 @@ public sealed partial class KiwisMarblesSubmod : ISubmod
         var selectedSource = celestials[_pendingSourceIndex];
         var selectedTarget = orbiters[_pendingTargetIndex];
 
-        // Surface placement helper
-        if (selectedTarget is Celestial targetCelestialPreview && (IOrbiter)selectedSource != selectedTarget)
+        // Surface placement helper (planets, moons and, since KSA 5638, orbiting stars)
+        if (selectedTarget is not Vehicle && (IOrbiter)selectedSource != selectedTarget)
         {
-            double tR = targetCelestialPreview.MeanRadius;
+            double tR = selectedTarget.MeanRadius;
             double sR = selectedSource.MeanRadius;
             double surfaceDist = tR + sR;
             ImGui.Spacing();
@@ -305,15 +305,15 @@ public sealed partial class KiwisMarblesSubmod : ISubmod
         }
 
         var (proxy, scaleIdx) = _weldEditState[i];
-        bool targetIsCelestial = weld.Target is Celestial;
+        bool targetIsBody = weld.Target is not Vehicle;
 
-        if (targetIsCelestial && !_weldSurfaceState.ContainsKey(i))
+        if (targetIsBody && !_weldSurfaceState.ContainsKey(i))
         {
             var (initLon, initLat) = OffsetToLonLat(weld.Offset);
             _weldSurfaceState[i] = (initLon, initLat, 0f, false);
         }
 
-        bool surfMode = targetIsCelestial && _weldSurfaceState.ContainsKey(i) && _weldSurfaceState[i].surfaceMode;
+        bool surfMode = targetIsBody && _weldSurfaceState.ContainsKey(i) && _weldSurfaceState[i].surfaceMode;
         bool newSurfMode = surfMode;
 
         // Offset controls section using 2-column table
@@ -324,14 +324,14 @@ public sealed partial class KiwisMarblesSubmod : ISubmod
             ImGui.TableSetupColumn("##lbl", ImGuiTableColumnFlags.WidthStretch, 1f);
             ImGui.TableSetupColumn("##widget", ImGuiTableColumnFlags.WidthStretch, 3f);
 
-            if (targetIsCelestial)
+            if (targetIsBody)
             {
                 ImGui.TableNextRow();
                 ImGui.TableNextColumn();
                 ImGui.AlignTextToFramePadding(); ImGui.Text("Surface Mode");
                 ImGui.TableNextColumn();
                 ImGui.Checkbox($"##km_surf_chk_{i}", ref newSurfMode);
-                ImGui.SetItemTooltip("Lock source to the surface of the target celestial body using longitude/latitude.");
+                ImGui.SetItemTooltip("Lock source to the surface of the target body (planet, moon or star) using longitude/latitude.");
             }
 
             if (!newSurfMode)
@@ -363,10 +363,10 @@ public sealed partial class KiwisMarblesSubmod : ISubmod
         }
         ImGui.PopStyleVar(); // CellPadding
 
-        if (targetIsCelestial && newSurfMode)
+        if (targetIsBody && newSurfMode)
         {
-            var targetCel = (Celestial)weld.Target;
-            double dist = targetCel.MeanRadius + weld.Source.MeanRadius;
+            double targetRadius = weld.Target.MeanRadius;
+            double dist = targetRadius + weld.Source.MeanRadius;
 
             float curLon = _weldSurfaceState.ContainsKey(i) ? _weldSurfaceState[i].lon : 0f;
             float curLat = _weldSurfaceState.ContainsKey(i) ? _weldSurfaceState[i].lat : 0f;
@@ -379,7 +379,7 @@ public sealed partial class KiwisMarblesSubmod : ISubmod
             }
 
             ImGui.TextDisabled($"Surface dist: {FormatKm(dist)}");
-            ImGui.TextDisabled($"  (target r: {FormatKm(targetCel.MeanRadius)} + source r: {FormatKm(weld.Source.MeanRadius)})");
+            ImGui.TextDisabled($"  (target r: {FormatKm(targetRadius)} + source r: {FormatKm(weld.Source.MeanRadius)})");
 
             bool lonChanged = false, latChanged = false, radChanged = false;
             ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new float2(6f, 6f));
@@ -423,7 +423,7 @@ public sealed partial class KiwisMarblesSubmod : ISubmod
 
             _weldSurfaceState[i] = (curLon, curLat, curRadialKm, true);
         }
-        else if (targetIsCelestial)
+        else if (targetIsBody)
         {
             _weldSurfaceState[i] = (
                 _weldSurfaceState.ContainsKey(i) ? _weldSurfaceState[i].lon : 0f,
@@ -477,6 +477,15 @@ public sealed partial class KiwisMarblesSubmod : ISubmod
                 _weldError = $"{source.Id} is already welded as a source.";
                 return;
             }
+        }
+
+        // The source moves under the target's parent, so it must not already be one of the target's ancestors
+        // (the same rule scene restore enforces).
+        for (IParentBody? ancestor = target.Parent; ancestor != null; ancestor = (ancestor as IOrbiter)?.Parent)
+        {
+            if (!ReferenceEquals(ancestor, source)) continue;
+            _weldError = $"{target.Id} orbits {source.Id}; welding would make {source.Id} its own ancestor.";
+            return;
         }
 
         _weldError = null;

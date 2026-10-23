@@ -39,9 +39,13 @@ public static class IronManRcsOrientationPatches
     {
         var states = ModuleStateful<ThrusterController, ThrusterControllerState,
             ThrusterControllerGlobalState, EmptyStruct>.InitializeHotPathList(kitten.Parts.States);
-        // Changing eligibility can change the mapping even when an explicit control part
-        // keeps Ctrl2Body unchanged. Force the native authority cache to recalculate.
-        states.GetMutableGlobalStateForInitialization() = ThrusterControllerGlobalState.Zero;
+        // Changing eligibility can change the mapping even when the control frame is unchanged
+        // (an explicit control part, or disabling back to the Identity EVA frame). Use the
+        // all-zero state of a never-computed list: its zero CachedCtrl2Body can never pass
+        // IsCtrl2BodyCurrent, so Rocket.RocketsNeedUpdate and IsCacheValid both force a full
+        // recompute on the next worker step. ThrusterControllerGlobalState.Zero caches Identity,
+        // which lets the frame-change gate skip that recompute and leaves zero RCS authority.
+        states.GetMutableGlobalStateForInitialization() = default;
     }
 
     private static ThrusterMapFlags? ReadManualControlMap(ThrusterController controller)

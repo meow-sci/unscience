@@ -32,7 +32,7 @@ Restore Defaults reverts within a session.
 3. Press **Apply**. The renderer is rebuilt through the game's own settings path (brief hitch),
    and the ring field re-appears with your assets.
 4. **Restore Defaults** puts everything back; **Rescan Assets** refreshes the mesh/texture catalog
-   (e.g. after parts-now loads new bundles).
+   (e.g. after another mod registers new meshes at runtime).
 
 Notes:
 - Make sure *Planetary Rings* and *Ring Meshes* are enabled in the game's graphics settings — the
@@ -78,8 +78,8 @@ layout) and uploads a `SimpleVkMesh` for primitive 0 on first use. Clones are ca
 lifetime and disposed only after defaults are restored and the renderer rebuilt.
 
 **Asset catalog:** meshes and textures are enumerated from `ModLibrary.AllMeshes` / `AllFiles`
-(internal static `SerializedCollection<T>` fields, resolved once by reflection — the same pattern
-parts-now's `GameRegistry` uses). Textures are filtered to those with a valid bindless handle;
+(internal static `SerializedCollection<T>` fields, resolved once by name-string reflection; both
+names are on the scope string-reflection watchlist). Textures are filtered to those with a valid bindless handle;
 normal maps to `TexturePowerReference` entries; `*_VM` pick-mesh hulls are hidden.
 
 ## Public API (MeowSci.RockyMcRockFaceLib)

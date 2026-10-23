@@ -99,8 +99,8 @@ public class ShakeAnimation : IKeyframeAnimation
         // Maintain look-at behavior if provider is set
         if (LookAtTargetProvider != null)
         {
-            double3 lookAtTarget = LookAtTargetProvider.Invoke(controller);
-            AnimationHelpers.LookAtTarget(transform, lookAtTarget);
+            double3 lookAtOffset = AnimationHelpers.GetLookAtOffset(LookAtTargetProvider, controller);
+            AnimationHelpers.LookAtOffset(transform, AnimationHelpers.GetTargetOffset(controller, transform), lookAtOffset);
         }
         
         // Log on first frame

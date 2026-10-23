@@ -2,9 +2,10 @@
 
 Run `dotnet run --project kitchen-sink.tests` from the repository root.
 
-Latest managed validation: 47 IVA ownership/persistence checks, 26 existing save checks and
-54 G-load checks passed. The full solution compiles against local KSA 5541 with zero warnings
-or errors; `saves.tests` also passes. Native acceptance below remains pending.
+Latest managed validation (KSA 5638): 47 IVA ownership/persistence checks, 26 existing save
+checks, 17 capsule glass checks and 108 G-load checks passed, with the real `KSA.dll` probe
+verified. The full solution compiles against local KSA 5638 with zero warnings or errors.
+Native acceptance below remains pending.
 
 Capsule glass adds 17 real-adapter checks: detached boolean JSON round-trip, independent legacy
 IVA preference, reset/replay, repeated and cross-scene loads, missing/legacy records, malformed
@@ -35,15 +36,29 @@ vanilla scene and remove/change the followed vessel. Check the ordinary free cam
 views, plus interaction with Camera Controller Override playback. Native acceptance is pending.
 
 Links the production G-load registry and Harmony transpiler into a native-free
-fixture of KSA 5438's structural-failure decision (source-identical to 5402). Checks multiple targets,
+fixture of KSA 5638's `DetectStructuralFailure(VehicleUpdateState, SimStep)` decision, including the
+new `DetectKittenImpact` branch (`PhysicsBubble.cs:1057-1095`). Checks multiple targets,
 duplicate adds, same-name identity isolation, contact situations, unchanged load
 telemetry, independent G/pressure thresholds and pressure cause classification,
 pending part/event preservation, removal, disposed/missing targets, concurrent
-UI/worker access, session reset, actual Harmony removal, and rejected detector layouts.
+UI/worker access, session reset, actual Harmony removal, and rejected detector layouts
+(missing/duplicate G-load or kitten-impact anchors, plus correct filter placement in either order).
+`KittenImpactChecks` covers native kitten ground/ocean deaths at the inclusive 20 m/s threshold,
+the ladder and non-kitten exemptions, protected kittens surviving 25 m/s landings with and without
+excess G while native telemetry and velocity sampling continue, fluid pressure still killing a
+protected kitten, same-name isolation, removal and unpatch.
 
-The fixture does not run Bepu, render ImGui, or reproduce the cart. Native acceptance:
-add two vehicles through Kitchen Sink; collide them with verified high part crash
-tolerances; remove one row and repeat; save, edit and reload to confirm protection returns on
+`KsaAssemblyProbe.cs` (also linked into `the-tick.tests`) reads the real `KSA.dll` the suite was
+built against (`KSA_DLL_DIR`/`KSAFolder`, metadata only, never loaded). It requires the fixture
+methods that the production lookups resolved to match the shipped static/return/parameter types
+and names, and the shipped detector body to call `StructuralLoad.get_GLoadFraction` and
+`DetectKittenImpact` exactly once. Without `KSA.dll` it prints WARN and the PASS line says
+"SKIPPED"; against the 5482 `KSA.dll` it fails, which is the regression the 5638 upgrade exposed.
+
+The fixture does not run Bepu, render ImGui, or reproduce the cart. Native acceptance (pending on
+5638): add two vehicles through Kitchen Sink; collide them with verified high part crash
+tolerances; protect an EVA kitten and drop it onto ground and water from > 20 m/s, then remove it
+and confirm the hard landing kills; remove one row and repeat; save, edit and reload to confirm protection returns on
 reconstructed vehicles; load a vanilla/legacy save to confirm cleanup; verify the picker filter
 does not activate game hotkeys.
 

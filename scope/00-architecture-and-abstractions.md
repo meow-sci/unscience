@@ -583,7 +583,8 @@ the Brutal.ImGuiApi ini API (see note below); it compiles against 4750.
   `KSAColor.Xkcd` (file unchanged).
 - **StarMap load-order invariant HOLDS:** `ModLibrary.LoadAll()` (`KSA/Program.cs:965`) still precedes
   `ModLibrary.Bind()` (`KSA/Program.cs:994`), so `[StarMapAllModsLoaded]` still fires before
-  `DeviceMeshInterleaved.Shared.Build()`. This is parts-now's headline standing invariant (U1).
+  `DeviceMeshInterleaved.Shared.Build()`. (This was parts-now's headline U1 invariant; parts-now was
+  removed @5638.)
 - **Brutal packages:** solution builds clean with `TreatWarningsAsErrors` and **0 warnings** against
   the 5117 DLLs, so no nullability/signature shift landed in the ImGui surface actually used
   (contrast the rev-4729 bump, which cost `garrys-torch.lib` a CS8604).

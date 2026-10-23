@@ -18,7 +18,7 @@ public enum VehicleReferenceFrame : byte { EclBody, EnuBody, BurnBody, Dock }
 public enum VehicleEngine : byte { MainIgnite, MainShutdown }
 public enum KittenEvaAction : byte { ViewMode, DirectMode, Rcs, ManualTrim, RateTrim }
 
-public class FlightComputer
+public partial class FlightComputer
 {
     public FlightComputerAttitudeMode AttitudeMode;
     public FlightComputerBurnMode BurnMode;

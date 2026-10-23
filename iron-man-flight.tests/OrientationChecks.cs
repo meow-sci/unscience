@@ -43,18 +43,18 @@ internal static class OrientationChecks
         };
         KSA.Program.Editor = editor;
         // The nullable choice getter intentionally has no NoInlining attribute, like the game.
-        SameRotation(kitten.Ctrl2Body, doubleQuat.Identity, "warm stock control frame");
+        SameRotation(kitten.Helm2Body, doubleQuat.Identity, "warm stock control frame");
         controller.GetFrame(editor.EditingSpace, CameraReferenceFrame.Editor);
-        controller.Scroll(1); jets.RecomputeDynamicData(); editor.CameraOffset = double3.Zero;
+        controller.Scroll(1); jets.Resolve(); editor.CameraOffset = double3.Zero;
 
         for (int cycle = 0; cycle < 2; cycle++)
         {
             IronManControlFramePatches.Apply(harmony);
             IronManEditorOrientationPatches.Apply(harmony);
             IronManRcsOrientationPatches.Apply(harmony);
-            SameRotation(kitten.Ctrl2Body, doubleQuat.Identity, "default-off control frame");
-            jets.RecomputeDynamicData();
-            Require(jets.ResolvedMap == ThrusterMapFlags.PitchUp, "default-off authored jet map");
+            SameRotation(kitten.Helm2Body, doubleQuat.Identity, "default-off control frame");
+            jets.Resolve();
+            Require(jets.State.ControlMap == ThrusterMapFlags.PitchUp, "default-off authored jet map");
             submod.Enabled.Add(kitten);
             CheckControlFrame(kitten, untouched, vessel);
             CheckEditorFrame(controller, editor, kitten, untouched, submod);
@@ -62,9 +62,9 @@ internal static class OrientationChecks
 
             submod.Enabled.Remove(kitten);
             submod.Configured.Add(kitten);
-            SameRotation(kitten.Ctrl2Body, doubleQuat.Identity, "disable restores stock control frame");
-            jets.RecomputeDynamicData();
-            Require(jets.ResolvedMap == ThrusterMapFlags.PitchUp, "disable restores original authored map");
+            SameRotation(kitten.Helm2Body, doubleQuat.Identity, "disable restores stock control frame");
+            jets.Resolve();
+            Require(jets.State.ControlMap == ThrusterMapFlags.PitchUp, "disable restores original authored map");
             var configuredFrame = controller.GetFrame(editor.EditingSpace, CameraReferenceFrame.Editor);
             Near(double3.UnitZ.Transform(configuredFrame), (-double3.UnitZ).Transform(editor.EditingSpace.Asmb2Ecl),
                 "configured EVA mode retains upright editor independently of rocket controls");
@@ -80,9 +80,9 @@ internal static class OrientationChecks
             IronManControlFramePatches.Remove(harmony);
             IronManEditorOrientationPatches.Remove(harmony);
             IronManRcsOrientationPatches.Remove(harmony);
-            SameRotation(kitten.Ctrl2Body, doubleQuat.Identity, "unload restores getter despite membership");
-            jets.RecomputeDynamicData();
-            Require(jets.ResolvedMap == ThrusterMapFlags.PitchUp, "unload restores authored map");
+            SameRotation(kitten.Helm2Body, doubleQuat.Identity, "unload restores getter despite membership");
+            jets.Resolve();
+            Require(jets.State.ControlMap == ThrusterMapFlags.PitchUp, "unload restores authored map");
             Near(double3.UnitZ.Transform(controller.GetFrame(editor.EditingSpace, CameraReferenceFrame.Editor)),
                 double3.UnitX.Transform(editor.EditingSpace.Asmb2Ecl), "unload restores whole editor frame");
             submod.Enabled.Clear();
@@ -94,24 +94,24 @@ internal static class OrientationChecks
 
     private static void CheckControlFrame(KittenEva kitten, KittenEva untouched, Vehicle vessel)
     {
-        doubleQuat rocket = kitten.Ctrl2Body;
+        doubleQuat rocket = kitten.Helm2Body;
         Near(double3.UnitX.Transform(rocket), -double3.UnitZ, "rocket nose points to kitten head");
         Near(double3.UnitY.Transform(rocket), double3.UnitY, "rocket right matches kitten right");
         Near(double3.UnitZ.Transform(rocket), double3.UnitX, "rocket down matches kitten face");
         var vector = new double3(4, 5, 6);
         Near(vector.Transform(rocket).Transform(rocket.Inverse()), vector, "real numerics frame round trip");
-        SameRotation(untouched.Ctrl2Body, doubleQuat.Identity, "other kitten frame untouched");
-        SameRotation(vessel.Ctrl2Body, doubleQuat.Identity, "normal vessel frame untouched");
+        SameRotation(untouched.Helm2Body, doubleQuat.Identity, "other kitten frame untouched");
+        SameRotation(vessel.Helm2Body, doubleQuat.Identity, "normal vessel frame untouched");
         var selected = new Part { Asmb2VehicleAsmb = doubleQuat.CreateFromAxisAngle(double3.UnitZ, 0.73) };
         kitten.ControlPart = selected;
-        SameRotation(kitten.Ctrl2Body, selected.Asmb2VehicleAsmb, "explicit control part overrides default");
+        SameRotation(kitten.Helm2Body, selected.Asmb2VehicleAsmb, "explicit control part overrides default");
         var connector = new Part.Connector { Asmb2VehicleAsmb = doubleQuat.CreateFromAxisAngle(double3.UnitX, -0.24) };
         kitten.ControlConnector = connector;
-        SameRotation(kitten.Ctrl2Body, connector.Asmb2VehicleAsmb, "connector wins over selected part");
+        SameRotation(kitten.Helm2Body, connector.Asmb2VehicleAsmb, "connector wins over selected part");
         kitten.ControlPart = null;
-        SameRotation(kitten.Ctrl2Body, connector.Asmb2VehicleAsmb, "explicit connector alone overrides default");
+        SameRotation(kitten.Helm2Body, connector.Asmb2VehicleAsmb, "explicit connector alone overrides default");
         kitten.ControlConnector = null;
-        SameRotation(kitten.Ctrl2Body, rocket, "clear choices restores rocket frame");
+        SameRotation(kitten.Helm2Body, rocket, "clear choices restores rocket frame");
     }
 
     private static void CheckEditorFrame(OrbitController controller, VehicleEditor editor, KittenEva kitten,
@@ -151,7 +151,7 @@ internal static class OrientationChecks
             double3.UnitX.Transform(space.Asmb2Ecl), "disposed kitten editor retains stock basis");
         kitten.IsDisposed = false;
         IronManSubmod.Instance = null;
-        SameRotation(kitten.Ctrl2Body, doubleQuat.Identity, "missing mod state preserves normal control basis");
+        SameRotation(kitten.Helm2Body, doubleQuat.Identity, "missing mod state preserves normal control basis");
         IronManSubmod.Instance = submod;
         editor.CameraOffset = double3.Zero;
     }
@@ -159,36 +159,37 @@ internal static class OrientationChecks
     private static void CheckBackpackMapping(KittenEva kitten, ThrusterController jets, IronManSubmod submod)
     {
         int calls = jets.GeometricMapCalls;
-        jets.RecomputeDynamicData();
-        Require(jets.ResolvedMap == jets.GeometricMap && jets.GeometricMapCalls == calls + 1,
+        jets.Resolve();
+        Require(jets.State.ControlMap == jets.GeometricMap && jets.GeometricMapCalls == calls + 1,
             "enabled root backpack takes native geometric-map path");
         Require(jets.ManualControlMap == ThrusterMapFlags.PitchUp, "authored map field never mutated");
         kitten.ControlPart = new Part();
-        jets.RecomputeDynamicData();
-        Require(jets.ResolvedMap == jets.GeometricMap, "explicit control part still permits geometric jet mapping");
+        jets.Resolve();
+        Require(jets.State.ControlMap == jets.GeometricMap, "explicit control part still permits geometric jet mapping");
         kitten.ControlPart = null;
         string id = kitten.Parts.Root.Template.Id;
         kitten.Parts.Root.Template.Id = "other-template";
-        jets.RecomputeDynamicData();
-        Require(jets.ResolvedMap == ThrusterMapFlags.PitchUp, "other root templates preserve authored maps");
+        jets.Resolve();
+        Require(jets.State.ControlMap == ThrusterMapFlags.PitchUp, "other root templates preserve authored maps");
         kitten.Parts.Root.Template.Id = id;
         var attachment = new Part { Tree = kitten.Parts };
         attachment.Template.Id = id;
         var attachedJet = new ThrusterController(attachment) { ManualControlMap = ThrusterMapFlags.PitchUp };
-        attachedJet.RecomputeDynamicData();
-        Require(attachedJet.ResolvedMap == ThrusterMapFlags.PitchUp, "same-template attached part is not treated as root backpack");
+        attachedJet.Resolve();
+        Require(attachedJet.State.ControlMap == ThrusterMapFlags.PitchUp, "same-template attached part is not treated as root backpack");
         var owner = kitten.Parts.OwningVehicle;
         kitten.Parts.OwningVehicle = new Vehicle();
-        jets.RecomputeDynamicData();
-        Require(jets.ResolvedMap == ThrusterMapFlags.PitchUp, "ordinary vessel owner preserves authored maps");
+        jets.Resolve();
+        Require(jets.State.ControlMap == ThrusterMapFlags.PitchUp, "ordinary vessel owner preserves authored maps");
         kitten.Parts.OwningVehicle = owner;
         IronManSubmod.Instance = null;
-        jets.RecomputeDynamicData();
-        Require(jets.ResolvedMap == ThrusterMapFlags.PitchUp, "missing mod state preserves authored maps");
+        jets.Resolve();
+        Require(jets.State.ControlMap == ThrusterMapFlags.PitchUp, "missing mod state preserves authored maps");
         IronManSubmod.Instance = submod;
-        kitten.Parts.States.Global.CacheMarker = 123;
+        kitten.Parts.States.GetMutableGlobalStateForInitialization().ResetCache(80f, floatQuat.Identity);
         IronManRcsOrientationPatches.InvalidateCache(kitten);
-        Require(kitten.Parts.States.Global.CacheMarker == 0, "activation invalidation resets native cached global state");
+        Require(!kitten.Parts.States.GlobalState.IsCtrl2BodyCurrent(floatQuat.Identity),
+            "activation invalidation resets native cached global state (gate behaviour: RcsCacheChecks)");
         Require(jets.ManualControlMap == ThrusterMapFlags.PitchUp, "cache reset leaves authored maps untouched");
     }
 

@@ -6,7 +6,8 @@ Reusable core for [`../free-fallin`](../free-fallin) and the unscience umbrella 
 |---|---|
 | `FreeFallinSubmod.cs` | `ISubmod` lifecycle and ImGui appearance/PBR editor |
 | `FreeFallinPatches.cs` | Prefixes `ChuteRenderable.Draw`, substitutes material handle 0, and restores observed canopies |
-| `CanopyProjectionShaders.cs` | Injects the material-gated Full Canopy varying/albedo projection into KSA's model PBR shaders in memory |
+| `CanopyProjectionShaders.cs` | Game seams for Full Canopy: resolves the stock shader files, forces their compile through `FromFile`, and installs the in-memory patch only after every check passes |
+| `CanopyShaderSource.cs` | Game-independent shader text transforms: derives `SET_TEXTURE`/`SET_MATERIAL` from the live `ModelPbr.frag`, checks anchors and varying location 3, and builds the patched sources |
 | `CanopyMaterialController.cs` | Transcodes the stock BC7 KTX2 to RGBA8 when compositing a decal, then builds GPU albedo/PBR textures and `MaterialData` objects |
 | `CanopyMaterialSettings.cs` / `CanopyTextureMode.cs` | Public settings model and Stock/Replace/FullCanopy/CenterDecal modes |
 | Shared PNG dependency | Uses `ksa-abstractions.lib`'s `.unscience/pngs` catalog and `PngFileBrowser` |
@@ -21,6 +22,16 @@ Full Canopy stores projection scale, rotation, and a mode marker in `MaterialDat
 patched skinned vertex shader derives a second UV from the canopy's bind-pose X/Z coordinates. The
 patched PBR fragment shader uses that UV only for marked materials' albedo; the authored UV remains
 in use for the stock normal and AO/roughness/metallic maps. Shader files on disk are never modified.
+
+The skinned vertex shader reads `MaterialBuffer`, so it must declare the same descriptor sets as the
+pipelines it joins. KSA 5530 renumbered the mesh-technique sets (texture library 1 → 5, materials
+2 → 1), so the set indices are never hard-coded: `CanopyShaderSource.ParseDescriptorSets` reads them
+from the game's `ModelPbr.frag` at activation and requires `ModelNormal.frag` and
+`ModelTranslucent.frag` (the other fragment shaders paired with `Model_Skinned.vert`) to agree. A
+missing, conflicting or non-numeric define, a changed anchor, or an occupied varying location 3
+disables Full Canopy with a console line before any Harmony patch is installed, leaving every stock
+shader untouched; the other texture modes keep working. `ksa-upgrade.tests` covers the parser on the
+real 5638 header and, when `KSAFolder` points at a game tree, patches the live shader files.
 
 ## Native save persistence
 

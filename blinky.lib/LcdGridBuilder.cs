@@ -57,21 +57,6 @@ public static class LcdGridBuilder
         }
         timings.Add(("ModLibrary.Get<PartTemplate>", sw.ElapsedMilliseconds));
 
-        // ── Find all fuel-carrying parts to use as connection anchors ──────────────
-        // PERFORMANCE: With N pixel engines all connected to 1 fuel part, each
-        // ResourceManager's PopulateGraph DFS traverses all N+1 nodes using
-        // O(N) List.Contains visited checks → O(N²) per engine → O(N³) total.
-        // By distributing engines across K fuel parts (round-robin), each DFS
-        // only sees N/K nodes → O(N/K)² per engine → O(N³/K²) total.
-        // With K=4 fuel parts on a 1444-engine grid: 3B → ~188M ops (~16× faster).
-        sw.Restart();
-        var fuelParts = FindAllFuelParts(vehicle);
-        timings.Add(($"FindAllFuelParts ({fuelParts.Count} found)", sw.ElapsedMilliseconds));
-        if (fuelParts.Count > 0)
-            Console.WriteLine($"blinky: found {fuelParts.Count} fuel part(s) for partitioned connections: {string.Join(", ", fuelParts.Select(p => p.Id))}");
-        else
-            Console.WriteLine("blinky: WARNING — no fuel parts found; engines may not fire");
-
         Console.WriteLine($"blinky: building {config.Width}x{config.Height} {config.Layout} grid using '{config.EnginePartId}' — {config.TotalParts} total parts");
 
         var createdParts = new List<Part>(config.TotalParts);
@@ -95,6 +80,23 @@ public static class LcdGridBuilder
             Console.WriteLine("blinky: no parts were successfully created");
             return null;
         }
+
+        // ── Find all fuel-carrying parts to use as connection anchors ──────────────
+        // PERFORMANCE: With N pixel engines all connected to 1 fuel part, each
+        // ResourceManager's PopulateGraph DFS traverses all N+1 nodes using
+        // O(N) List.Contains visited checks → O(N²) per engine → O(N³) total.
+        // By distributing engines across K fuel parts (round-robin), each DFS
+        // only sees N/K nodes → O(N/K)² per engine → O(N³/K²) total.
+        // With K=4 fuel parts on a 1444-engine grid: 3B → ~188M ops (~16× faster).
+        // Runs after instantiation so tanks that cannot hold the pixel engine's
+        // propellant (e.g. magnetic traps) are never chosen as anchors.
+        sw.Restart();
+        var fuelParts = FuelAnchorFinder.Find(vehicle, createdParts[0]);
+        timings.Add(($"FindAllFuelParts ({fuelParts.Count} found)", sw.ElapsedMilliseconds));
+        if (fuelParts.Count > 0)
+            Console.WriteLine($"blinky: found {fuelParts.Count} fuel part(s) for partitioned connections: {string.Join(", ", fuelParts.Select(p => p.Id))}");
+        else
+            Console.WriteLine("blinky: WARNING — no fuel parts that can hold the engines' propellant found; engines may not fire");
 
         // ── Tree wiring — TreeParent / TreeChildren ──────────────────────────────
         sw.Restart();
@@ -278,10 +280,10 @@ public static class LcdGridBuilder
             return 0;
         }
 
-        var fuelParts = FindAllFuelParts(vehicle);
+        var fuelParts = FuelAnchorFinder.Find(vehicle, parts[0]);
         if (fuelParts.Count == 0)
         {
-            Console.WriteLine("blinky: repair — vehicle has no fuel parts; the grid cannot be fed");
+            Console.WriteLine("blinky: repair — vehicle has no fuel parts that can hold the engines' propellant; the grid cannot be fed");
             return 0;
         }
 
@@ -410,34 +412,6 @@ public static class LcdGridBuilder
     }
 
     /// <summary>
-    /// Collects ALL parts on the vehicle that carry Tank modules (fuel/oxidizer),
-    /// preferring non-sub-parts. Used for round-robin partitioned fuel connections
-    /// to reduce ResourceManager.PopulateGraph cost from O(N³) to O(N³/K²).
-    /// </summary>
-    private static List<Part> FindAllFuelParts(Vehicle vehicle)
-    {
-        var result = new List<Part>();
-        foreach (var part in vehicle.Parts.Parts)
-        {
-            if (part.IsSubPart) continue;
-            var tanks = part.SubtreeModules.Get<Tank>();
-            if (tanks.Length > 0)
-                result.Add(part);
-        }
-        // Fallback: accept sub-parts if nothing found at top level
-        if (result.Count == 0)
-        {
-            foreach (var part in vehicle.Parts.Parts)
-            {
-                var tanks = part.SubtreeModules.Get<Tank>();
-                if (tanks.Length > 0)
-                    result.Add(part);
-            }
-        }
-        return result;
-    }
-
-    /// <summary>
     /// Wires a pixel engine part into the vehicle's propellant network so
     /// <c>ResourceManager.PopulateGraph()</c> can reach the fuel tanks.
     ///
@@ -446,7 +420,7 @@ public static class LcdGridBuilder
     /// part unless that connection is on a connector named by the part template's
     /// <c>ConsumerFeedWiring</c>/<c>FeedsFrom</c> wiring (<c>IsDeclaredFeedConnection</c>),
     /// and the base <c>CanFlowAcross</c> additionally requires the connection to carry the
-    /// combustor's plumbing capability (<c>BulkFluid</c> for these liquid engines).
+    /// core's <c>PlumbedCore.PlumbingCapability</c> (<c>BulkFluid</c> for these liquid engines).
     ///
     /// A bare part-to-part connection satisfies neither. <c>Part.EndpointCapabilities</c> is
     /// null for anything that is not a fuel-port part, so such a connection resolves to
@@ -610,9 +584,9 @@ public static class LcdGridBuilder
     }
 
     /// <summary>
-    /// Post-rebuild sanity check. A pixel can only light if its combustor's
+    /// Post-rebuild sanity check. A pixel can only light if its tank-fed core's
     /// <c>ResourceManager</c> ended up with a non-empty <c>ConsumptionOrder</c> — otherwise
-    /// <c>Combustor.ComputePropellantAvailable</c> returns false forever and activating the
+    /// <c>PlumbedCore.ComputePropellantAvailable</c> returns false forever and activating the
     /// engine does nothing at all. Logging it here turns a silently dark grid into a
     /// diagnosable console message.
     /// </summary>
@@ -628,14 +602,16 @@ public static class LcdGridBuilder
             var cores = part.SubtreeModules.Get<RocketCore>();
             for (int i = 0; i < cores.Length; i++)
             {
-                if (cores[i] is not Combustor combustor) continue;
+                // PlumbedCore (KSA 5487) is the tank-fed base of Combustor, ThermalCore and
+                // AntimatterRamCore; SolidMotor cores draw no tank propellant.
+                if (cores[i] is not PlumbedCore plumbed) continue;
 
-                if (desiredMix == "?") desiredMix = combustor.DesiredMix?.Name ?? "?";
+                if (desiredMix == "?") desiredMix = plumbed.DesiredMix?.Name ?? "?";
 
-                if (PropellantFeedDiagnostics.CountTanks(combustor.ResourceManager) > 0)
+                if (PropellantFeedDiagnostics.CountTanks(plumbed.ResourceManager) > 0)
                     anyFed = true;
                 else
-                    starvedCores[combustor.TemplateId] = starvedCores.GetValueOrDefault(combustor.TemplateId) + 1;
+                    starvedCores[plumbed.TemplateId] = starvedCores.GetValueOrDefault(plumbed.TemplateId) + 1;
             }
             if (anyFed) fedParts++;
         }

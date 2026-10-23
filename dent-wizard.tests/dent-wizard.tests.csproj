@@ -5,7 +5,7 @@
     <Compile Include="../dent-wizard.lib/LaunchRequest.cs" Link="LaunchRequest.cs" />
     <Compile Include="../dent-wizard.lib/DentWizardSubmod.cs" Link="DentWizardSubmod.cs" />
     <Compile Include="../kitchen-sink.lib/GLoadProtection.cs" Link="GLoadProtection.cs" />
-    <Reference Include="Brutal.Core.Numerics"><HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath></Reference>
+    <Reference Include="Brutal.Numerics"><HintPath>$(KSAFolder)Brutal.Numerics.dll</HintPath></Reference>
     <Reference Include="BepuUtilities"><HintPath>$(KSAFolder)BepuUtilities.dll</HintPath></Reference>
   </ItemGroup>
 </Project>

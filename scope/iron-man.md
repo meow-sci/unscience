@@ -1,5 +1,49 @@
 # Iron Man — EVA editor, connectors and vessel physics
 
+## KSA 5638 (5482 → 5638) verification
+
+Verified 2026-10-22 against `2026.10.19.5638` (via 5554) from decomp and a real-IL dump of KSA.dll.
+Static/managed only: the solution builds and all three Iron Man suites pass. KSA.dll is x64-only and
+the arm64 build host has no Rosetta, so real-assembly reflection probes and native runs were impossible.
+
+- 🔴 **`Vehicle.Ctrl2Body` → `Helm2Body` (fixed; compile break).** Same expression (`Vehicle.cs:613`), so
+  the postfix retargets to `get_Helm2Body`. The helm frame now feeds `HelmRates` (`:661`),
+  `GetHelm2Cce/Cci` (`:3180-3185`), navball `Navball2Helm`/`*DirHelm` markers (`:2837-2943`),
+  OrbitController chase and worker `FlightComputerNavigation.Helm2Body` (`PhysicsBubble.cs:1372,1508,1888`).
+  The worker FC then sets `Helm2Asmb = Ctrl2Asmb = Tnm2Asmb = nav.Helm2Body` (`FlightComputer.cs:505-507`),
+  rotates `Tnm2Asmb` minimally so +X follows trimmed net gimbal thrust (`UpdateTnmFrame`, `:1494-1516`) and
+  selects `Ctrl2Asmb = IsTnm ? Tnm2Asmb : Helm2Asmb` (`:530`, `GetDesiredControlFrame` `:1433-1452`) for
+  attitude, TVC and RCS; module context `Ctrl2Body = FlightComputer.Ctrl2Asmb` (`VehicleUpdateState.cs:393`).
+  Overriding only the helm is therefore sufficient: Tnm/Ctrl derive from it. Redesign landed in unlogged revs 5555–5602.
+- 🔴 **Navball thrust marker 90° off (fixed; stock bug).** `UpdateNavBallMarkers` computes
+  `ThrustDirHelm = UnitX·Tnm2Asmb·Helm2Asmb⁻¹` from the main-thread FC (`Vehicle.cs:2932-2943`), but
+  `FlightComputer.CopyFrom` (`:265-317`, called `Vehicle.cs:2598`) copies `Tnm2Asmb` and never `Helm2Asmb`,
+  which stays Identity. New `IronManNavballPatches` postfixes private `Vehicle.UpdateNavBallMarkers()` and,
+  only for enabled kittens with a valid marker, recomputes it with the live `Helm2Body`. Ordinary vessels keep
+  stock (their rotated control parts show the same stock offset). Missing method/field logs and skips.
+- 🔴 **RCS authority dead after disable (fixed).** 5638 gates `UpdateRockets` on
+  `RocketsNeedUpdate(..., ctrl2Body)` (`Rocket.cs:89,256-260`) using `IsCtrl2BodyCurrent`
+  (`ThrusterControllerGlobalState.cs:49`, 0.0005 rad); `UpdateThrusterCache` is `IsCacheValid` + `ResetCache`
+  (`Rocket.cs:195-213`). The old reset to `Zero` cached Identity, so disabling back to the Identity EVA frame (or
+  toggling with an Identity explicit control part) skipped the recompute: zero authority, `ActiveControlSystem`
+  None, no manual rotation. `InvalidateCache` now writes `default`, the all-zero state a fresh list starts with
+  (`ModuleStateful.cs:264`); a zero quaternion is never current, forcing a recompute. `RecomputeDynamicData`
+  now takes seven parameters (`ThrusterController.cs:84`); the transpiler still finds one map read (`:124`).
+- ℹ️ **Kitten impact death is EVA-only.** New `PhysicsBubble.DetectKittenImpact` (`:1057-1078`, from
+  `DetectStructuralFailure` `:1086`) kills a kitten that loses ≥20 m/s of downward speed on contact. It is
+  gated on `IsKitten`, so enabled Iron Man kittens skip it and use ordinary vessel G-load limits (no 2.5× kitten
+  allowance, `:1099`). Live check only.
+- ⚠ **Optimized KSA.dll (rev 5630) inlining.** Small getters such as `get_Helm2Body` may be inlined by Tier-1 JIT.
+  KSA.dll is IL-only (no ReadyToRun), Iron Man patches at AllModsLoaded before any flight caller runs, and
+  Harmony 2.4.2/MonoMod disables inlining of a method when it is patched. Residual risk: callers already
+  Tier-1-compiled with the getter inlined before the first patch keep stock behaviour; verify after a
+  mid-session unload/reapply.
+- ℹ️ Test fidelity: `iron-man-flight.tests` now mirrors the 5638 helm/Tnm/Ctrl chain, `CopyFrom` gap, navball
+  thrust tail, global-state cache/gate and the seven-argument `RecomputeDynamicData` (`HelmFixture.cs`,
+  `ThrusterCacheFixture.cs`). Reverting either fix fails the managed checks.
+- **Native acceptance pending:** navball thrust marker on the rocket nose with and without gimbal offset;
+  manual RCS rotation immediately after Iron Man → EVA and with an explicit control part; landing impacts.
+
 ## KSA 5482 (5438 → 5482) verification
 
 Verified 2026-09-25 against `2026.9.22.5482` (revs 5439–5481), diffed from `2026.9.10.5438`.
@@ -80,7 +124,7 @@ See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
 Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
 
 Original baseline: **KSA 2026.9.7.5402**, `ksa-game-assemblies/current/decomp`. Added 2026-09-07.
-Current verification: **2026.9.22.5482** (section above); watchlist rows marked `@5482` carry 5482 lines.
+Current verification: **2026.10.19.5638** (top section); watchlist rows marked `@5638` / `@5482` carry those builds' lines.
 [Research evidence](../plans/iron-man/RESEARCH.md) explains the design;
 [player instructions](../iron-man/README.md) describe activation and save dependencies.
 The [flight-computer follow-up](../plans/iron-man/FLIGHT_COMPUTER.md) records the native HUD fix.
@@ -107,7 +151,8 @@ signature/overload changes; private string names must be re-grepped on every gam
 | Target | Patch / owner | Required behavior |
 |---|---|---|
 | `Vehicle.TeleportToLocation(Celestial,double,double)` | surface-teleport transpiler | Exactly one static `GetInitialKinematicStateForLocation(Celestial,UniverseTime,double,double,double3,double3,double3,byte4)` call receives the vehicle via an adapter. Only live active Iron Man kittens: permute full bounds/center to rocket axes, reuse native placement, convert returned orientation/body rates; preserve orbit and native event queue. |
-| `Vehicle.get_Ctrl2Body()` | control-frame postfix | Enabled kitten without explicit control part/connector: control X→body -Z, Y→Y, Z→X. Shared by navball, rates, worker navigation and modules. |
+| `Vehicle.get_Helm2Body()` (was `get_Ctrl2Body`, renamed @5638) | control-frame postfix | Enabled kitten without explicit control part/connector: helm X→body -Z, Y→Y, Z→X. Shared by navball, rates, chase camera and worker navigation; the worker FC derives `Helm2Asmb`, thrust-aligned `Tnm2Asmb` and active `Ctrl2Asmb` (attitude/TVC/RCS module context) from it (`FlightComputer.cs:505-530` @5638). Small getter in an optimized assembly: see inlining note. |
+| private `Vehicle.UpdateNavBallMarkers()`; private field `Vehicle._navBallMarkerData` (Harmony `ref` injection) | navball postfix | @5638 `Vehicle.cs:2846-2943`. Enabled kitten with `ThrustValid` only: `ThrustDirHelm = UnitX·FlightComputer.Tnm2Asmb·Helm2Body⁻¹`, replacing the stale never-copied main-thread `Helm2Asmb`. Missing method/field or patch failure logs and skips (stock marker), without disabling Iron Man. |
 | private `OrbitController.GetFrame2Ecl(IFollowable,CameraReferenceFrame)` | editor-orientation postfix | Own configured EditingSpace + Editor frame only, in either flight mode: camera +Z maps to body -Z; geometry unchanged. |
 | private `OrbitController.EditorOnScroll(GlfwWindow,double2)` | editor-orientation transpiler | Exactly two UnitX getters and two CameraOffset.X field reads become scoped headward pan and projected bounds. |
 | `ThrusterController.RecomputeDynamicData` | RCS orientation transpiler | Exactly one ManualControlMap field read; enabled actual root-backpack uses native geometric mapping, authored field untouched. |
@@ -125,7 +170,8 @@ signature/overload changes; private string names must be re-grepped on every gam
 | internal `Part.GetReferenceWithChildren(ref uint,PartInstance,bool)` | connector serialization postfix | Set marked instance Id only for owned nodes, preserving original Id, stock prefix count and ordered owned suffix. |
 | `Part(string,PartTemplate,PartInstance,Part)` | constructor prefix/postfix | Decode valid marked data, restore runtime Id, append nodes BEFORE `RegenerateConnectionsFromPartInstance` indexes them. @5482 the ctor (`Part.cs:1490`) no longer creates a tree; the postfix touches only template/sub-part/scale/connectors, so a root is registered while its `Tree` is still null (unload filters those out). |
 
-No private field reflection, shader strings, GPU byte offsets or game DLL modifications.
+One private field (`Vehicle._navBallMarkerData`, type-checked before patching) is reached through Harmony's
+`____navBallMarkerData` injection. No shader strings, GPU byte offsets or game DLL modifications.
 Reverse-patch behavior and emitted nonvirtual dispatch are also covered by managed Harmony checks.
 The new HUD adapters do **not** patch generic JIT methods: they resolve and emit a call to the closed
 `Vehicle.IsFlightComputerDisabled<Enum>(Enum)` only. Private `_enumValue` reflection is unnecessary.
@@ -146,12 +192,14 @@ Unexpected IL match counts fail installation with rollback; removed hooks restor
   validation) and `KittenEva.SetControlMode` (native CCF restrictions). Both transition directions
   clear held input, MainShutdown and disarm; rocket entry selects manual attitude/burn/direct thrust.
   Preserve worker MMU bookkeeping with its matching saved EVA FC state; no locomotion reset/teleport.
-- `Vehicle.ControlPart/ControlConnector/Ctrl2Body`; `VehicleEditingSpace.Asmb2Ecl`,
+- `Vehicle.ControlPart/ControlConnector/Helm2Body/FlightComputer`; `FlightComputer.Tnm2Asmb` (copied by
+  `CopyFrom`) and `Helm2Asmb` (not copied); `NavBallMarkerData.ThrustDirHelm/ThrustValid`; `VehicleEditingSpace.Asmb2Ecl`,
   `VehicleEditor.CameraOffset`; `ThrusterController.Parent.FullPart/ManualControlMap`,
   `Part.Tree?.OwningVehicle` (nullable since 5482) / `Template.Id`; root `KittenBackPackPart` authored RCS mappings.
   `ModuleStateful<ThrusterController,ThrusterControllerState,ThrusterControllerGlobalState,EmptyStruct>`
   `InitializeHotPathList(Parts.States).GetMutableGlobalStateForInitialization()` resets authority to
-  `ThrusterControllerGlobalState.Zero` at joined enable/disable/disposal. Native cache checks Ctrl2Body;
+  `default(ThrusterControllerGlobalState)` (all-zero, as a fresh list; never `Zero`, whose Identity frame passes the
+  5638 `IsCtrl2BodyCurrent` gate) at joined enable/disable/disposal. Native cache and gate check the module context Ctrl2Body;
   membership reads use published arrays on workers. See [orientation evidence](../plans/iron-man/ORIENTATION.md).
 - `Program.EditorFlag`, `IsEditorOpen`, `ControlledVehicle`, `Editor`, `MainViewport`,
   `RenderedViewport`, `Instance.ResourceFrameIndex`, `Instance.SuperMeshRenderSystem`, `VehiclesInFrame`.
@@ -184,7 +232,8 @@ Unexpected IL match counts fail installation with rollback; removed hooks restor
 - `PhysicsFrameHook.Enqueue`: handoff after worker result application, before all next snapshots.
   Teardown waits `JobSystems.VehicleSolver` and `ClothSolvers`; closes owned editor before unpatching.
 - Worker `IsKitten` branches in `PhysicsBubble.FlightComputerInputsFor/AdvanceKittenLocomotion`,
-  `PoseIntegratorCallbacks`, `NarrowPhaseCallbacks`, `PartFailure`, and G-load detection are
+  `PoseIntegratorCallbacks`, `NarrowPhaseCallbacks`, `PartFailure`, G-load detection (2.5× kitten allowance) and,
+  @5638, `DetectKittenImpact` (≥20 m/s downward-speed loss on contact, `PhysicsBubble.cs:1057-1086`) are
   semantically load-bearing even without symbol changes. Normal vessel behavior replaces EVA servos,
   ground movement, swim/ladder behavior and special failure allowances while activated.
 
@@ -242,7 +291,9 @@ HUD correction addresses that reported gap; live autopilot response remains to b
       EVA-mode/configured kittens, other inactive kittens, ordinary vessels and other teleport paths
       retain native placement. Wait for queued mode selection before teleport; an existing FC
       attitude target may turn the kitten afterward.
-- [ ] Backpack RCS follows rocket axes, including engines off; disable restores authored EVA maps.
+- [ ] Backpack RCS follows rocket axes, including engines off; disable restores authored EVA maps with
+      immediate manual rotation (5638 frame gate), also with an explicit control part. Navball thrust
+      marker sits on the rocket nose (and follows gimbal-trimmed thrust) only for the enabled kitten.
 - [ ] Enable one of two kittens; only that kitten gets vessel controls/physics. Reject ladder enable.
 - [ ] Editor avatar aligns with body nodes, including a scaled kitten. Body/root actions are blocked;
       accessory move/rotate/scale/copy/delete and blueprint accessory loading still work.
@@ -267,4 +318,6 @@ and original EVA preferences. `IronManEvaSettings.Saves` binds the original `Con
 record instead of silently replacing its baseline. Existing constructor metadata still restores
 custom connectors before native linking; late replay never authors replacement nodes. Engines
 remain disarmed. `IronManFlightSettings.Saves` validates enum values and finite custom targets,
-deadband/rate limits. No new Harmony/reflection seam. See [saves](saves.md).
+deadband/rate limits. No new Harmony/reflection seam. See [saves](saves.md). The 5638 navball
+thrust-marker correction (recomputed every frame) and thruster-cache invalidation (native transient solver
+state, rebuilt on the next worker step) add nothing to persist.

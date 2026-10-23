@@ -5,6 +5,9 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <!-- KsaAssemblyProbe compares fixtures with the real KSA.dll metadata (never loaded). -->
+    <AssemblyMetadata Include="KSAFolder" Value="$(KSAFolder)" />
+    <Compile Include="../kitchen-sink.tests/KsaAssemblyProbe.cs" Link="KsaAssemblyProbe.cs" />
     <Compile Include="../the-tick.lib/TickProtection.cs" Link="TickProtection.cs" />
     <Compile Include="../the-tick.lib/TheTickPatches.cs" Link="TheTickPatches.cs" />
     <Compile Include="../the-tick.lib/TheTickSubmod.Saves.cs" Link="TheTickSubmod.Saves.cs" />

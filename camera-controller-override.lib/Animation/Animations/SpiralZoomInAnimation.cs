@@ -84,9 +84,9 @@ public class SpiralZoomInAnimation : IKeyframeAnimation
         // Calculate frame progress for zoom movement
         double frameDistance = totalDistance * currentEasedProgress - _distanceTraveled;
         
-        // Get CURRENT target position and calculate direction toward it
-        double3 targetPos = AnimationHelpers.GetTargetPosition(controller);
-        double3 towardTarget = targetPos - transform.PositionEcl;
+        // Get CURRENT offset from the target and calculate direction toward it
+        double3 cameraOffset = AnimationHelpers.GetTargetOffset(controller, transform);
+        double3 towardTarget = -cameraOffset;
         double distanceToTarget = towardTarget.Length();
         
         // Handle edge case: camera is very close to target
@@ -106,7 +106,8 @@ public class SpiralZoomInAnimation : IKeyframeAnimation
         }
         
         double3 displacement = direction * frameDistance;
-        transform.PositionEcl += displacement;
+        cameraOffset += displacement;
+        AnimationHelpers.SetTargetOffset(controller, transform, cameraOffset);
         _distanceTraveled += displacement.Length();
         
         // === SPIRAL COMPONENT (rotate camera orientation around look-at axis) ===
@@ -116,7 +117,7 @@ public class SpiralZoomInAnimation : IKeyframeAnimation
         double totalAngleRadians = totalAngleDegrees * Math.PI / 180.0;
         
         // Calculate look-at direction (from camera to target)
-        double3 lookDirection = targetPos - transform.PositionEcl;
+        double3 lookDirection = -cameraOffset;
         double lookDirectionLength = lookDirection.Length();
         
         if (lookDirectionLength > 0.0001)

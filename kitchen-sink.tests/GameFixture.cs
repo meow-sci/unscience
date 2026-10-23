@@ -47,6 +47,14 @@ internal struct VehicleProperties
 
 internal struct VehicleUpdateData { public StructuralLoad NewStructuralLoad; }
 
+/// <summary>Mirror of KSA 5638 <c>SimStep</c> (<c>SimStep.cs:3</c>); times are seconds instead of UniverseTime.</summary>
+internal readonly struct SimStep
+{
+    public double PreviousTime { get; init; }
+    public double NextTime { get; init; }
+    public double DeltaTime { get; init; }
+}
+
 internal sealed class VehicleUpdateState(Vehicle vehicle)
 {
     public Vehicle ReadOnlyVehicle = vehicle;
@@ -56,6 +64,12 @@ internal sealed class VehicleUpdateState(Vehicle vehicle)
     public object? PartFailureEvent;
     public double PeakGLoad = 75, PeakDynamicPressure;
     public bool IsKitten, IsDebris, HadVehicleContactThisFrame;
+    /// <summary>Fixture input: vertical surface-relative velocity (m/s, up positive) this frame.</summary>
+    public double VerticalSurfaceVelocity;
+    /// <summary>Fixture input standing in for <c>LadderFollowOwnsBody</c> (kitten on a ladder).</summary>
+    public bool OnLadder;
+    public double KittenSurfaceVelocity;
+    public double KittenSurfaceVelocityTime = double.NegativeInfinity;
     public ref readonly VehicleProperties GetReadOnlyProps() => ref Props;
 }
 
@@ -67,15 +81,51 @@ internal static class VehicleStructuralLimits
 
 internal static class PhysicsBubble
 {
-    public static void Detect(VehicleUpdateState state) => DetectStructuralFailure(state);
+    public static readonly SimStep FirstFrame = new() { PreviousTime = 0, NextTime = 0.02, DeltaTime = 0.02 };
 
-    // KSA 5438 PhysicsBubble.cs:873-912 decision flow (identical to 5402:782-821).
-    // Descriptive local names retain the native decision order and thresholds.
-    // Native-free fixture; production transpiler and identity registry are linked unchanged.
+    public static void Detect(VehicleUpdateState state) => Detect(state, FirstFrame);
+    public static void Detect(VehicleUpdateState state, SimStep frame) => DetectStructuralFailure(state, frame);
+
+    public static SimStep After(SimStep frame) =>
+        new() { PreviousTime = frame.NextTime, NextTime = frame.NextTime + frame.DeltaTime, DeltaTime = frame.DeltaTime };
+
+    // KSA 5638 PhysicsBubble.cs:1051-1078 (DownwardSpeedLost, DetectKittenImpact), vertical axis only.
+    internal static double DownwardSpeedLost(double previousVelocity, double velocity) =>
+        Math.Max(0.0, -previousVelocity) - Math.Max(0.0, -velocity);
+
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void DetectStructuralFailure(VehicleUpdateState vehicleState)
+    private static bool DetectKittenImpact(VehicleUpdateState vehicleState, SimStep frame)
+    {
+        double velocity = vehicleState.VerticalSurfaceVelocity;
+        double? previous = vehicleState.KittenSurfaceVelocityTime == frame.PreviousTime
+            ? vehicleState.KittenSurfaceVelocity : null;
+        vehicleState.KittenSurfaceVelocity = velocity;
+        vehicleState.KittenSurfaceVelocityTime = frame.NextTime;
+        Situation situation = vehicleState.Props.Situation;
+        if (previous.HasValue && !vehicleState.OnLadder && (situation.HasTerrainContact() || situation.HasOceanContact()))
+            return DownwardSpeedLost(previous.Value, velocity) >= 20.0;
+        return false;
+    }
+
+    // KSA 5638 PhysicsBubble.cs:1080-1132 decision flow (5482:958 plus the SimStep parameter and the
+    // kitten-impact branch that returns before the load telemetry is written). Descriptive local names
+    // retain the native decision order and thresholds. Native-free fixture; production transpiler and
+    // identity registry are linked unchanged. KsaAssemblyProbe proves this signature matches KSA.dll.
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void DetectStructuralFailure(VehicleUpdateState vehicleState, SimStep frame)
     {
         if (vehicleState.DestructionEvent != null) return;
+        if (vehicleState.IsKitten && DetectKittenImpact(vehicleState, frame))
+        {
+            Situation impactSituation = vehicleState.GetReadOnlyProps().Situation;
+            vehicleState.DestructionEvent = new VehicleDestructionEvent
+            {
+                Cause = !impactSituation.HasTerrainContact() ? VehicleDestructionCause.OceanImpact : VehicleDestructionCause.GroundImpact,
+                PeakGLoad = (float)vehicleState.PeakGLoad,
+                PeakDynamicPressure = (float)vehicleState.PeakDynamicPressure
+            };
+            return;
+        }
         ref readonly VehicleProperties props = ref vehicleState.GetReadOnlyProps();
         double limit = VehicleStructuralLimits.EffectiveMaxGLoad(props.ComputeBoundingSphereRadiusAsmb());
         if (vehicleState.IsKitten) limit *= 2.5;

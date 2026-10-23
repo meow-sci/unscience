@@ -79,9 +79,9 @@ public class ZoomInAnimation : IKeyframeAnimation
         double frameProgress = currentEasedProgress - _lastEasedProgress;
         _lastEasedProgress = currentEasedProgress;
         
-        // Get CURRENT target position and calculate direction toward it
-        double3 targetPos = AnimationHelpers.GetTargetPosition(controller);
-        double3 towardTarget = targetPos - transform.PositionEcl;
+        // Get CURRENT offset from the target and calculate direction toward it
+        double3 cameraOffset = AnimationHelpers.GetTargetOffset(controller, transform);
+        double3 towardTarget = -cameraOffset;
         double distanceToTarget = towardTarget.Length();
         
         // Handle edge case: camera is very close to target
@@ -103,7 +103,8 @@ public class ZoomInAnimation : IKeyframeAnimation
         }
         
         double3 displacement = direction * frameDistance;
-        transform.PositionEcl += displacement;
+        cameraOffset += displacement;
+        AnimationHelpers.SetTargetOffset(controller, transform, cameraOffset);
         
         // Log on first frame to verify correct initialization
         if (elapsedTime < deltaTime * 1.5)
@@ -112,8 +113,8 @@ public class ZoomInAnimation : IKeyframeAnimation
         }
         
         // Maintain look-at behavior - use current target
-        double3 lookAtTarget = LookAtTargetProvider?.Invoke(controller) ?? targetPos;
-        AnimationHelpers.LookAtTarget(transform, lookAtTarget);
+        double3 lookAtOffset = AnimationHelpers.GetLookAtOffset(LookAtTargetProvider, controller);
+        AnimationHelpers.LookAtOffset(transform, cameraOffset, lookAtOffset);
         
         // Track distance traveled
         _distanceTraveled += displacement.Length();

@@ -24,9 +24,10 @@ public struct float3
 
 namespace KSA
 {
-// KSA 5482 part render data. The stock types are native-backed; these fixtures keep only the
-// members PartRenderFilter and VehiclePaintPatches reflect or patch. Instance lists hold part tags
-// (dent lists hold tag + 1000) so compaction order and dent alignment are observable.
+// KSA 5482+ part render data, gates as of 5638. The stock types are native-backed; these fixtures
+// keep only the members PartRenderFilter, IvaForceRender and VehiclePaintPatches reflect, patch or
+// call. Instance lists hold part tags (dent lists hold tag + 1000) so compaction order and dent
+// alignment are observable.
 [Flags]
 public enum ViewportOptionFlags
 {
@@ -34,9 +35,17 @@ public enum ViewportOptionFlags
     RenderPartModels = 0x1000,
 }
 
+[Flags]
+public enum ViewportStateFlags
+{
+    None = 0,
+    InsideVehicle = 8,
+}
+
 public interface IViewport
 {
-    ViewportOptionFlags Options { get; }
+    ViewportStateFlags State { get; }
+    ViewportOptionFlags OptionFlags { get; }
     CameraMode Mode { get; }
 }
 
@@ -46,12 +55,18 @@ public static class Program { public static object? Editor; }
 public static class ViewportEx
 {
     public static bool HasAny(this IViewport inViewport, ViewportOptionFlags inOptionFlags) =>
-        (inViewport.Options & inOptionFlags) != 0;
+        (inViewport.OptionFlags & inOptionFlags) != 0;
+
+    /// <summary>5638 interior gate: IVA mode, or a viewport inside a vehicle (crew portraits).</summary>
+    public static bool RendersInterior(this IViewport inViewport) =>
+        inViewport.Mode == CameraMode.IVA
+        || (inViewport.State & ViewportStateFlags.InsideVehicle) == ViewportStateFlags.InsideVehicle;
 }
 
 public sealed class TestViewport(ViewportOptionFlags options) : IViewport
 {
-    public ViewportOptionFlags Options { get; } = options;
+    public ViewportStateFlags State { get; set; } = ViewportStateFlags.None;
+    public ViewportOptionFlags OptionFlags { get; } = options;
     public CameraMode Mode { get; set; } = CameraMode.Orbit;
 }
 
@@ -85,7 +100,11 @@ public sealed class PartModel
         Instances.Add(this);
     }
 
-    /// <summary>False models the raytraced-IVA / internal-outside-IVA branches, which append nothing.</summary>
+    /// <summary>
+    /// False models the raytraced-IVA branch (still gated on <c>Mode == IVA</c> at 5638), which
+    /// appends nothing to the instance lists. Internal models outside interior views are gated in
+    /// <c>Compose</c> by <c>RendersInterior()</c>.
+    /// </summary>
     public bool RasterPath = true;
 
     public sealed class ViewportData
@@ -227,7 +246,7 @@ public sealed class PartTreeRenderData
         {
             if (batch.Count == 0 || !batch.Model.RasterPath
                 || batch.Model.Template.RayTracing == PartModelModule.RaytracingMode.ShadowProxy
-                || (batch.Model.Template.Internal && inViewport.Mode != CameraMode.IVA)) continue;
+                || (batch.Model.Template.Internal && !inViewport.RendersInterior())) continue;
             var data = PartModel.ViewportData.Get(batch.Model, inViewport);
             for (int j = 0; j < batch.Count; j++)
             {

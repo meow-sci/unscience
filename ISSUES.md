@@ -1,4 +1,35 @@
-## Current triage — KSA 2026.9.22.5482
+## Current triage — KSA 2026.10.19.5638
+
+See [upgrade review](plans/KSA_5638_UPGRADE.md). Upgrade from 5482 (revs 5483–5637; 5555–5602
+unlogged). Fixed in code and verified by the full build plus all 18 managed suites on macOS; no native
+KSA run was possible. **Every item below still needs an in-game pass.** Where this conflicts with
+the 5482 notes, it takes precedence.
+
+- **The Tick / Kitchen Sink G-load protection were inert on 5638:** fixed in code. The private detector
+  gained a `SimStep` parameter, so the exact lookup failed and both features stayed unavailable. Both
+  now also cover KSA's new EVA-kitten hard-landing death (≥20 m/s). Live check: protect a vessel and an
+  EVA kitten; ram terrain, dive through dense atmosphere, drop the kitten onto ground and water at
+  >20 m/s; confirm survival, then delete the row and confirm death; save/reload.
+- **Free Fallin Full Canopy (high):** its skinned vertex shader bound material data at what is now the
+  shadow-cascade UBO slot, affecting every skinned mesh while Free Fallin was loaded. Fixed (sets
+  derived from the live shader, fails closed). Live check with Vulkan validation on: kittens, eyes and
+  canopies; console shows `SET_TEXTURE 5, SET_MATERIAL 1`.
+- **Save loading with missing part mods/characters:** no longer refused; KSA skips the vehicle and
+  Unscience warns. Live check one save of each.
+- **Kiwi's Marbles star targets**, **DOH despawn teardown**, **Iron Man navball thrust marker / RCS after
+  disable**, **Pebbles viewport residency**, **Hot Pursuit stale celestial**, **camera sequences far from
+  the origin**, **Blinky magnetic-trap tanks:** fixed in code; live checks listed in the upgrade report.
+- **Stock 5638 bug (not ours):** `Vehicle.UpdateNavBallMarkers` divides by the main-thread
+  `FlightComputer.Helm2Asmb`, which `FlightComputer.CopyFrom` never copies, so the thrust marker is wrong
+  for any vessel with a rotated control part. Iron Man corrects only enabled kittens.
+- **Optimized KSA.dll (rev 5630):** small patch targets could be inlined into callers compiled before a
+  mid-session Harmony reapply. Watch: Unscience menu item, typing blocks hotkeys, IVA seat head
+  visibility, Iron Man helm frame — especially after toggling features off and on.
+- **Open (by design / not fixed):** Pebbles bundles are now sized for 8 viewports (~8× clutter VRAM,
+  not counted by recipe budgets); Blinky/Shiny hiding still does not apply in raytraced IVA; HotkeyGuard
+  mouse-button bypass (5449) unchanged; legacy `parts-now` save records warn on every load.
+
+## Previous triage — KSA 2026.9.22.5482
 
 See [upgrade review](plans/KSA_5482_UPGRADE.md). Upgrade from 5438 (revs 5439–5481). The code
 fixes are in the working tree. They were verified by a

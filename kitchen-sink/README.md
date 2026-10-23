@@ -12,10 +12,13 @@ Only Unscience is shipped; this standalone project is a development host with an
 5. Click a row's **Delete** button to remove its protection; this does not delete the vehicle.
 
 Protection disables only KSA's whole-vehicle G-load destruction decision for those exact
-vehicle instances, including loads during vehicle, ground and ocean contact. Bepu collisions,
-measured G-load telemetry, flight-computer limits, individual part crash tolerances, and
-atmospheric/ocean dynamic-pressure destruction continue normally. For collision-based machines,
-set suitable part crash tolerances separately.
+vehicle instances, including loads during vehicle, ground and ocean contact. For a protected EVA
+kitten it also disables KSA 5638's separate hard-landing check (losing ≥ 20 m/s of downward speed
+on ground/ocean contact), which replaced the G-load kill that protected kittens already survived
+on earlier builds; the frame then falls through to the normal, filtered G-load check. Bepu
+collisions, measured G-load telemetry, flight-computer limits, individual part crash tolerances,
+and atmospheric/ocean dynamic-pressure destruction continue normally. For collision-based
+machines, set suitable part crash tolerances separately.
 
 The list supports multiple vehicles and rejects duplicate entries. Removed or disposed vehicles
 are pruned; an unrelated replacement with the same name does not inherit live protection.
@@ -110,8 +113,9 @@ filter and one-shot editor refresh are transient. The defunct Flexo panels and s
 - `KitchenSinkSubmod.GLoadProtection.cs`: filtered picker and active table.
 - `GLoadProtection.cs`: concurrent registry keyed by vehicle reference identity.
 - `GLoadProtectionPatches.cs`: guarded Harmony transpiler on
-  `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState)`; gates only the
-  `StructuralLoad.GLoadFraction` value consumed by the destruction comparison.
+  `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState, SimStep)`; gates only the
+  `StructuralLoad.GLoadFraction` value consumed by the destruction comparison and the
+  `DetectKittenImpact` result. Missing or duplicated anchors disable the feature with a log line.
 - Both `unscience/Patcher.cs` and the standalone `Patcher.cs` install/remove this patch.
 - `KitchenSinkSubmod.Saves.cs`: backward-compatible IVA record and G-load target capture/reset/replay.
 - `CapsuleGlassExperiment.cs`: exact static-model filter and independent IVA visibility ownership; both hosts install/remove it.
@@ -122,8 +126,10 @@ filter and one-shot editor refresh are transient. The defunct Flexo panels and s
 
 Build the solution with `dotnet build`. Run `dotnet run --project kitchen-sink.tests` for the
 production patch's managed fixtures. These cover isolation, removal, telemetry, damage thresholds,
-contact causes, cleanup and unpatching. Native ImGui/Bepu cart acceptance remains an in-game check.
-The G-load detector and end-frame caller are unchanged from 5402 to 5438 and 5482; protection and
-both version-1 save records need no migration. See the [reconciliation record](../plans/KSA_5438_RECONCILIATION.md).
+contact causes, kitten hard landings, cleanup and unpatching, and compare the fixture with the
+real `KSA.dll` signature and anchors. Native ImGui/Bepu cart and kitten-landing acceptance remains
+an in-game check. The G-load detector was unchanged from 5402 to 5482; KSA 5638 added its
+`SimStep` parameter and kitten-impact branch (the 1-arg lookup silently disabled protection until
+fixed). The version-1 save record needs no migration. See the [reconciliation record](../plans/KSA_5438_RECONCILIATION.md).
 See [game integration](../scope/ui-customization.md#kitchen-sink) and
 [destruction investigation](../plans/VEHICLE_DESTRUCTION_INVESTIGATION.md).

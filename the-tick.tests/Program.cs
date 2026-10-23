@@ -19,6 +19,9 @@ internal static class Checks
         Require(hull.Parts.Parts[1].CrashTolerancePascals == PartStructuralLimits.DerivedFallback
             && authoredPart.CrashTolerancePascals == 250_000, "native tolerance resolution before patching");
         ExpectCause(new VehicleUpdateState(hull), VehicleDestructionCause.ExcessiveGForce);
+        var kitten = new Vehicle("Kitten");
+        KittenImpactChecks.ExpectImpact(kitten, Situation.Terrain, VehicleDestructionCause.GroundImpact);
+        bool probed = KittenImpactChecks.VerifyGameSignatures();
 
         var harmony = new Harmony("the-tick.tests");
         TheTickPatches.Apply(harmony);
@@ -52,6 +55,10 @@ internal static class Checks
                 "sub-parts resolve ownership through their full part when their own tree is unset");
 
             CheckStructuralDetector(hull, sameName);
+            Require(TickProtection.Add(kitten), "EVA kittens can be registered");
+            KittenImpactChecks.Run(kitten);
+            Require(TickProtection.Remove(kitten), "kitten registration can be deleted");
+            KittenImpactChecks.ExpectImpact(kitten, Situation.Terrain, VehicleDestructionCause.GroundImpact);
 
             Require(TickProtection.Remove(hull), "delete removes the selected vehicle");
             Require(hull.Parts.Parts[0].CrashTolerancePascals == 250_000, "deleted vehicle returns to its authored tolerance");
@@ -81,10 +88,13 @@ internal static class Checks
 
         Require(!TheTickPatches.IsApplied && TickProtection.Snapshot().Length == 0, "unload clears readiness and state");
         TickProtection.Add(rover);
+        TickProtection.Add(kitten);
         Require(rover.Parts.Parts[0].CrashTolerancePascals == PartStructuralLimits.DerivedFallback, "unpatching restores native tolerance");
         ExpectCause(new VehicleUpdateState(rover), VehicleDestructionCause.ExcessiveGForce);
+        KittenImpactChecks.ExpectImpact(kitten, Situation.Terrain, VehicleDestructionCause.GroundImpact);
         TickProtection.Clear();
-        Console.WriteLine($"PASS: {_checks} The Tick indestructibility checks; native collision/UI acceptance remains in-game.");
+        string probe = probed ? "real KSA.dll signatures verified" : "real KSA.dll probe SKIPPED";
+        Console.WriteLine($"PASS: {_checks} The Tick indestructibility checks ({probe}); native collision/UI acceptance remains in-game.");
     }
 
     private static void CheckPartFailure(Vehicle vehicle, bool protectedVehicle)

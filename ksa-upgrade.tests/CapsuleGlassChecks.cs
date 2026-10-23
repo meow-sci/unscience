@@ -40,6 +40,21 @@ internal static class CapsuleGlassChecks
             Frame();
             Require(Count(windowA) == 2 && Count(windowB) == 1 && Count(interior) == 0, "off retains stock windows and hidden cabin");
 
+            KSA.Program.Editor = new object();
+            try
+            {
+                Frame();
+                Require(Count(interior) == 1 && interior.Template.Internal, "editor reveals the cabin for one compose and restores its template");
+                view.State = ViewportStateFlags.InsideVehicle;
+                Frame();
+                Require(Count(interior) == 1 && interior.Template.Internal, "editor inside-vehicle views keep the native interior gate");
+            }
+            finally
+            {
+                KSA.Program.Editor = null;
+                view.State = ViewportStateFlags.None;
+            }
+
             CapsuleGlassExperiment.SetEnabled(true);
             Frame();
             Require(Count(windowA) == 0 && Count(windowB) == 0, "both exact window model IDs are hidden across instances");
@@ -85,6 +100,14 @@ internal static class CapsuleGlassChecks
             view.Mode = CameraMode.IVA;
             Frame();
             Require(Count(windowA) == 0 && Count(interior) == 1 && GlassCount() == 1, "native IVA glass remains submitted while opaque windows are hidden");
+            view.Mode = CameraMode.Orbit;
+            view.State = ViewportStateFlags.InsideVehicle;
+            Frame();
+            Require(Count(windowA) == 0 && Count(interior) == 1 && GlassCount() == 1, "inside-vehicle crew portraits match the IVA result");
+            CapsuleGlassExperiment.SetEnabled(false);
+            Frame();
+            Require(interior.Template.Internal && Count(interior) == 1 && Count(windowA) == 2,
+                "experiment off: portraits render the native cabin (5638 RendersInterior) and stock windows");
             CapsuleGlassExperiment.Remove(harmony);
             IvaForceRender.Enabled = true;
             IvaForceRender.Unpatch(harmony);

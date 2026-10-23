@@ -1,7 +1,8 @@
 # World save checks
 
 Managed executable exercising production save DTOs and recipes for canopy appearance,
-ring definitions/overlays, Sphinx statics, decals and mounted cameras. It verifies detached
+ring definitions/overlays, Sphinx statics, decals, mounted cameras and Kiwi's Marbles welds. A weld
+targeting a KSA 5638 orbiting star round-trips with the unchanged version-1 field set. It verifies detached
 collections, constructor-backed fields, Brutal/System.Numerics fields, durable target data,
 explicit viewport/visibility state, nonfinite rejection and portable GLB library identity.
 Canopy checks preserve effective Humble recolors independently of authored tint settings,

@@ -17,6 +17,7 @@ public static class IronManPatches
             IronManFlightPatches.Apply(harmony);
             IronManFlightComputerPatches.Apply(harmony);
             IronManControlFramePatches.Apply(harmony);
+            IronManNavballPatches.Apply(harmony);
             IronManEditorOrientationPatches.Apply(harmony);
             IronManRcsOrientationPatches.Apply(harmony);
             IronManTeleportPatches.Apply(harmony);
@@ -35,6 +36,7 @@ public static class IronManPatches
         RemoveSafely(() => IronManTeleportPatches.Remove(harmony));
         RemoveSafely(() => IronManRcsOrientationPatches.Remove(harmony));
         RemoveSafely(() => IronManEditorOrientationPatches.Remove(harmony));
+        RemoveSafely(() => IronManNavballPatches.Remove(harmony));
         RemoveSafely(() => IronManControlFramePatches.Remove(harmony));
         RemoveSafely(() => IronManFlightComputerPatches.Remove(harmony));
         if (!IronManConnectorUnload.PrepareForUnload())

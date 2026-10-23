@@ -7,6 +7,7 @@ using MeowSci.BloominOnionLib;
 using MeowSci.FreeFallinLib;
 using MeowSci.GraffitiLib;
 using MeowSci.HotPursuitLib;
+using MeowSci.KiwisMarblesLib;
 using MeowSci.KsaAbstractions.Persistence;
 using MeowSci.PebblesLib;
 using MeowSci.RockyMcRockFaceLib;
@@ -63,6 +64,16 @@ var placed = RoundTrip(new SphinxSubmod.StaticSave { BodyId = "Mars", MeshId = "
 Check(placed.Scale.Y == 3 && placed.UvOffset.Y == .4f && placed.Collision == 2 && placed.PositionCcf.Z == 3, "static transform/material/collision");
 Check(placed.Align && !placed.Visible && placed.Png == "stone.png", "static flags and PNG");
 
+// KSA 5638 multi-star: OrbitingStar is a non-vehicle IOrbiter, so the weld picker offers stars and restore resolves
+// them like any body target. The payload shape is unchanged (a star target is an ordinary non-vehicle target id).
+var starWeld = RoundTrip(new SavedCelestialWeld { Source = "ProximaCentaurib", Target = "AlphaCentauriA", TargetIsVehicle = false,
+    Offset = new double3(2e9, 0, -3), OriginalParent = "ProximaCentauri", OriginalTime = 86400.5,
+    OriginalPosition = new double3(7.2e9, 1, 2), OriginalVelocity = new double3(3, 4.1e4, 5) });
+Check(starWeld.Target == "AlphaCentauriA" && !starWeld.TargetIsVehicle && starWeld.OriginalParent == "ProximaCentauri"
+    && starWeld.Offset.X == 2e9 && starWeld.OriginalTime == 86400.5 && starWeld.OriginalVelocity.Y == 4.1e4, "star-target weld payload");
+Check(SaveJson.ToElement(starWeld).EnumerateObject().Select(property => property.Name).SequenceEqual(new[] { "Source", "Target", "TargetIsVehicle",
+    "Offset", "OriginalParent", "OriginalTime", "OriginalPosition", "OriginalVelocity" }), "weld payload fields unchanged");
+
 string hash = new('A', 64);
 var foreign = new GlbIdentity("C:\\Users\\someone\\.unscience\\glbs\\model.glb", hash, "");
 var portable = GlbIdentity.Parse(foreign.MeshId(-1));
@@ -74,7 +85,7 @@ RejectOverflow<float>("1e100");
 RejectOverflow<double>("1e999");
 Check(!SaveJson.ToElement(camera).GetRawText().Contains("PartInstanceId", StringComparison.Ordinal), "no runtime instance identifier in camera DTO");
 Check(!SaveJson.ToElement(placed).GetRawText().Contains("Model", StringComparison.Ordinal), "no native static resource graph");
-Console.WriteLine("PASS: world save production DTOs, detached ring models, numeric fields, portable GLB identity, native graph exclusion and nonfinite rejection.");
+Console.WriteLine("PASS: world save production DTOs, detached ring models, star-target weld records, numeric fields, portable GLB identity, native graph exclusion and nonfinite rejection.");
 
 static T RoundTrip<T>(T value) => SaveJson.FromElement<T>(JsonDocument.Parse(SaveJson.ToElement(value).GetRawText()).RootElement);
 static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

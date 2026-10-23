@@ -9,15 +9,20 @@ part picking, re-resolves targets by vehicle ID and `Part.InstanceId`, and recom
 part-relative pose from `FixedController.OnFrame`. It uses KSA's stock secondary viewport renderer
 and window; it does not allocate Vulkan resources.
 
-After writing each mounted ECL position, `HotPursuitCelestialState` mirrors KSA 5402's
-main-camera nearby-celestial selection and public distance/terrain/altitude fields. This
-prevents the nearby body from also being emitted by the distant-sphere pass (the source of
-the dark-grey secondary-view artifact) while retaining KSA's 80,000 km surface-distance
-cutoff.
+After writing each mounted ECL position, `HotPursuitCelestialState` mirrors KSA's
+main-camera nearby-celestial selection and public distance/terrain/altitude fields, including
+the 80,000 km surface-distance cutoff. Up to 5482 this kept the nearby body out of the
+distant-sphere pass (the dark-grey secondary-view artifact). Since 5638 stock resolves
+`Camera.GetEffectiveNearbyCelestial()` (`NearbyCelestial ?? FindNearbyCelestial`), which picks the
+same body. The mirror keeps raw `NearbyCelestial` readers, such as the airless-body near/far flag,
+consistent with that pick. Stock never clears a secondary camera's `NearbyCelestial`, so
+`HotPursuitCelestialState.Clear` runs whenever an entry releases or loses its lease. A stale body
+would otherwise override the next owner's lookup and render the wrong planet.
 
-The KSA 5402 secondary `Program.RenderViewport` path omits the `ParticleSystem`,
-`VolumetricExhaustRenderer`, main planet/ocean/cloud, part-glass, and overall-bloom passes.
-Engine plumes and generic particles are therefore not available in these feeds; the game-owned
+Since 5541/5638 the secondary `Program.RenderViewport` path also renders terrain and an
+atmosphere-only pass, without clouds or rings, reusing the main viewport's shadow maps. It still
+omits the `ParticleSystem`, `VolumetricExhaustRenderer`, ocean/cloud, part-glass and overall-bloom
+passes. Engine plumes and generic particles are therefore not available in these feeds; the game-owned
 passes bind main-camera targets/resources and are intentionally not re-injected by this library.
 
 See [`../hot-pursuit/README.md`](../hot-pursuit/README.md) for features, user controls, limitations,

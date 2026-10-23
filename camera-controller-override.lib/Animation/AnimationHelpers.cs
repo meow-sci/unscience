@@ -25,21 +25,52 @@ public static class AnimationHelpers
     
     /// <summary>
     /// Get the target position from the controller's Following object.
+    /// Absolute ECL: only use it to convert a custom absolute look-at provider into an offset.
     /// </summary>
     /// <param name="controller">The camera controller.</param>
     /// <param name="fallback">Fallback position if no target available.</param>
     /// <returns>Target position in ecliptic coordinates.</returns>
     public static double3 GetTargetPosition(Controller controller, double3 fallback = default)
         => controller?.Camera?.Following?.GetPositionEcl() ?? fallback;
-    
+
     /// <summary>
-    /// Orient the transform to look at a target position.
+    /// Camera position relative to its follow target, in ECL axes. All animations work in this
+    /// target-relative space. A following KSA camera stores exactly this offset
+    /// (<c>Camera.PositionCce</c>), so it is read directly instead of subtracting two absolute
+    /// ECL positions, whose double precision degrades to metres at interstellar distances.
+    /// Without a follow target the offset is the absolute position.
     /// </summary>
-    /// <param name="transform">The transform to modify.</param>
-    /// <param name="targetPos">The position to look at in ecliptic coordinates.</param>
-    public static void LookAtTarget(Transform3D transform, double3 targetPos)
+    public static double3 GetTargetOffset(Controller controller, Transform3D transform)
     {
-        double3 lookDirection = targetPos - transform.PositionEcl;
+        if (transform is Camera { Following: not null } camera)
+            return camera.PositionCce;
+        return transform.PositionEcl - GetTargetPosition(controller);
+    }
+
+    /// <summary>Place the camera at <paramref name="offset"/> from its follow target (see <see cref="GetTargetOffset"/>).</summary>
+    public static void SetTargetOffset(Controller controller, Transform3D transform, double3 offset)
+    {
+        if (transform is Camera { Following: not null } camera)
+            camera.PositionCce = offset;
+        else
+            transform.PositionEcl = GetTargetPosition(controller) + offset;
+    }
+
+    /// <summary>
+    /// Look-at point relative to the follow target: <paramref name="defaultOffset"/> unless a
+    /// custom absolute <paramref name="provider"/> is set, which is converted once per frame.
+    /// </summary>
+    public static double3 GetLookAtOffset(Func<Controller, double3>? provider, Controller controller,
+        double3 defaultOffset = default)
+        => provider == null ? defaultOffset : provider(controller) - GetTargetPosition(controller);
+
+    /// <summary>
+    /// Orient the transform from <paramref name="cameraOffset"/> toward <paramref name="lookAtOffset"/>,
+    /// both relative to the follow target, keeping the current up vector.
+    /// </summary>
+    public static void LookAtOffset(Transform3D transform, double3 cameraOffset, double3 lookAtOffset)
+    {
+        double3 lookDirection = lookAtOffset - cameraOffset;
         if (lookDirection.LengthSquared() > 0.0001)
         {
             double3 currentUp = double3.UnitY.Transform(transform.LocalRotation);

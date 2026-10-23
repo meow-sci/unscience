@@ -26,7 +26,8 @@ part references and lifecycle hooks live in `ksa-abstractions.lib/Persistence`. 
 Managed production Harmony-hook fixtures and storage/coordinator regression checks for native
 load timing, failure isolation, reset ordering, JSON integrity, bounded files and retained state.
 Includes KSA 5482 failed-write (`Write()` returns false → no sidecar, failure status) and
-unreadable-save (reported once, scene unchanged) checks.
+unreadable-save (reported once, scene unchanged) checks, and (5638) a legacy `parts-now` record
+from the removed Parts Now submod that must load, be reported, and be carried forward unchanged.
 
 ### [camera-saves.tests](camera-saves.tests)
 Managed production camera-recipe mapping/serialization checks across all ten animation types,
@@ -79,7 +80,7 @@ Per-vessel indestructibility bundled in Unscience. Filterable vessel picker, **M
 **Protect Controlled Vessel** buttons, and an active table with per-row Delete. For exact registered vehicle
 instances, every part reports a `double.MaxValue` crash tolerance (Harmony prefix on `Part.CrashTolerancePascals`,
 owner resolved through `Part.Tree.OwningVehicle`) so contact-pressure part failure never trips, and the
-whole-vehicle G-load / 200 kPa dynamic-pressure destruction event from `PhysicsBubble.DetectStructuralFailure`
+kitten hard-landing, G-load and 200 kPa dynamic-pressure destruction events from `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState, SimStep)`
 is discarded by a prefix/postfix pair while load telemetry stays native. Shared `PartTemplate` XML data is never
 mutated, so other vessels built from the same parts remain destructible. Protected vessels no longer dent.
 Saves protected IDs in a version-1 `the-tick` record and rebinds them after native reconstruction; vanilla/missing
@@ -265,7 +266,7 @@ Dynamic LCD pixel grid builder. Builds NxM engine pixel grids at runtime by dyna
 - Batch creation with single `PartTree.CreateFromNewPartTree()` rebuild (N→1 recomputes)
 - **BlinkyGridManager** — static singleton managing grids by `(vehicleId, gridName)` compound key
 - **Global scan** — discovers blinky grids across all loaded vehicles (Debug menu)
-- **Propellant feed** — each pixel engine is wired to a fuel-bearing part through its own **declared feed connector** (`RocketCore.FeedConnectors`); KSA rejects any other route, so this is what makes the pixels actually light
+- **Propellant feed** — each pixel engine is wired to a fuel-bearing part through its own **declared feed connector** (`RocketCore.FeedConnectors`); KSA rejects any other route, so this is what makes the pixels actually light. Fuel anchors (`FuelAnchorFinder`) must carry a tank that can hold the engine's propellant (`Tank.HoldableSubsetOf`), so 5638 magnetic traps never starve a pixel; feed checks test the 5487 `PlumbedCore` base
 - **Repair Feed** — re-wires a grid's propellant feed in place (for grids found by scanning, or built before the feed-wiring fix) and rebuilds the resource managers
 - **Ignition/throttle warning** — flags when the vehicle is shut down, in Auto burn mode, or at zero throttle, any of which keeps the grid dark
 - **Diagnose** — logs per-controller ignition state, feed connector wiring, and `ResourceManager.ConsumptionOrder` tank counts
@@ -276,7 +277,7 @@ Dynamic LCD pixel grid builder. Builds NxM engine pixel grids at runtime by dyna
 - Build/Destroy individual grids at any time; vehicle combo selector with filter
 - Per-grid collapsible UI sections with info table, pattern buttons, and destroy
 - Menu bar with Debug menu for global grid scanning
-- **blinky.lib**: `BlinkyGridManager` (compound-key scroll/static/off/pattern APIs, `ScanAllVehicles`), `ScrollAnimation`, `PixelGrid` (single-grid + `ScanAllFromVehicle` auto-discovery), `PixelPatterns`, `LcdGridConfig`, `LcdGridBuilder` (`BuildGrid`, `DestroyGrid`, `ScanExistingGrid`, `RepairFuelFeeds`), `BlinkyPixelGrid`.
+- **blinky.lib**: `BlinkyGridManager` (compound-key scroll/static/off/pattern APIs, `ScanAllVehicles`), `ScrollAnimation`, `PixelGrid` (single-grid + `ScanAllFromVehicle` auto-discovery), `PixelPatterns`, `LcdGridConfig`, `LcdGridBuilder` (`BuildGrid`, `DestroyGrid`, `ScanExistingGrid`, `RepairFuelFeeds`), `FuelAnchorFinder`, `BlinkyPixelGrid`.
 
 ### [its-so-shiny](its-so-shiny) / [its-so-shiny.lib](its-so-shiny.lib)
 Light-part pixel grid builder. Builds Blinky-style NxM grids using KSA's built-in `LightPart` instead of engine parts, avoiding engine ignition, thrust cancellation, and fuel/resource graph complexity.
@@ -418,7 +419,7 @@ is substituted on every canopy as it draws, so the image follows KSA's animated 
 Swap the **meshes and textures of KSA's planetary ring system** (Saturn's instanced rock field + 2D band) at runtime. Pick any built-in mesh — including every part/subpart mesh (~800 in a filterable dropdown) — per ring LOD, change the rock PBR material textures (diffuse/normal/AoRoughMetal), the ring band texture (which also drives the planet's ring shadow and, since KSA 5482, Saturn's atmospheric ring shadow via band alpha), and the rock field's size/density/draw-distance/thickness.
 - **Data-level swap, no Harmony patches**: mutates the public `PlanetaryRingsReference` XML-backed tree (`RingLodReference.MeshFileReference.Mesh`, material texture references), then forces the game's own `Program.RebuildRenderer()` settings path so `PlanetaryRingsRenderData` rebuilds from the mutated references with correct GPU sync
 - **Mesh conversion**: part/subpart meshes are atlas-interleaved (no `DeviceMesh`), so they are cloned into private `Simple` `MeshReference`s sharing the retained CPU-side `HostPrimitives` and uploaded as a per-attribute-stream `SimpleVkMesh` (the ring pipeline's format) on first use; clones cached for the mod's lifetime
-- **Asset catalog** via reflection over `ModLibrary.AllMeshes`/`AllFiles` (the parts-now `GameRegistry` pattern); textures filtered to bound bindless handles, normal maps to `TexturePowerReference`
+- **Asset catalog** via reflection over `ModLibrary.AllMeshes`/`AllFiles` (internal static fields looked up by name — on the string-reflection watchlist); textures filtered to bound bindless handles, normal maps to `TexturePowerReference`
 - Overrides are session-only (deliberately not persisted — a game restart is back to the stock ring); Restore Defaults reverts within a session
 - F11 window toggle (standalone mode); unscience supermod integration via `ISubmod`
 - **rocky-mcrock-face.lib**: `RockyMcRockFaceSubmod` (+ `.Ui` partial), `RingSwapController` (snapshot/apply/restore/rebuild), `RingAssetCatalog`, `RingMeshFactory` (interleaved→Simple clone cache), `RingSelection`, `RockyUi` (public form/grid/combo helpers, reused by bloomin-onion)
@@ -441,7 +442,7 @@ Define **brand-new planetary rings at runtime** and apply them to **any celestia
 ### [unscience](unscience)
 Unified supermod that consolidates the standalone feature mods into a single ImGui window with collapsible headers and a gear icon (⚙) context menu for per-submod visibility toggles. All submod logic lives directly in the respective `.lib` projects — unscience instantiates these lib submods and orchestrates them via the `ISubmod` interface from `ksa-abstractions.lib`. A single Harmony instance consolidates their patches. Standalone mods continue to work independently.
 - F11 window toggle with unified panel for all core submods
-- Submods: Blinky, Bloomin' Onion, BYO Music, Camera Controller Override, Dent Wizard, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Iron Man, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Parts Now, Pebbles, Pyro, Rocky McRock Face, Skittles, Sphinx, Thug Life, Zippo (29 total)
+- Submods: Blinky, Bloomin' Onion, BYO Music, Camera Controller Override, Dent Wizard, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Iron Man, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Pebbles, Pyro, Rocky McRock Face, Save Yourself, Skittles, Sphinx, The Tick, Thug Life, Zippo (30 total; Parts Now was removed at KSA 5638)
 - Uses `ISubmod` interface (from `ksa-abstractions.lib`): `Name`, `Initialize()`, `Update(dt)`, `RenderContent()`, `Dispose()`
 - Each submod class lives in its `.lib` project (for example `BlinkySubmod` in `blinky.lib`)
 - `unscience/Submods/` directory removed — no thin UI wrapper layer; submod classes own their own ImGui rendering
@@ -462,22 +463,6 @@ Placeholder/template mod with basic mod structure. Requires proper naming and im
 ---
 
 ## Part Editor Mods
-
-### [parts-now](parts-now) / [parts-now.lib](parts-now.lib)
-Runtime Part / SubPart loader. Paste Part XML into a brand new mod folder, or load / reload / unload an existing mod folder, without restarting the game. New parts appear in the vehicle editor's part browser immediately with thumbnails and game data attached.
-- Paste XML workflow — mod-id form with live validation, three tabbed XML documents (Assets / Part / GameData, 256 KiB each) with clipboard paste, Validate then Install & Load
-- Writes a real KSA mod folder (`mod.toml` + XML, UTF-8 no BOM, LF, atomic tmp+move) under the game's discovered mods path and adds an enabled manifest entry so the parts also load at next launch
-- Mod folder workflow — scans the mods directory, classifies each folder (Content / StarMap / Both / Empty, LoadedAtBoot / LoadedByPartsNow / NotLoaded) and offers Load / Reload / Unload only where it is safe
-- Reload = purge + load, so an edited GLB, KTX2 or XML really is re-read (`SerializedCollection.Register` silently drops duplicate ids, which would otherwise skip the file read)
-- Fail-closed reload/unload safety gate — refuses while a live vehicle flies one of the parts, while the vehicle editor holds one, while a job is in flight, or for anything KSA loaded at boot
-- Mesh headroom reservation — inflates `DeviceMeshInterleaved.Shared`'s size counters from `[StarMapAllModsLoaded]` (before `ModLibrary.Bind` allocates the single shared interleaved buffer) and rewinds the bump cursor on the first frame; configurable in `parts-now.toml`, effective next launch, with leak accounting for bytes an unload can never reclaim
-- Fifteen validation rules (V1–V15) run before anything is written or registered, including the crash guard that rejects a `<PbrMaterial>` missing any of Diffuse / Normal / AoRoughMetal
-- Incremental game-data attach, model warming, and per-part thumbnail rendering (2 per frame) against KSA's offscreen thumbnail viewport
-- Single reflection layer with a self-test that disables loading with a readable message instead of crashing when KSA internals move
-- Standalone window on F10 (configurable); also an unscience submod
-- **parts-now.lib**: `PartsNowSubmod` (ISubmod entry point), `GameRegistry` (the only reflection into `ModLibrary` internals), `MeshBudget` (shared-buffer headroom + leak accounting), `BundleParser` / `BundleValidator` (V1–V15), `RuntimeModLoader` (load state machine), `RuntimeModUnloader` (safety gate + purge/rollback), `PartThumbnailGenerator`, `ModIdValidator` / `ModFolderWriter` / `ModFolderScanner`, `StatusPanel` / `PastePanel` / `ModFolderPanel` / `ResultsPanel`
-
----
 
 ### [dont-stifle-me](dont-stifle-me) / [dont-stifle-me.lib](dont-stifle-me.lib)
 Vehicle editor un-limiter. Restores free part scaling and provides an extensible switch for widening authored editor-value ranges.
@@ -618,12 +603,28 @@ The previous integration baseline was KSA **2026.9.10.5438**, compared with **20
 - `humble-arteest.lib`: explicit static/dynamic part submission targets preserve paint/emissive with dents.
 - `free-fallin.lib`: current canopy baseline and per-renderable native material restoration.
 - `graffiti.lib`: decals draw after final depth resolve; Vulkan index enum migration.
-- `parts-now.lib`: V8 rejects untracked top-level Explosion/ExplosionVolume registries.
 - `pebbles.lib`, `sphinx.lib`, `thug-life.lib`: current Vulkan index enum bindings.
+
+## KSA 5638 upgrade
+
+The current integration baseline is KSA **2026.10.19.5638**, compared with **2026.9.22.5482**.
+[Upgrade evidence and native acceptance](plans/KSA_5638_UPGRADE.md) covers the full suite. Build and
+all 18 managed suites pass; in-game acceptance is pending.
+
+- All projects: Brutal's open-source assembly renames (`Brutal.Core`, `Brutal.Numerics`, `Brutal.Strings`, …).
+- `iron-man.lib`: `Helm2Body` retarget, new `IronManNavballPatches` (thrust marker for enabled kittens), RCS cache gate.
+- `the-tick.lib` / `kitchen-sink.lib`: `DetectStructuralFailure(…, SimStep)` lookup (both were inert); kitten hard-landing coverage.
+- `free-fallin.lib`: Full Canopy descriptor sets derived from the live shader (`CanopyShaderSource`), fail closed.
+- `ksa-abstractions.lib`: save preflight warns for natively skipped vehicles; `WaitAll()` reset join; `IvaForceRender` uses `RendersInterior()`.
+- `kiwis-marbles.lib`: star-target welds restore. `doh.lib`: despawn via `Universe.DestroyVehicle`.
+- `pebbles.lib`: per-viewport clutter residency release and nested mapped-memory retirement.
+- `blinky.lib`: `FuelAnchorFinder` skips tanks that cannot hold the engine mix; `PlumbedCore` checks.
+- `camera-controller-override.lib`: follow-relative playback; `hot-pursuit.lib`: clears its celestial mirror.
+- **parts-now / parts-now.lib removed** (legacy save records retained).
 
 ## KSA 5482 upgrade
 
-The current integration baseline is KSA **2026.9.22.5482**, compared with **2026.9.10.5438**.
+Previous baseline: KSA **2026.9.22.5482**, compared with **2026.9.10.5438**.
 [Upgrade evidence and native acceptance](plans/KSA_5482_UPGRADE.md) covers the full suite.
 Verification is limited to the build and managed suites. The supplied KSA.dll is Windows x64, so no
 native session was run. In-game acceptance is pending.
@@ -645,8 +646,7 @@ native session was run. In-game acceptance is pending.
 ### [ksa-upgrade.tests](ksa-upgrade.tests)
 
 Managed executable linking production Blinky feed diagnostics, Free Fallin material restoration,
-Parts Now V8 validation, and (5482) the shared `PartRenderFilter` and Vehicle Paint patches. Covers empty/selected drain views, per-canopy originals and re-enable behavior,
-external material changes, rejected top-level explosion definitions, retained legacy exclusions,
-permitted nested references and source diagnostics; shared render-filter compaction, owners, dent
+and (5482) the shared `PartRenderFilter` and Vehicle Paint patches. Covers empty/selected drain
+views, per-canopy originals and re-enable behavior, external material changes; shared render-filter compaction, owners, dent
 alignment and fail-open cases; paint in cached static/dynamic state flags and single invalidation. Also links production capsule-glass filtering and shared IVA ownership for exact window isolation, late models, independent toggle orders, shadow-proxy preservation and unpatch cleanup.
 Managed Harmony fixtures avoid native game and GPU initialization; see [README](ksa-upgrade.tests/README.md).

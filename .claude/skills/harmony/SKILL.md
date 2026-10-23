@@ -34,7 +34,7 @@ There is **no** `[Patch]`/`[Unpatch]`/`ModInfo` attribute on these methods. The 
 ### The Harmony instance
 
 - Stored as a single nullable **static field**: `private static Harmony? _harmony;`
-- The ID is a **string literal**, either the mod folder name (`"zippo"`, `"parts-now"`, `"thug-life"`) or a fully-qualified namespace (`"MeowSci.Blinky"`, `"MeowSci.Unscience"`). Pick one and reuse the exact same string for `UnpatchAll`.
+- The ID is a **string literal**, either the mod folder name (`"zippo"`, `"save-yourself"`, `"thug-life"`) or a fully-qualified namespace (`"MeowSci.Blinky"`, `"MeowSci.Unscience"`). Pick one and reuse the exact same string for `UnpatchAll`.
 - Created either inline (`= new Harmony("zippo")`) or lazily in `Patch()` (`_harmony = new Harmony("MeowSci.Blinky")`). Lazy creation pairs naturally with `_harmony = null` in `Unload()`.
 
 ### HotkeyGuard is mandatory (see CLAUDE.md)

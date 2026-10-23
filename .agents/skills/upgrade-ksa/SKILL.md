@@ -140,12 +140,12 @@ Flag every commit line touching a subsystem unscience couples to:
 | `Celestial`, `Orbit`/`SetOrbit`, `IOrbiter`, `ShowOrbit`, orbit lines, SOI | kiwis-marbles | `celestial-and-lights.md` |
 | `LightModule`, `LightSwitch`, `ColorRgb`/`FloatReference`, `KeyframeAnimationModule` | zippo, its-so-shiny | `celestial-and-lights.md` |
 | `Camera`, `Controller`/`OrbitController`/`FlyController`, FOV, `Viewport` | glass, camera-controller-override | `camera.md` |
-| `Part`/`PartTree`/`PartTemplate`, connectors, face-snapping, editor tags/categories, thumbnails, part size, **editor scale clamp / scale gizmo** | parts-now, dont-stifle-me, blinky, its-so-shiny, kitchen-sink | `part-editor-and-robotics.md` |
+| `Part`/`PartTree`/`PartTemplate`, connectors, face-snapping, editor tags/categories, thumbnails, part size, **editor scale clamp / scale gizmo** | dont-stifle-me, blinky, its-so-shiny, kitchen-sink | `part-editor-and-robotics.md` |
 | render pass, shaders/GLSL, `SuperMeshRenderSystem`, `PerInstanceData`, `MaterialData`, `GpuMaterialSystem`, MSAA, Vulkan | **thug-life, humble-arteest, doh, blinky, its-so-shiny** | `pixel-grids-and-render.md`, `character-and-materials.md` |
 | `KittenEva`, `CharacterAvatar`, animations, `CatExpressionAnim`, `EVADoor`, characters | doh, kitten-animations, garrys-torch | `character-and-materials.md` |
 | `GaugeCanvas`, HUD, gauges, menu bar / `View` menu / file bar | unscience `MenuBarPatch` | `ui-customization.md` |
 | `ImGui`, `Brutal.*` package bump, nullability | **any mod** — see the `TreatWarningsAsErrors` note in step 2 | wherever it lands |
-| `ModLibrary` asset ids, part templates, meshes, FMOD/audio, substances | blinky, its-so-shiny, thug-life, doh, humble-arteest, parts-now, byo-music | master index §5 |
+| `ModLibrary` asset ids, part templates, meshes, FMOD/audio, substances | blinky, its-so-shiny, thug-life, doh, humble-arteest, byo-music | master index §5 |
 
 > A changelog line that moves **no symbol** can still break a mod. Treat behavior and UX changes as
 > real integration changes even when every referenced member remains source-compatible.
@@ -433,8 +433,7 @@ the risk.
 Nothing in this repo is firewalled from KSA, but these parts couple to no game member and only break
 via toolchain/package churn:
 
-- TOML persistence (Tomlyn) and its file layouts: skittles themes, garrys-torch presets, and
-  parts-now's `parts-now.toml`.
+- TOML persistence (Tomlyn) and its file layouts: skittles themes and garrys-torch presets.
 - Pure-ImGui layout/state code, easing math, ring buffers, topological sorts,
   and `mkmod.ts`.
 - The **StarMap.API** loader ABI (and the other NuGet deps: Lib.Harmony and Tomlyn) — a StarMap or

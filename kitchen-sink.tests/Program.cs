@@ -1,6 +1,4 @@
 using System;
-using System.Linq;
-using System.Reflection.Emit;
 using System.Threading.Tasks;
 using HarmonyLib;
 using KSA;
@@ -14,12 +12,21 @@ internal static class Checks
     {
         var axle = new Vehicle("Axle");
         var cradle = new Vehicle("Cradle");
+        var evaKitten = new Vehicle("Kitten");
         ExpectCause(new VehicleUpdateState(axle), VehicleDestructionCause.ExcessiveGForce);
+        KittenImpactChecks.ExpectImpact(evaKitten, 25, Situation.Terrain, VehicleDestructionCause.GroundImpact);
+        bool probed = KittenImpactChecks.VerifyGameSignatures();
         var harmony = new Harmony("kitchen-sink.tests");
         GLoadProtectionPatches.Apply(harmony);
         try
         {
             Require(GLoadProtectionPatches.IsApplied, "patch reports ready");
+            GLoadProtectionPatches.Apply(harmony);
+            Require(GLoadProtectionPatches.IsApplied, "repeated apply is idempotent");
+            Require(GLoadProtection.Add(evaKitten), "EVA kittens can be protected");
+            KittenImpactChecks.Run(evaKitten, new Vehicle("Stray"));
+            Require(GLoadProtection.Remove(evaKitten), "kitten protection can be removed");
+            KittenImpactChecks.ExpectImpact(evaKitten, 25, Situation.Terrain, VehicleDestructionCause.GroundImpact);
             Require(GLoadProtection.Add(axle) && GLoadProtection.Add(cradle), "multiple vehicles can be protected");
             Require(!GLoadProtection.Add(axle) && GLoadProtection.Snapshot().Length == 2, "duplicate add is harmless");
             foreach (var vehicle in new[] { axle, cradle })
@@ -89,36 +96,24 @@ internal static class Checks
             GLoadProtection.Add(cradle);
             GLoadProtection.Clear();
             Require(GLoadProtection.Snapshot().Length == 0, "session reset clears protection");
-            CheckRejectedLayouts();
+            KittenImpactChecks.CheckRejectedLayouts();
             SaveChecks.Run(harmony);
             CapsuleGlassSaveChecks.Run(harmony);
             IvaCameraChecks.Run(harmony);
             GLoadProtection.Add(cradle);
+            GLoadProtection.Add(evaKitten);
         }
         finally { GLoadProtectionPatches.Remove(harmony); }
 
         Require(!GLoadProtectionPatches.IsApplied && GLoadProtection.Snapshot().Length == 0, "unload clears readiness and state");
         // Re-add registry state after unpatch to prove native behavior was restored.
         GLoadProtection.Add(cradle);
+        GLoadProtection.Add(evaKitten);
         ExpectCause(new VehicleUpdateState(cradle), VehicleDestructionCause.ExcessiveGForce);
+        KittenImpactChecks.ExpectImpact(evaKitten, 25, Situation.Terrain, VehicleDestructionCause.GroundImpact);
         GLoadProtection.Clear();
-        Console.WriteLine($"PASS: {_checks} G-load protection checks; native collision/UI acceptance remains in-game.");
-    }
-
-    private static void CheckRejectedLayouts()
-    {
-        var getter = AccessTools.PropertyGetter(typeof(StructuralLoad), nameof(StructuralLoad.GLoadFraction));
-        foreach (var code in new[]
-        {
-            new[] { new CodeInstruction(OpCodes.Ret) },
-            new[] { new CodeInstruction(OpCodes.Call, getter), new CodeInstruction(OpCodes.Call, getter) }
-        })
-        {
-            bool rejected = false;
-            try { _ = GLoadProtectionPatches.Transpile(code).ToArray(); }
-            catch (InvalidOperationException) { rejected = true; }
-            Require(rejected, "missing/ambiguous detector layouts fail explicitly");
-        }
+        string probe = probed ? "real KSA.dll signatures/anchors verified" : "real KSA.dll probe SKIPPED";
+        Console.WriteLine($"PASS: {_checks} G-load protection checks ({probe}); native collision/UI acceptance remains in-game.");
     }
 
     private static void ExpectCause(VehicleUpdateState state, VehicleDestructionCause cause)
@@ -127,7 +122,7 @@ internal static class Checks
         Require(state.DestructionEvent?.Cause == cause, $"expected native cause {cause}");
     }
 
-    private static void Require(bool condition, string message)
+    internal static void Require(bool condition, string message)
     {
         if (!condition) throw new InvalidOperationException(message);
         _checks++;

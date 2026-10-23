@@ -1,5 +1,86 @@
 # Save/load lifecycle integration
 
+## KSA 5638 (5482 → 5638) verification
+
+Verified against `2026.10.19.5638` (NEW, `ksa-game-assemblies` `edda844`) vs `2026.9.22.5482` (OLD,
+`a2f724f`). Managed/static only: the full solution build passes (0 warnings), and `saves.tests`,
+`world-saves.tests`, `camera-saves.tests` and `doh.tests` pass. No native save or load was run.
+Line numbers below are NEW (`decomp/KSA/`).
+
+- **Native load now skips bad vehicles instead of crashing (semantic drift, fixed).** Revs 5632/5633
+  changed `CelestialSystem.DeserializeSave` to `(CelestialSystemData, ISet<string> skippedVehicles)`
+  (`CelestialSystem.cs:655`).
+  - A missing parent body or a parent that is not an `IParentBody` is logged and skipped (`:661-692`,
+    as at 5482).
+  - A vehicle whose `RootPartInstance.FindMissingParts()` (`PartInstance.cs:120-141`) reports templates
+    is skipped with the `AlertVehicleMissingParts` alert and added to the set (`:694-699`).
+  - A vehicle whose build throws, for example `ModLibrary.Get<CharacterReference>` for an uninstalled
+    character in the `KittenEva` constructor (`KittenEva.cs:71-76`), is caught, skipped with
+    `AlertVehicleChangedParts` and added to the set (`:701-721`).
+  - `Universe.DeserializeSave` (`Universe.cs:2419`) then ends the mission of roster kittens assigned
+    to a skipped vehicle (`:2461-2469`).
+
+  At 5482 a missing template or character threw after every vehicle had been destroyed, so the
+  preflight refusal was protective. It was now stricter than the game. `NativeSavePreflight.Validate`
+  (`ksa-abstractions.lib/Persistence/NativeSavePreflight.cs:27-59`) returns one diagnostic per vehicle
+  KSA will skip: a missing parent body, uninstalled part templates (each named once, including
+  subparts, which native finds only when the build throws) or an uninstalled character.
+  `NativeSaveHooks.ResetBeforeLoad` raises them through the new `LoadWarning` callback after the
+  reset join (`NativeSaveHooks.cs:151-162`), so a direct load's fresh diagnostics transaction keeps
+  them. `unscience/UnscienceSaves.cs` routes them to `SceneSaveCoordinator.Report`.
+- **Refusals that remain (the game still cannot survive them).** Each is checked before reset
+  (`NativeSavePreflight.cs:38-43,61-84,105-127`):
+  - null/invalid `GameTime`, camera reference fields or raw transforms, an undefined camera mode, or a
+    null `KittenRoster`. Native dereferences all of these after destruction (`Universe.cs:2444-2472`;
+    `Camera.cs:813-850`).
+  - not exactly one celestial system, or a different system. Native reads only `CelestialSystems[0]`,
+    and `UncompressedSave.Load` (`UncompressedSave.cs:45-80`) never switches systems.
+  - a blank or (case-insensitive) duplicate vehicle id. `LookupCollection.Register` ignores the first
+    and logs the second (`LookupCollection.cs:110-136`), leaving a constructed but unregistered vehicle
+    in its parent's `Children`.
+  - a null `ParentBody` record, which native dereferences outside its per-vehicle try/catch (`CelestialSystem.cs:661`).
+  - a null child, a cycle, depth over 256 or more than 200000 parts. `CollectMissingParts` recurses through
+    `Children` without null or cycle checks.
+- **Sidecar replay for skipped vehicles.** Participants already resolve vehicles only through the exact
+  `VehicleProvider.FindVehicle` / `SavedPartReference.Resolve` identities, which return null for a
+  skipped id. They then `Warn` per entry or `Require` per record; none falls back to the controlled or a
+  similarly named vehicle. The coordinator retains every record with warnings, so the next save keeps
+  it, and current edits for that feature are not captured until **Use current setup** is pressed. The
+  native save itself no longer contains a skipped vehicle after a re-save.
+  - The native `_skippedVehicles` set is a private static field (`Universe.cs:102`) and is not passed to
+    any public method we patch. Reading it would add a private-reflection dependency; the preflight
+    already predicts every skip except an unexpected build exception, which KSA alerts on itself and
+    participants still report as unresolved. We therefore do not read it.
+  - KSA also ends the mission only for roster kittens whose `AssignedVehicleId` matches a skipped
+    vehicle. An EVA kitten (`AssignedVehicleId == "EVA"`) skipped for a missing character stays
+    assigned, and so does the crew of a vehicle skipped for a missing parent. This is stock behavior.
+- **`JobSystems.WaitAll()` (new) and our join.** `WaitAll` (`JobSystems.cs:61-67`) joins
+  `NearestOrbitAndPerformanceWorker`, `OrbitSolvers`, `VehicleSolver` and `ClothSolvers`. Native
+  `Universe.DeserializeSave` now calls it first (`Universe.cs:2426`, replacing the 5482 three-scheduler
+  join), so native destruction also waits for the hover job. Our prefix still must join first,
+  because the `Resetting` callbacks mutate old-world state before the original runs. `LoadSystem`
+  (`Universe.cs:236-260`) has no join at all. `ResetAtJoinedBoundary` now calls `JobSystems.WaitAll()`
+  (`NativeSaveHooks.cs:191-212`). That is the game's own set and survives scheduler renames such as
+  5482's. `PrepareFrame` still queues `NearestOrbitPointJob` (`Program.cs:2330-2335`) before the
+  world-change handoff (`GetJobSimStep`, `:2350`).
+- **`JobSystems.PlumeTrailLodBuilder` removed (rev 5505).** The standing "not joined" issue is moot.
+  No unscience code referenced it.
+- **Checked unchanged:** the hook targets `GameSave.Populate()`, `UncompressedSave.Write()` (`bool`),
+  `UncompressedSave.Load()` (lazy caught read, `:61-79`), `Universe.DeserializeSave(UniverseData)` and
+  `Universe.LoadSystem(string)`. `Camera.DeserializeSave` still falls back to the first vehicle or the
+  home body when the followed vehicle was skipped (`Camera.cs:819-836`).
+- **Payload compatibility.** No participant ID, version or payload changed. Saves that 5482 refused now
+  load with diagnostics.
+- **Managed checks (`saves.tests`, 18 lifecycle checks).** The fixture native load joins via `WaitAll` and
+  skips the same vehicles. New: "vehicles KSA skips load with warnings instead of refusal" (file and
+  direct loads, ordering after reset, one name per missing template) and "skipped vehicle stays
+  unresolved through the real coordinator" (repeated loads, retained record, next save). Structural
+  refusals now include a null parent record, null child, cycle and over-deep tree.
+- **Live checks pending (native).** Load a save whose vessel uses an uninstalled part mod and one with an
+  uninstalled character kitten. Check the KSA alerts, the toolbox warnings, the
+  unresolved-target warnings, roster state and camera fallback. Re-save, then confirm the retained
+  records survive and that **Use current setup** releases them.
+
 ## KSA 5482 (5438 → 5482) verification
 
 Verified against `2026.9.22.5482` (NEW) vs `2026.9.10.5438` (OLD) with both supplied decomp trees.
@@ -81,7 +162,7 @@ Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
   - The seven `PhysicsFrameHook` seams are unique and in order (`Program.cs:2162-2212`).
   - The join set is still complete. Physics islands run inside the `VehicleSolver` job on
     `VehicleWorkerPool`, `BubbleStepJob.cs` was removed, and no new schedulers were added.
-    `PlumeTrailLodBuilder` is still not joined, which is a standing issue.
+    `PlumeTrailLodBuilder` is still not joined, which is a standing issue (@5638 moot: removed in rev 5505).
 - **Live checks pending (native).**
   - Overwrite while the old folder is locked (Windows): no sidecar is written into the intact old save,
     and the toolbox reports the failure.
@@ -106,9 +187,9 @@ Research and ordering evidence: [native lifecycle assessment](../plans/saves-gam
 | Harmony postfix `GameSave.Populate()` | Capture detached feature state against the completed native UniverseData snapshot. Never mutate live physics for capture. |
 | Harmony postfix `UncompressedSave.Write()` (`bool` @5482; bound by name + `Type.EmptyTypes`) | Write sidecar only after successful native file output: `Written` fires only when the original returned `true` (`__result`) and was not skipped. A `false` return (@5482: `SaveDirectory.TryReplace` or native write failure, old folder possibly intact) invokes `WriteFailed`, which discards the capture and reports failure; a throwing write publishes nothing. |
 | Harmony prefix + finalizer `UncompressedSave.Load()` | Preflight and scope the file transaction; skip editor refusal; clear context on success or exceptions without suppressing native errors. @5482 the universe read is lazy and caught inside `Load` (logged, returns before `DeserializeSave`); the finalizer turns a load that never reached `DeserializeSave` into `LastLoadError`/`LoadFailed` (`InvalidDataException`). |
-| Harmony prefix + postfix + finalizer `Universe.DeserializeSave(UniverseData)` | Join workers, discard stale queued edits and reset old ownership before native destruction; replay after reconstructed vehicles/camera and before next solver dispatch. Direct loads also reset baseline. |
+| Harmony prefix + postfix + finalizer `Universe.DeserializeSave(UniverseData)` | Join workers, discard stale queued edits and reset old ownership before native destruction; replay after reconstructed vehicles/camera and before next solver dispatch. Direct loads also reset baseline. @5638 the prefix raises preflight `LoadWarning`s for vehicles native will skip after the reset. |
 | Harmony prefix + finalizer `Universe.LoadSystem(string)` | Validate system name via `SystemLibrary.Find` before cleanup on world replacement. No replay from previous save. |
-| `JobSystems.OrbitSolvers`, `VehicleSolver`, `ClothSolvers`, `NearestOrbitAndPerformanceWorker` (renamed from `ConcurrentWorkers` @5482) / `JobScheduler.Wait()` | Explicit joins before prefix cleanup: the original's internal joins are too late for prefix mutations. Requires `Brutal.Concurrency` reference. |
+| `JobSystems.WaitAll()` (@5638; was the four `JobScheduler.Wait()` calls on `OrbitSolvers`, `VehicleSolver`, `ClothSolvers`, `NearestOrbitAndPerformanceWorker`) | Explicit join before prefix cleanup: the original's own `WaitAll` (`Universe.cs:2426`) is too late for prefix mutations, and `LoadSystem` has none. Requires `Brutal.Concurrency` reference. |
 | `Program.IsEditorOpen`, `Universe.CurrentSystem` | Preserve active setup on editor-refused requests and no-world early failures. |
 | `PhysicsFrameHook.ClearPending()` | Discard queued old-world mutations both before and after cleanup callbacks. BeforePhysics subscriptions remain registered. |
 
@@ -151,10 +232,11 @@ untouched until replay and stock startup remains immediate.
 ## Native dependency and identity preflight
 
 `NativeSavePreflight` checks the incoming `UniverseData` against the current celestial system,
-unique vehicle IDs, existing `IParentBody` targets, required `CharacterReference` and used
-`PartTemplate` assets through `ModLibrary.Get<T>`. Bounded acyclic `PartInstance.Children` /
-`SubPartInstances` traversal runs before ownership reset. This prevents known missing native
-asset failures from destroying the current scene; it cannot predict every native reconstruction
+unique vehicle IDs and a parent-body record per vehicle, with a bounded acyclic `PartInstance.Children` /
+`SubPartInstances` traversal, before ownership reset. @5638 a missing `IParentBody`, `CharacterReference`
+or used `PartTemplate` (resolved through `ModLibrary.Get<T>`) is no longer a refusal: KSA skips that
+vehicle itself, so the preflight returns a per-vehicle diagnostic that `NativeSaveHooks` raises as
+`LoadWarning` after reset (see the 5638 section). It cannot predict every native reconstruction
 failure. `GameTime.IsValid`, camera reference fields/raw transforms/mode and `KittenRoster` are also
 checked before reset. `UniverseData.IsValid` is deliberately avoided: its CameraData.IsValid requires
 a nonempty Following identity, but native saves explicitly support unfollowed/free cameras.
@@ -308,3 +390,10 @@ the scene coordinator. It checks group capture, same-save reuse without new allo
 saves without the group field, missing kittens releasing their sets, vanilla-load cleanup before
 frame, no reuse after release, idempotent release, and rejection of a malformed group. Cloning
 itself, GPU writes and the native load are checked in-game.
+
+@5638: a saved DOH kitten whose character is no longer installed is skipped by KSA itself. The
+preflight then warns, and restore reports "DOH kitten missing" and releases its detached set as for
+any missing kitten. Despawn, prune and orphan removal go through
+`Universe.DestroyVehicle(kitten, CrewDisposition.Boarded)` (see
+[character-and-materials.md](character-and-materials.md#doh) #28). This leaves the save adapter, its
+reset order and the stale-set release unchanged. `doh.tests` (34 checks) adds teardown coverage.

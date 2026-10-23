@@ -23,7 +23,6 @@ using MeowSci.ZippoLib;
 using MeowSci.HumbleArteestLib;
 using MeowSci.DohLib;
 using MeowSci.KitchenSinkLib;
-using MeowSci.PartsNowLib;
 using MeowSci.TheTickLib;
 using MeowSci.ThugLifeLib;
 using MeowSci.DontStifleMeLib;
@@ -93,7 +92,6 @@ public class Mod
             _submods.Add(new KitchenSinkSubmod());
             _submods.Add(new KittenAnimationsSubmod());
             _submods.Add(new KiwisMarblesSubmod());
-            _submods.Add(new PartsNowSubmod());
             var pebbles = new PebblesSubmod();
             _submods.Add(pebbles);
             _submods.Add(new PyroSubmod());

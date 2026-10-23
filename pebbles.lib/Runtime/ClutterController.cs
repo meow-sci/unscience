@@ -139,6 +139,8 @@ public sealed partial class ClutterController : IDisposable
             RememberGrids(record, sourceGraph, before, authoritative: record.Owner != null);
             ReplayGrids(record, next.Graph.Reference, next.Placement, next.Render, next.Physical);
             ClearStatics(body);
+            // KSA 5629+: the renderer releases viewports only on attached arrays, so detach residency here.
+            ClutterResidency.ReleaseDetached(owner.PlanetEcotypeRenderData[body.Hash]);
             if (record.Owner == null)
             {
                 record.OriginalTemplate = originalTemplate;
@@ -178,6 +180,7 @@ public sealed partial class ClutterController : IDisposable
         RememberGrids(record, resources.Graph.Reference, resources.Placement, authoritative: true);
         ReplayGrids(record, record.OriginalTemplate!.GroundClutterReference!, record.OriginalPlacement, record.OriginalRender, record.OriginalPhysical);
         ClearStatics(body);
+        // The outgoing override arrays are retired below; the originals were released when Apply detached them.
         SetTemplate(body, record.OriginalTemplate!);
         owner.PlanetPlacementData[body.Hash] = record.OriginalPlacement; owner.PlanetEcotypeRenderData[body.Hash] = record.OriginalRender; owner.PlanetPhysicalData[body.Hash] = record.OriginalPhysical;
         Bounds(owner)[body.Hash] = record.OriginalRadius;

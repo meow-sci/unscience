@@ -40,7 +40,6 @@
     <ProjectReference Include="..\kitchen-sink.lib\kitchen-sink.lib.csproj" />
     <ProjectReference Include="..\the-tick.lib\the-tick.lib.csproj" />
     <ProjectReference Include="..\thug-life.lib\thug-life.lib.csproj" />
-    <ProjectReference Include="..\parts-now.lib\parts-now.lib.csproj" />
     <ProjectReference Include="..\dont-stifle-me.lib\dont-stifle-me.lib.csproj" />
     <ProjectReference Include="..\rocky-mcrock-face.lib\rocky-mcrock-face.lib.csproj" />
     <ProjectReference Include="..\save-yourself.lib\save-yourself.lib.csproj" />
@@ -54,12 +53,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Brutal.Core.Common" Condition="Exists('$(KSAFolder)Brutal.Core.Common.dll')">
-      <HintPath>$(KSAFolder)Brutal.Core.Common.dll</HintPath>
+    <Reference Include="Brutal.Core" Condition="Exists('$(KSAFolder)Brutal.Core.dll')">
+      <HintPath>$(KSAFolder)Brutal.Core.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="Brutal.Core.Numerics" Condition="Exists('$(KSAFolder)Brutal.Core.Numerics.dll')">
-      <HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath>
+    <Reference Include="Brutal.Numerics" Condition="Exists('$(KSAFolder)Brutal.Numerics.dll')">
+      <HintPath>$(KSAFolder)Brutal.Numerics.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Brutal.ImGui" Condition="Exists('$(KSAFolder)Brutal.ImGui.dll')">
@@ -70,8 +69,8 @@
       <HintPath>$(KSAFolder)Brutal.ImGui.Abstractions.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="Brutal.Core.Strings" Condition="Exists('$(KSAFolder)Brutal.Core.Strings.dll')">
-      <HintPath>$(KSAFolder)Brutal.Core.Strings.dll</HintPath>
+    <Reference Include="Brutal.Strings" Condition="Exists('$(KSAFolder)Brutal.Strings.dll')">
+      <HintPath>$(KSAFolder)Brutal.Strings.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="KSA" Condition="Exists('$(KSAFolder)KSA.dll')">

@@ -1,5 +1,36 @@
 # Planetary rings — rocky-mcrock-face
 
+## KSA 5638 (5482 → 5638) spot check
+
+Spot-checked 2026-10-22 against `2026.10.19.5638` (ksa-game-assemblies `edda844`) for the string-reflection
+surface and the render seams the other 5638 findings touch. The solution builds; no ring-specific managed
+test exists and no native run was possible. **No code change.** This was not a full re-verification of
+the catalog below.
+
+- ✅ **Reflected members present.** These are all still present at 5638:
+  - `Program._planetTransparenciesRenderer` `:178`.
+  - `PlanetTransparenciesRenderer._ringsRenderer :41`, `_ringRendererCreated :47` and `_anyRings :71`.
+  - Public `PopulatePlanets :158` and `RebuildFrameResources :381` (ring branch `:409`).
+  - `StaticCelestial._distantRenderer :8` and `DistantSphereRenderer._material :29`.
+  - The auto-property backing fields `TextureReference.<TextureAsset>k__BackingField` (`:61`) and
+    `MeshReference.<HostPrimitives>k__BackingField` (`:46`).
+  - `ModLibrary.AllFiles/AllGltfs/AllMeshes` (`:68,76,80`).
+  - `TextureReference.Bind(Renderer, StagingPool)` is still virtual (`:129`).
+  - The `PlanetaryRingsRenderData`, `DistantSphereRenderer`, `PlanetaryRingsReference` and
+    `TextureReference` diffs are optimized-build decompiler output. `DistantSphereMaterialData` lost
+    nothing Bloomin writes (typed, compile-checked).
+- ℹ️ **Atmosphere-only pass in secondary viewports.** `PlanetTransparenciesRenderer.RenderAtmosphereOnly`
+  (`:233`, called from `Program.RenderViewport` `:4750`) skips clouds and rings
+  (`flag2 = !inAtmosphereOnly && …` `:244`). Hot Pursuit, docking and Add Camera feeds therefore show no
+  ring meshes, stock or Bloomin, though ring shadows in the atmosphere data still apply. `PopulatePlanets`
+  now sizes both `_bodiesSortedBackToFront` and the new `_bodiesSortedForViewport` (`:178-179`), so
+  Bloomin's re-populate after adding a ring keeps both arrays in step.
+- ℹ️ **Bindless capacity (rev 5546).** `BindlessTextureLibrary` clamps capacity to device update-after-bind
+  limits, which only matters for painted-ring textures on low-limit GPUs (see
+  [decals](decals.md#ksa-5638-5482--5638-verification)).
+- ℹ️ **Optimized KSA.dll (rev 5630).** Field reflection is unaffected, and these mods patch no game
+  method besides the shared `HotkeyGuard`.
+
 ## KSA 5482 (5438 → 5482) verification
 
 Verified against `2026.9.22.5482` (NEW) vs `2026.9.10.5438` (OLD) with both supplied decomp/Content
@@ -208,7 +239,7 @@ Decomp paths relative to `~/repos/meow-sci/ksa-game-assemblies/current/decomp` (
 | 6 | `PbrMaterialReference.{DiffuseReference : TextureReference?, NormalReference : TexturePowerReference?, PBRMap : TextureReference?}` (public fields) | direct API | `KSA/PbrMaterialReference.cs:10-17` | `RingSwapController` | OK |
 | 7 | `MeshReference` — public `Id/Simple/Interleaved/PrimitiveCount/BoundingSphereRadius` fields, `HostPrimitives`/`DevicePrimitives` get-only props, `DeviceMesh => DevicePrimitives[0]`, `Bind(Renderer, StagingPool)`, `Dispose()` | direct API | `KSA/MeshReference.cs:17-58,120,145` | `RingMeshFactory`, `RingAssetCatalog` | OK — **multi-primitive shape is new @5348** (`DevicePrimitives[]` replaced the old single `DeviceMesh` field) |
 | 8 | `MeshReference.<HostPrimitives>k__BackingField : MeshAsset[]` (auto-prop backing field) | **reflection (string)** | `KSA/MeshReference.cs:40` | `RingMeshFactory` static field lookup — null-checked; Apply fails with a UI error, never crashes | OK |
-| 9 | `ModLibrary.AllMeshes : SerializedCollection<MeshReference>` / `ModLibrary.AllFiles : SerializedCollection<FileReference>` / `ModLibrary.AllGltfs : SerializedCollection<Gltf2Reference>` (internal static fields) | **reflection (string)** | `KSA/ModLibrary.cs:80,68,76` | `RingAssetCatalog.Collection<T>` — same pattern/names as parts-now `GameRegistry` (AllMeshes/AllFiles already on the watchlist) | OK |
+| 9 | `ModLibrary.AllMeshes : SerializedCollection<MeshReference>` / `ModLibrary.AllFiles : SerializedCollection<FileReference>` / `ModLibrary.AllGltfs : SerializedCollection<Gltf2Reference>` (internal static fields) | **reflection (string)** | `KSA/ModLibrary.cs:80,68,76` | `RingAssetCatalog.Collection<T>` — AllMeshes/AllFiles/AllGltfs by name string (on the string-reflection watchlist; pebbles `ClutterAssets` reflects the same three names) | OK |
 | 9b | `Gltf2Reference.{Id, Source : FileReference?}` + `FileReference.ModPath` · `GltfUtility.LoadModel(string) : Gltf` + `Gltf.Meshes[].Name` (JSON-only parse for the catalog) · `GltfLoader(string)` ctor + `MeshReference.Load(GltfLoader, int mesh, createDeviceMesh: false)` (conversion — the exact import `MeshFileReference.DoLoad` runs for the stock ring rocks; skinned meshes import in bind pose) | direct API | `KSA/Gltf2Reference.cs:10`; `KSA/FileReference.cs:24`; `Brutal.GltfApi/GltfUtility.cs:38`, `GltfLoader.cs:23`; `KSA/MeshReference.cs:76` | `RingAssetCatalog.RefreshGltfMeshes`, `RingMeshFactory.GetRingUsableFromGltf` — makes character/MMU/helmet meshes (the glTF-file pipeline, never in `AllMeshes`) selectable | OK |
 | 9c | `DeviceMeshInterleaved.IndexCount` (public field) · `SimpleVkMesh.IndexCount` | direct API | `KSA/DeviceMeshInterleaved.cs:117`; `RenderCore.Mesh/SimpleVkMesh.cs:26` | `RingAssetCatalog.GetMeshIndexCount`, `RingMeshFactory.GetConvertedIndexCount` — UI triangle-cost readout only | OK |
 | 10 | `SerializedCollection<T>.GetList() : List<T>` (live list — copied before iteration) | direct API | `KSA/SerializedCollection.cs:62` @5482 | `RingAssetCatalog.Refresh` | OK (5482 only adds `Deregister`; the game deregisters runtime distant glints, which never appear in the mesh/file/gltf catalogs) |

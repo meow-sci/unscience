@@ -50,10 +50,17 @@ Auto-discovers all named blinky grids on all loaded vehicles by parsing `pixel_{
 
 Pixel engines only fire if they can reach propellant. KSA's resource graph refuses the first hop out
 of a consumer part unless the connection sits on a connector the part template declares in its
-`ConsumerFeedWiring`/`FeedsFrom` wiring **and** that connection carries the combustor's plumbing
-capability (`BulkFluid` for these engines). blinky therefore connects
+`ConsumerFeedWiring`/`FeedsFrom` wiring **and** that connection carries the tank-fed core's
+`PlumbedCore.PlumbingCapability` (`BulkFluid` for these engines). blinky therefore connects
 `RocketCore.FeedConnectors[i]` (e.g. EngineA3's `_connector3`) to a fuel-bearing `Part`, and
 stage-aligns each pixel part to its fuel anchor so the `…SameStage` flow rules still find the tank.
+
+Fuel anchors are spread round-robin over every part that carries a tank **able to hold the pixel
+engine's propellant** (`FuelAnchorFinder`, using the game's `Tank.HoldableSubsetOf`). Tanks that
+cannot hold any reactant of the engine's mix — notably the KSA 5638 magnetic trap
+`CoreFuelTankA_Prefab_MagneticTrapA`, which holds only antimatter — are skipped and counted in a
+`skipped N tank part(s) that cannot hold …` log line, so they never starve a pixel. The same rule
+applies to **Repair Feed** and save restore.
 
 A bare part-to-part connection satisfies neither requirement — that was the long-standing bug where
 grids added vehicle mass but never lit.
@@ -165,6 +172,20 @@ Normal KSA saves made with Unscience preserve grids, ownership, patterns and scr
 the native-loaded parts. No extra engine parts are spawned and vehicle ignition is preserved.
 See [save details](../blinky.lib/README.md#scene-saves). Native saves omit ordinary pixel names,
 so a scan alone cannot recover older saves that lack Unscience grid metadata.
+
+## KSA 5638 compatibility
+
+- KSA 5487 moved tank-fed propellant draw (`ResourceManager`, `DesiredMix`, `FeedTanks`,
+  `PlumbingCapability`) from `Combustor` to the new `PlumbedCore` base, shared by `Combustor`,
+  `ThermalCore` and `AntimatterRamCore`. The feed check, **Diagnose** and the propellant tally now
+  test `PlumbedCore`, so a pixel engine with any tank-fed core is reported correctly. `SolidMotor`
+  cores are still skipped.
+- KSA 5638 adds magnetic-trap tanks (`<MagneticTrap Value="true"/>`, `Interstellar` editor tag).
+  They are excluded as fuel anchors unless they can hold the pixel engine's propellant (see
+  *Propellant Feed*).
+
+Verified by build and decompiled-source review only. Building a grid on a vessel that carries a
+magnetic trap, and ignition of a non-combustor pixel engine, still need an in-game pass.
 
 ## KSA 5482 compatibility
 

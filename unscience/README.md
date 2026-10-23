@@ -4,7 +4,7 @@ Unscience is the only distributed mod. `dotnet build` deploys one `unscience/` f
 feature libraries remain separate projects with explicit references. Former standalone hosts are
 retained for development and are not deployed or published. See [distribution](../README.md#distribution).
 
-A unified supermod that consolidates 31 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
+A unified supermod that consolidates 30 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
 
 ## Included Submods
 
@@ -31,7 +31,6 @@ A unified supermod that consolidates 31 KSA feature libraries into a single ImGu
 | Kitchen Sink | Editor fixes, IVA visibility, experimental see-through capsule windows, unlocked IVA camera and G-load protection |
 | Kitten Animations | Targets any live EVA kitten through a filterable picker, then plays body animations and expressions |
 | Kiwi's Marbles | Welds celestial bodies to other orbiters with CCI offsets |
-| Parts Now | Validates and loads part asset bundles at runtime |
 | Rocky McRock Face | Swaps planetary ring meshes/textures (Saturn's rock field) with any built-in mesh |
 | Pebbles — Ground Clutter | Replaces selected planet clutter types with built-in meshes or GLBs, with scale, collider editing and per-planet restore |
 | Pyro | Customizes volumetric engine exhaust plumes |
@@ -120,11 +119,15 @@ remain in subsequent saves so missing entries are not silently lost. While a fea
 retained, its current edits do not replace that record; **Use current setup for future saves**
 discards retained records understood by this build so the current setup can be saved instead.
 Unknown feature versions stay retained. Original save files are unchanged until overwritten.
+Saves written while the retired Parts Now submod was installed carry a `parts-now` record. This
+build has no owner for it, so a load lists it as an unsupported feature and carries it forward
+unchanged; the native save and every other feature still load normally. Mod folders that Parts Now
+installed are ordinary KSA content mods (enabled in `manifest.toml`) and keep loading at boot.
 
-Imported **PNG, GLB and sound libraries** and **Parts Now mod folders** must remain installed.
-When moving a save to another computer, copy these dependencies too. Runtime part templates must
-be available before native reconstruction; known missing part/character dependencies reject the load
-before the current scene is destroyed. Optional missing media leaves a retained feature record.
+Imported **PNG, GLB and sound libraries** must remain installed. When moving a save to another
+computer, copy these dependencies too. Part templates (including content-mod parts) must be
+installed before loading; known missing part/character dependencies reject the load before the
+current scene is destroyed. Optional missing media leaves a retained feature record.
 PNG/audio references use catalog filenames; GLB identities additionally verify content hashes.
 Named preset libraries remain global. Skittles also stores the applied style in scene saves.
 
@@ -189,11 +192,23 @@ the vehicle editor is open.
 
 ## KSA compatibility
 
-The current checkout compiles against KSA **2026.10.7.5541**, including Kitchen Sink's IVA
-camera unlock and the required Graffiti global-descriptor migration. Kitchen Sink and shared
-save suites pass; native acceptance is pending. The last full integration audit remains
-**2026.9.22.5482** (previously 2026.9.10.5438).
-User-visible changes:
+The current checkout compiles against KSA **2026.10.19.5638**; the full integration audit was run
+against it (diffed from 2026.9.22.5482; [upgrade report](../plans/KSA_5638_UPGRADE.md)). The build and
+all 18 managed suites pass; native acceptance is pending. User-visible changes in 5638:
+
+- **Parts Now was removed.** Saves that contain its record still load; the record is kept and
+  reported as an unsupported feature.
+- Loading a save whose vessel uses a missing part mod or character no longer refuses the whole
+  load: KSA skips that vessel with its own alert and Unscience shows a warning.
+- The Tick and Kitchen Sink G-load protection work again (they were silently disabled on 5638), and
+  protected EVA kittens also survive KSA's new hard-landing death.
+- Free Fallin's Full Canopy shader uses the new descriptor sets; it disables itself with a log line
+  if the game's shader layout can't be read.
+- Kiwi's Marbles welds that target a star now survive save/load; DOH despawn uses KSA's own vehicle
+  teardown; Iron Man's navball thrust marker points along the rocket nose; Hot Pursuit, camera
+  sequences far from the origin and Blinky's fuel pairing (magnetic-trap tanks) were adjusted.
+
+Earlier (5482) user-visible changes:
 
 - Meshes hidden by Blinky/It's So Shiny still render in raytraced IVA views (known gap).
 - Eternal Flame refills fuel during burns; this needs in-game confirmation.

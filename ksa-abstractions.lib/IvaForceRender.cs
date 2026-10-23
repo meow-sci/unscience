@@ -66,8 +66,8 @@ public static class IvaForceRender
         _ctorPostfix = typeof(IvaForceRender).GetMethod(nameof(CtorPostfix), BindingFlags.NonPublic | BindingFlags.Static)!;
         harmony.Patch(_ctorOriginal, postfix: new HarmonyMethod(_ctorPostfix));
 
-        // KSA 5482 raster-composes static part models from cached batches and applies the
-        // internal/IVA gate itself, without calling PartModel.AddInstance.
+        // KSA 5482+ raster-composes static part models from cached batches and applies the
+        // internal-model gate itself (5638: RendersInterior()), without calling PartModel.AddInstance.
         _composeOriginal = AccessTools.Method(typeof(PartTreeRenderData), nameof(PartTreeRenderData.Compose), new[] { typeof(Brutal.Numerics.double4x4).MakeByRefType(), typeof(bool), typeof(IViewport), typeof(int) })
             ?? throw new MissingMethodException(nameof(PartTreeRenderData), nameof(PartTreeRenderData.Compose));
         _composePrefix = typeof(IvaForceRender).GetMethod(nameof(ComposePrefix), BindingFlags.NonPublic | BindingFlags.Static)!;
@@ -134,10 +134,12 @@ public static class IvaForceRender
     /// template for this one Compose call so stock code appends instances and dents consistently;
     /// <see cref="ComposeFinalizer"/> restores them even when Compose throws. Only the main-thread
     /// render path reads <c>Template.Internal</c>, so no other reader observes the change.
+    /// Skipped where stock already renders interiors: KSA 5638 gates internal models on
+    /// <c>RendersInterior()</c> (IVA mode or an inside-vehicle viewport such as a crew portrait).
     /// </summary>
     private static void ComposePrefix(IViewport inViewport)
     {
-        if (KSA.Program.Editor == null || inViewport.Mode == CameraMode.IVA
+        if (KSA.Program.Editor == null || inViewport.RendersInterior()
             || !inViewport.HasAny(ViewportOptionFlags.RenderPartModels)) return;
         if (_internalTemplatesDirty) RebuildInternalTemplates();
         foreach (var template in _internalTemplates)

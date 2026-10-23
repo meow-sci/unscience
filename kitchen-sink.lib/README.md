@@ -19,10 +19,13 @@ See [Kitchen Sink controls](../kitchen-sink/README.md).
 - `GLoadProtection`: concurrent live registry using exact vehicle reference identity;
   multiple targets, duplicate prevention, missing/disposed pruning and reset.
 - `GLoadProtectionPatches`: Apply/Remove Harmony helper used by both hosts. The transpiler
-  requires exactly one `StructuralLoad.GLoadFraction` getter in the private static
-  `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState)` method. It filters only the
-  comparison input for registered targets, preserving load telemetry, part damage, fluid-pressure
-  damage and Bepu contacts. Unexpected method layouts reject installation explicitly.
+  requires exactly one `StructuralLoad.GLoadFraction` getter and exactly one
+  `PhysicsBubble.DetectKittenImpact(VehicleUpdateState, SimStep) : bool` call in the private static
+  `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState, SimStep)` method (KSA 5638 signature).
+  It filters only the G-load comparison input and the kitten hard-landing result for registered
+  targets, so a protected kitten falls through to the filtered G-load check while load telemetry,
+  the kitten velocity sample, part damage, fluid-pressure damage and Bepu contacts stay native.
+  Unexpected signatures or method layouts reject installation explicitly.
 - `KitchenSinkSubmod.GLoadProtection.cs`: filtered vehicle picker, add button and active table
   with a per-row Delete action. Patch readiness gates adding entries.
 
@@ -57,9 +60,9 @@ The removed Flexo diagnostics no longer own any part-transform or solver-resync 
 ## Validation
 
 `dotnet run --project kitchen-sink.tests` links the production registry/transpiler into managed
-KSA 5438 decision fixtures (the detector and end-frame caller are unchanged from 5402).
-No G-load algorithm or saved-record migration is required for 5438 or 5482. On KSA 5482
-`PhysicsBubble.DetectStructuralFailure` has a byte-identical body. The shared IVA helper in
+KSA 5638 decision fixtures and checks them against the real `KSA.dll` metadata. KSA 5638 changed
+`PhysicsBubble.DetectStructuralFailure` to `(VehicleUpdateState, SimStep)` and added the kitten
+hard-landing branch; the lookup and transpiler follow it. No saved-record migration is required. The shared IVA helper in
 `ksa-abstractions.lib` now reveals editor internals through `PartTreeRenderData.Compose`, because
 5482 raster composition bypasses the dent-aware `AddInstance` sink that 5438 used.
 Full solution compilation checks typed game/UI references. Actual

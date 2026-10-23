@@ -36,8 +36,8 @@ Headless library providing programmatic kitten spawning and per-kitten GPU mater
 ### Spawning (`Spawning/`)
 
 - **`KittenSpawner`** — Core spawning engine replicating `EVADoor.CreateKittenEva()`. Split into
-  partials: `KittenSpawner.cs` (spawn/despawn/prune), `.Positioning.cs`, `.Materials.cs` (per-kitten
-  cloning) and `.Catalog.cs` (backpack part, propellant, characters). Supports:
+  partials: `KittenSpawner.cs` (spawn), `.Teardown.cs` (despawn, prune, orphan removal), `.Positioning.cs`,
+  `.Materials.cs` (per-kitten cloning) and `.Catalog.cs` (backpack part, propellant, characters). Supports:
   - Vehicle-relative positioning with body-frame offset. The anchor is `SpawnRequest.ReferenceVehicle`,
     or an unambiguous `ReferenceVehicleId`. The orbit epoch is the reference state's own `StateTime`,
     as `EVADoor` does.
@@ -49,9 +49,11 @@ Headless library providing programmatic kitten spawning and per-kitten GPU mater
     fit above the reserve. Before each `KittenEva` is constructed, at least 2 free slots are required,
     because its avatar allocates a fur material.
   - If the `KittenEva` constructor throws after the vehicle registered itself, the half-built kitten
-    is deregistered and disposed. The result reports how many kittens spawned.
+    is removed through the same teardown (and deregistered directly if that throws). The result
+    reports how many kittens spawned.
   - `Despawn(id)` / `DespawnAll()` — remove spawned kittens and release material sets no other
-    kitten uses. Also clears entries whose kitten the game already removed.
+    kitten uses. Also clears entries whose kitten the game already removed. See
+    [kitten teardown](#kitten-teardown-ksa-5638).
   - `PruneDisposed()` — drop entries for kittens the game destroyed and release their materials
   - `RecolorKitten(id, color)` — live tint update
   - `GetAvailableCharacters()` — enumerate character IDs from `ModLibrary`
@@ -89,8 +91,21 @@ All `KittenSpawner` methods MUST run on the game thread. Callers are responsible
 
 Since KSA build 5402 the game locks the shared BepuPhysics shapes registry while the background vehicle physics step (`VehicleUpdateTask`, queued from `Program.PrepareFrame` on the `JobSystems.VehicleSolver` scheduler) is running. That step overlaps the UI pass where doh's buttons fire. Constructing a `KittenEva` (`BepuHandles.Create`) or disposing one (`BepuHandles.Dispose`) calls `ConstraintSim.UnlockShapes`, which throws `InvalidOperationException: The shapes registry cannot be mutated while the vehicle update is stepping` if the step is still mid-flight. This showed up as a crash when spawning several kittens inside each other, because overlapping kittens make the step slow enough to still be running when the next click lands.
 
-`KittenSpawner` guards both paths with `JobSystems.VehicleSolver.Wait()` (see `WaitForVehicleSolverIdle`) before touching the vehicle. `PrepareFrame` waits on the same scheduler at the start of every frame, so this only moves that wait earlier; nothing re-queues the solver until the next frame, so the rest of the spawn loop is safe. The game's own EVA button avoids the race differently, by staging the spawn in `InputEvents.EvaSpawnBuffer` and applying it at the frame sync point.
+`KittenSpawner` guards both paths with `JobSystems.VehicleSolver.Wait()` (see `WaitForVehicleSolverIdle`) before touching the vehicle. Teardown also joins `JobSystems.NearestOrbitAndPerformanceWorker`, whose hover job walks `CurrentSystem.All`; KSA destroys vehicles before queuing that job each frame, while doh's buttons fire after it. `PrepareFrame` waits on the same scheduler at the start of every frame, so this only moves that wait earlier; nothing re-queues the solver until the next frame, so the rest of the spawn loop is safe. The game's own EVA button avoids the race differently, by staging the spawn in `InputEvents.EvaSpawnBuffer` and applying it at the frame sync point.
 
+
+### Kitten teardown (KSA 5638)
+
+Every removal goes through the game's own `Universe.DestroyVehicle(vehicle, CrewDisposition.Boarded)`,
+as KSA itself now does when a kitten boards a vessel (rev 5607). Earlier builds of doh called
+`CurrentSystem.Deregister` and `Vehicle.Dispose` directly, which skipped the game's hand-offs.
+`DestroyVehicle` moves any camera following the kitten, including the character-portrait camera
+(rev 5486). It clears `Program.ControlledVehicle` and every other vessel's target, and moves the
+kitten's particle emitters to the parent body. Then it disposes the kitten, which also deregisters it.
+
+`Boarded` is the only disposition that leaves crew records alone. `EndMission` and `Kill` end or kill a
+roster entry named after the vehicle. doh kittens are not roster crew, so neither applies. Material-set
+release, the solver-idle wait and the prune, unload and stale-restore order are unchanged.
 
 ## Dependencies
 

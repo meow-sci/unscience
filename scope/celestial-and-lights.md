@@ -1,5 +1,66 @@
 # Scope: Celestial Welding & Lights (kiwis-marbles, zippo)
 
+## KSA 5638 (5482 → 5638) verification
+
+Verified against `2026.10.19.5638` (NEW, `edda844`) vs `2026.9.22.5482` (OLD, `a2f724f`). Managed/static
+only: the full solution builds with 0 warnings, and `world-saves.tests` round-trips a star-target weld.
+No native KSA run was possible. Line numbers below are NEW (`decomp/KSA/`).
+
+- **Multi-star systems (semantic drift, fixed in kiwis-marbles).** 5638 adds interstellar content
+  (`Content/Core/InterstellarAstronomicals.xml`). Root `Barycenter`s (`AlphaCentauri` `:8`, `Sirius`
+  `:385`, `61Cygni` `:586`, `Procyon` `:633`) and `FixedStar`s are `IIndependentRoot`/`IParentBody`
+  but not `IOrbiter` (`Barycenter.cs:7`, `FixedStar.cs:7`). The stars that orbit them are
+  `OrbitingStar : StellarBody, IOrbiter, …, IOrbitSolved` (`OrbitingStar.cs:9`), for example
+  `AlphaCentauriA/B` and `ProximaCentauri`. At 5482 no `StellarBody` was an `IOrbiter`.
+  - The Target picker lists `CelestialProvider.GetAllOrbiters()` (`KiwisMarblesSubmod.cs:114`), so stars
+    became selectable targets. Replay resolved non-vehicle targets only from `GetAllCelestials()`, so a
+    star-target weld was dropped on load ("Unresolved celestial weld").
+  - Fix: `FindBodyTarget` (`KiwisMarblesSubmod.Persistence.cs:74-89`) resolves the same candidates (every
+    non-vehicle `IOrbiter`) by exact id. An ambiguous id returns null and is reported, never substituted.
+    The save ID, version 1 and payload are unchanged; a star target is an ordinary
+    `TargetIsVehicle = false` id. Saved original parents may be stars or barycenters. They resolve
+    through `All.OfType<IParentBody>()`, which already included them.
+  - The surface helper and surface mode now apply to any non-vehicle target
+    (`KiwisMarblesSubmod.cs:194-196,308,368`) through `IRadius.MeanRadius`, which `StellarBody` implements
+    (`StellarBody.cs:45`). Previously they required `Celestial`.
+  - Sources stay `Celestial` only (`GetAllCelestials()`, `:113`). `OrbitingStar.Orbit` has a private
+    setter (`OrbitingStar.cs:31`), and roots do not orbit.
+  - Weld math is unchanged for star targets. The source is re-orbited around `target.Parent` (a
+    barycenter for `AlphaCentauriA`) with `Orbit.CreateFromStateCci` (`Orbit.cs:1577`, `mu = parent.Mu`;
+    barycenter mass from `SetMassFromStars`, `CelestialSystem.cs:207-209`; `IParentBody.Mu`,
+    `IParentBody.cs:15`). `IParentBody.Children` (`:27`) and `UpdatePerFrameDataTree` (`:114`) are
+    unchanged. The ancestor walks (`KiwisMarblesSubmod.Persistence.cs:105-106,137-148`) now pass through
+    orbiting stars and stop at the non-`IOrbiter` root.
+- **Orbit solvers iterate `IOrbitSolved` (new since 5482).** `Celestial` and `OrbitingStar` both implement it
+  (`Celestial.cs:18`, `UpdateTask` property `:66`). `Universe.ApplyOrbitSolvers` (`Universe.cs:1897-1912`,
+  reverse order) and `ExecuteNextOrbitSolvers` (`:2097-2111`) use it. A star target's position is
+  therefore applied before the weld prefix, like a planet's. The welded source's `CelestialUpdateTask`
+  still snapshots the welded `Orbit` in `ExecuteNextOrbitSolvers`, after the prefix.
+- **Central-mass orbits (documented limitation).** `Orbit` now carries an optional `_centralMass`
+  (`Orbit.cs:1094`, `Mu` `:1144-1154`, `Create(..., centralMass)` `:1520`), set from
+  `OrbitTemplate.GetCentralMassOverride` (`OrbitTemplate.cs:110-126`: `CentralMass`, `Barycentric`, `TwoBody`)
+  in the `Celestial` and `OrbitingStar` constructors (`Celestial.cs:215`, `OrbitingStar.cs:62-63`).
+  `CreateFromStateCci` never sets it. In-session Unweld restores the captured `Orbit` object exactly.
+  After save/load, the original orbit is rebuilt from state vectors with plain parent gravity. Stock
+  Content uses overrides only on stars, which cannot be sources; a modded planet or moon with an
+  override would drift after unweld. The payload has no field for it, so this is documented, not migrated.
+- **Weld creation guard (hardening).** `InitiateWeld` (`KiwisMarblesSubmod.cs:482-489`) refuses a target
+  that already orbits the source, which replay already rejected as a parent cycle.
+- **Solver window unchanged.** `Program.PrepareFrame` waits (`Program.cs:2285-2296`), applies orbit/vehicle
+  solvers (`:2298,:2301`), queues the hover job (`:2330-2335`), then calls `GetJobSimStep` (`:2350`),
+  `ExecuteNextClothSolvers` (`:2351`), `FlushDirty*` (`:2352-2353`), `ExecuteNextVehicleSolvers`
+  (`:2354`, the weld prefix; method `Universe.cs:2125`, single overload) and `ExecuteNextOrbitSolvers` (`:2355`).
+  `Celestial.SetOrbit` (`Celestial.cs:158`), `Celestial.Orbit` (`:64`), `OrbitColor` (`:72`) and
+  `CreateFromStateCci`'s signature are unchanged.
+- **zippo (spot check only).** `LightModule`, `ColorRgbReference`, `PowerConsumer` and `PartTemplate.Components`
+  (`PartTemplate.cs:119`) show decompiler noise only; `FloatReference`, `IndexedColor` and `KSAColor`
+  are byte-identical. `KeyframeAnimationModule` now gates the transform-dirty refresh on
+  `Extension.ConsumeRotationChange()`. It also fixes the mirrored fan-out state lookup
+  (`GetModuleAndState(keyframeAnimationModule)`), which matters for the Disco D4 mirrored-part live check.
+- **Live checks pending (native):** weld a planet to `AlphaCentauriA` and to `ProximaCentauri`, then
+  save, load and Unweld; check the surface helper on a star target, a weld chain through an orbiting
+  star, and the refused ancestor weld.
+
 ## KSA 5482 (5438 → 5482) verification
 
 No code migration required in kiwis-marbles or zippo. Verified against `2026.9.22.5482` (NEW) vs
@@ -122,8 +183,8 @@ red "Unweld" button. Renders inside the Unscience toolbox via `ISubmod.RenderCon
 | 6 | Direct typed | `CelestialWeldEngine.cs:32`; `KiwisMarblesSubmod.cs:483` | `IOrbiter.Orbit : Orbit { get; }` / `Celestial.Orbit { get; set; }` | `IOrbiter.cs:16`; `Celestial.cs:67` @5482 | Yes | Same | Source `.Orbit` saved for restore. |
 | 7 | Direct typed | `CelestialWeldEngine.cs:35` | `IOrbiter.GetPositionCci() : double3` | `IOrbiter.cs:48` | Yes | Same | Target CCI position each frame. |
 | 8 | Direct typed | `CelestialWeldEngine.cs:36` | `IOrbiter.GetVelocityCci() : double3` | `IOrbiter.cs:62` | Yes | Same | Target CCI velocity each frame. |
-| 9 | Direct typed | `KiwisMarblesSubmod.cs:196-197,369,382` | `Celestial.MeanRadius : double` (override) | `Celestial.cs:87` @5482 | Yes | Same | Surface-placement helper only. |
-| 10 | Direct typed | `KiwisMarblesSubmod.cs:113,114` (via `CelestialProvider`) | `Universe.CurrentSystem : CelestialSystem? { get; }` → `.All : LookupCollection<Astronomical>` → `.UnsafeAsList()` | `Universe.cs:104`; `CelestialSystem.cs:64`; `LookupCollection.cs:210` @5482 | Yes | Same | Source list `OfType<Celestial>()`, target list `OfType<IOrbiter>()`. |
+| 9 | Direct typed | `KiwisMarblesSubmod.cs:194-196,308,368` @5638 | `IRadius.MeanRadius : double` via `IOrbiter` (was `Celestial.MeanRadius`) | `IRadius.cs:5`; `Celestial.cs:86`; `StellarBody.cs:45` @5638 | Yes | @5638 any non-vehicle target, including `OrbitingStar` | Surface-placement helper only. |
+| 10 | Direct typed | `KiwisMarblesSubmod.cs:113,114`; `KiwisMarblesSubmod.Persistence.cs:82,93` (via `CelestialProvider`) | `Universe.CurrentSystem : CelestialSystem? { get; }` → `.All : LookupCollection<Astronomical>` → `.UnsafeAsList()` | `Universe.cs:104`; `CelestialSystem.cs:64`; `LookupCollection.cs:210` @5482 | Yes | ⚠️ @5638 `OfType<IOrbiter>()` now also yields `OrbitingStar` | Source list `OfType<Celestial>()`, target list `OfType<IOrbiter>()`. Replay resolves non-vehicle targets from the same `IOrbiter` set (@5638 fix). |
 | 11 | Direct typed | `CelestialWeldEngine.cs:44` (via `SimTimeProvider`) | `Universe.GetElapsedTime() : UniverseTime` (static) | `Universe.cs:2323` @5482 | Yes | Same | State time for #3. (Was `GetElapsedSimTime() : SimTime` before rev 5211.) |
 | 12 | Cast/type | `CelestialWeldEngine.cs:119`; `KiwisMarblesSubmod.cs:194,257` | `(IOrbiter)Celestial` cast; `IParentBody` as parent type | `IOrbiter.cs`, `IParentBody.cs` | Yes | Same | Celestial implements IOrbiter (topo-sort edge test). |
 | 13 | Lifecycle/Harmony | `Patcher.cs:22,39` | `HotkeyGuard` → `GameSettings.OnKeyAll(GlfwKeyEvent) : bool` | `GameSettings.cs:3407` @5482 | Yes | Same signature | Shared guard; PatchAll defines no own patches. |
@@ -231,7 +292,8 @@ replacement, craft destruction/debris handoff, and unload restoration require an
 ## Scene persistence: celestial welds and lights
 
 Kiwi's Marbles saves stable source/target ids with target kind and original orbital parent/state
-vectors/epoch. Typed `Orbit.StateVectors.{StateTime,PositionCci,VelocityCci}`, `Orbit.Parent` and
+vectors/epoch. @5638 non-vehicle targets, including orbiting stars, resolve from the picker's
+`IOrbiter` set; the payload is unchanged. Typed `Orbit.StateVectors.{StateTime,PositionCci,VelocityCci}`, `Orbit.Parent` and
 `Orbit.CreateFromStateCci` are now part of baseline replay. Reset restores old orbits synchronously;
 replay rebinds bodies/vehicles, checks cycles and runs existing topological updates before solvers.
 Native `CelestialSystem.SerializeSave` only enumerates vehicles and cannot restore these changes.

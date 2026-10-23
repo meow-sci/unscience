@@ -50,8 +50,7 @@ public class OrbitAnimation : IKeyframeAnimation
     public void Initialize(Controller controller, Transform3D transform)
     {
         // Get current state to determine orbit axis
-        double3 targetPos = AnimationHelpers.GetTargetPosition(controller);
-        double3 currentOffset = transform.PositionEcl - targetPos;
+        double3 currentOffset = AnimationHelpers.GetTargetOffset(controller, transform);
         
         // Validate radius
         double radius = currentOffset.Length();
@@ -69,7 +68,7 @@ public class OrbitAnimation : IKeyframeAnimation
         _orbitAxis = AnimationHelpers.CalculateOrbitAxis(currentOffset, transform.LocalRotation);
         _isInitialized = true;
         
-        Console.WriteLine($"[OrbitAnimation] Initialize: pos={transform.PositionEcl}, target={targetPos}, radius={radius:F2}");
+        Console.WriteLine($"[OrbitAnimation] Initialize: offset={currentOffset}, radius={radius:F2}");
     }
     
     public bool Update(Controller controller, Transform3D transform, double deltaTime, double elapsedTime)
@@ -103,12 +102,9 @@ public class OrbitAnimation : IKeyframeAnimation
             + double3.Cross(k, _startOffset) * sin 
             + k * double3.Dot(k, _startOffset) * (1.0 - cos);
         
-        // Get CURRENT target position - target may be moving!
-        double3 currentTargetPos = AnimationHelpers.GetTargetPosition(controller);
-        
-        // Update position relative to CURRENT target (not starting target)
-        // This allows orbit to follow a moving target while still using absolute rotation
-        transform.PositionEcl = currentTargetPos + rotatedOffset;
+        // Update position relative to the CURRENT target (not starting target) - target may be
+        // moving! This allows orbit to follow a moving target while still using absolute rotation
+        AnimationHelpers.SetTargetOffset(controller, transform, rotatedOffset);
         
         // Log on first frame
         if (elapsedTime < deltaTime * 1.5)
@@ -117,8 +113,8 @@ public class OrbitAnimation : IKeyframeAnimation
         }
         
         // Maintain look-at behavior
-        double3 lookAtTarget = LookAtTargetProvider?.Invoke(controller) ?? currentTargetPos;
-        AnimationHelpers.LookAtTarget(transform, lookAtTarget);
+        double3 lookAtOffset = AnimationHelpers.GetLookAtOffset(LookAtTargetProvider, controller);
+        AnimationHelpers.LookAtOffset(transform, rotatedOffset, lookAtOffset);
         
         // Log on completion
         bool isComplete = elapsedTime >= DurationSeconds;

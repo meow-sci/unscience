@@ -22,7 +22,7 @@
     <Compile Include="../ksa-abstractions.lib/EasingHelper.cs" Link="EasingHelper.cs" />
     <Reference Include="BepuPhysics"><HintPath>$(KSAFolder)BepuPhysics.dll</HintPath></Reference>
     <Reference Include="BepuUtilities"><HintPath>$(KSAFolder)BepuUtilities.dll</HintPath></Reference>
-    <Reference Include="Brutal.Core.Numerics"><HintPath>$(KSAFolder)Brutal.Core.Numerics.dll</HintPath></Reference>
+    <Reference Include="Brutal.Numerics"><HintPath>$(KSAFolder)Brutal.Numerics.dll</HintPath></Reference>
     <Compile Include="../garrys-torch.lib/WeldScaleSnapshot.Persistence.cs" Link="WeldScaleSnapshot.Persistence.cs" />
     <Compile Include="../ksa-abstractions.lib/Persistence/SaveJson.cs" Link="SaveJson.cs" />
     <Compile Include="../ksa-abstractions.lib/Persistence/FiniteNumberConverters.cs" Link="FiniteNumberConverters.cs" />

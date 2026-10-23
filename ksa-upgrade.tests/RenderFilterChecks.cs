@@ -7,7 +7,8 @@ using MeowSci.KsaAbstractions;
 
 /// <summary>
 /// KSA 5482 PartRenderFilter: the shared compaction that replaced blinky's and its-so-shiny's
-/// per-module render-skip prefixes. Runs the production patches against fixture compose methods.
+/// per-module render-skip prefixes. Runs the production patches against fixture compose methods,
+/// including the 5638 interior gate (IVA or inside-vehicle crew portraits).
 /// </summary>
 internal static class RenderFilterChecks
 {
@@ -60,6 +61,8 @@ internal static class RenderFilterChecks
         Frame(tree, NoParts);
         Require(Static(mixed).Count == 0, "viewports without part models are skipped");
 
+        CheckInteriorViews();
+
         PartRenderFilter.Unregister(harmony, "its-so-shiny");
         Clear(mixed, plainOnly, nonRaster, misaligned, dynamic, glass);
         Frame(tree, View);
@@ -80,6 +83,26 @@ internal static class RenderFilterChecks
         PartRenderFilter.Unregister(harmony, "faulty");
 
         Console.WriteLine("PartRenderFilter: shared compaction, ordering, dent alignment, owners and fail-open passed.");
+    }
+
+    /// <summary>KSA 5638 composes internal models through the raster path in IVA and crew portraits.</summary>
+    private static void CheckInteriorViews()
+    {
+        var tree = new PartTreeRenderData();
+        var cabin = new PartModel(new PartModelModule.Template { Id = "cabin", Internal = true });
+        tree.AddStatic(cabin, new Part("pixel_f", 15), new Part("hull", 16));
+        var portrait = new TestViewport(ViewportOptionFlags.RenderPartModels) { State = ViewportStateFlags.InsideVehicle };
+        var iva = new TestViewport(ViewportOptionFlags.RenderPartModels) { Mode = CameraMode.IVA };
+
+        Frame(tree, View);
+        Require(Static(cabin).Count == 0, "internal models stay hidden outside interior views");
+        foreach (var viewport in new IViewport[] { portrait, iva })
+        {
+            Frame(tree, viewport);
+            var data = PartModel.ViewportData.Get(cabin, viewport);
+            Require(data.InstanceList.SequenceEqual(new[] { 16 }) && data.DentInstanceList.SequenceEqual(new[] { 1016 }),
+                "interior views compact internal models with aligned dents");
+        }
     }
 
     private static void Frame(PartTreeRenderData tree, IViewport viewport)

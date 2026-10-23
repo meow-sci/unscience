@@ -6,7 +6,7 @@ using KSA;
 using MeowSci.KsaAbstractions;
 using MeowSci.KsaAbstractions.Persistence;
 
-internal static class Program
+internal static partial class Program
 {
     private static int _passed;
 
@@ -29,13 +29,16 @@ internal static class Program
             Run("callback failures are isolated and native exceptions survive", CallbackFailures);
             Run("repeated loads have independent transactions", RepeatedLoads);
             Run("world replacement waits for frame boundary and latest request wins", DeferredLoads);
-            Run("used native template preflight preserves old scene and reports once", NativePreflight);
+            Run("structural preflight refusal preserves old scene and reports once", NativePreflight);
+            Run("vehicles KSA skips load with warnings instead of refusal", SkippedVehiclePreflight);
+            Run("skipped vehicle stays unresolved through the real coordinator", SkippedVehicleRoundTrip);
             Run("worker join failure never reaches native destruction", JoinFailure);
         }
         finally { NativeSaveHooks.Remove(harmony); }
         Run("removal restores native methods", Removed);
         Console.WriteLine($"Native save lifecycle: {_passed} checks passed.");
         StorageTests.Run();
+        RetiredFeatureTests.Run();
         PartReferenceTests.Run();
         KittenPhaseTests.Run();
         MaterialOwnershipTests.Run();
@@ -57,6 +60,7 @@ internal static class Program
         NativeSaveHooks.Resetting = () => Trace.Events.Add("reset");
         NativeSaveHooks.Restoring = () => Trace.Events.Add("restore");
         NativeSaveHooks.LoadFinished = () => Trace.Events.Add("finished");
+        NativeSaveHooks.LoadWarning = _ => Trace.Events.Add("load warning");
         test();
         _passed++;
         Console.WriteLine("PASS " + name);
@@ -94,8 +98,8 @@ internal static class Program
         PhysicsFrameHook.Pending.Enqueue(() => throw new Exception("old action"));
         NativeSaveHooks.Resetting += () => PhysicsFrameHook.Pending.Enqueue(() => { });
         LoadNow(new UncompressedSave());
-        Equal("preflight", "native read", "join orbit", "join vehicle", "join cloth", "join nearest-orbit-and-performance", "clear pending",
-            "reset", "clear pending", "join orbit", "join vehicle", "join cloth", "native destroy",
+        Equal("preflight", "native read", "join nearest-orbit-and-performance", "join orbit", "join vehicle", "join cloth", "clear pending",
+            "reset", "clear pending", "join nearest-orbit-and-performance", "join orbit", "join vehicle", "join cloth", "native destroy",
             "native reconstructed", "restore", "native menus closed", "finished");
         Check(PhysicsFrameHook.Pending.Count == 0, "old-world and reset-queued edits cleared");
     }
@@ -150,7 +154,7 @@ internal static class Program
         Universe.LoadSystem("valid");
         Equal();
         PhysicsFrameHook.ReplayPending();
-        Equal("join orbit", "join vehicle", "join cloth", "join nearest-orbit-and-performance", "clear pending", "reset", "clear pending", "native new system");
+        Equal("join nearest-orbit-and-performance", "join orbit", "join vehicle", "join cloth", "clear pending", "reset", "clear pending", "native new system");
     }
 
     private static void CallbackFailures()
@@ -210,58 +214,6 @@ internal static class Program
     {
         save.Load();
         PhysicsFrameHook.ReplayPending();
-    }
-
-    private static void NativePreflight()
-    {
-        var data = new UniverseData();
-        data.CelestialSystems[0].Vehicles.Add(new VehicleData
-        {
-            RootPartInstance = new PartInstance { SubPartInstances = new() { new() { InstanceOf = "missing-subpart" } } }
-        });
-        int failures = 0;
-        NativeSaveHooks.LoadFailed = ex => { Check(ex is System.IO.InvalidDataException, "controlled preflight error"); failures++; };
-        var save = new UncompressedSave { UniverseData = data };
-        bool rejected = false;
-        try { LoadNow(save); }
-        catch (System.IO.InvalidDataException ex) { rejected = ex.Message.Contains("missing-subpart"); }
-        Check(rejected && failures == 1, "file preflight reports one failure");
-        Equal("preflight", "native read", "finished");
-        Check(NativeSaveHooks.LastLoadError is System.IO.InvalidDataException, "visible failure recorded");
-        Check(!PhysicsFrameHook.IsReplayingWorldChange, "failed preflight releases guard");
-        Trace.Events.Clear();
-        data.CelestialSystems[0].Vehicles[0].RootPartInstance!.SubPartInstances![0].InstanceOf = "part";
-        LoadNow(save);
-        Check(Trace.Events.Contains("reset") && NativeSaveHooks.LastLoadError == null, "installed dependency permits normal replay");
-
-        foreach (Action<UniverseData> corrupt in new Action<UniverseData>[]
-        {
-            d => d.GameTime = null,
-            d => d.Camera = null,
-            d => d.KittenRoster = null,
-            d => d.GameTime!.Valid = false,
-            d => d.Camera!.Following = null,
-            d => d.Camera!.MapInverted = null,
-            d => d.Camera!.CameraMode = (CameraMode)999,
-            d => d.Camera!._positionRaw = new() { Valid = false },
-            d => d.CelestialSystems[0].Id.Id = "different system",
-            d => d.CelestialSystems[0].Vehicles[0].ParentBody.Id = "missing body",
-            d => d.CelestialSystems[0].Vehicles[0].Character = "missing character",
-            d => d.CelestialSystems[0].Vehicles.Add(new VehicleData { Id = "VEHICLE" }),
-            d => d.CelestialSystems[0].Vehicles.Add(d.CelestialSystems[0].Vehicles[0])
-        })
-        {
-            var invalid = new UniverseData();
-            invalid.CelestialSystems[0].Vehicles.Add(new VehicleData());
-            corrupt(invalid);
-            rejected = false;
-            try { NativeSavePreflight.Validate(invalid); }
-            catch (System.IO.InvalidDataException) { rejected = true; }
-            Check(rejected, "invalid native prerequisite rejected");
-        }
-        var freeCamera = new UniverseData();
-        Check(freeCamera.Camera!.Following!.Id == "", "fixture has an unfollowed free camera");
-        NativeSavePreflight.Validate(freeCamera);
     }
 
     private static void JoinFailure()

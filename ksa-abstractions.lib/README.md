@@ -90,7 +90,7 @@ Shared implementation of Kitchen Sink's **Always Render IVA Interiors**. Hosts c
   owner releasing visibility restores the changed flags; unpatch clears all ownership and restores
   templates. `IsInstalled` reports whether both patches attached. Kitchen Sink's capsule experiment
   uses this requirement, and its own scene-save adapter persists that requirement's desired state.
-- **Editor preview:** internal meshes stay visible in the vehicle editor outside IVA while the patch is installed, whether or not `Enabled` is set. KSA 5482 raster-composes static models in `PartTreeRenderData.Compose` and applies the internal/IVA gate there, without calling `PartModel.AddInstance`. The helper therefore uses a prefix on `Compose` for editor, non-IVA viewports that render part models. The prefix temporarily clears `Template.Internal` on internal, non-`ShadowProxy` templates, and a finalizer restores them even when `Compose` throws. Stock code then appends instances and dents consistently. The template list is rebuilt from `PartModel.Instances` after model creation or restoration.
+- **Editor preview:** internal meshes stay visible in the vehicle editor outside IVA while the patch is installed, whether or not `Enabled` is set. KSA 5482 raster-composes static models in `PartTreeRenderData.Compose` and applies the internal/IVA gate there, without calling `PartModel.AddInstance`. The helper therefore uses a prefix on `Compose` for editor viewports that render part models but not interiors. Since KSA 5638 it skips on the stock `RendersInterior()` gate (IVA mode or an inside-vehicle crew portrait) rather than `Mode == IVA`. The prefix temporarily clears `Template.Internal` on internal, non-`ShadowProxy` templates, and a finalizer restores them even when `Compose` throws. Stock code then appends instances and dents consistently. The template list is rebuilt from `PartModel.Instances` after model creation or restoration.
 - Change from 5438: internal meshes no longer appear in editor part thumbnails. The old `AddInstance` postfix also reached thumbnails.
 
 ### HiddenUiFrameHook
@@ -262,8 +262,23 @@ fails. The previous save folder can then survive. The hook raises `WriteFailed` 
 from this session is written into the old save. KSA 5482 also catches an unreadable `universe.xml`,
 logs it and returns before `Universe.DeserializeSave`. When a file load never reaches reconstruction,
 `FinishedLoading` sets `LastLoadError` to an `InvalidDataException` and raises `LoadFailed`; the
-current scene is unchanged. The reset join waits for `JobSystems.NearestOrbitAndPerformanceWorker`
-(renamed from `ConcurrentWorkers` in 5482).
+current scene is unchanged. The reset join calls `JobSystems.WaitAll()` (KSA 5638). It covers the
+nearest-orbit-and-performance, orbit, vehicle and cloth schedulers. Native `DeserializeSave` now runs
+the same join itself, but only after this prefix has already run the reset callbacks, so the explicit
+join stays.
+
+`NativeSavePreflight.Validate` refuses only data that native reconstruction cannot survive:
+- invalid time, camera or roster records;
+- a missing, extra or different celestial system;
+- blank or duplicate vehicle IDs;
+- a vehicle without a parent-body record;
+- a null, cyclic, deeper-than-256 or larger-than-200000-part tree.
+
+Since KSA revs 5632/5633 the game skips a vehicle with a missing parent body, missing part templates
+or an uninstalled character, and shows its own alert. The preflight returns one diagnostic per such
+vehicle instead of refusing the save. `NativeSaveHooks` raises each through `LoadWarning` after reset,
+and the host adds it to the save status. Participants then report those vehicles as unresolved
+targets, and their records are retained.
 
 See [save integration](../scope/saves.md), [plan](../plans/SAVES.md) and
 [managed checks](../saves.tests/README.md). GPU/native acceptance is separate from managed tests.
