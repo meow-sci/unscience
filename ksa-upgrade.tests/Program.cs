@@ -1,5 +1,6 @@
 using System;
 
+PatchApplicationChecks.Run();
 PropellantFeedChecks.Run();
 FreeFallinChecks.Run();
 FreeFallinShaderChecks.Run();

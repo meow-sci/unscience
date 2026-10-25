@@ -1,5 +1,24 @@
 # Save/load lifecycle integration
 
+## KSA 5638 shared handoff startup follow-up
+
+`NativeSaveHooks.Apply` requires the shared `PhysicsFrameHook` before installing save patches. A
+reported Windows startup failure therefore disabled the native sidecar lifecycle along with Dent
+Wizard and welding. The hook now validates its seven native solver calls before compatible foreign
+call wrappers (`Priority.First` plus `before` constraints for existing owners), retains the exact
+result/snapshot boundary, and reports full installation exceptions and transpiler owner/order data.
+Actual Harmony regression tests reproduce the former default-priority conflict, exercise both
+installation orders and three failed retries, and verify targeted rollback preserves foreign patches.
+This demonstrates a compatibility correction; the reported live failure's cause remains unconfirmed.
+
+Deferred world changes still replay after result application and the orbit-reader join, **before**
+`GetJobSimStep` computes time from the new world. Queue ordering, per-callback isolation, previous-time
+timestamps, native capture/reset/replay, feature identities and payload versions are unchanged.
+Failed removal discards pending old-world edits and world requests even when foreign code prevents
+Harmony from rebuilding; installed state stays true until removal succeeds. The real-KSA IL probe
+reads signatures and ordered seams without executing native code. Managed Garry baseline/animation
+round trips remain in the same suite; Windows startup and native save/load acceptance are still open.
+
 ## KSA 5638 (5482 → 5638) verification
 
 Verified against `2026.10.19.5638` (NEW, `ksa-game-assemblies` `edda844`) vs `2026.9.22.5482` (OLD,

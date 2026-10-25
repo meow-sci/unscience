@@ -11,6 +11,8 @@ namespace KSA
 
     public sealed class Program
     {
+        private readonly int[] _frameItems = { 1, 2 };
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         public SimStep RunFrame(double dt) => PrepareFrame(0, dt);
 
@@ -20,6 +22,11 @@ namespace KSA
             Universe.ApplyOrbitSolvers();
             Universe.ApplyVehicleSolvers();
             Universe.ApplyClothSolvers();
+            // 5638's optimized PrepareFrame iterates a ReadOnlySpan<Vehicle> here. Keep a
+            // byref-like local and real branches in the patched caller, without loading KSA.
+            ReadOnlySpan<int> frameItems = _frameItems;
+            for (int i = 0; i < frameItems.Length; i++)
+                if (frameItems[i] < 0) return default;
             SimStep step = Universe.GetJobSimStep(dtPlayer);
             Universe.ExecuteNextClothSolvers(dtPlayer, step);
             Universe.ExecuteNextVehicleSolvers(dtPlayer, step);

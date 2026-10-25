@@ -30,6 +30,29 @@ The fixture's `JobSystems.NearestOrbitAndPerformanceWorker` records joins. Check
 mutations join the orbit readers once, after the step and before editing, and that a second
 `JoinOrbitReaders()` in the same frame does not wait again.
 
+## Harmony composition and actual game IL
+
+`FrameHookInteropChecks` first reproduces the old default-priority installer's
+`TargetInvocationException` with a real Harmony call-profiling transpiler. It then applies the
+production installer with that profiler already installed at Normal and First priorities, and with
+the profiler installed afterward. Checks cover exact world-load-before-step and
+results-before-edit-before-weld-before-snapshot ordering, `PreviousTime`, duplicate application,
+foreign removal, own removal/reapplication, three failed-install retries, retained foreign patches,
+and full exception/owner/order diagnostics. A failed unpatch must retain the actual installed state
+while discarding queued old-world work; a later successful removal recovers normally.
+
+The frame fixture includes a `ReadOnlySpan<int>` local and loop branches. Run the same executable
+with `--configuration Release` to exercise optimized managed IL, matching an important 5638 shape.
+`PhysicsFrameAssemblyChecks` reads the real KSA.dll through `PEReader`; it never loads or executes
+the Windows assembly. It requires the reflected caller/solver signatures and all seven unique,
+ordered direct calls. KSA.dll is required; its folder resolves from runtime `KSA_DLL_DIR`, runtime
+`KSAFolder`, then the `KSAFolder` recorded at build time. This also permits checking an older DLL
+with the built executable. Current 5638 has a 703-byte caller with `ReadOnlySpan<Vehicle>` locals.
+
+This proves the ordering defect and correction for compatible call wrappers. It does not establish
+which installed mod caused a reported native startup failure, execute the actual KSA caller, or
+replace the Windows weld/save/load acceptance checks.
+
 ## Collision and preset regression
 
 `CollisionChecks` links production `WeldCollisionPatches` and uses actual Bepu rigid bodies and a

@@ -21,6 +21,10 @@ internal weld update using player delta and `step.PreviousTime`, and returns tha
 The patch requires unique ordered ApplyOrbit/Vehicle/ClothSolvers, GetJobSimStep and
 ExecuteNextCloth/Vehicle/OrbitSolvers calls. A changed layout fails installation rather than
 reintroducing unsafe UI teleports. Runtime errors are logged without preventing game scheduling.
+The shared transpiler runs at First priority and before existing foreign owners, so a call-profiler
+can wrap solver calls after validation without hiding those calls from the layout guard. Installation
+errors include the full exception and foreign transpiler ordering. Repeated `Apply` calls keep one
+weld callback and one collision-patch set; failed installs roll back only the shared hook method.
 Before each `Vehicle.Teleport`, `WeldEngine` calls `PhysicsFrameHook.JoinOrbitReaders()`. In KSA 5482,
 `PrepareFrame` queues the nearest-orbit job before this handoff, and that job may still be reading
 orbit points that the teleport disposes. The join happens at most once per frame. Frames with no
@@ -39,6 +43,11 @@ affect the frame hook, and kitten animation targeting is unchanged.
 `dotnet run --project garrys-torch.tests/garrys-torch.tests.csproj` exercises the production
 Harmony patch on a managed fixture. Build the whole solution with `dotnet build`.
 The [integration scope](../scope/vehicle-physics.md) records the current game-source evidence.
+The tests reproduce the original default-priority profiler conflict with actual Harmony, then check
+both installation orders, repeated application, three failed-install retries and failed removal.
+They also read the real KSA.dll's seven ordered seams without loading native code, and patch an
+optimized caller with a `ReadOnlySpan` local. A profiler conflict is a demonstrated compatibility
+defect; the cause of the reported 5638 Windows startup failure still needs its full diagnostic log.
 
 Native KSA physics/rendering still needs an in-game smoke pass:
 

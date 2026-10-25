@@ -232,11 +232,29 @@ lifecycle checks incl. skipped-vehicle loads, plus 16 retired-feature checks), `
 `world-saves.tests` (star-target weld), `kitchen-sink.tests` (108 G-load), `the-tick.tests` (108); all
 18 suites and the full build pass. See [KSA_5638_UPGRADE](KSA_5638_UPGRADE.md).
 
+October 25 startup follow-up (5638): the Windows log reports the shared frame hook failing to
+install, and the user confirmed welding did not work. Scene-save hooks require that same handoff
+before they install. A production-Harmony call-wrapper regression reproduces the failure shape;
+the handoff now orders its validation before existing foreign wrappers and cleans failed installs
+without removing foreign patches. This changes installation, not the save boundary, participant
+IDs, versions, payloads, stable identity resolution or replay policy. Applied canopy settings remain
+scene-saved; CRLF parser support changes only shader activation. Patch reports, owner/order
+diagnostics and shader caches are transient and are rebuilt at startup. The original Windows
+failure's inner exception and the complete installed-mod interaction still need native verification.
+
 ## Native acceptance checklist
 
 Record KSA build, Unscience commit, OS/architecture, installed mods/assets, pass/fail and observed
 warnings for each run. Use throwaway save copies for failure injection. Keep an untouched source
 save and screenshots/counts/reference values for comparison. All boxes begin unchecked.
+
+- [ ] **5638 startup follow-up:** with the same purr2d2/purrTTY/gatOS stack, confirm the shared
+  `PrepareFrame handoff hook applied` line, no failed scene-save/Dent Wizard/weld groups, and a
+  zero-failure startup summary. Create a weld and confirm actual motion, then normal save/overwrite
+  produces a fresh `unscience.json`; reload twice and A→B→A, load a vanilla save and a new system,
+  and verify old ownership/queued mutations clear. Also test Dent Wizard firing and Godzilla
+  Apply/Restore. If startup still fails, record the complete inner exception and target patch-owner
+  report. Profiler involvement is unconfirmed until this combined native pass.
 
 ### Transaction and lifecycle
 

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using MeowSci.FreeFallinLib;
 
 /// <summary>
@@ -84,23 +85,10 @@ internal static class FreeFallinShaderChecks
     internal static void Run()
     {
         _checks = 0;
-        Require(Parse(ModelPbr5638Header) == new CanopyDescriptorSets(5, 1), "5638 ModelPbr.frag yields texture set 5, material set 1");
-        Require(Parse(ModelPbr5482Defines) == new CanopyDescriptorSets(1, 2), "5482 ordering yields texture set 1, material set 2");
-
-        RequireThrows(() => Parse(ModelPbr5638Header.Replace("#define SET_TEXTURE 5", "")), "missing SET_TEXTURE fails closed");
-        RequireThrows(() => Parse(ModelPbr5638Header.Replace("#define SET_MATERIAL 1", "")), "missing SET_MATERIAL fails closed");
-        RequireThrows(() => Parse(ModelPbr5638Header.Replace("#define SET_MATERIAL 1", "// #define SET_MATERIAL 1")), "commented-out define is ignored");
-        RequireThrows(() => Parse(ModelPbr5638Header.Replace("#define SET_TEXTURE 5", "/* #define SET_TEXTURE 5 */")), "block-commented define is ignored");
-        RequireThrows(() => Parse(ModelPbr5638Header + "\n#define SET_MATERIAL 2\n"), "conflicting definitions fail closed");
-        RequireThrows(() => Parse(ModelPbr5638Header.Replace("#define SET_TEXTURE 5", "#define SET_TEXTURE (SET_GLOBAL + 1)")), "non-numeric set fails closed");
-        RequireThrows(() => Parse(ModelPbr5638Header.Replace("#define SET_TEXTURE 5", "#define SET_TEXTURE 1")), "shared texture/material set fails closed");
-        RequireThrows(() => Parse(ModelPbr5638Header.Replace("#define SET_MATERIAL 1", "#define SET_MATERIAL 0")), "pipeline-own set 0 fails closed");
-        Require(Parse(ModelPbr5638Header + "\n#define SET_MATERIAL 1\n") == new CanopyDescriptorSets(5, 1), "repeated identical define is accepted");
-
+        RunDescriptorSetChecks("LF", ToLf);
+        RunDescriptorSetChecks("CRLF", ToCrLf);
+        RunDescriptorSetChecks("mixed LF/CRLF", ToMixedLineEndings);
         var sets = new CanopyDescriptorSets(5, 1);
-        CanopyShaderSource.RequireSameDescriptorSets(sets, ModelPbr5638Header, "ModelNormal.frag");
-        RequireThrows(() => CanopyShaderSource.RequireSameDescriptorSets(sets, ModelPbr5482Defines, "ModelNormal.frag"), "partner fragment with another layout fails closed");
-
         string patched = CanopyShaderSource.PatchSkinnedVertex(SkinnedVertex, sets);
         Require(patched.Contains("#define SET_TEXTURE 5\n#include \"../Common/TextureSet.glsl\"", StringComparison.Ordinal)
             && patched.Contains("#define SET_MATERIAL 1\n#include \"../Common/MaterialSet.glsl\"", StringComparison.Ordinal)
@@ -120,6 +108,26 @@ internal static class FreeFallinShaderChecks
         Console.WriteLine($"PASS: free-fallin shader layout ({_checks} checks)");
     }
 
+    private static void RunDescriptorSetChecks(string lineEndings, Func<string, string> transform)
+    {
+        CanopyDescriptorSets ParseVariant(string source) => Parse(transform(source));
+        var sets = new CanopyDescriptorSets(5, 1);
+        Require(ParseVariant(ModelPbr5638Header) == sets, $"{lineEndings}: 5638 header yields texture set 5, material set 1");
+        Require(ParseVariant(ModelPbr5482Defines) == new CanopyDescriptorSets(1, 2), $"{lineEndings}: 5482 header yields texture set 1, material set 2");
+        Require(ParseVariant("#version 450\n#define SET_TEXTURE 5\n#define SET_MATERIAL 1") == sets, $"{lineEndings}: final define needs no line terminator");
+        RequireThrows(() => ParseVariant(ModelPbr5638Header.Replace("#define SET_TEXTURE 5", "")), $"{lineEndings}: missing SET_TEXTURE fails closed");
+        RequireThrows(() => ParseVariant(ModelPbr5638Header.Replace("#define SET_MATERIAL 1", "")), $"{lineEndings}: missing SET_MATERIAL fails closed");
+        RequireThrows(() => ParseVariant(ModelPbr5638Header.Replace("#define SET_MATERIAL 1", "// #define SET_MATERIAL 1")), $"{lineEndings}: commented-out define is ignored");
+        RequireThrows(() => ParseVariant(ModelPbr5638Header.Replace("#define SET_TEXTURE 5", "/* #define SET_TEXTURE 5 */")), $"{lineEndings}: block-commented define is ignored");
+        RequireThrows(() => ParseVariant(ModelPbr5638Header + "\n#define SET_MATERIAL 2\n"), $"{lineEndings}: conflicting definitions fail closed");
+        RequireThrows(() => ParseVariant(ModelPbr5638Header.Replace("#define SET_TEXTURE 5", "#define SET_TEXTURE (SET_GLOBAL + 1)")), $"{lineEndings}: non-numeric set fails closed");
+        RequireThrows(() => ParseVariant(ModelPbr5638Header.Replace("#define SET_TEXTURE 5", "#define SET_TEXTURE 1")), $"{lineEndings}: shared texture/material set fails closed");
+        RequireThrows(() => ParseVariant(ModelPbr5638Header.Replace("#define SET_MATERIAL 1", "#define SET_MATERIAL 0")), $"{lineEndings}: pipeline-own set 0 fails closed");
+        Require(ParseVariant(ModelPbr5638Header + "\n#define SET_MATERIAL 1\n") == sets, $"{lineEndings}: repeated identical define is accepted");
+        CanopyShaderSource.RequireSameDescriptorSets(sets, transform(ModelPbr5638Header), "ModelNormal.frag");
+        RequireThrows(() => CanopyShaderSource.RequireSameDescriptorSets(sets, transform(ModelPbr5482Defines), "ModelNormal.frag"), $"{lineEndings}: partner fragment with another layout fails closed");
+    }
+
     /// <summary>Patches the real game shaders when a KSA Content tree is reachable from KSAFolder.</summary>
     private static void RunLiveShaders()
     {
@@ -130,15 +138,36 @@ internal static class FreeFallinShaderChecks
             return;
         }
 
-        string Read(string name) => File.ReadAllText(Path.Combine(mesh, name));
-        CanopyDescriptorSets live = CanopyShaderSource.ParseDescriptorSets(Read("ModelPbr.frag"), "ModelPbr.frag");
-        CanopyShaderSource.RequireSameDescriptorSets(live, Read("ModelNormal.frag"), "ModelNormal.frag");
-        CanopyShaderSource.RequireSameDescriptorSets(live, Read("ModelTranslucent.frag"), "ModelTranslucent.frag");
-        CanopyShaderSource.PatchStaticVertex(Read("Model.vert"));
-        string skinned = CanopyShaderSource.PatchSkinnedVertex(Read("Model_Skinned.vert"), live);
-        CanopyShaderSource.PatchFragment(Read("ModelPbr.frag"));
-        Require(skinned.Contains($"#define SET_MATERIAL {live.Material}", StringComparison.Ordinal), "live skinned vertex uses the live material set");
-        Console.WriteLine($"free-fallin: live {mesh} -> {live}");
+        CanopyDescriptorSets expected = Parse(File.ReadAllText(Path.Combine(mesh, "ModelPbr.frag")));
+        Check("on disk", source => source);
+        Check("CRLF", ToCrLf);
+        Check("mixed LF/CRLF", ToMixedLineEndings);
+
+        void Check(string lineEndings, Func<string, string> transform)
+        {
+            string Read(string name) => transform(File.ReadAllText(Path.Combine(mesh, name)));
+            CanopyDescriptorSets live = Parse(Read("ModelPbr.frag"));
+            Require(live == expected, $"{lineEndings}: live descriptor sets are unchanged");
+            CanopyShaderSource.RequireSameDescriptorSets(live, Read("ModelNormal.frag"), "ModelNormal.frag");
+            CanopyShaderSource.RequireSameDescriptorSets(live, Read("ModelTranslucent.frag"), "ModelTranslucent.frag");
+            CanopyShaderSource.PatchStaticVertex(Read("Model.vert"));
+            string skinned = CanopyShaderSource.PatchSkinnedVertex(Read("Model_Skinned.vert"), live);
+            CanopyShaderSource.PatchFragment(Read("ModelPbr.frag"));
+            Require(skinned.Contains($"#define SET_MATERIAL {live.Material}", StringComparison.Ordinal), $"{lineEndings}: live skinned vertex uses the live material set");
+            Console.WriteLine($"free-fallin: live {lineEndings} {mesh} -> {live}");
+        }
+    }
+
+    private static string ToLf(string source) => source.Replace("\r\n", "\n", StringComparison.Ordinal);
+    private static string ToCrLf(string source) => ToLf(source).Replace("\n", "\r\n", StringComparison.Ordinal);
+
+    private static string ToMixedLineEndings(string source)
+    {
+        string[] lines = ToLf(source).Split('\n');
+        var mixed = new StringBuilder(lines[0]);
+        for (int i = 1; i < lines.Length; i++)
+            mixed.Append(i % 2 == 0 ? "\n" : "\r\n").Append(lines[i]);
+        return mixed.ToString();
     }
 
     private static string? FindMeshShaders()

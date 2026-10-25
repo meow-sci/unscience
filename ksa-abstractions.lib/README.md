@@ -205,6 +205,22 @@ actions are discarded when the system is absent or the hook is removed. Callers 
 queued actions after disposal. Exceptions are isolated per action/listener. Garry's Torch installs
 this hook for Unscience and subscribes its weld callback; Godzilla queues edits and restores.
 
+The transpiler validates the original seven solver calls at `Priority.First`, before every already
+registered foreign transpiler owner. This allows call-profiling wrappers to compose without hiding
+the anchors from validation, including owners already at First priority. Later normal-priority
+transpilers also run after validation. Unsupported layouts still fail closed. Installation failures
+log the full exception plus requested and registered transpiler ordering, then remove only this
+hook's method; a cleanup failure is logged without replacing the original exception. Repeated
+application does not duplicate welding callbacks. Removal always clears pending edits/world changes,
+even if another transpiler prevents Harmony from rebuilding the caller; an unsuccessful removal
+keeps `IsApplied` true while the previous executable chain remains installed.
+
+The managed Harmony regression reproduces the former default-priority `TargetInvocationException`
+with a call-wrapper profiler, then verifies both installation orders, reapply, retries and removal.
+A metadata-only check reads the real KSA.dll signatures and ordered calls; the optimized fixture
+includes a `ReadOnlySpan` local and branches. These checks establish a compatibility correction,
+not the cause of a particular Windows startup failure or native physics acceptance.
+
 `JoinOrbitReaders()` waits for `JobSystems.NearestOrbitAndPerformanceWorker`, at most once per frame.
 In KSA 5482, `PrepareFrame` queues the nearest-orbit job on that worker just before this handoff. The
 job reads flight plans and cached orbit points, and `Vehicle.Teleport` or other flight-plan edits

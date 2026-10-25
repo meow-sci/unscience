@@ -126,6 +126,17 @@ Verification baseline:
   patch class; the supermod applies them all onto
   its one instance instead of each mod owning its own. `HotkeyGuard` (from the seam lib) is applied
   first, exactly once.
+- **Startup diagnostics (5638 follow-up).** Each `Patcher.Patch()` invocation creates a local
+  `PatchApplicationReport`. Its `TryApply` catches failures per group and logs `Exception.ToString()`
+  through `Console.WriteLine`, retaining reflection wrappers, inner errors and stacks. The final
+  summary reports completed/attempted and failed counts with every failed group name; it no longer
+  prints an unqualified “Harmony patches applied” after failures. A completed group only returned
+  without throwing: optional controllers and helpers that self-disable remain allowed. Apply/remove
+  ordering and HotkeyGuard wiring are unchanged; `TryRemove` and the outer setup/cleanup catches
+  also log complete exceptions. This report is transient execution diagnostics, created afresh on
+  every patch invocation and excluded from `UnscienceSaves`/sidecar records. Managed production-helper
+  checks cover failure isolation, wrapped exceptions, totals and fresh runs; native startup acceptance
+  remains pending. No game target or saved payload changes.
 - **`ksa-abstractions.lib` is the game-facing seam.** All cross-cutting game access is funnelled
   through small static helpers here (`VehicleProvider`, `CelestialProvider`, `SimTimeProvider`,
   `PartHelpers`, `XkcdColorHelper`, `HotkeyGuard`, `HiddenUiFrameHook`, `IvaForceRender`, `PartRenderFilter` (5482),
@@ -187,7 +198,8 @@ instance. Targets are listed at cross-reference granularity (type+member); per-c
 live in each feature's own `scope/` file. **Two entries are owned by this area** (in **bold**) and
 are fully verified below: the inlined `EternalFlamePatches` and `MenuBarPatch`.
 
-Apply/Remove line numbers are the current `unscience/Patcher.cs` (re-read @5482).
+Apply/Remove line numbers below are historical `unscience/Patcher.cs` citations (re-read @5482);
+the named patch groups remain the current lookup anchors.
 
 | Patch class | Owning project | Apply (Patcher.cs) | Remove (Patcher.cs) | Primary game target(s) | Kind | Risk note |
 |---|---|---|---|---|---|---|
@@ -384,7 +396,7 @@ the *Hidden-HUD fallback* note under the lifecycle table for the why.
 
 | # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (5348) | In 5348? | Risk/notes |
 |---|---|---|---|---|---|---|
-| 1 | Harmony prefix (**string-named**) | `HiddenUiFrameHook.cs:28` (name), `:44` (lookup), `:47` (patch), `:54` (unpatch) | `Program.OnDrawUiConsole(double dt)` — `private void`, instance | `KSA/Program.cs:3086` @5482, called unconditionally from `OnFrame` at `:2266` (`:3009` / `:2201` @5402) | Yes | `AccessTools.Method` by string; a miss throws `MissingMethodException` at `Patch()` → logged and skipped by `Patcher.TryApply` (mods then freeze on F2 again, nothing else breaks). **Phase contract:** must stay a method the game calls every frame *after* the `if (DrawUI)` UI block and *before* `ImGui.Render()`/`OnPreRender` — `DrawFps()` (`:3137`, static, no `dt`) is the fallback anchor if `OnDrawUiConsole` moves. Body drift @5402 (`HoveredViewport.IsMain()` / `.ImGuiId`) does not touch the signature. |
+| 1 | Harmony prefix (**string-named**) | `HiddenUiFrameHook.cs:28` (name), `:44` (lookup), `:47` (patch), `:54` (unpatch) | `Program.OnDrawUiConsole(double dt)` — `private void`, instance | `KSA/Program.cs:3086` @5482, called unconditionally from `OnFrame` at `:2266` (`:3009` / `:2201` @5402) | Yes | `AccessTools.Method` by string; a miss throws `MissingMethodException` at `Patch()` → logged and skipped by `PatchApplicationReport.TryApply` (mods then freeze on F2 again, nothing else breaks). **Phase contract:** must stay a method the game calls every frame *after* the `if (DrawUI)` UI block and *before* `ImGui.Render()`/`OnPreRender` — `DrawFps()` (`:3137`, static, no `dt`) is the fallback anchor if `OnDrawUiConsole` moves. Body drift @5402 (`HoveredViewport.IsMain()` / `.ImGuiId`) does not touch the signature. |
 | 2 | Direct API (static prop) | `:40`, `:64` | `Program.DrawUI` — `public static bool { get; set; }` | `KSA/Program.cs:526` @5482 (`:527` @5402) | Yes | Gate. Toggled by `InputAction.ToggleUi` (`KSA/Input.cs:297` = F2, handled `Program.cs:1755`). If the game ever gates `OnDrawUiFrame` on something else, this prefix goes dead-silent (no crash). |
 
 Update-risk findings (5261→5348): n/a (new). Verified against 5348 by construction: `OnFrame`

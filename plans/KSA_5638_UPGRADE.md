@@ -3,9 +3,10 @@
 ## Verdict and inputs
 
 The update breaks compilation in two places and silently disables or corrupts several features that
-still compile. All compile breaks and every runtime finding are fixed in the working tree
-(uncommitted), and the **parts-now** mod was removed at the user's request. **Static and managed
-verification only: no live KSA pass was run.**
+still compile. The original review fixed the compile breaks and the runtime defects found by its
+static/managed checks; **parts-now** was removed at the user's request. The October 25 Windows
+startup log exposed additional failures, documented in the [startup follow-up](#startup-follow-up-2026-10-25).
+**Static and managed verification only: no live KSA pass was run by the coding agents.**
 
 | Input | Verified value |
 |---|---|
@@ -133,3 +134,71 @@ dotnet build ksa-mod-experiments.slnx --no-incremental -m:1 -nr:false -p:UseShar
 - Godzilla on convex-hull parts (collisions, fuel hoses); capsule window alignment after re-import.
 - Blinky on a vessel with a magnetic trap. Garry's Torch: check whether 5612 ended the error spam.
 - All standing 5482 native checks remain open (see [ISSUES](../ISSUES.md)).
+
+## Startup follow-up (2026-10-25)
+
+The supplied Windows log runs KSA **2026.10.19.5638** with purr2d2, purrTTY, gatOS and Unscience.
+It reports scene-save, Dent Wizard handoff and Garry's Torch weld-timing installation failures,
+each reduced to `Exception has been thrown by the target of an invocation.` The user subsequently
+confirmed that welding did not work at all. Full Canopy separately disables itself because its
+parser cannot find `SET_TEXTURE`.
+
+### Reproduced defects and changes
+
+- **Shared frame-hook ordering.** Both supplied game-source trees still contain the seven expected
+  solver calls uniquely and in order. A real Harmony 2.4.2 regression with a call-profiling
+  transpiler installed first reproduces the same outer `TargetInvocationException`; its inner
+  error is the hook's solver-sequence guard. The handoff now runs before preexisting foreign
+  wrappers, retains its strict call-count/order guards and removes only its own transpiler when
+  installation fails. Existing workers still commit before queued edits/welds and before new
+  snapshots. Deferred loads still replay before computing the step; orbit-reader joins,
+  `PreviousTime` and callback isolation remain unchanged. This proves a compatibility defect;
+  **it does not establish that purr2d2 caused the original live failure**. Target patch-owner/order
+  and complete exception diagnostics make any remaining Windows failure actionable.
+- **Windows shader parsing.** The production parser accepts the real 5638 fragment shader with LF
+  endings and raises the exact logged missing-`SET_TEXTURE` error after converting it to CRLF.
+  Allowing the optional carriage return before the regex line anchor fixes it. LF/CRLF/mixed
+  files, unterminated final defines, malformed definitions and real game shader transforms are
+  covered; numeric/range/partner/anchor checks and fail-closed behavior remain intact.
+- **Consolidated diagnostics.** Each startup run has its own patch-group report; full exception
+  chains replace message-only logging. The final summary measures groups that returned without
+  throwing and names failures. Optional helpers may self-disable without throwing, so a completed
+  group is deliberately not a claim that every rendering path is available. Removal failures also
+  retain their complete exception context.
+
+### Save/restore and native acceptance
+
+The failed handoff prevents `NativeSaveHooks` from installing, so the original reported session
+cannot capture/replay Unscience state. Native overwrite recreates its directory and can remove an
+existing sidecar while those hooks are absent. The corrected installer retains the existing safe
+boundary and adapters. **No save IDs, versions, payloads or migrations change.** Durable weld and
+applied canopy configuration remain sidecar-owned; patch diagnostics/order metadata and shader
+caches are transient. Existing native/global/transient ownership remains as documented in
+[save acceptance](saves-acceptance.md).
+
+### Combined verification
+
+- Full non-incremental **Release** solution build against CURRENT 5638: **0 warnings, 0 errors**.
+- **All 18 managed suites pass** in Release: byo-music, camera-saves, dent-wizard, doh,
+  garrys-torch, godzilla, iron-man, iron-man-flight, iron-man-mode, kitchen-sink, ksa-upgrade,
+  pebbles, pyro, save-yourself, saves, sphinx, the-tick and world-saves.
+- Added coverage: actual Harmony composition/retry/removal and an optimized span fixture;
+  metadata-only 5638 frame signature and seven ordered calls (703-byte caller); 51 shader checks
+  including real Content with Windows/mixed endings; 10 consolidated reporting checks. PREVIOUS
+  5554 independently passes the same metadata checks (822-byte caller). Neither executes native KSA.
+- `scripts/check-dist.py` passes: one Unscience mod with 31 explicitly referenced feature assemblies,
+  no proprietary KSA DLL. `git diff --check` passes.
+
+The combined build used `KSAFolder=/Users/asherwin/repos/meow-sci/ksa-game-assemblies/current/dll/`,
+`UNSCIENCE_DIST_DIR=/private/tmp/unscience-startup-fix-release-dist`, and
+`dotnet build ksa-mod-experiments.slnx -c Release --no-incremental -m:1 -nr:false -p:UseSharedCompilation=false`.
+Each built test executable ran with the same CURRENT `KSAFolder` environment, enabling the real
+Content and DLL checks. Existing real-adapter scale/animation round trips and reset/replay suites pass;
+no native scene/GPU test was performed.
+
+Windows acceptance remains open: start the same installed-mod stack, confirm shared-hook and
+shader activation plus zero failed groups, create and move a weld, exercise F2/pause/warp and
+unweld, fire Dent Wizard, apply/restore Godzilla, then save/overwrite/reload including repeated and
+cross-scene loads. Check that a fresh matching sidecar is written. If the hook still fails, retain
+the complete inner exception and owner report; use a profiler-disabled comparison to narrow the
+interaction. Full Canopy also needs native shader compilation/rendering acceptance.

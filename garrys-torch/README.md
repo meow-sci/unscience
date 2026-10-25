@@ -45,6 +45,13 @@ cloth, vehicle and orbit solvers after it. The patch validates those seven calls
 and in that order; an unexpected layout rejects installation with a logged error. Patching the
 caller also avoids depending on solver calls that may already have been inlined before mod loading.
 
+The shared hook validates before existing foreign transpilers and later normal-priority patches,
+allowing compatible solver-call profiling wrappers to coexist. Reapplying Garry's Torch preserves
+one welding callback. Startup should log `unscience physics: PrepareFrame handoff hook applied`;
+if installation fails, its complete exception and transpiler owner/order details are logged. The
+managed tests reproduce and correct one profiling-order conflict. The reported Windows 5638 failure
+and native welding still require a retest; the installed profiler has not been established as its cause.
+
 KSA 5482 keeps the seven calls in the same order. It adds `PartTree.FlushDirtyDerived`/
 `FlushDirtyResourceManagers` before the vehicle solvers, and the transpiler tolerates those calls.
 It also queues the nearest-orbit job (`JobSystems.NearestOrbitAndPerformanceWorker`) just before

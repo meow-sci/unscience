@@ -91,8 +91,9 @@ selections afresh.
 6. Verify `SetShaderFromMod` still defaults to cached modules and that forcing `useCustomOptions`
    still routes all three target ids through `CompileVariantWithCustomOptions` and `FromFile`.
 7. Run `ksa-upgrade.tests` with `KSAFolder` set (it derives the sets from and patches the live
-   shaders), then compile/link both static+fragment and skinned+fragment pairs offline and reflect
-   them; verify varying location 3, `MaterialBuffer` at `(SET_MATERIAL, 0)` in the skinned vertex
+   shaders, also with Windows CRLF and mixed endings), then compile/link both static+fragment and
+   skinned+fragment pairs offline and reflect them; verify varying location 3,
+   `MaterialBuffer` at `(SET_MATERIAL, 0)` in the skinned vertex
    shader, and that every pipeline pairing `ModelSkinnedVert` (`SuperMeshRenderSystem`,
    `CharacterRenderResources.EyeRenderer`) still binds materials and the bindless library there.
 8. Live-test stock tint, panel replacement, Full Canopy orientation while reefing/inflating, center
@@ -211,6 +212,26 @@ Verified 2026-10-22 against `2026.10.19.5638` (`ksa-game-assemblies` `edda844`),
     after arming;
   - canopy orientation while reefing/inflating, in the main and secondary viewports;
   - every earlier pending item above.
+
+## Windows shader line endings (2026-10-25, KSA 5638)
+
+Windows startup reported `ModelPbr.frag no longer defines SET_TEXTURE; descriptor layout cannot be
+derived.` The descriptor-define regex stopped its value before CR, but .NET's multiline `$` anchor
+only skips LF. Valid CRLF defines therefore failed to match and Full Canopy stayed unavailable.
+The parser now explicitly accepts the optional CR before that anchor. LF, CRLF, mixed endings and
+an unterminated final define use the same numeric/range/conflict and partner-layout validation;
+shader anchors, varying location 3 and descriptor layouts are unchanged.
+
+The production-linked `ksa-upgrade.tests` regression failed with the reported error before the fix
+and passes afterward: **51 shader checks** against CURRENT's 5638 Content tree, including its five
+shader inputs converted to CRLF and mixed endings. Missing/commented/conflicting/non-numeric,
+shared and set-0 definitions still fail closed for every format. These are managed parsing and
+source-transformation checks; native Windows startup, GPU compilation and rendered acceptance
+remain pending under the existing native checklist above.
+
+Save review: applied canopy settings and effective albedo remain in the existing `free-fallin`
+record. Parsing/cached shader source is transient renderer setup derived from installed files;
+no save ID, version, payload, reset or replay behavior changes.
 
 ## Save/load adapter (feature/saves)
 

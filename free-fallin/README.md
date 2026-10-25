@@ -36,7 +36,10 @@ standalone F11 mod and as the **Free Fallin - Parachute Customizer** section in 
 4. Tune tint and PBR values, then press **Apply to All Parachutes**.
 5. Deploy a parachute to preview the result. Press **Restore Stock** to undo it.
 
-The setting is session-only; imported PNG files remain in the library for later sessions.
+Ordinary KSA saves made through the Unscience host retain the last successfully applied canopy
+settings and effective material color. Loading re-creates the appearance; unapplied editor changes
+are not captured. Imported PNG files remain shared-library dependencies and must still be present
+when restoring a save. The legacy standalone host does not install Unscience's scene-save workflow.
 
 ## Projects
 
@@ -50,6 +53,9 @@ Verified against KSA `2026.10.19.5638`. The mod depends on the native canopy mat
 (with `ParachuteCanopy_Material_CheckerLongOrange` as the stable source for custom materials),
 `ChuteRenderable.Draw`, its private `_renderable` field, and
 `AnimatedRenderable.MaterialIndices`. Full canopy also depends on the model shader anchors and reads
-the texture/material descriptor sets from the game's `ModelPbr.frag`; if they cannot be read it is
-disabled (logged to the console) and the other modes keep working. See
+the texture/material descriptor sets from the game's `ModelPbr.frag`. The parser accepts LF, Windows
+CRLF and mixed endings, including an unterminated final line. Invalid or disagreeing descriptor
+definitions disable Full canopy (logged to the console), and the other modes keep working. Managed
+checks cover these source formats; native Windows startup, shader compilation and rendering still
+require in-game acceptance. See
 [`../scope/parachutes.md`](../scope/parachutes.md).

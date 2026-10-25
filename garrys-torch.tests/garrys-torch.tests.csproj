@@ -4,6 +4,9 @@
     <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
   </PropertyGroup>
   <ItemGroup>
+    <AssemblyMetadata Include="KSAFolder" Value="$(KSAFolder)" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
     <PackageReference Include="Tomlyn" Version="0.19.0" />
     <Compile Include="../garrys-torch.lib/WeldPreset.cs" Link="WeldPreset.cs" />

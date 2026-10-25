@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <Compile Include="../unscience/PatchApplicationReport.cs" Link="PatchApplicationReport.cs" />
     <Compile Include="../blinky.lib/PropellantFeedDiagnostics.cs" Link="PropellantFeedDiagnostics.cs" />
     <Compile Include="../free-fallin.lib/FreeFallinPatches.cs" Link="FreeFallinPatches.cs" />
     <Compile Include="../free-fallin.lib/CanopyShaderSource.cs" Link="CanopyShaderSource.cs" />

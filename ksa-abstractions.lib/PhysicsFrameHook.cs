@@ -50,17 +50,63 @@ public static class PhysicsFrameHook
     public static void Apply(Harmony harmony)
     {
         if (IsApplied) return;
-        harmony.Patch(PrepareFrameMethod(), transpiler: new HarmonyMethod(TranspilerMethod()));
-        IsApplied = true;
-        Console.WriteLine("unscience physics: PrepareFrame handoff hook applied");
+        MethodInfo original = PrepareFrameMethod();
+        MethodInfo transpiler = TranspilerMethod();
+        string[] owners = Array.Empty<string>();
+        try
+        {
+            // Harmony reruns the complete transpiler chain on each patch/unpatch. Validate the
+            // original solver calls before call-site profilers can replace their operands. Priority
+            // covers later normal-priority patches; before covers earlier owners even at First.
+            // Never interpret an arbitrary foreign wrapper as evidence of a safe solver boundary.
+            var existing = Harmony.GetPatchInfo(original)?.Transpilers;
+            // A previous failed wrapper generation must not accumulate registrations on retry.
+            if (existing?.Any(patch => patch.PatchMethod == transpiler) == true)
+                harmony.Unpatch(original, transpiler);
+            owners = Harmony.GetPatchInfo(original)?.Transpilers
+                .Select(patch => patch.owner).Where(owner => owner != harmony.Id).Distinct().ToArray()
+                ?? Array.Empty<string>();
+            harmony.Patch(original, transpiler: new HarmonyMethod(transpiler)
+            {
+                priority = Priority.First,
+                before = owners
+            });
+            IsApplied = true;
+            Console.WriteLine("unscience physics: PrepareFrame handoff hook applied");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"unscience physics: PrepareFrame handoff installation failed: {ex}");
+            Console.WriteLine($"unscience physics: requested priority={Priority.First} before=[{string.Join(",", owners)}]");
+            try { LogTranspilers(original); }
+            catch (Exception diagnostic)
+            {
+                Console.WriteLine($"unscience physics: PrepareFrame patch inspection also failed: {diagnostic}");
+            }
+            try { harmony.Unpatch(original, transpiler); }
+            catch (Exception rollback)
+            {
+                Console.WriteLine($"unscience physics: PrepareFrame targeted rollback also failed: {rollback}");
+            }
+            throw;
+        }
     }
 
     public static void Remove(Harmony harmony)
     {
-        harmony.Unpatch(PrepareFrameMethod(), TranspilerMethod());
-        Pending.Clear();
-        ClearPendingWorldChange();
-        IsApplied = false;
+        try
+        {
+            harmony.Unpatch(PrepareFrameMethod(), TranspilerMethod());
+            // On generation failure Harmony retains the previous executable chain. Keep the
+            // installation flag until removal succeeds, but never keep queued old-world work.
+            IsApplied = false;
+        }
+        finally
+        {
+            Pending.Clear();
+            ClearPendingWorldChange();
+            _orbitReadersJoined = false;
+        }
     }
 
     private static MethodInfo PrepareFrameMethod() =>
@@ -69,6 +115,19 @@ public static class PhysicsFrameHook
 
     private static MethodInfo TranspilerMethod() =>
         AccessTools.Method(typeof(PhysicsFrameHook), nameof(Transpile));
+
+    private static void LogTranspilers(MethodInfo original)
+    {
+        var patches = Harmony.GetPatchInfo(original)?.Transpilers;
+        Console.WriteLine($"unscience physics: {original.DeclaringType?.FullName}.{original.Name}(double,double); "
+            + $"Harmony {typeof(Harmony).Assembly.GetName().Version}; {patches?.Count ?? 0} registered transpiler(s)");
+        if (patches == null) return;
+        foreach (var patch in patches)
+            Console.WriteLine($"unscience physics: transpiler owner='{patch.owner}' "
+                + $"method='{patch.PatchMethod.DeclaringType?.FullName}.{patch.PatchMethod.Name}' "
+                + $"priority={patch.priority} index={patch.index} "
+                + $"before=[{string.Join(",", patch.before)}] after=[{string.Join(",", patch.after)}]");
+    }
 
     internal static IEnumerable<CodeInstruction> Transpile(IEnumerable<CodeInstruction> instructions)
     {
@@ -93,8 +152,10 @@ public static class PhysicsFrameHook
             var method = AccessTools.Method(typeof(Universe), seam)
                 ?? throw new MissingMethodException(typeof(Universe).FullName, seam);
             int index = codes.FindIndex(code => code.Calls(method));
-            if (index <= previousIndex || codes.Count(code => code.Calls(method)) != 1)
-                throw new InvalidOperationException($"unscience physics: unexpected PrepareFrame solver sequence at {seam}");
+            int count = codes.Count(code => code.Calls(method));
+            if (index <= previousIndex || count != 1)
+                throw new InvalidOperationException($"unscience physics: unexpected PrepareFrame solver sequence at {seam} "
+                    + $"(calls={count}, index={index}, previous={previousIndex})");
             previousIndex = index;
             if (seam == nameof(Universe.GetJobSimStep)) stepIndex = index;
         }

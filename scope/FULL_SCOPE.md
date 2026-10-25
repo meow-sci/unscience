@@ -73,6 +73,13 @@ rocky-mcrock-face, save-yourself, skittles, sphinx, the-tick, thug-life, zippo. 
 
 ## Current status against 5638
 
+**October 25 startup follow-up:** the supplied Windows log and in-game report establish failed
+weld updates and shared-hook installation. Managed reproduction found a call-wrapper transpiler
+ordering defect; installation now precedes existing foreign wrappers and reports/cleans failed
+attempts. The original live cause and welding acceptance still require a Windows retest. Full Canopy
+also accepts CRLF shader defines; startup reports full exceptions and partial patch-group failures.
+No save IDs or payloads change. See the [follow-up evidence](../plans/KSA_5638_UPGRADE.md#startup-follow-up-2026-10-25).
+
 Two compile breaks: the Brutal assembly renames (every csproj HintPath) and `Vehicle.Ctrl2Body` →
 `Helm2Body` (Iron Man; the flight computer now derives `Tnm`/`Ctrl` frames from the helm). Silent
 breaks fixed: **free-fallin** Full Canopy injected pre-5530 descriptor-set numbers into the shared

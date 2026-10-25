@@ -29,8 +29,9 @@ internal static class CanopyShaderSource
     private const int MaxSetIndex = 31;
     private const int ProjectionLocation = 3;
 
+    // Multiline $ stops before LF, leaving CR to match explicitly for Windows shader files.
     private static readonly Regex DefinePattern = new(
-        @"^[ \t]*#[ \t]*define[ \t]+(?<name>\w+)(?<value>[^\r\n]*)$", RegexOptions.Multiline | RegexOptions.CultureInvariant);
+        @"^[ \t]*#[ \t]*define[ \t]+(?<name>\w+)(?<value>[^\r\n]*)\r?$", RegexOptions.Multiline | RegexOptions.CultureInvariant);
     private static readonly Regex BlockComment = new(@"/\*.*?\*/", RegexOptions.Singleline | RegexOptions.CultureInvariant);
     private static readonly Regex LineComment = new(@"//[^\r\n]*", RegexOptions.CultureInvariant);
 

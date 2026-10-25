@@ -11,12 +11,14 @@ internal static class Checks
 {
     private static void Main()
     {
+        PhysicsFrameAssemblyChecks.Run();
         CollisionChecks.Run();
         PresetChecks.Run();
         ScaleChecks.Run();
         SaveChecks.Run();
         AnimationSaveChecks.Run();
         CheckRejectedLayouts();
+        FrameHookInteropChecks.Run();
         var game = new KSA.Program();
 
         // Reproduce the bug: removing the source after workers stage results prevents commit.

@@ -28,10 +28,14 @@ pipelines it joins. KSA 5530 renumbered the mesh-technique sets (texture library
 2 → 1), so the set indices are never hard-coded: `CanopyShaderSource.ParseDescriptorSets` reads them
 from the game's `ModelPbr.frag` at activation and requires `ModelNormal.frag` and
 `ModelTranslucent.frag` (the other fragment shaders paired with `Model_Skinned.vert`) to agree. A
+shader can use LF, Windows CRLF or mixed line endings, with or without a final line terminator. A
 missing, conflicting or non-numeric define, a changed anchor, or an occupied varying location 3
 disables Full Canopy with a console line before any Harmony patch is installed, leaving every stock
 shader untouched; the other texture modes keep working. `ksa-upgrade.tests` covers the parser on the
-real 5638 header and, when `KSAFolder` points at a game tree, patches the live shader files.
+real 5638 header and the 5482 layout across these line endings, including malformed CRLF rejection.
+When `KSAFolder` points at a game tree, it also patches the live shader files as read and with CRLF
+and mixed endings. These are managed text checks; native shader compilation/rendering remains an
+in-game acceptance check.
 
 ## Native save persistence
 
@@ -52,3 +56,6 @@ forgets it on release, preventing a reused GPU slot from inheriting another mate
 Each observed canopy records its native slot-zero handle before the first replacement; Restore
 Stock, save/load reset, and unload restore that exact handle and clear tracking so a later apply
 captures fresh native choices.
+
+Shader parsing and generated shader text are transient renderer setup, recreated from the installed
+game sources. The Windows line-ending fix changes no saved settings, feature ID, payload or version.

@@ -1,4 +1,4 @@
-# KSA 5438/5482 managed upgrade checks
+# KSA 5438/5482/5638 managed upgrade checks
 
 Run from the repository root:
 
@@ -6,7 +6,7 @@ Run from the repository root:
 dotnet run --project ksa-upgrade.tests/ksa-upgrade.tests.csproj
 ```
 
-The executable is a small managed regression suite for the KSA 5438 and 5482 integration fixes.
+The executable is a small managed regression suite for the KSA 5438, 5482 and 5638 integration fixes.
 For 5438 it links the production `PropellantFeedDiagnostics` helper and the Free Fallin patch. For
 5482 it links `PartRenderFilter` and the Vehicle Paint patches (sections below). The feed fixture
 (`PropellantFeedFixture.cs`) supplies the managed `ResourceManager.ConsumptionOrder` surface and
@@ -27,11 +27,16 @@ exercise the production capture/replacement/restore ownership logic.
 
 `FreeFallinShaderChecks` links production `free-fallin.lib/CanopyShaderSource.cs` (no game types). It
 parses `SET_TEXTURE`/`SET_MATERIAL` from the verbatim 5638 `ModelPbr.frag` header (5, 1) and the 5482
-ordering (1, 2), and requires fail-closed errors for missing, commented-out, conflicting, non-numeric,
-shared or set-0 defines, a disagreeing partner fragment, a skinned vertex shader that already declares
-sets or uses varying location 3, and missing anchors. When `KSAFolder` points beside a KSA `Content`
-tree it also derives the sets from, and patches, the live `Model.vert`, `Model_Skinned.vert` and
-`ModelPbr.frag`; otherwise it prints a SKIP line.
+ordering (1, 2), using LF, Windows CRLF and mixed line endings. It also checks a final define without
+a line terminator. Every format requires fail-closed errors for missing, commented-out, conflicting,
+non-numeric, shared or set-0 defines and a disagreeing partner fragment. Separate patch checks reject
+a skinned vertex shader that already declares sets or uses varying location 3, and missing anchors.
+When `KSAFolder` points beside a KSA `Content` tree it also derives the sets from, and patches, the
+live `Model.vert`, `Model_Skinned.vert` and
+`ModelPbr.frag`, cross-checking both partner fragments. It repeats the live-source checks after
+converting all five shader inputs to CRLF and mixed endings; otherwise it prints a SKIP line. The
+line-ending regressions call the production parser, not a test copy. They reproduced the Windows
+`no longer defines SET_TEXTURE` error before the parser fix. No GPU shader compiler runs here.
 
 ## KSA 5482 render-data checks
 
@@ -93,6 +98,16 @@ crew-portrait (`InsideVehicle`) view matching the IVA result, plus the native ca
 experiment off. The fixture models native interior raster gates but has no Vulkan or ray tracing
 renderer. Native window
 alignment, depth, tint, exterior lighting and live save/load acceptance remain pending.
+
+## Consolidated patch startup diagnostics (5638)
+
+`PatchApplicationChecks` links production `unscience/PatchApplicationReport.cs` without game types.
+Ten checks execute successful actions, a real reflection-wrapped failure with two inner errors,
+a subsequent successful action and an independent second failure. They verify action ordering,
+failure isolation, complete retained/logged exceptions and stacks, all failed names and measured
+summary counts. A fresh report also exercises an absent optional controller and has no failures
+from the earlier run. These are runtime startup diagnostics; no saved configuration is added.
+They do not prove that native Harmony targets install or that optional self-disabled features run.
 
 ## Boundary
 

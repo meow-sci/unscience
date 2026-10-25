@@ -51,7 +51,7 @@ Shared library with common abstractions used across multiple mods. Provides util
 - `HotkeyGuard` — mandatory Harmony prefix on `GameSettings.OnKeyAll` that swallows game hotkeys while an ImGui text input has focus (KSA 5482 mouse-button bindings bypass it)
 - `PartRenderFilter` — shared, owner-registered part-mesh hiding for KSA 5482+: one prefix/postfix set on `PartTreeRenderData.Compose`/`ComposeDynamic`/`ComposeGlass` compacts hidden parts out of the per-frame instance and dent lists; fails open; raytraced IVA not filtered. Used by blinky, its-so-shiny and Kitchen Sink; model-scoped registrations hide only exact static models while sharing compaction
 - `IvaForceRender` — Kitchen Sink's independent IVA-interior toggle plus owner requirements (`EffectiveEnabled`); restores non-shadow-proxy template flags when the last owner releases/unpatches. On 5482 editor reveal is a prefix/finalizer on `PartTreeRenderData.Compose`
-- `PhysicsFrameHook` — shared `Program.PrepareFrame` simulation handoff (queued mutations, `BeforePhysics`, deferred world changes); `JoinOrbitReaders()` waits for KSA 5482's nearest-orbit job before vessel moves
+- `PhysicsFrameHook` — shared `Program.PrepareFrame` simulation handoff (queued mutations, `BeforePhysics`, deferred world changes); validates before existing foreign call-wrapper transpilers, diagnoses/cleans failed installations, and `JoinOrbitReaders()` waits for KSA 5482's nearest-orbit job before vessel moves
 - `HiddenUiFrameHook` — Harmony prefix on `Program.OnDrawUiConsole` that replays a host's registered `BeforeGui`/`AfterGui` per-frame work while the game HUD is hidden (F2), because StarMap's `[StarMapBeforeGui]`/`[StarMapAfterGui]` targets are skipped by the game in that state; used by unscience
 - `PngLibrary` / `PngFileBrowser` — shared `.unscience/pngs` catalog and reusable ImGui filesystem picker; every filesystem PNG import is copied into this one auto-uniquifying library, used by graffiti and free-fallin
 - `EasingType` enum + `EasingHelper.ApplyEasing()` — shared easing utility (Linear/EaseIn/EaseOut/EaseInOut with power params); used by zippo.lib, garrys-torch.lib, camera-controller-override.lib
@@ -145,6 +145,9 @@ fixture. Reproduces discarded actuator results and checks result retention, time
 patch removal, and rejection of missing/duplicate/reordered solver seams. Also runs the production
 collision patches against game-version Bepu for contact suppression/restoration and checks TOML
 preset migration/round-trip. Scale checks link production snapshots, scale APIs, animation queue and kitten Harmony correction to cover authored nested scales, identity unweld, restoration and topology changes. Does not run native KSA.
+Startup checks compose real Harmony call wrappers in both installation orders, exercise repeated
+apply/remove and failed-install cleanup, and verify the actual KSA DLL's frame signature and ordered
+calls through metadata without executing the game. The managed frame retains span locals/branches.
 See its [README](garrys-torch.tests/README.md) for usage.
 
 ### [kiwis-marbles](kiwis-marbles) / [kiwis-marbles.lib](kiwis-marbles.lib)
@@ -410,7 +413,10 @@ is substituted on every canopy as it draws, so the image follows KSA's animated 
   complete canopy, or alpha-composited in the center of the stock albedo
 - Stock-map AO/roughness/metallic multipliers or uniform 0–1 PBR overrides
 - Shared ImGui PNG browser and catalog with graffiti; imports persist under `.unscience/pngs`
-- Session-only active settings, global to existing and future parachutes, with Restore Stock
+- Applied settings are global to existing and future parachutes, support Restore Stock, and persist
+  through the `free-fallin` scene-save record; unapplied controls and shader caches are transient
+- Full Canopy derives descriptor sets from stock shaders with LF, Windows CRLF or mixed line endings;
+  missing/conflicting definitions still disable projection before stock shaders are changed
 - `free-fallin.lib`: `FreeFallinSubmod`, `CanopyMaterialController`, `CanopyProjectionShaders`,
   `FreeFallinPatches`, settings, image library/browser; `free-fallin`: standalone F11 StarMap host
   with mandatory HotkeyGuard
@@ -449,6 +455,8 @@ Unified supermod that consolidates the standalone feature mods into a single ImG
 - `Update(dt)` runs every frame for all submods (even hidden) for frame-critical logic
 - Consolidated Harmony patches include blinky/its-so-shiny render-skip (shared `PartRenderFilter`), camera-controller-override sequence playback, free-fallin canopy material substitution + full-canopy shader projection, glass main-camera FOV override, hot-pursuit fixed-camera pose, humble-arteest vehicle paint + engine emissive + kitten visor draw toggle, i-feel-seen render distance, skittles hotkey blocking, pyro exhaust submission, and graffiti decal pass
 - References all feature `.lib` projects, including `hot-pursuit.lib`, plus `ksa-abstractions.lib`
+- Startup reports complete patch exceptions and per-run completed/failed group counts; helper
+  completion does not claim every optional rendering path is active. These diagnostics are transient.
 
 ---
 
@@ -611,6 +619,11 @@ The current integration baseline is KSA **2026.10.19.5638**, compared with **202
 [Upgrade evidence and native acceptance](plans/KSA_5638_UPGRADE.md) covers the full suite. Build and
 all 18 managed suites pass; in-game acceptance is pending.
 
+October 25 startup follow-up: the shared handoff validates before existing foreign call wrappers
+and cleans failed installations; Free Fallin accepts Windows CRLF shader definitions; Unscience
+logs complete patch exceptions and reports failed groups in its startup summary. The user's Windows
+weld failure is recorded and native retesting remains required. Save payloads are unchanged.
+
 - All projects: Brutal's open-source assembly renames (`Brutal.Core`, `Brutal.Numerics`, `Brutal.Strings`, …).
 - `iron-man.lib`: `Helm2Body` retarget, new `IronManNavballPatches` (thrust marker for enabled kittens), RCS cache gate.
 - `the-tick.lib` / `kitchen-sink.lib`: `DetectStructuralFailure(…, SimStep)` lookup (both were inert); kitten hard-landing coverage.
@@ -650,3 +663,5 @@ and (5482) the shared `PartRenderFilter` and Vehicle Paint patches. Covers empty
 views, per-canopy originals and re-enable behavior, external material changes; shared render-filter compaction, owners, dent
 alignment and fail-open cases; paint in cached static/dynamic state flags and single invalidation. Also links production capsule-glass filtering and shared IVA ownership for exact window isolation, late models, independent toggle orders, shadow-proxy preservation and unpatch cleanup.
 Managed Harmony fixtures avoid native game and GPU initialization; see [README](ksa-upgrade.tests/README.md).
+Additional startup regressions exercise the production patch-group report and LF/CRLF/mixed shader
+parsing, including malformed definitions and real game shader transforms.

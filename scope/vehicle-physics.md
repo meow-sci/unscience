@@ -1,5 +1,34 @@
 # Vehicle Manipulation / Physics Mods — Game Integration Scope
 
+## KSA 5638 startup handoff compatibility follow-up
+
+Windows startup reported the same outer `TargetInvocationException` for saves, Dent Wizard and
+Garry's Torch, with no shared handoff success line; welding was inert. Their common dependency is
+`PhysicsFrameHook.Apply`. The original seven native calls remain unique and ordered in supplied
+5638 and 5554 sources. A managed regression using actual Harmony 2.4.2 reproduces that outer error
+when an earlier default-priority profiling transpiler replaces direct solver calls before the hook
+validates them. This establishes a compatibility defect; it does **not** identify the live profiler
+or prove the reported Windows failure's cause.
+
+`PhysicsFrameHook` now installs at `Priority.First` with `before` constraints for all existing
+foreign transpiler owners, so it validates original call operands before compatible wrappers run.
+The seven-call unique/order guard and exact `GetJobSimStep` replacement remain unchanged; there is
+no alternate mutation boundary. Later normal-priority wrappers compose too. Failed installation
+logs the original exception, requested priority/order, and registered transpiler owner/method/
+priority/index/before/after, then attempts method-targeted rollback without replacing the original
+exception. Retries remove any stale registration of this exact method before adding it again.
+Garry's Torch application is idempotent, including its collision patches and callback. Failed
+removal always clears pending edits/world changes; while Harmony retains the old executable chain,
+the hook continues to report installed until removal succeeds.
+
+`garrys-torch.tests` checks both install orders, earlier Normal/First owners, profiler removal,
+reapply, three failed-install retries, diagnostics and failed-unpatch recovery using production
+Harmony. It verifies deferred world replacement before step computation, queued mutations before
+welds, `PreviousTime`, orbit-reader joins and all snapshots afterward. An optimized fixture includes
+span locals/branches; a metadata-only real-KSA check confirms caller/solver signatures and seven
+ordered calls (5638: 703-byte caller, `ReadOnlySpan<Vehicle>` local). Native startup/welding and scene
+save/load acceptance remain pending; no save ID/version/payload or persisted weld state changed.
+
 ## KSA 5482 (5438 → 5482) verification
 
 Verified against `2026.9.22.5482` (NEW) vs `2026.9.10.5438` (OLD) with both supplied decomp/Content

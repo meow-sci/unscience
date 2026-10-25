@@ -5,6 +5,17 @@ unlogged). Fixed in code and verified by the full build plus all 18 managed suit
 KSA run was possible. **Every item below still needs an in-game pass.** Where this conflicts with
 the 5482 notes, it takes precedence.
 
+- **October 25 Windows startup / welding failure:** the supplied log shows scene saves, Dent Wizard
+  handoff and weld timing failing together; the user confirmed welding did not work. A managed
+  call-wrapper transpiler reproduces the shared-hook installation error shape, and ordering/rollback
+  is corrected in code. The original runtime cause remains unconfirmed; purr2d2 involvement is a
+  hypothesis. Full inner exceptions and target-owner diagnostics replace the previous opaque logs.
+  Native retest with the same installed mods is required. Scene-save hooks are unavailable while
+  this handoff fails, and native overwrite can remove an old sidecar.
+- **October 25 Full Canopy Windows parsing:** CRLF shader defines reproduce the exact missing
+  `SET_TEXTURE` error. Fixed in code with LF/CRLF/mixed production-parser and real shader regressions;
+  Windows shader compilation/rendering acceptance remains pending. No save payload changes.
+
 - **The Tick / Kitchen Sink G-load protection were inert on 5638:** fixed in code. The private detector
   gained a `SimStep` parameter, so the exact lookup failed and both features stayed unavailable. Both
   now also cover KSA's new EVA-kitten hard-landing death (≥20 m/s). Live check: protect a vessel and an
