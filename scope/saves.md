@@ -14,6 +14,14 @@ disappear, the shared hook installs, and welding works, while purrTTY/gatOS rema
 isolates a purr2d2 interaction, not the exact transformation. Updated-build coexistence and actual
 scene-save behavior remain unverified.
 
+Actual-source follow-up: Purr2D2's old unconditional `Universe.DeserializeSave` cleanup prefix ran
+even when Unscience deferred the original. This could discard its session setup before a later
+preflight rejection. Its companion last-priority prefix now checks `__runOriginal` and joins
+`JobSystems.WaitAll` before actual cleanup; normal file requests already defer earlier at
+`UncompressedSave.Load`. The optional source-linked `Purr2D2.Interop` executable combines both
+production hooks with native-independent fixtures for the deferral/reset/replay contract. No
+participant ID, payload, identity resolver or native/global/session ownership policy changes.
+
 Deferred world changes still replay after result application and the orbit-reader join, **before**
 `GetJobSimStep` computes time from the new world. Queue ordering, per-callback isolation, previous-time
 timestamps, native capture/reset/replay, feature identities and payload versions are unchanged.

@@ -244,6 +244,16 @@ comparison disables only purr2d2: the shared hook installs, all three patch erro
 welding works, with purrTTY/gatOS still enabled. Updated-build coexistence with purr2d2 and actual
 native scene-save behavior remain unverified; the exact original inner exception is unavailable.
 
+The actual-source audit adds `Purr2D2.Interop`: real Purr2D2 `GameHooks`, `PhysicsFrameHook` and
+`NativeSaveHooks` compose on native-independent fixtures. A last-priority Purr2D2 deserialize
+prefix observes `__runOriginal`, so a deferred or rejected direct load no longer clears its current
+session equipment/holds/requests before replay; actual cleanup joins native jobs. File-load
+deferral remains at `UncompressedSave.Load`. Existing Purr2D2 post-load cleanup is idempotent.
+Its settings/generated assets remain global, fragment results are native-saved, and its per-kitten
+equipment/holds retain their documented session policy. Unscience feature records, versions,
+payloads and reset/replay ordering are unchanged. Iron Man keyboard priority and the Purr2D2
+non-character-worker guard are transient dispatch/ownership changes, not new saved state.
+
 ## Native acceptance checklist
 
 Record KSA build, Unscience commit, OS/architecture, installed mods/assets, pass/fail and observed

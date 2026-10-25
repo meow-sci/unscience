@@ -67,6 +67,7 @@ class Checks
             submod.Enabled.Clear();
             otherMod.UnpatchAll(otherMod.Id);
         }
+        InputCompatibilityChecks.Run();
         FlightComputerChecks.Run();
         FlightSaveChecks.Run();
         OrientationChecks.Run();

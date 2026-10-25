@@ -53,6 +53,13 @@ This proves the ordering defect and correction for compatible call wrappers. It 
 which installed mod caused a reported native startup failure, execute the actual KSA caller, or
 replace the Windows weld/save/load acceptance checks.
 
+An optional [Purr2D2 cross-mod harness](purr2d2-interop/README.md) compiles Purr's real complete
+`GameHooks.cs` from an external source checkout alongside production Unscience frame/save hooks.
+It checks actual install-order and direct-load reset interactions, including the historical
+default-priority installer. The generic profiler fixture above remains useful for broader ordering
+coverage; Purr specifically replaces the `ExecuteNextVehicleSolvers` anchor and leaves Apply* and
+`GetJobSimStep` direct. The cross-harness is outside the solution and needs its explicit source path.
+
 ## Collision and preset regression
 
 `CollisionChecks` links production `WeldCollisionPatches` and uses actual Bepu rigid bodies and a

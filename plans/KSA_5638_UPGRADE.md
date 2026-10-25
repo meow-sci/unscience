@@ -158,6 +158,60 @@ works with the real profiler, or establish native scene-save/Dent Wizard/Godzill
 Canopy still fails without purr2d2, so its CRLF parsing defect is independent. The next acceptance
 run must use the updated build **with purr2d2 re-enabled**.
 
+### Actual Purr2D2 source audit and paired fixes
+
+The supplied editable source is `/Users/asherwin/wip/purr2d2-initial/repos/purr2d2`, base revision
+`08b74bc`; the former `/Users/asherwin/repos/meow-sci/purr2d2` checkout contains only a license.
+`src/Runtime/GameHooks.cs:112` replaces `Universe.ExecuteNextVehicleSolvers` with
+`PrepareAndDispatchVehicles`. That removes exactly one of Unscience's seven required direct calls;
+the real-source regression reproduces the historical guard error at **ExecuteNextVehicleSolvers**.
+Purr2D2 leaves `GetJobSimStep` and the three Apply calls intact. The earlier generic profiler
+fixture replaced more anchors and was a compatibility reproduction, not the exact Purr transform.
+
+The current Unscience ordering fix composes with that real transformation. Purr2D2's companion
+installer also explicitly orders after `MeowSci.Unscience`, supporting the older normal-priority
+installer in either load order without an assembly dependency. Its timing wrappers still make
+ordinary native calls and preserve their stack, exceptions and profiling segments; the actual
+source has no GetJobSimStep profiling wrapper to lose. Purr2D2's callback remains after input,
+before new workers, and Unscience's mutations/welds remain before the next solver snapshots.
+
+Two further source-backed ownership problems are corrected:
+
+- **Deferred direct load cleanup:** Purr2D2's unconditional void `DeserializeSave` prefix cleared
+  session setup even when Unscience skipped the original to defer it. A later rejected preflight
+  left the native scene intact but had already lost equipment, Force holds and pending requests.
+  Its separate last-priority prefix now checks `__runOriginal` and joins native jobs before actual
+  cleanup. Initial file loads already defer at `UncompressedSave.Load`. Existing post-load cleanup
+  stays idempotent; all native/global/session ownership policies and save payloads are unchanged.
+- **Same-kitten Iron Man mode:** default-priority effectful keyboard prefixes competed for Space,
+  and Purr2D2 could apply a queued somersault after Iron Man selected vessel physics. Enabled Iron
+  Man now owns keyboard handling at First priority; inactive kittens pass through. Purr2D2 checks
+  the final prepared worker's `IsKitten` flag and releases its request before changing a
+  non-character worker's motion or inputs. No cross-assembly mode lookup or new saved state.
+
+The optional `garrys-torch.tests/purr2d2-interop/Purr2D2.Interop.csproj` compiles the complete supplied
+Purr2D2 `GameHooks.cs` with production `PhysicsFrameHook` and `NativeSaveHooks`. Host/runtime sinks
+and preflight accept/reject policy are fixtures; no Purr transform or save-hook method is copied.
+It tests load order, original failure, wrappers, removal/reapply and actual defer/reset/replay code.
+The warmed-wrapper target-prefix fixture verifies ordinary patched dispatch with an explicitly
+non-inlined managed target; it does **not** prove native optimized JIT/inlining behavior. Keep that
+native check open rather than declaring all optimized callers cleared.
+
+Additional regressions exercise real Iron Man Harmony input ownership (14 checks) and queued/active
+Purr2D2 worker mode changes without modifying another mode's prepared kinematics, inputs or events.
+The broad Purr validator also exposed a previously documented stale UI test: it expected the title
+at the circle center, while the unchanged two-line layout places the title above and hint below.
+Only the test expectation was corrected to verify those relative positions and the absent tooltip;
+the product UI was not changed.
+
+Paired verification passes: both complete Release builds (zero warnings/errors), all 18 Unscience
+managed suites, Purr2D2's full `tools/validate.py --run-tests` source/stage/GLSL/managed validation,
+and both original-source audit mode and corrected-source mode of the optional interop harness.
+The Purr checkout acquired a separate user edit to `SaberRuntime.SaberOverlay.cs` during this work;
+it is preserved, excluded from the compatibility patch/commit, and included in the final test build.
+The final Purr build with that edit also passes. Native co-loaded gameplay and optimized JIT remain
+acceptance work, including fuel/refill and celestial prefixes through the warmed dispatch wrapper.
+
 ### Reproduced defects and changes
 
 - **Shared frame-hook ordering.** Both supplied game-source trees still contain the seven expected

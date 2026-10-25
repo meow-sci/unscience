@@ -34,7 +34,8 @@ public static class IronManFlightPatches
             harmony.Patch(RequiredMethod(typeof(VehicleUpdateState), nameof(VehicleUpdateState.PrepareFromVehicle)),
                 postfix: new HarmonyMethod(typeof(IronManFlightPatches), nameof(PreparePostfix)));
             harmony.Patch(RequiredMethod(typeof(KittenEva), nameof(KittenEva.OnKey), typeof(GlfwKeyEvent)),
-                prefix: new HarmonyMethod(typeof(IronManFlightPatches), nameof(OnKeyPrefix)));
+                // Active rocket mode owns vessel input before optional EVA action prefixes.
+                prefix: new HarmonyMethod(typeof(IronManFlightPatches), nameof(OnKeyPrefix)) { priority = Priority.First });
             harmony.Patch(RequiredMethod(typeof(KittenEva), nameof(KittenEva.ProcessInput), typeof(InputAction), typeof(GlfwKeyAction), typeof(GlfwModifier)),
                 prefix: new HarmonyMethod(typeof(IronManFlightPatches), nameof(ProcessInputPrefix)));
             IronManRenderPatches.Apply(harmony);

@@ -10,13 +10,19 @@ the 5482 notes, it takes precedence.
   call-wrapper transpiler reproduces the shared-hook installation error shape, and ordering/rollback
   is corrected in code. **Native baseline comparison:** disabling only purr2d2 removes all three
   failures, the shared handoff installs, and the user reports working welds; purrTTY/gatOS stay
-  enabled. This isolates a purr2d2 interaction, but the exact transformation is still unknown.
-  Updated-build coexistence with purr2d2 re-enabled remains required. Full inner exceptions and
+  enabled. The supplied source then identifies the replacement of `ExecuteNextVehicleSolvers` by
+  Purr2D2's timing wrapper; real-source composition tests reproduce that exact guard failure.
+  Updated-build native coexistence with purr2d2 re-enabled remains required. Full inner exceptions and
   owner diagnostics replace the opaque logs. Scene-save hooks are unavailable while this handoff
   fails, and native overwrite can remove an old sidecar; no native save acceptance was reported.
 - **October 25 Full Canopy Windows parsing:** CRLF shader defines reproduce the exact missing
   `SET_TEXTURE` error. Fixed in code with LF/CRLF/mixed production-parser and real shader regressions;
   Windows shader compilation/rendering acceptance remains pending. No save payload changes.
+- **Purr2D2 direct-load / Iron Man coexistence:** companion Purr2D2 fixes retain session equipment
+  when a direct deserialize is deferred/rejected and join workers before actual cleanup; they also
+  cancel somersaults before modifying a non-character worker. Unscience gives enabled Iron Man
+  first keyboard priority. Managed production regressions cover these cases; native acceptance
+  with both updated mods remains open. No scene-save payloads changed.
 
 - **The Tick / Kitchen Sink G-load protection were inert on 5638:** fixed in code. The private detector
   gained a `SimStep` parameter, so the exact lookup failed and both features stayed unavailable. Both

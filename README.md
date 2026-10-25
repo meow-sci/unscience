@@ -21,6 +21,10 @@ and scene saves. Disabling only purr2d2 on the original installed build removes 
 failures and restores welding. The updated build still needs testing with purr2d2 re-enabled.
 See the [startup follow-up](plans/KSA_5638_UPGRADE.md#startup-follow-up-2026-10-25).
 
+The Purr2D2 source audit also adds a companion deferred-load cleanup correction and same-kitten
+input ownership: Iron Man rocket mode owns Space, and Purr2D2 cancels somersaults before changing a
+vessel-mode worker. The paired source tests are separate from native co-loaded acceptance.
+
 Kitchen Sink includes **Unlock IVA Camera**: enter IVA, enable the toggle, and use free cam
 movement while retaining IVA interiors, lighting and configured ray tracing. Turning it off or
 using **Return to Seat** restores the seated camera. Speed and the unlocked view are scene-saved.

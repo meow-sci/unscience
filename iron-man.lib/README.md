@@ -24,6 +24,10 @@ Iron Man development host. See [player controls](../iron-man/README.md) and the 
 - `IronManFlightPatches` changes only opted-in worker snapshots' `IsKitten` classification and
   routes keyboard/actions through nonvirtual base Vehicle implementations. Stock modules calculate
   mass, fuel, forces, RCS and collision responses. Character simulation is restored on disable.
+  Its key prefix runs at `Priority.First`, so active rocket mode owns vessel input before optional
+  EVA actions such as Purr2D2's Space somersault. Inactive kittens pass through to those actions.
+  Purr2D2's matching worker guard releases a queued/active somersault when native preparation
+  selects `IsKitten = false`, preserving the vessel mode's prepared physics and inputs.
 - `IronManFlightComputerPatches` changes only enabled kittens' native EVA/Vehicle canvas
   classification and both gauge button policy call sites. A nonvirtual base-policy call
   preserves stock target/burn/engine restrictions and avoids patching shared generic JIT code.
@@ -74,3 +78,6 @@ Scene persistence is registered by the Unscience host through `ISaveParticipantS
 Saved original EVA control part/connector references are validated against the loaded kitten
 before enabling its restored mode. An unavailable reference produces a retained recovery record
 instead of silently losing the original Disable baseline.
+
+Input ownership and prepared-worker classification are runtime behavior rebuilt from the restored
+mode. The Purr2D2 compatibility fixes change no scene-save ID, version, payload or replay policy.

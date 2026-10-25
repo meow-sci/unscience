@@ -143,6 +143,26 @@ EVA mode; `IsEnabled` gates rocket worker/input/HUD/frame/RCS behavior and surfa
 Authored-node restoration, data integrity and equipment rendering remain passive in EVA mode. No stock asset/template is mutated.
 See [mode transitions](../plans/iron-man/FLIGHT_MODES.md).
 
+## Purr2D2 input and worker ownership (2026-10-25)
+
+Both mods can prefix `KittenEva.OnKey` with an effectful bool prefix. Default ordering allowed a
+Space somersault to consume input before active Iron Man's base-vehicle handler. Iron Man now
+installs that key prefix at `Priority.First`: enabled kittens run the base vehicle handler once
+and consume the event; inactive kittens continue through the other EVA prefixes. Production
+Harmony checks cover both installation orders, enable/disable, exact other-kitten isolation and
+unload (**14 checks** in `iron-man-flight.tests/InputCompatibilityChecks.cs`).
+
+The matching Purr2D2 change checks the final prepared worker's `IsKitten` after native preparation
+and Iron Man's `PrepareFromVehicle` postfix. If it is false, Purr2D2 releases queued/active
+somersault ownership before changing velocity, locomotion, movement/grab inputs or pending failure
+events. This catches a mode switch after a button/keyboard request without a direct assembly
+dependency. Character workers keep the normal one-shot launch behavior. Co-loaded native input,
+rocket controls and transitions during a jump remain in-game acceptance work.
+
+Save review: the existing `iron-man` record still restores configured/active mode and flight
+preferences with engines disarmed. Prefix ordering and prepared-worker ownership are transient
+runtime state; no ID, version, payload, reset or replay behavior changes.
+
 ## Harmony and reflection watchlist
 
 Decomp paths below are under `KSA/`. By-name resolution (even with `nameof`) must be checked for
@@ -159,7 +179,7 @@ signature/overload changes; private string names must be re-grepped on every gam
 | `GaugeCanvas.IsContextVisible()` | flight-computer transpiler | Exactly two `isinst KittenEva` sites become a session-gated EVA classifier. Preserve all other context predicates, AND behavior, empty/null cases and saved canvas settings. |
 | `GaugeButtonFlightComputer.IsDisabled()` / `PackData()` | flight-computer transpilers | Exactly one `Vehicle.IsFlightComputerDisabled<Enum>` call per method routes through the same adapter: enabled kitten uses nonvirtual base policy, all others keep virtual dispatch. Packed disabled/selected state and click eligibility stay consistent. |
 | `VehicleUpdateState.PrepareFromVehicle(bool,ManualControlInputs)` | flight postfix | Stock assigns `IsKitten` from `ReadOnlyVehicle` on main thread before workers; opted-in snapshots become ordinary vessels. |
-| `KittenEva.OnKey(GlfwKeyEvent)` / `ProcessInput(InputAction,GlfwKeyAction,GlfwModifier)` | flight prefixes | Enabled kittens use original base Vehicle input; reverse patches on `Vehicle.OnKey` / `ProcessInput` must retain nonvirtual dispatch. |
+| `KittenEva.OnKey(GlfwKeyEvent)` / `ProcessInput(InputAction,GlfwKeyAction,GlfwModifier)` | flight prefixes | Enabled kittens use original base Vehicle input; `OnKey` runs at `Priority.First` before optional effectful EVA action prefixes, while inactive kittens pass through. Reverse patches on `Vehicle.OnKey` / `ProcessInput` must retain nonvirtual dispatch. |
 | `Vehicle.UpdateRenderData(IViewport,int)` | render prefix; nonvirtual early base dispatch | Suppress late equipment submission without suppressing KittenEva's character draw. Early dispatch must retain other mods' base-render patches. |
 | `PartModelRenderer.UpdateRenderData(IViewport,int)` | render prefix | Submit authored EVA equipment before upload. @5482 `Program` skips EVA in the early loop (`Program.cs:4292-4299`), uploads at 4317, then draws the avatar at 4428/4622. Instance lists are cleared at frame start (`PartModelRenderer.ClearFrameData`), so equipment submitted after the upload is discarded, not drawn a frame late. |
 | `SuperMeshRenderSystem.ClearBuckets(IViewport)` | editor postfix | **Signature @5482** (was parameterless; per-view buckets, rev 5474); still one overload, postfix binds only `__instance`. Only matching Program renderer/main viewport/editor: submit avatar after clearing and before prepass (`Program.cs:4901` @5482). Also invoked per viewport from `RenderViewport` (`:4419`) and `RenderGame` (`:4613`), where the editor-kitten gate returns early. |

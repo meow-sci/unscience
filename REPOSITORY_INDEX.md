@@ -150,6 +150,14 @@ apply/remove and failed-install cleanup, and verify the actual KSA DLL's frame s
 calls through metadata without executing the game. The managed frame retains span locals/branches.
 See its [README](garrys-torch.tests/README.md) for usage.
 
+### [Purr2D2.Interop](garrys-torch.tests/purr2d2-interop)
+Optional managed cross-mod executable. Compiles the supplied Purr2D2 `GameHooks.cs` directly with
+production `PhysicsFrameHook` and `NativeSaveHooks`, using native-independent host/runtime sinks.
+Checks both frame patch orders, the exact historical dispatch-anchor failure, retained timing
+wrappers, reapply/removal and direct/file load deferral, rejection and replay. Pass
+`-p:Purr2D2SourceDir=/absolute/path/to/purr2d2`; the source checkout is not modified. This project
+is outside the standard solution and does not execute native KSA.
+
 ### [kiwis-marbles](kiwis-marbles) / [kiwis-marbles.lib](kiwis-marbles.lib)
 Celestial body welding mod. Repositions planets and moons by welding them to follow other celestial bodies or vehicles at user-defined offsets. Bypasses physics for the source body, rewriting its orbit once per sim step from a Harmony prefix on `Universe.ExecuteNextVehicleSolvers` (after the orbit/vehicle solver results are applied, before the next step is queued).
 - Weld any planet or moon to any orbiter (celestial or vehicle)
@@ -624,6 +632,13 @@ and cleans failed installations; Free Fallin accepts Windows CRLF shader definit
 logs complete patch exceptions and reports failed groups in its startup summary. A native baseline
 comparison restores the shared hook and welding when only purr2d2 is disabled; updated-build
 coexistence with purr2d2 remains unverified. Save payloads are unchanged.
+
+The subsequent source audit identifies Purr2D2's `PrepareAndDispatchVehicles` replacement of
+`ExecuteNextVehicleSolvers` as the exact shared anchor conflict. Its companion fix explicitly orders
+after Unscience and preserves skipped direct-load setup until actual reconstruction. Iron Man now
+owns rocket-mode keyboard input before EVA-action prefixes; Purr2D2 leaves non-character prepared
+workers unchanged. Source-linked and feature regressions cover these policies; native acceptance
+with both updated mods remains pending.
 
 - All projects: Brutal's open-source assembly renames (`Brutal.Core`, `Brutal.Numerics`, `Brutal.Strings`, …).
 - `iron-man.lib`: `Helm2Body` retarget, new `IronManNavballPatches` (thrust marker for enabled kittens), RCS cache gate.

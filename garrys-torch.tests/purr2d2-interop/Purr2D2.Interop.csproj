@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <Compile Include="../../ksa-abstractions.lib/PhysicsFrameHook.cs" Link="Production/PhysicsFrameHook.cs" />
+    <Compile Include="../../ksa-abstractions.lib/Persistence/NativeSaveHooks.cs" Link="Production/NativeSaveHooks.cs" />
+    <Compile Include="$(Purr2D2SourceDir)/src/Runtime/GameHooks.cs" Link="Production/PurrGameHooks.cs" />
+    <AssemblyMetadata Include="Purr2D2SourceDir" Value="$(Purr2D2SourceDir)" />
+  </ItemGroup>
+  <Target Name="RequirePurrSource" BeforeTargets="CoreCompile">
+    <Error Condition="!Exists('$(Purr2D2SourceDir)/src/Runtime/GameHooks.cs')"
+           Text="Pass -p:Purr2D2SourceDir=/absolute/path/to/purr2d2. The harness compiles its actual GameHooks.cs without modifying that checkout." />
+  </Target>
+</Project>

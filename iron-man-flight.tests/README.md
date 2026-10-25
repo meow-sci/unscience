@@ -13,6 +13,13 @@ GPU submission with the avatar retained in the late phase, and visible equipment
 mode is disabled. A second render prefix installed before and after Iron Man tests coexistence
 without skipped early overrides or duplicated late submissions.
 
+`InputCompatibilityChecks` installs the real production flight patches alongside an effectful
+somersault-style `KittenEva.OnKey` prefix in both installation orders. Fourteen checks verify that
+active Iron Man owns vessel input first, inactive mode passes through, another kitten keeps its
+somersault input, unrelated EVA input stays native, and unloading removes only Iron Man's owner.
+The competing-prefix check fails without the production `Priority.First` setting. This is a
+managed input-ownership check; native Purr2D2/Unscience controls still need co-loaded acceptance.
+
 The flight-computer checks run all three production transpilers and the emitted nonvirtual
 `Vehicle.IsFlightComputerDisabled<Enum>` adapter. They cover default-off and per-kitten HUD
 selection, every additional context condition and AND ordering, empty/null contexts, preservation
