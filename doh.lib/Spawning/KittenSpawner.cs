@@ -16,7 +16,7 @@ namespace MeowSci.DohLib.Spawning;
 ///   - Optional per-kitten material customization
 ///
 /// Partial files: Positioning (spawn frame), Materials (per-kitten cloning), Catalog (game lookups),
-/// Teardown (despawn, prune and native vehicle destruction).
+/// Naming (exact names and numbered prefixes), Teardown (despawn, prune and native vehicle destruction).
 /// MUST be called on the game thread (not from HTTP handlers directly).
 /// </summary>
 public sealed partial class KittenSpawner
@@ -29,7 +29,6 @@ public sealed partial class KittenSpawner
 
     private readonly MaterialFactory _materialFactory;
     private readonly SpawnedKittenRegistry _registry;
-    private int _nextKittenIndex;
 
     public KittenSpawner(MaterialFactory materialFactory, SpawnedKittenRegistry registry)
     {
@@ -117,8 +116,10 @@ public sealed partial class KittenSpawner
             if (freeSlots >= 0 && freeSlots < MinFreeSlotsForKitten)
                 return Stopped(results, request.Count, $"GPU material pool exhausted ({freeSlots} slots free)");
 
-            // Generate unique name
-            string kittenName = GenerateUniqueName(system);
+            // Preserve exact single names; batch/automatic names skip occupied IDs.
+            string? kittenName = GenerateKittenName(system, request);
+            if (kittenName == null)
+                return Stopped(results, request.Count, $"The vehicle name '{request.VehicleName}' is already in use. Choose another name");
 
             // Create backpack part
             Part? backpackPart = CreateBackpackPart();
@@ -233,15 +234,5 @@ public sealed partial class KittenSpawner
             Error = $"{reason} ({spawned.Count} of {requested} spawned).",
             SpawnedKittens = spawned.ToArray()
         };
-    }
-
-    private string GenerateUniqueName(CelestialSystem system)
-    {
-        string name;
-        do
-        {
-            name = $"Kitten_doh_{_nextKittenIndex++}";
-        } while (system.All.TryGet(name, out _));
-        return name;
     }
 }

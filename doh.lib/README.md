@@ -24,7 +24,10 @@ Headless library providing programmatic kitten spawning and per-kitten GPU mater
 
 ### DohSubmod (`DohSubmod.cs`)
 
-- **`DohSubmod`** — `ISubmod` implementation for unscience supermod integration. Encapsulates the full spawning UI (vehicle/character selection, offset, batch count, color picker, kitten list with live recoloring and despawn). Also used by standalone `doh/Mod.cs` to avoid code duplication.
+- **`DohSubmod`** — `ISubmod` implementation for unscience supermod integration. Encapsulates the full spawning UI (vehicle/character selection, editable vehicle name/batch prefix, offset, batch count, color picker, kitten list with live recoloring and despawn). Also used by standalone `doh/Mod.cs` to avoid code duplication.
+  - The name field starts at `Kitten_doh_` and applies to both spawn buttons. A single spawn uses
+    nonblank text verbatim, refusing an occupied name; a batch appends collision-free numbers.
+    Blank text uses automatic default-prefix numbering, including for a single spawn.
   - The spawn target is held as the selected `Vehicle` object, never as a list index. KSA's vehicle
     list swap-removes on deregister, and `VehicleProvider` filters debris, so an index silently moved
     onto another vehicle (often a spawned kitten) whenever something was removed. Spawns then ignored
@@ -37,7 +40,8 @@ Headless library providing programmatic kitten spawning and per-kitten GPU mater
 
 - **`KittenSpawner`** — Core spawning engine replicating `EVADoor.CreateKittenEva()`. Split into
   partials: `KittenSpawner.cs` (spawn), `.Teardown.cs` (despawn, prune, orphan removal), `.Positioning.cs`,
-  `.Materials.cs` (per-kitten cloning) and `.Catalog.cs` (backpack part, propellant, characters). Supports:
+  `.Materials.cs` (per-kitten cloning), `.Naming.cs` (exact names / unique prefixes) and `.Catalog.cs`
+  (backpack part, propellant, characters). Supports:
   - Vehicle-relative positioning with body-frame offset. The anchor is `SpawnRequest.ReferenceVehicle`,
     or an unambiguous `ReferenceVehicleId`. The orbit epoch is the reference state's own `StateTime`,
     as `EVADoor` does.
@@ -61,7 +65,7 @@ Headless library providing programmatic kitten spawning and per-kitten GPU mater
     calls `part.CreateOwnTree()` before configuring the MMH/NTO tanks and refilling them, as
     `EVADoor.GetBackPackPart` does. Without it, every spawn threw a null reference.
 
-- **`SpawnRequest`** — Input DTO for spawn operations. Key fields: `ReferenceVehicle` / `ReferenceVehicleId`, `OffsetBodyFrame`, `Count`, `CharacterId`, `TintColor`, `UniqueMaterialsPerKitten`, `PerKittenColors`.
+- **`SpawnRequest`** — Input DTO for spawn operations. Key fields: `ReferenceVehicle` / `ReferenceVehicleId`, `OffsetBodyFrame`, `Count`, `VehicleName`, `CharacterId`, `TintColor`, `UniqueMaterialsPerKitten`, `PerKittenColors`. `VehicleName` is exact for a single spawn and a prefix for batches; absent/blank input preserves the existing automatic `DefaultNamePrefix` (`Kitten_doh_`) behavior.
 
 - **`SpawnResult`** / **`SpawnedKittenInfo`** — Result DTOs with per-kitten spawn details. `Warning` reports kittens that spawned untinted. A batch that stops part-way still lists the kittens it spawned.
 
@@ -122,6 +126,12 @@ character, and private material colors by source/name. Native KSA serialization 
 restore only rebinds registry ownership and cloned materials and never spawns duplicates. A runtime
 vehicle reference makes capture follow renamed kittens. Shared successful color-write tracking
 also preserves Humble Arteest edits to DOH's private material slots.
+
+The additive version-1 `SpawnName` field preserves the editable name/prefix, including blank input.
+Legacy records without it, vanilla saves and new scenes reset to `Kitten_doh_`. Null, embedded NUL
+or names exceeding the input's 255 UTF-8 byte limit are rejected and retained with diagnostics.
+Native KSA owns already-spawned vehicle names. The numeric naming counter is only a runtime hint:
+the live native lookup skips occupied names after reload, so the counter needs no sidecar record.
 
 Each kitten also saves an optional `MaterialGroup`, the ID of the set it rendered with, so a shared
 batch restores onto one shared set. Records without it, from older builds, restore one set per kitten.

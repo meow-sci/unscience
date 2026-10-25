@@ -9,6 +9,8 @@
     <Compile Include="../doh.lib/Materials/MaterialFactory.Lifetime.cs" Link="MaterialFactory.Lifetime.cs" />
     <Compile Include="../doh.lib/Spawning/SpawnedKittenRegistry.cs" Link="SpawnedKittenRegistry.cs" />
     <Compile Include="../doh.lib/Spawning/KittenSpawner.Teardown.cs" Link="KittenSpawner.Teardown.cs" />
+    <Compile Include="../doh.lib/Spawning/KittenSpawner.Naming.cs" Link="KittenSpawner.Naming.cs" />
+    <Compile Include="../doh.lib/Spawning/SpawnRequest.cs" Link="SpawnRequest.cs" />
     <Compile Include="../ksa-abstractions.lib/VehicleProvider.cs" Link="VehicleProvider.cs" />
     <Compile Include="../ksa-abstractions.lib/Persistence/ISaveParticipant.cs" Link="ISaveParticipant.cs" />
     <Compile Include="../ksa-abstractions.lib/Persistence/MaterialColorState.cs" Link="MaterialColorState.cs" />

@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Brutal.Numerics;
 using KSA;
 using MeowSci.DohLib.Materials;
+using MeowSci.DohLib.Spawning;
 using MeowSci.KsaAbstractions;
 using MeowSci.KsaAbstractions.Persistence;
 
@@ -11,6 +13,7 @@ namespace MeowSci.DohLib;
 
 public sealed partial class DohSubmod
 {
+    private const int SpawnNameCapacity = 256;
     private readonly Dictionary<string, KittenMaterialSet> _savedMaterialCache = new(StringComparer.Ordinal);
 
     public IEnumerable<ISaveParticipant> SaveParticipants
@@ -20,6 +23,9 @@ public sealed partial class DohSubmod
 
     private static void ValidateDoh(SavedDoh saved)
     {
+        if (saved.SpawnName == null || saved.SpawnName.Contains('\0')
+            || Encoding.UTF8.GetByteCount(saved.SpawnName) >= SpawnNameCapacity)
+            throw new InvalidOperationException("Invalid DOH spawn name.");
         if (saved.SpawnCount is < 1 or > 10000 || saved.Kittens == null || saved.Kittens.Count > 10000
             || saved.Kittens.Any(k => k == null || string.IsNullOrWhiteSpace(k.VehicleId) || string.IsNullOrWhiteSpace(k.CharacterId)
                 || (k.MaterialGroup != null && string.IsNullOrWhiteSpace(k.MaterialGroup))
@@ -38,6 +44,7 @@ public sealed partial class DohSubmod
         var saved = new SavedDoh
         {
             Offset = _offset, SpawnCount = _spawnCount, UseCustomColor = _useCustomColor,
+            SpawnName = _spawnName.ToString(),
             TintColor = _tintColor, UniquePerKitten = _uniquePerKitten,
             CharacterId = _selectedCharacterIndex >= 0 && _selectedCharacterIndex < _availableCharacters.Length
                 ? _availableCharacters[_selectedCharacterIndex] : null
@@ -69,6 +76,7 @@ public sealed partial class DohSubmod
         _selectedVehicle = null;
         _offset = new float3(0, 0, 10);
         _spawnCount = 1;
+        _spawnName.SetValue(SpawnRequest.DefaultNamePrefix.AsSpan());
         _useCustomColor = _uniquePerKitten = false;
         _tintColor = new float4(1, 1, 1, 1);
         _selectedCharacterIndex = -1;
@@ -78,6 +86,7 @@ public sealed partial class DohSubmod
     {
         context.Require(saved.SpawnCount >= 1 && saved.SpawnCount <= 10000, "Invalid DOH spawn count.");
         _offset = saved.Offset; _spawnCount = saved.SpawnCount;
+        _spawnName.SetValue(saved.SpawnName.AsSpan());
         _useCustomColor = saved.UseCustomColor; _uniquePerKitten = saved.UniquePerKitten;
         _tintColor = saved.TintColor;
         _selectedCharacterIndex = Array.IndexOf(_availableCharacters, saved.CharacterId);
@@ -147,6 +156,8 @@ public sealed partial class DohSubmod
     {
         public float3 Offset { get; set; }
         public int SpawnCount { get; set; } = 1;
+        /// <summary>Additive v1 field; legacy records restore the default name/prefix.</summary>
+        public string SpawnName { get; set; } = SpawnRequest.DefaultNamePrefix;
         public bool UseCustomColor { get; set; }
         public bool UniquePerKitten { get; set; }
         public float4 TintColor { get; set; }

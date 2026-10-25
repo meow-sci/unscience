@@ -46,6 +46,9 @@ A unified supermod that consolidates 30 KSA feature libraries into a single ImGu
 - **F11** — Toggle the unscience window
 - **Gear icon (⚙)** — Opens a popup to show/hide individual submods
 - Each submod has a **collapsible header** that can be expanded or collapsed
+- **DOH** — edit **Vehicle name** / **Name prefix** before either spawn button. The field defaults
+  to `Kitten_doh_`; single spawns use the exact text, batches append numbers, and blank input uses
+  automatic naming. The setting is restored by scene saves. [Details](../doh/README.md#usage).
 - The **Skittles Theme Editor** opens in a separate window via the "Open Theme Editor" button
 
 Kitchen Sink → **See Inside Capsule (Experimental)** tries the stock medium/Gemini capsule

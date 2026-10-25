@@ -2,16 +2,25 @@
 
 Run `dotnet run --project doh.tests` from the repository root.
 
+Current suite: 55 checks.
+
 Links the production DOH save adapter (`DohSubmod.Persistence.cs`), `SpawnedKittenRegistry`,
 `KittenMaterialSet`, the material-set release code (`MaterialFactory.Lifetime.cs`), the spawner
 teardown (`KittenSpawner.Teardown.cs`), `VehicleProvider`, the JSON helpers and the scene
-coordinator into a native-free fixture. Only the ImGui half of `DohSubmod`, the Vulkan/reflection
+coordinator into a native-free fixture. Also links the production naming partial and `SpawnRequest`.
+Only the ImGui half of `DohSubmod`, its text buffer, the Vulkan/reflection
 material bridge, material cloning and spawning are substituted. The substituted spawner follows the
 production reuse rule: a released set is never reused. The fixture `Universe.DestroyVehicle` records
 its disposition, clears control and deregisters, as KSA 5638 does.
 
 Checks:
 
+- exact single names (including the prefilled value and significant whitespace), case-insensitive
+  occupied-name refusal, numbered batches skipping occupied names, blank/default fallback and
+  a fresh spawner avoiding names restored by KSA;
+- real-adapter JSON round-trips of a Unicode name/prefix and blank input, detached capture,
+  repeated/cross-scene loads, legacy records without `SpawnName`, vanilla reset, and diagnosed,
+  retained null/NUL/over-capacity (UTF-8) names;
 - capture writes one `MaterialGroup` for a shared batch, a distinct group for a unique kitten and
   none for an untinted kitten;
 - reloading the same save rebinds reconstructed kittens onto the detached sets without new

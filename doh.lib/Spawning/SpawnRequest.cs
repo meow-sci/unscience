@@ -8,6 +8,16 @@ namespace MeowSci.DohLib.Spawning;
 /// </summary>
 public sealed class SpawnRequest
 {
+    /// <summary>Default prefix for automatically numbered kitten names.</summary>
+    public const string DefaultNamePrefix = "Kitten_doh_";
+
+    /// <summary>
+    /// Exact vehicle name for a single spawn, or a prefix for numbered batch names.
+    /// Null, empty or whitespace uses the default prefix with automatic numbering.
+    /// An occupied exact name is rejected rather than silently changed.
+    /// </summary>
+    public string? VehicleName { get; init; }
+
     // ---- Positioning Mode 1: Relative to vehicle ----
 
     /// <summary>

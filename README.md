@@ -35,6 +35,10 @@ stock medium capsule's two opaque window surfaces and reveals its existing IVA c
 The switch is scene-saved and reversible; native visual acceptance is pending. See
 [the experiment](kitchen-sink/README.md#capsule-glass-experiment).
 
+DOH's spawn controls include an editable vehicle name / batch prefix, initially `Kitten_doh_`.
+Single spawns use the text exactly, batches append numbers, and blank input uses automatic naming.
+The setting is scene-saved. See [DOH usage](doh/README.md#usage).
+
 # releases
 
 GitHub Actions uses `1.${GITHUB_RUN_NUMBER}.0` for stable releases from `main`

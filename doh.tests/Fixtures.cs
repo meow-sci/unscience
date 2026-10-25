@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Brutal.ImGuiApi;
 using Brutal.Numerics;
 using KSA;
 using MeowSci.DohLib.Materials;
@@ -11,10 +13,27 @@ using MeowSci.KsaAbstractions.Persistence;
 namespace Brutal.Numerics
 {
     public readonly record struct float3(float X, float Y, float Z);
+    public readonly record struct double3(double X, double Y, double Z);
 
     public readonly record struct float4(float X, float Y, float Z, float W)
     {
         public static float4 One => new(1, 1, 1, 1);
+    }
+}
+
+namespace Brutal.ImGuiApi
+{
+    /// <summary>Holds text for the production adapter without loading the native ImGui library.</summary>
+    public sealed class ImInputString(int capacity, string initialContent)
+    {
+        private string _value = initialContent;
+        public void SetValue(ReadOnlySpan<char> content)
+        {
+            if (System.Text.Encoding.UTF8.GetByteCount(content) >= capacity)
+                throw new InvalidOperationException("Input buffer capacity exceeded.");
+            _value = content.ToString();
+        }
+        public override string ToString() => _value;
     }
 }
 
@@ -79,7 +98,7 @@ namespace KSA
 
         public bool TryGet(string id, out Astronomical? value)
         {
-            value = _vehicles.Find(vehicle => vehicle.Id == id);
+            value = _vehicles.Find(vehicle => string.Equals(vehicle.Id, id, StringComparison.OrdinalIgnoreCase));
             return value != null;
         }
     }
@@ -178,6 +197,7 @@ namespace MeowSci.DohLib
         private readonly KittenSpawner? _spawner;
         private float3 _offset = new(0, 0, 10);
         private int _spawnCount = 1;
+        private readonly ImInputString _spawnName = new(SpawnNameCapacity, SpawnRequest.DefaultNamePrefix);
         private bool _useCustomColor;
         private float4 _tintColor = float4.One;
         private bool _uniquePerKitten;
@@ -191,6 +211,7 @@ namespace MeowSci.DohLib
         public SpawnedKittenRegistry Registry => _registry!;
         public KittenSpawner Spawner => _spawner!;
         public Vehicle? SelectedVehicle { get => _selectedVehicle; set => _selectedVehicle = value; }
+        public string SpawnName { get => _spawnName.ToString(); set => _spawnName.SetValue(value.AsSpan()); }
 
         public void Track(KittenEva kitten, string characterId, KittenMaterialSet? set) =>
             _registry!.Register(kitten.Id, characterId, set);

@@ -75,6 +75,16 @@ restore in dependency order before new simulation dispatch. This avoids destroyi
 the current ImGui frame has already referenced them. The extra frame and all native lifecycle
 assumptions still require the in-game checks below.
 
+DOH naming addition (October 25, 2026): additive `SpawnName` in the existing version-1 `doh` record
+captures the editable exact name / batch prefix for both spawn buttons. Old records and vanilla/new
+scenes use `Kitten_doh_`; blank input preserves automatic naming. Existing kitten names remain
+native-owned. The runtime numeric counter need not persist because each spawn checks native names.
+Managed naming and real-adapter checks cover Unicode/blank round-trips, detached capture, repeated
+and cross-scene loads, legacy/missing records and invalid text. `doh.tests` passes all 55 checks.
+Full `dotnet build -m:1 -p:UseSharedCompilation=false
+-p:UNSCIENCE_DIST_DIR=/private/tmp/unscience-doh-name-dist` passes against local KSA 5638 with zero
+warnings/errors. Native UI/save-load acceptance is pending.
+
 ## Implemented coverage, all 29 submods
 
 Each source link is the adapter defining the current capture/reset/restore policy. “Restores”
@@ -87,7 +97,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [BYO Music](../byo-music.lib/ByoMusicSubmod.Saves.cs) | Unfinished sounds' vehicle targets, filenames, repeat, gap, volume and range. | Every restored sound is paused. Resume starts at the beginning; sample position, current gap progress and former paused/playing distinction are not restored. Finished sounds are omitted. Sound files remain required. |
 | [Camera Controller Override](../camera-controller-override.lib/CameraControllerOverrideSubmod.Saves.cs) | Ordered typed keyframe recipes, parallel groups, pending group recipes, return-to-start duration/easing/powers. | Restores stopped. Current running segment, elapsed time and its captured start pose are not resumed. Native camera pose loads independently. Pressing Play starts the reconstructed sequence through its normal behavior. |
 | [Dent Wizard](../dent-wizard.lib/DentWizardSubmod.cs) | KSA saves the launched vessel's resulting orbit/physical state; v1 `dent-wizard` is an empty lifecycle record. Reset cancels automatic mode, armed and pending shots. Mass labels are read live from native vessel state and are not sidecar data. | Source selection and speed are input for the next one-shot action, not an applied registration or ongoing force; they reset to unselected/5 m/s. Launches never replay on load. Kitchen Sink independently saves any source/target G-load protection. |
-| [DOH](../doh.lib/DohSubmod.Persistence.cs) | Registry of native-restored spawned kittens, character IDs, cloned tint and named material colors, plus an optional per-kitten `MaterialGroup` so a shared batch keeps one material set, and spawn offset/count/character/color options. | Rebinds kittens instead of spawning duplicates; registry ownership supports later Despawn, which uses `Universe.DestroyVehicle(…, Boarded)` since 5638. Missing kittens or changed material identities warn. Legacy records without groups restore one set per kitten. Detached sets nothing rebinds, or left by a vanilla load, are released to KSA's fixed 512-slot GPU material pool. The spawn-target vehicle selection is UI input and resets. Character assets must be installed. Pending spawn actions are not replayed. |
+| [DOH](../doh.lib/DohSubmod.Persistence.cs) | Registry of native-restored spawned kittens, character IDs, cloned tint and named material colors, plus an optional per-kitten `MaterialGroup` so a shared batch keeps one material set, and spawn name/prefix/offset/count/character/color options. | Rebinds kittens instead of spawning duplicates; registry ownership supports later Despawn, which uses `Universe.DestroyVehicle(…, Boarded)` since 5638. Missing kittens or changed material identities warn. Legacy records without groups restore one set per kitten. Detached sets nothing rebinds, or left by a vanilla load, are released to KSA's fixed 512-slot GPU material pool. The spawn-target vehicle selection is UI input and resets. Character assets must be installed. Pending spawn actions are not replayed. |
 | [Don't Stifle Me](../dont-stifle-me.lib/DontStifleMeSubmod.Saves.cs) | Editor scale enable/snap flags and extended-value policy. | Existing part geometry/configuration remains native-owned. Does not serialize an editor undo stack or uncommitted operation. |
 | [Eternal Flame](../eternal-flame.lib/EternalFlameSubmod.Saves.cs) | Monitored vehicles, fuel/electricity switches and refill interval. | Monitoring resumes; interval timing restarts, without offline catch-up. Native save owns the current resource quantities. |
 | [Free Fallin'](../free-fallin.lib/FreeFallinSubmod.Saves.cs) | Applied global canopy material settings and effective albedo. | Recreates appearance, not a cloth simulation checkpoint. Applied state only; external textures remain dependencies. |
@@ -311,6 +321,10 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
   native lost part names, and stopping/deleting one grid leaves the others intact.
 - [ ] Save DOH clones with distinct materials and an uncolored clone. Check roster/vehicle counts remain
   unchanged, unique tint remains unique, material selection still works and Despawn acts on restored clones.
+- [ ] In DOH, enter an exact name and spawn one kitten through each spawn button; an occupied name
+  must show an error. Spawn a batch with a custom prefix, then use blank input for automatic
+  `Kitten_doh_` names. Save/load and confirm both the name field and native kitten names survive;
+  repeated loads create no duplicates, and a legacy/vanilla save resets the field to its default.
 - [ ] Save a DOH non-unique tinted batch; reload and confirm the batch still shares one set ("Tint All" on
   one recolors all) while unique kittens stay independent. Watch the DOH window's GPU slot counter across
   repeated loads, a vanilla load plus a spawn, and Despawn All: usage must return to its baseline instead

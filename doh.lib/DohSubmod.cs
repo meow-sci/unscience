@@ -38,6 +38,7 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
     // UI state — spawn parameters
     private float3 _offset = new float3(0f, 0f, 10f);
     private int _spawnCount = 1;
+    private readonly ImInputString _spawnName = new(SpawnNameCapacity, SpawnRequest.DefaultNamePrefix);
     private bool _useCustomColor;
     private float4 _tintColor = new float4(1f, 1f, 1f, 1f);
     private bool _uniquePerKitten;
@@ -152,6 +153,13 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
 
             RenderVehicleRow();
             RenderCharacterRow();
+
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn(); ImGui.AlignTextToFramePadding();
+            ImGui.Text(_spawnCount > 1 ? "Name prefix" : "Vehicle name");
+            ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
+            ImGui.InputText("##doh_name", _spawnName);
+            ImGui.SetItemTooltip("Single spawn: use this exact name. Batches: append numbers to this prefix. Leave blank for automatic Kitten_doh_ names.");
 
             // Offset
             ImGui.TableNextRow();
@@ -478,6 +486,7 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
             ReferenceVehicleId = target.Id,
             OffsetBodyFrame = new double3(_offset.X, _offset.Y, _offset.Z),
             Count = _spawnCount,
+            VehicleName = _spawnName.ToString(),
             CharacterId = characterId,
             TintColor = _useCustomColor ? _tintColor : null,
             UniqueMaterialsPerKitten = _uniquePerKitten,
@@ -504,6 +513,7 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
             ReferenceVehicleId = target.Id,
             OffsetBodyFrame = new double3(_offset.X, _offset.Y, _offset.Z),
             Count = _spawnCount,
+            VehicleName = _spawnName.ToString(),
             CharacterId = characterId,
             TintColor = perKittenColors[0],
             PerKittenColors = perKittenColors,

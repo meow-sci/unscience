@@ -10,7 +10,7 @@ using MeowSci.DohLib.Materials;
 using MeowSci.DohLib.Spawning;
 using MeowSci.KsaAbstractions.Persistence;
 
-internal static class Checks
+internal static partial class Checks
 {
     private static readonly float4 Red = new(1, 0, 0, 1);
     private static readonly float4 Blue = new(0, 0, 1, 1);
@@ -20,6 +20,8 @@ internal static class Checks
 
     private static void Main()
     {
+        NamingChecks();
+        SpawnNameSaveChecks();
         var submod = new DohSubmod();
         var coordinator = new SceneSaveCoordinator(submod.SaveParticipants);
 
@@ -103,7 +105,7 @@ internal static class Checks
 
         TeardownChecks(submod);
 
-        Console.WriteLine($"PASS: {_checks} DOH save/restore, teardown and material release checks.");
+        Console.WriteLine($"PASS: {_checks} DOH naming, save/restore, teardown and material release checks.");
     }
 
     /// <summary>The real KittenSpawner teardown routes every removal through Universe.DestroyVehicle.</summary>

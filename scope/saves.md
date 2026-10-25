@@ -399,6 +399,15 @@ spawned `KittenEva` vehicles, so the record never spawns anything. It rebinds ea
 to its reconstructed kitten, re-clones or reuses the tinted material set, and reapplies each saved
 material color by source/name.
 
+The additive version-1 `SpawnName` field saves the editable name / batch prefix for both spawn
+buttons. Missing legacy fields and loads with no record reset to `Kitten_doh_`; blank input is
+preserved as automatic naming. Validation rejects null, embedded NUL and text of 256 or more UTF-8
+bytes before replay into the 256-byte ImGui buffer, retaining malformed records with diagnostics.
+Names of existing kittens remain native-owned; restore never renames or respawns them. The numeric
+counter is a transient search hint, with uniqueness enforced against native `All.TryGet` on each
+spawn after loading. The real-adapter checks cover detached Unicode/blank capture, repeated and
+cross-scene replay, legacy/missing fields and invalid names.
+
 Each saved kitten now carries an optional `MaterialGroup`: the set ID it rendered with when saved.
 Kittens with the same group get one shared set on restore, the way a non-unique batch was spawned.
 The field is additive, so the version and record ID stay the same. Saves without it restore every

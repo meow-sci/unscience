@@ -371,6 +371,8 @@ Global ImGui theme manager. Provides a theme picker and a full style editor that
 Programmatic kitten spawning with per-kitten GPU material customization. Spawns KittenEva entities at arbitrary positions with unique tint colors via runtime MaterialData creation in GpuMaterialSystem.
 - Vehicle-relative positioning with configurable body-frame offset (XYZ)
 - Batch spawning (1–20 kittens) with chain offsets
+- Editable vehicle name / batch prefix (default `Kitten_doh_`) for both spawn buttons: exact single
+  names, collision-free numbered batches, blank automatic fallback; name/prefix is scene-saved
 - Character selection from ModLibrary or random assignment
 - Per-kitten material tinting via custom AlbedoColor on cloned GPU materials
 - Unique or shared material sets for batch spawns
@@ -379,11 +381,11 @@ Programmatic kitten spawning with per-kitten GPU material customization. Spawns 
 - Spawned kitten registry with full tracking
 - F8 ImGui window with vehicle/character combos (filterable), color picker, kitten list table. The spawn target is held as the `Vehicle` object, never a list index, because KSA's vehicle list swap-removes
 - GPU material pool budget: KSA's material pool is a fixed 512 slots. doh keeps 64 free for the game, preflights tinted spawns (~10 slots per set), shares one set per non-unique batch, and releases sets on despawn, prune, unload and stale restore. A half-constructed `KittenEva` is cleaned up if its constructor throws
-- **doh.lib**: `MaterialSystemAccessor` (reflection bridge to GpuMaterialSystem/GpuTextureSystem; `.Pool.cs` capacity/free-slot/reserve/release), `MaterialFactory` (runtime per-kitten material creation; `.Lifetime.cs` release), `KittenMaterialSet` (per-kitten GPU handles, owned asset names, live UpdateTint), `KittenSpawner` (spawn/despawn/prune/recolor engine replicating EVADoor.CreateKittenEva; partials `.Positioning`, `.Materials`, `.Catalog`), `SpawnRequest`/`SpawnResult` (DTOs), `SpawnedKittenRegistry` (state tracking), `DohSubmod` (ISubmod for unscience integration; `.Persistence.cs` scene saves with optional shared `MaterialGroup`). All methods are game-thread-only.
+- **doh.lib**: `MaterialSystemAccessor` (reflection bridge to GpuMaterialSystem/GpuTextureSystem; `.Pool.cs` capacity/free-slot/reserve/release), `MaterialFactory` (runtime per-kitten material creation; `.Lifetime.cs` release), `KittenMaterialSet` (per-kitten GPU handles, owned asset names, live UpdateTint), `KittenSpawner` (spawn/despawn/prune/recolor engine replicating EVADoor.CreateKittenEva; partials `.Positioning`, `.Materials`, `.Naming`, `.Catalog`), `SpawnRequest`/`SpawnResult` (DTOs), `SpawnedKittenRegistry` (state tracking), `DohSubmod` (ISubmod for unscience integration; `.Persistence.cs` scene saves with optional shared `MaterialGroup`). All methods are game-thread-only.
 - **Unscience integration**: DOH is available as a submod in the unscience supermod via `DohSubmod`.
 
 ### [doh.tests](doh.tests)
-Native-free managed checks that link the real DOH save adapter, kitten registry, material set and material-set release code. Cover shared `MaterialGroup` capture/restore, same-save reuse without new allocations, legacy records without groups, missing kittens releasing their sets, vanilla-load cleanup, no reuse after release and malformed groups. Run `dotnet run --project doh.tests`; see its [README](doh.tests/README.md).
+Native-free managed checks that link the real DOH save adapter, naming, kitten registry, material set and material-set release code. Cover exact/prefixed/automatic names and collisions, name/prefix round-trips and legacy/reset/invalid-name handling, shared `MaterialGroup` capture/restore, same-save reuse without new allocations, legacy records without groups, missing kittens releasing their sets, vanilla-load cleanup, no reuse after release and malformed groups. Run `dotnet run --project doh.tests`; see its [README](doh.tests/README.md).
 
 ---
 
