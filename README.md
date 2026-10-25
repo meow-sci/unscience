@@ -17,8 +17,9 @@ in-game acceptance is pending. Parts Now was removed in this upgrade. See
 The October 25 startup follow-up fixes Full Canopy parsing of Windows shader line endings,
 orders the shared physics handoff before existing call-wrapping transpilers, and reports complete
 patch errors with a measured startup summary. The handoff serves welding, Dent Wizard, Godzilla
-and scene saves. The reported Windows welding failure still requires an in-game retest with the
-updated build and the same installed mods. See the [startup follow-up](plans/KSA_5638_UPGRADE.md#startup-follow-up-2026-10-25).
+and scene saves. Disabling only purr2d2 on the original installed build removes the shared-hook
+failures and restores welding. The updated build still needs testing with purr2d2 re-enabled.
+See the [startup follow-up](plans/KSA_5638_UPGRADE.md#startup-follow-up-2026-10-25).
 
 Kitchen Sink includes **Unlock IVA Camera**: enter IVA, enable the toggle, and use free cam
 movement while retaining IVA interiors, lighting and configured ray tracing. Turning it off or

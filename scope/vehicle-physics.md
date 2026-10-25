@@ -7,8 +7,9 @@ Garry's Torch, with no shared handoff success line; welding was inert. Their com
 `PhysicsFrameHook.Apply`. The original seven native calls remain unique and ordered in supplied
 5638 and 5554 sources. A managed regression using actual Harmony 2.4.2 reproduces that outer error
 when an earlier default-priority profiling transpiler replaces direct solver calls before the hook
-validates them. This establishes a compatibility defect; it does **not** identify the live profiler
-or prove the reported Windows failure's cause.
+validates them. The subsequent native baseline comparison disables only purr2d2, keeps purrTTY/gatOS
+enabled, removes all three hook failures and restores welding. This isolates a purr2d2 interaction;
+the exact transformation and updated-build coexistence with purr2d2 are still unverified.
 
 `PhysicsFrameHook` now installs at `Priority.First` with `before` constraints for all existing
 foreign transpiler owners, so it validates original call operands before compatible wrappers run.
@@ -26,8 +27,9 @@ reapply, three failed-install retries, diagnostics and failed-unpatch recovery u
 Harmony. It verifies deferred world replacement before step computation, queued mutations before
 welds, `PreviousTime`, orbit-reader joins and all snapshots afterward. An optimized fixture includes
 span locals/branches; a metadata-only real-KSA check confirms caller/solver signatures and seven
-ordered calls (5638: 703-byte caller, `ReadOnlySpan<Vehicle>` local). Native startup/welding and scene
-save/load acceptance remain pending; no save ID/version/payload or persisted weld state changed.
+ordered calls (5638: 703-byte caller, `ReadOnlySpan<Vehicle>` local). Native updated-build
+startup/welding with purr2d2 and scene save/load acceptance remain pending; no save ID/version/payload
+or persisted weld state changed.
 
 ## KSA 5482 (5438 → 5482) verification
 

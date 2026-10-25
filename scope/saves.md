@@ -9,7 +9,10 @@ call wrappers (`Priority.First` plus `before` constraints for existing owners), 
 result/snapshot boundary, and reports full installation exceptions and transpiler owner/order data.
 Actual Harmony regression tests reproduce the former default-priority conflict, exercise both
 installation orders and three failed retries, and verify targeted rollback preserves foreign patches.
-This demonstrates a compatibility correction; the reported live failure's cause remains unconfirmed.
+The user's native original-build comparison then disables only purr2d2: all three startup failures
+disappear, the shared hook installs, and welding works, while purrTTY/gatOS remain enabled. This
+isolates a purr2d2 interaction, not the exact transformation. Updated-build coexistence and actual
+scene-save behavior remain unverified.
 
 Deferred world changes still replay after result application and the orbit-reader join, **before**
 `GetJobSimStep` computes time from the new world. Queue ordering, per-callback isolation, previous-time

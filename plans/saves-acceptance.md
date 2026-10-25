@@ -239,8 +239,10 @@ the handoff now orders its validation before existing foreign wrappers and clean
 without removing foreign patches. This changes installation, not the save boundary, participant
 IDs, versions, payloads, stable identity resolution or replay policy. Applied canopy settings remain
 scene-saved; CRLF parser support changes only shader activation. Patch reports, owner/order
-diagnostics and shader caches are transient and are rebuilt at startup. The original Windows
-failure's inner exception and the complete installed-mod interaction still need native verification.
+diagnostics and shader caches are transient and are rebuilt at startup. A native original-build
+comparison disables only purr2d2: the shared hook installs, all three patch errors disappear and
+welding works, with purrTTY/gatOS still enabled. Updated-build coexistence with purr2d2 and actual
+native scene-save behavior remain unverified; the exact original inner exception is unavailable.
 
 ## Native acceptance checklist
 
@@ -254,7 +256,8 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
   produces a fresh `unscience.json`; reload twice and A→B→A, load a vanilla save and a new system,
   and verify old ownership/queued mutations clear. Also test Dent Wizard firing and Godzilla
   Apply/Restore. If startup still fails, record the complete inner exception and target patch-owner
-  report. Profiler involvement is unconfirmed until this combined native pass.
+  report. The original-build comparison without purr2d2 passed startup/welding; this item requires
+  the updated build with purr2d2 enabled and actual scene-save acceptance.
 
 ### Transaction and lifecycle
 

@@ -103,8 +103,9 @@ Native game acceptance remains pending. Dated historical rows retain their origi
 the current summary and owning area updates below supersede their compatibility status.
 The [October 25 startup follow-up](../plans/KSA_5638_UPGRADE.md#startup-follow-up-2026-10-25)
 records the reported Windows welding failure, managed call-wrapper ordering reproduction, CRLF
-shader parser fix and complete startup diagnostics. The original live hook exception is still
-unconfirmed until a native retest records its inner error or confirms the updated installation.
+shader parser fix and complete startup diagnostics. A native original-build comparison restores
+the shared hook and welding when only purr2d2 is disabled. The exact live transformation and
+updated-build coexistence with purr2d2 remain unverified.
 
 ---
 
@@ -201,7 +202,7 @@ Verified 2026-10-22 against **2026.10.19.5638**, diffed from 5482. Full evidence
 | `PhysicsBubble.DetectStructuralFailure(VehicleUpdateState, SimStep)` + kitten-only `DetectKittenImpact` (unlogged) | the-tick, kitchen-sink G-load | Silent reflection miss — both inert. Lookups fixed; Kitchen Sink masks the kitten-impact result for protected kittens; The Tick's postfix covers it. Fixtures now mirror 5638; `KsaAssemblyProbe` checks real KSA.dll metadata. |
 | Mesh descriptor sets renumbered (rev 5530): `SET_TEXTURE` 1→5, `SET_MATERIAL` 2→1, CSM 2, lighting 3, global 4 | free-fallin | Silent shader break in the shared skinned vertex shader (material SSBO bound at the CSM UBO slot). Defines now parsed from live `ModelPbr.frag` (cross-checked with ModelNormal/ModelTranslucent); fails closed. spirv-cross proof recorded. |
 | Windows CRLF shader text (October 25 startup) | free-fallin | Define regex now consumes the carriage return before the multiline end anchor. LF/CRLF/mixed, unterminated and malformed define checks plus real shader transforms cover the fix. Descriptor indices/anchors and save payload remain unchanged. |
-| `Program.PrepareFrame(double,double)` combined Harmony transpilers (October 25 startup) | scene saves, garrys-torch, dent-wizard, godzilla, iron-man | Existing call wrappers can hide solver anchors before our validator runs. Installer now precedes preexisting foreign wrappers, retains strict guards and cleans its own failed patch. Managed reproduction matches the log's outer error shape; original live cause is unconfirmed. Full exception/owner diagnostics and native retest required. |
+| `Program.PrepareFrame(double,double)` combined Harmony transpilers (October 25 startup) | scene saves, garrys-torch, dent-wizard, godzilla, iron-man | Existing call wrappers can hide solver anchors before our validator runs. Installer now precedes preexisting foreign wrappers, retains strict guards and cleans its own failed patch. Native original-build comparison restores shared-hook startup and welding with only purr2d2 disabled. Exact live transformation and updated-build coexistence with purr2d2 remain unverified. |
 | `CelestialSystem.DeserializeSave(…, ISet<string>)` skips missing-part/character vehicles (5632/5633); `Universe.DeserializeSave` → `JobSystems.WaitAll()` | native save preflight | Preflight now warns (via `NativeSaveHooks.LoadWarning`) instead of refusing; structural checks KSA still cannot survive remain. Reset join is `WaitAll()`; `PlumeTrailLodBuilder` removed (5505). |
 | `OrbitingStar : StellarBody, IOrbiter` (5512/5515) | kiwis-marbles | Star-target welds restore by exact id among offered orbiters (were dropped). Payload unchanged. |
 | `Universe.DestroyVehicle` gains `ReleasePortraitCamera`/`HandOffEmitters`; boarding uses it (5486/5607) | doh | Despawn/orphan removal use `DestroyVehicle(kitten, CrewDisposition.Boarded)` (no roster change). |

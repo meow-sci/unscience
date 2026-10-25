@@ -143,6 +143,21 @@ each reduced to `Exception has been thrown by the target of an invocation.` The 
 confirmed that welding did not work at all. Full Canopy separately disables itself because its
 parser cannot find `SET_TEXTURE`.
 
+### Native comparison: purr2d2 disabled
+
+The user then repeated startup on the original installed build with only purr2d2 disabled and
+reported **welds worked**. The new log explicitly skips purr2d2, keeps purrTTY and gatOS enabled,
+prints `unscience physics: PrepareFrame handoff hook applied`, and contains none of the three
+scene-save/Dent Wizard/weld-timing failures. The old `unscience: Harmony patches applied` summary
+and unchanged Full Canopy error identify this as the requested baseline comparison, rather than
+acceptance of the updated test build.
+
+This isolates purr2d2's presence as the trigger for the shared-hook/welding failure in the tested
+configuration. It does not reveal which profiler transformation caused it, prove the ordering fix
+works with the real profiler, or establish native scene-save/Dent Wizard/Godzilla behavior. Full
+Canopy still fails without purr2d2, so its CRLF parsing defect is independent. The next acceptance
+run must use the updated build **with purr2d2 re-enabled**.
+
 ### Reproduced defects and changes
 
 - **Shared frame-hook ordering.** Both supplied game-source trees still contain the seven expected
@@ -152,9 +167,10 @@ parser cannot find `SET_TEXTURE`.
   wrappers, retains its strict call-count/order guards and removes only its own transpiler when
   installation fails. Existing workers still commit before queued edits/welds and before new
   snapshots. Deferred loads still replay before computing the step; orbit-reader joins,
-  `PreviousTime` and callback isolation remain unchanged. This proves a compatibility defect;
-  **it does not establish that purr2d2 caused the original live failure**. Target patch-owner/order
-  and complete exception diagnostics make any remaining Windows failure actionable.
+  `PreviousTime` and callback isolation remain unchanged. The managed reproduction proves a
+  compatibility defect; the separate native comparison above isolates the purr2d2 interaction.
+  The exact live transformation remains unknown. Target patch-owner/order and complete exception
+  diagnostics make any remaining Windows failure actionable.
 - **Windows shader parsing.** The production parser accepts the real 5638 fragment shader with LF
   endings and raises the exact logged missing-`SET_TEXTURE` error after converting it to CRLF.
   Allowing the optional carriage return before the regex line anchor fixes it. LF/CRLF/mixed
@@ -200,5 +216,5 @@ Windows acceptance remains open: start the same installed-mod stack, confirm sha
 shader activation plus zero failed groups, create and move a weld, exercise F2/pause/warp and
 unweld, fire Dent Wizard, apply/restore Godzilla, then save/overwrite/reload including repeated and
 cross-scene loads. Check that a fresh matching sidecar is written. If the hook still fails, retain
-the complete inner exception and owner report; use a profiler-disabled comparison to narrow the
-interaction. Full Canopy also needs native shader compilation/rendering acceptance.
+the complete inner exception and owner report. The original-build profiler-disabled comparison
+has passed; updated-build coexistence and Full Canopy compilation/rendering remain open.

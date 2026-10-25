@@ -8,10 +8,12 @@ the 5482 notes, it takes precedence.
 - **October 25 Windows startup / welding failure:** the supplied log shows scene saves, Dent Wizard
   handoff and weld timing failing together; the user confirmed welding did not work. A managed
   call-wrapper transpiler reproduces the shared-hook installation error shape, and ordering/rollback
-  is corrected in code. The original runtime cause remains unconfirmed; purr2d2 involvement is a
-  hypothesis. Full inner exceptions and target-owner diagnostics replace the previous opaque logs.
-  Native retest with the same installed mods is required. Scene-save hooks are unavailable while
-  this handoff fails, and native overwrite can remove an old sidecar.
+  is corrected in code. **Native baseline comparison:** disabling only purr2d2 removes all three
+  failures, the shared handoff installs, and the user reports working welds; purrTTY/gatOS stay
+  enabled. This isolates a purr2d2 interaction, but the exact transformation is still unknown.
+  Updated-build coexistence with purr2d2 re-enabled remains required. Full inner exceptions and
+  owner diagnostics replace the opaque logs. Scene-save hooks are unavailable while this handoff
+  fails, and native overwrite can remove an old sidecar; no native save acceptance was reported.
 - **October 25 Full Canopy Windows parsing:** CRLF shader defines reproduce the exact missing
   `SET_TEXTURE` error. Fixed in code with LF/CRLF/mixed production-parser and real shader regressions;
   Windows shader compilation/rendering acceptance remains pending. No save payload changes.

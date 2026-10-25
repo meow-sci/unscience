@@ -621,8 +621,9 @@ all 18 managed suites pass; in-game acceptance is pending.
 
 October 25 startup follow-up: the shared handoff validates before existing foreign call wrappers
 and cleans failed installations; Free Fallin accepts Windows CRLF shader definitions; Unscience
-logs complete patch exceptions and reports failed groups in its startup summary. The user's Windows
-weld failure is recorded and native retesting remains required. Save payloads are unchanged.
+logs complete patch exceptions and reports failed groups in its startup summary. A native baseline
+comparison restores the shared hook and welding when only purr2d2 is disabled; updated-build
+coexistence with purr2d2 remains unverified. Save payloads are unchanged.
 
 - All projects: Brutal's open-source assembly renames (`Brutal.Core`, `Brutal.Numerics`, `Brutal.Strings`, …).
 - `iron-man.lib`: `Helm2Body` retarget, new `IronManNavballPatches` (thrust marker for enabled kittens), RCS cache gate.

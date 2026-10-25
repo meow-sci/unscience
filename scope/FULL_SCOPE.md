@@ -76,8 +76,10 @@ rocky-mcrock-face, save-yourself, skittles, sphinx, the-tick, thug-life, zippo. 
 **October 25 startup follow-up:** the supplied Windows log and in-game report establish failed
 weld updates and shared-hook installation. Managed reproduction found a call-wrapper transpiler
 ordering defect; installation now precedes existing foreign wrappers and reports/cleans failed
-attempts. The original live cause and welding acceptance still require a Windows retest. Full Canopy
-also accepts CRLF shader defines; startup reports full exceptions and partial patch-group failures.
+attempts. A native original-build comparison removes all three hook failures and restores welding
+when only purr2d2 is disabled; updated-build coexistence with purr2d2 is still unverified. The exact
+live transformation remains unknown. Full Canopy also accepts CRLF shader defines; startup reports
+full exceptions and partial patch-group failures.
 No save IDs or payloads change. See the [follow-up evidence](../plans/KSA_5638_UPGRADE.md#startup-follow-up-2026-10-25).
 
 Two compile breaks: the Brutal assembly renames (every csproj HintPath) and `Vehicle.Ctrl2Body` →
