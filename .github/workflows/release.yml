@@ -91,6 +91,9 @@ jobs:
       - name: Build solution
         run: dotnet build ksa-mod-experiments.slnx -c Release --nologo -v quiet
 
+      - name: Runtime bootstrap regressions
+        run: python3 tools/check_runtime_bootstrap.py --entry-assembly unscience/bin/Release/net10.0/MeowSci.Unscience.dll
+
       - name: Validate single-mod distribution
         run: python3 scripts/check-dist.py "$UNSCIENCE_DIST_DIR"
 

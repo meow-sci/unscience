@@ -13,6 +13,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../Shared/RuntimeBootstrap.cs" Link="RuntimeBootstrap.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\blinky.lib\blinky.lib.csproj" />
     <ProjectReference Include="..\byo-music.lib\byo-music.lib.csproj" />
     <ProjectReference Include="..\camera-controller-override.lib\camera-controller-override.lib.csproj" />

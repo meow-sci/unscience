@@ -1,5 +1,9 @@
 # 00 — Unscience supermod shell + `ksa-abstractions.lib` game-integration scope
 
+## Runtime networking bootstrap
+
+The Unscience entry project source-links `Shared/RuntimeBootstrap.cs`. Its module initializer loads System.Net.Primitives/System.Net.Sockets through the default context before mod method execution; `Mod.OnFullyLoaded` reports networking bindings before constructing submods. The helper reflects framework TypeRefs and TCP signatures only; no KSA member, Harmony target, lifecycle signature or save adapter changes. Reports retain loader/runtime incompatibility evidence but do not disable unrelated submods. See [policy and early-loading limits](../Shared/README.md).
+
 Kitchen Sink IVA unlock is wired by both `unscience/Patcher.cs` and `kitchen-sink/Patcher.cs`
 through `IvaCameraUnlock.Apply/Remove`. It uses the consolidated Harmony instance for one
 seat-head postfix and owns a temporary main IVA controller replacement. It contributes an

@@ -1,5 +1,9 @@
 # Save/load lifecycle integration
 
+## Runtime bootstrap state
+
+Networking preload/diagnostic results are process startup state only. The source-linked helper holds no scene objects or durable user choices and adds no participant, record, sidecar field or game hook. Existing capture/reset/replay and ownership policies are unchanged; no save migration is needed.
+
 ## KSA 5638 shared handoff startup follow-up
 
 `NativeSaveHooks.Apply` requires the shared `PhysicsFrameHook` before installing save patches. A

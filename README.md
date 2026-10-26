@@ -1,5 +1,7 @@
 # unscience
 
+The Unscience entry module uses the [shared runtime bootstrap](Shared/README.md) for early default-context networking preload and one assembly/path/context report before submod construction. Networking incompatibility is reported without disabling unrelated submods. No scene-save IDs, payloads, ownership APIs or hooks change.
+
 **unscience** is a Kitten Space Agency mod that lets you do ubsurd, silly things to KSA.
 
 It breaks physics, moves things around, resizes things, makes noises, changes colors and textures, and much more.

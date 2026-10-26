@@ -1,5 +1,7 @@
 # Unscience — Full Game-Integration Scope
 
+Runtime startup includes the [shared networking bootstrap](00-architecture-and-abstractions.md#runtime-networking-bootstrap) and 19 isolated load-context scenarios. The helper is compiled into the Unscience entry module; no game member or sidecar contract changes. Native Windows combined-mod startup acceptance remains pending.
+
 This folder maps the suite's game types, Harmony targets, reflection, shaders, assets and lifecycle
 contracts. Update the owning area and master index in the same change as an integration edit.
 

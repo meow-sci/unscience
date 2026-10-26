@@ -1,5 +1,9 @@
 # Unscience — Unified Supermod
 
+The Unscience entry module uses the [shared runtime bootstrap](../Shared/README.md) for early default-context networking preload and one assembly/path/context report before submod construction. Networking incompatibility is reported without disabling unrelated submods. No scene-save IDs, payloads, ownership APIs or hooks change.
+
+Run `python3 tools/check_runtime_bootstrap.py --entry-assembly unscience/bin/Release/net10.0/MeowSci.Unscience.dll` after the solution build. The helper has no separate runtime DLL or cross-mod dependency.
+
 Unscience is the only distributed mod. `dotnet build` deploys one `unscience/` folder;
 feature libraries remain separate projects with explicit references. Former standalone hosts are
 retained for development and are not deployed or published. See [distribution](../README.md#distribution).

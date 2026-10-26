@@ -1,5 +1,9 @@
 # Scene save implementation coverage and native acceptance
 
+## Runtime bootstrap follow-up
+
+The default-networking bootstrap and diagnostic caches are process startup state, intentionally absent from scene saves. No persisted state or save lifecycle changes. Managed load-context regressions cover standalone/pair/triple ordering and late/pre-existing binding failures; native acceptance still requires a Windows combined-mod startup followed by ordinary save/load with the existing sidecars.
+
 Implementation baseline: `feature/saves`, KSA 5402 reference assemblies, September 2026.
 Current compatibility: **5482** (`2026.9.22.5482`, upgraded from 5438), including Kitchen Sink
 G-load records and Dent Wizard. The 5482 fixes outside the separately tracked ground-clutter work

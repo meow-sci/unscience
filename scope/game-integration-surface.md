@@ -1,5 +1,9 @@
 ## Kitchen Sink capsule glass experiment (5541)
 
+## Runtime framework startup
+
+The entry-module bootstrap and first `Mod.OnFullyLoaded` diagnostic depend on .NET/StarMap load contexts, not a new KSA member or Harmony target. See [architecture](00-architecture-and-abstractions.md#runtime-networking-bootstrap). Existing game integration points and scene-save payloads are unchanged.
+
 [Authoritative feature/asset map](ui-customization.md#kitchen-sink-capsule-glass-experiment-5541).
 Default-off **See Inside Capsule (Experimental)** uses the existing shared
 `PartTreeRenderData.Compose` batch compaction; static-model predicates OR with Blinky/Shiny's

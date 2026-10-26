@@ -1,4 +1,5 @@
 using System;
+using MeowSci.ModRuntime;
 using System.Collections.Generic;
 using Brutal.Numerics;
 using Brutal.ImGuiApi;
@@ -64,6 +65,7 @@ public class Mod
     [StarMapAllModsLoaded]
     public void OnFullyLoaded()
     {
+        RuntimeBootstrap.Report("unscience");
         try
         {
             // Create all submods in display order

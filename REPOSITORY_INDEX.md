@@ -1,4 +1,8 @@
 
+
+## Runtime networking startup and regressions
+
+`Shared/RuntimeBootstrap.cs` is compiled into the Unscience entry module, not ksa-abstractions or a shipped helper DLL. It is synchronized with gatOS/purr2d2 and performs early preload plus once-per-entry binding diagnostics. `tools/check_runtime_bootstrap.py` builds the game-free fixtures under `tests/runtime-bootstrap` and runs 19 isolated scenarios. See [shared policy](Shared/README.md).
 # KSA Mod Experiments - Repository Index
 
 This document serves as a comprehensive index of all mods and libraries in this KSA mod experiment project. It's designed to help AI agents and developers quickly discover existing functionality and understand the purpose of each mod.
