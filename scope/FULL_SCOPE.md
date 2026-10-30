@@ -7,24 +7,22 @@ contracts. Update the owning area and master index in the same change as an inte
 
 ## Version baseline
 
-- **Cataloged against:** KSA **2026.10.19.5638**, metadata date **2026-10-20**.
-- **Diffed from:** the recorded baseline **2026.9.22.5482** (not the on-disk PREVIOUS 5554), using
-  `ksa-game-assemblies` git history `a2f724f..edda844`; 5541 (`47703f3`) and 5554 (`935a32b`) only
-  date changes. The in-repo `decomp/ksa` is historical.
+- **Cataloged against:** KSA **2026.10.25.5707**, metadata date **2026-10-29**.
+- **Diffed from:** **2026.10.19.5638**, which is both the on-disk PREVIOUS tree and the prior recorded
+  baseline (`ksa-game-assemblies` `edda844..4b3e9e2`). The in-repo `decomp/ksa` is historical.
 - **Build references:** explicitly set `KSAFolder` to CURRENT's `dll/` (macOS; no separate native
   install). Distribution was redirected during all checks.
-- **Changelog coverage:** revisions 5483–5540, 5542–5553 and 5603–5637 are logged; **5555–5602 appear in
-  no `version.json`** (the Helm control frame, `DetectStructuralFailure(…, SimStep)` and other changes
-  landed there). Source/Content comparison covers the full span: 819 KSA C# files (99 added, 4 removed),
-  211 Content files. Brutal went open source (rev 5618) and renamed its assemblies
-  (`Brutal.Core.Common` → `Brutal.Core`, `Brutal.Core.{Numerics,Strings,Memory,Collections,Logging,Maths}` →
-  `Brutal.{…}`); `KSA.dll` is now built with optimizations (rev 5630).
-- **Verification:** whole-solution compilation (0 warnings) and 18 managed suites, plus eight area audits
-  of reflection, Harmony signatures/bodies/IL anchors, render/GPU, shader/descriptor/asset and byte
-  layouts. Evidence and the native acceptance matrix are in [KSA_5638_UPGRADE](../plans/KSA_5638_UPGRADE.md).
-  This is a **static/managed baseline; live game validation remains pending**.
-- Dated area tables retain historical build/line citations; their 5638 sections and the upgrade report
-  record the 5482 → 5638 deltas. Earlier reports: [5482](../plans/KSA_5482_UPGRADE.md), [5438](../plans/KSA_5438_UPGRADE.md).
+- **Changelog coverage:** revisions 5639–5703 are all logged (no gap). Source/Content comparison: 191 C#
+  files changed, 64 added, 4 moved (`RenderCore` descriptor/image interfaces → `Brutal.VulkanApi.Abstractions`);
+  53 Content files changed, 6 shaders added, no asset id removed. Brutal packages bumped (rev 5652)
+  with assembly versions unchanged; StarMap needs no rebuild.
+- **Verification:** whole-solution compilation (0 warnings) and 18 managed suites, including new
+  real-KSA.dll metadata checks for the 5707 seams, plus eight area audits of reflection, Harmony
+  signatures/bodies/IL anchors, render/GPU, shader/descriptor/asset and byte layouts. Evidence and the
+  native acceptance matrix are in [KSA_5707_UPGRADE](../plans/KSA_5707_UPGRADE.md). This is a
+  **static/managed baseline; live game validation remains pending**.
+- Dated area tables retain historical build/line citations; their dated sections and the upgrade reports
+  record the deltas. Earlier reports: [5638](../plans/KSA_5638_UPGRADE.md), [5482](../plans/KSA_5482_UPGRADE.md), [5438](../plans/KSA_5438_UPGRADE.md).
 
 ## How to use on a game update
 
@@ -73,7 +71,21 @@ rocky-mcrock-face, save-yourself, skittles, sphinx, the-tick, thug-life, zippo. 
 
 ---
 
-## Current status against 5638
+## Current status against 5707
+
+Two compile breaks: `SimpleVkTexture.ImageView` → `VkImageView` (graffiti, pebbles, thug-life) and
+`Part.Connectors` → `Connector[]` (Iron Man). Silent breaks fixed: **Iron Man** anchors were lost (and
+connected ones crashed) on save load because every `Part` constructor now chains through one private
+constructor that its patch did not cover — it now patches that seam, and a copy-constructor postfix keeps
+anchors on `PartCloner` copies; **Sphinx** drew with no pipeline bound when the 10-set static pipeline
+fails to build (rev 5640) — now skipped like stock; **Pebbles** did not redirect the new depth-normal
+pre-pass (wrong AO/silhouettes) and dropped the new `UsesCustomNormals` foliage flag (optional recipe
+field, inherits stock); **DOH** custom names could bind a rostered kitten's radiation/KIA state — now
+refused. New native-only drift: radiation death (outside The Tick), step-limited warp, collider-based
+spawns and strut colliders, Hot Pursuit clouds/VRAM, Pluto's tilt/lock, terrain height under statics and
+decals. No save ids or versions changed. Native acceptance pending; see [KSA_5707_UPGRADE](../plans/KSA_5707_UPGRADE.md).
+
+## Earlier status (5638)
 
 DOH now exposes the existing `Kitten_doh_` prefix as a scene-saved name field: exact single names,
 numbered batch prefixes and blank automatic fallback. Collision checks reuse native `All.TryGet`;

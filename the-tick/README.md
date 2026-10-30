@@ -12,9 +12,10 @@ Only Unscience is shipped; this standalone project is a development host with an
 
 ## What protection does
 
-KSA destroys vehicles through two independent systems, and The Tick exempts the exact registered
-vehicle instances from both while leaving physics, contacts and telemetry native
-(see [the destruction investigation](../plans/VEHICLE_DESTRUCTION_INVESTIGATION.md)):
+KSA destroys vehicles by force through two independent systems, and The Tick exempts the exact
+registered vehicle instances from both while leaving physics, contacts and telemetry native
+(see [the destruction investigation](../plans/VEHICLE_DESTRUCTION_INVESTIGATION.md)). Radiation is a
+separate, non-force kill path that The Tick does not cover (see below):
 
 | KSA system | Native behaviour | With The Tick |
 |---|---|---|
@@ -33,6 +34,13 @@ discarded, the structural-load gauge reads empty, because KSA's kitten-impact br
 before writing load telemetry. Debris shed by *other* vessels, unregistered EVA kittens (native
 limits and hard-landing deaths) and vessels that merely share a name are not protected.
 Collisions still push and spin the vessel.
+
+**Radiation is not covered.** Since KSA 5707 (rev 5669) a kitten whose acute dose reaches 4 Sv dies
+through `Vehicle.KillLethallyDosedCrew`, run from `Universe.ApplyVehicleSolvers` and not from the
+structural detector. A registered EVA kitten is destroyed (`DestroyVehicle(…, Kill)`). The crew of a
+registered vessel are killed and unseated while the vessel itself survives. The Tick makes vessels
+indestructible to force; it does not make kittens immortal. A destroyed kitten leaves the active list
+on the next prune, like any other disposed vessel.
 
 ## Scene saves
 

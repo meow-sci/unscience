@@ -7,4 +7,5 @@ FreeFallinShaderChecks.Run();
 CapsuleGlassChecks.Run();
 RenderFilterChecks.Run();
 VehiclePaintChecks.Run();
-Console.WriteLine("PASS: KSA 5438/5482/5638 managed upgrade regressions");
+Ksa5707Checks.Run();
+Console.WriteLine("PASS: KSA 5438/5482/5638/5707 managed upgrade regressions");

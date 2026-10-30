@@ -1,5 +1,92 @@
 # Pixel-Grid & Custom-Render Mods — Game Integration Scope
 
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified against `2026.10.25.5707` (revs 5639–5703), diffed from 5638. Static/managed only: the
+whole solution builds against the 5707 DLLs, the managed suites pass, and
+`ksa-upgrade.tests/Ksa5707Checks.cs` runs metadata checks on the real KSA.dll. No native run.
+Line numbers in this section are @5707.
+
+- ✅ **Render filter targets unchanged (blinky #1–#3/#25, shiny #1–#3).** `Compose`
+  (`KSA/PartTreeRenderData.cs:1345`; interior flag `:1352`, RT branch `:1371`, raster `:1387`),
+  `ComposeDynamic` (`:1239`), `ComposeGlass` (`:994`), `WriteState` (`:1297`), `WriteDynamicState`
+  (`:1175`) and `ToPerInstanceData` are byte-identical to 5638. `_batches`/`_glassBatches`/`_dynamicBatches`
+  (`:240,242,246`) and nested `Batch`/`DynamicBatch`/`GlassBatch` (`:23,74,164`) keep `Model`,
+  `Parts : Part[]`, `Count`, `StateBitFlags : int[]`. `StateBit` (`:199`) still uses bits 0..10 only
+  (full-part 0x40/0x80, shared 0x10/0x20), so humble-arteest paint bits 11..31 stay free.
+- ℹ️ **`PartTreeRenderData` internal rework (rev 5643, no code change).** Slots grow by one below 4096
+  (`GrownSlotCapacity`/`SlotCountForAdd` `:316,321`), module batch indices are rented (`:339`), and
+  full-part plus depth-1 sub-part slot matrices come from a per-build `_fullPartMatrices` cache
+  (`RefreshFullPartMatrices` `:391`, called from `EnsureBuilt` `:564,579`; `ComputeMatrixFromFullPart`
+  `:373`). `ComputeDynamicMatrixAsmb2VehicleAsmb` became `ApplyGimbal` (`:1154`), and
+  `RewriteTransforms` (`:857`) now reads `DynamicStateSlots`. Capacity is still ≥ `Count`, the filter
+  reads only `Parts[0..Count)`, and no mod writes the batch arrays. A patch on
+  `Part.ComputeMatrixAsmb2VehicleAsmb` would no longer reach depth-1 sub-part slots; no unscience mod
+  patches it.
+- ℹ️ **New editor ghost compose path (rev 5643).** `PartTree.ComposeRenderData` (`KSA/PartTree.cs:1344-1351`)
+  runs once per symmetry ghost from `VehicleEditor.UpdateGhostRenderData` (`KSA/VehicleEditor.cs:4335-4346`,
+  called at `:5393`). It calls the three `Compose*` directly, without `EnsureBuilt` or
+  `PartTree.UpdateRenderData`. `PartRenderFilter` and IvaForceRender's editor reveal patch `Compose*`,
+  so ghosts are filtered and revealed like the edited vehicle. Each call appends its own range after
+  existing ones, and ghosts reuse the source tree's cached state bits, including paint.
+- ⚠️ **Raytraced-IVA gap now reaches AMD (rev 5670).** 5670 fixed IVA ray tracing on AMD (scratch
+  alignment, TLAS device addresses, SBT alignment, the `alphaHit.rahit` per-frame instance offset). The
+  submission side is unchanged (`PartModel.cs:481`, `PartModelGlass.cs:540`; `RaytracingRenderer.cs`,
+  `PartModelRaytracingData*.cs` byte-identical). Blinky/shiny pixels and Kitchen Sink's capsule windows
+  therefore still render in raytraced IVA. More players will now hit this known gap. No code change.
+- 🔴 **thug-life compile fix (rev 5652).** `SimpleVkTexture.Image/ImageView` were renamed to
+  `VkImage/VkImageView` (`RenderCore/SimpleVkTexture.cs:75,77`), so `ThugLifeTextureFactory.cs:24`
+  now reads `Texture.VkImageView`. All other used Brutal/RenderCore API is unchanged (`VkUtils.cs`
+  byte-identical; descriptor/pipeline helper signatures identical).
+- ✅ **thug-life render-pass compatible under HDR (rev 5645).** `RenderMainPass(IViewport, CommandBuffer)`
+  is at `KSA/SuperMeshRenderSystem.cs:382`. The file's only change is the nested context's
+  `DescriptorDynamicOffset` → `DynamicOffsets`, which no mod reads. Callers `Program.cs:4833`
+  (secondary viewports), `:5146` and `:5363` are still inside `OffscreenTarget.BeginRendering/EndRendering`.
+  `GetCompositeTarget` (`Program.cs:4915-4922`) sends only the main viewport's final composite to
+  `HdrPresentPass`, after the scene pass. The target the quad pipeline is built against is unchanged:
+  `Program.ColorFormat` R16G16B16A16SFloat (`:227`), main offscreen `:1622`, secondary surfaces
+  `KSA.Rendering/ViewportRenderSurface.cs:105-107`. Under HDR, `Core/Renderer.cs` sets
+  `Renderer.ColorFormat` to B8G8R8A8UNorm; thug-life never reads it. Anchors: `OffscreenTarget` `:514`,
+  `RenderedViewport` `:564`, `GetRenderCamera` `:727`, `SetViewport` `:4702`. `RenderTarget.cs`,
+  `RenderingPresets.cs`, `Camera.cs` and `Mesh/UnlitMesh.*` are identical. Rev 5640 skips pipelines
+  that need more than 8 sets; the quad uses 1.
+- ℹ️ **Pixel part construction (rev 5643; blinky #6/#11/#13, shiny #6/#10).** The public 4-arg ctor
+  (`KSA/Part.cs:1551`) now chains to a private 10-arg ctor (`:1566`). That ctor still runs
+  `RefreshScale` + `NotifyModulesOfFullPartCreation` when `parent == null` (`:1633-1637`), so pixel
+  engines' `RocketCore.FeedConnectors` are bound (`RocketCore.cs` byte-identical). Iron Man's new
+  private-ctor prefix is a no-op here (`inInstance == null`).
+  - `Part.Connections` is now a getter over a lazy list with a shared empty fallback (`:650,1183`;
+    adds go through `EnsureConnections`, `:414-418,2310`). Both builders only read it and copy it with
+    `ToArray()` before `Disconnect` (`LcdGridBuilder.cs:219`, `ShinyGridBuilder.cs:131`), so the
+    shared list is never mutated.
+  - `Connection` is no longer `IDisposable` (`:468`; unused). `Connection.Connect` (`:537`) has the
+    same body.
+  - `SubtreeModules` is now `_subtreeModules ?? Modules` (`:1187`), which is equivalent for read-only
+    `Get<T>()`.
+- ℹ️ **Feed graph (blinky #24/#24a).** `ResourceGroupList.cs` was refactored, but `CalculateStages`
+  (`:118-127`) still eagerly calls `PartTree.RecreateResourceManagers` (`KSA/PartTree.cs:873`). This
+  looks equivalent from reading the code; it is unconfirmed until a live run.
+  - `Tank.CanHold` (`KSA/Tank.cs:788`) adds a gas rule: gas needs `RatedPressure > 0` and a
+    single-reactant mix (`:801`, used by `HoldableSubsetOf` `:814`). Hydrolox is `H2(l)`+`O2(l)`
+    (`Reactions.xml:1386-1390`), so EngineA2–A6 anchors are unaffected.
+  - The `CreateFromNewPartTree` body (`KSA/PartTree.cs:303`) is identical. `Volatiles.xml` only gained
+    `HydrogenMassFraction` (radiation shielding).
+- ✅ **Checked unchanged:**
+  - `PartModel`/`PartModelDynamic`/`PartModelGlass` changed only in `Get()` (new
+    `FirstInstanceByTemplateId` fast path; still one model per template id, `Instances` populated), and
+    their `PerInstanceData` layouts are unchanged.
+  - Byte-identical: `PartModelRenderer.cs`, `PartModelModule.cs`, `ViewportEx.cs`,
+    `EngineController.cs`, `PowerConsumer.cs`, `Battery.cs`, `ResourceManager(Base).cs`, and the
+    `Mesh/` shaders with their includes.
+  - `Part.FullPart` (`:1177`) and `PartTree.UpdateRenderData` (`:1308`) are unchanged.
+  - Content `CorePropulsionA*`, `PartAssets.xml` and `CoreElectricalAGameData.xml` are identical.
+- **Native acceptance pending:**
+  - Blinky on a staged vehicle, plus Repair Feeds; a shiny build with battery power.
+  - Pixel/shiny meshes hidden on editor symmetry ghosts.
+  - Raytraced IVA on AMD (expect filtered parts to be visible, the known gap).
+  - The thug-life quad with HDR output on and off, in main and portrait viewports.
+  - The 5638 list below.
+
 ## KSA 5638 (5482 → 5638) verification
 
 Verified 2026-10-22 against `2026.10.19.5638` (git `edda844` of ksa-game-assemblies; 5541 = `47703f3`,
@@ -459,13 +546,13 @@ lost on reload. No StarMap save hooks, no disk I/O.
 | 5 | Direct (render-pass) | `thug-life.lib/ThugLifeQuadRenderer.cs:152` | `Program.OffscreenTarget.SetupGraphicsPipeline(ref VkGraphicsPipelineCreateInfo)` — `RenderTarget : IRenderPassInfo` | `KSA/Program.cs:457`, `KSA.Rendering/RenderTarget.cs:356` | Yes | **REPLACED @5261** — was `Program.OffScreenPass` (`RenderPassState`) → `.SampleCount`, `.Pass`; unchanged @5402 (`RenderTarget.cs` byte-identical) | Game migrated the main scene pass to **dynamic rendering**; the old property no longer exists. **Null until `BuildRenderTargets()` (`Program.cs:970`), which runs AFTER `ModLibrary.LoadAll()` (`:942`) — i.e. after `[StarMapAllModsLoaded]`. Pipeline build must stay lazy (see *Init timing* above).** Non-main viewports own their targets but build them with the same `Program.Instance.ColorFormat` + `GameSettings.GetSampleCount()` (`KSA.Rendering/ViewportRenderSurface.cs:105-107`, `KSA/ViewportBase.cs:128`), so the main-target-built pipeline stays compatible in every `RenderMainPass` call. |
 | 6 | Direct (render) | `thug-life.lib/ThugLifeQuadRenderer.cs:133,134,136` | `Presets.InputAssembly.TriangleList`; `Presets.Rasterization.Fill.CullNone`; `Presets.BlendState.BlendColorAlpha` | `RenderCore.Pipelines/SimplePipelineCreator.cs:15` (+ Brutal abstractions) | Yes | None | Pipeline state presets; compile-verified by build. |
 | 7 | Direct (render) | `thug-life.lib/ThugLifeQuadRenderer.cs:135` | `RenderingPresets.ReverseZDepthStencil.DepthTestWrite` | `KSA/RenderingPresets.cs:14` (used widely, e.g. `KSA.Rendering.Water.Rendering/OceanRenderer.cs:311`) | Yes | None (file byte-identical) | Reverse-Z depth test+write; the game still clears depth to `0f`. 4730/4733 depth-prepass changes did not alter this preset. |
-| 8 | Direct (render) | `thug-life.lib/ThugLifeQuadRenderer.cs:130,131`; `:50`,`TextureFactory.cs:31,35,53` | `Renderer.{Device,Allocator,Graphics,DynamicStateInfo,ViewportState}` | `Core/Renderer.cs` (byte-identical) | Yes | None | Compile-verified. |
+| 8 | Direct (render) | `thug-life.lib/ThugLifeQuadRenderer.cs:130,131`; `:50`,`TextureFactory.cs:31,35,53` | `Renderer.{Device,Allocator,Graphics,DynamicStateInfo,ViewportState}` | `Core/Renderer.cs` (byte-identical @5402; @5707 gained HDR swapchain/UI-image members, used members unchanged) | Yes | None | Compile-verified. |
 | 9 | Direct (render) | `thug-life.lib/ThugLifeQuadRenderer.cs:252,256` | `Program.GetRenderCamera()` (= `RenderedViewport.GetCamera()`); `Camera.MVP.viewProjection` | `KSA/Program.cs:642`, `:491` (`RenderedViewport : IViewport` @5402); `KSA/Camera.cs:63`, `KSA/ViewProjection.cs:13` | Yes | **CHANGED (mod-side @5348)** — was `Program.GetMainCamera()` (`:632`); `RenderedViewport` retyped `Viewport`→`IViewport` @5402 (mod never names the type) | `RenderMainPass` runs once per **visible viewport** (main + the two always-visible 128² crew-portrait viewports since 5261; @5402 `RenderViewport` sets `_renderedViewport = viewport` at `Program.cs:4315` before the call), and ego space is camera-relative, so the main camera drew the portrait passes with the wrong clip transform. Now uses the camera of the viewport being rendered. Mod null-checks defensively. |
 | 10 | Direct (render) | `thug-life.lib/ThugLifeQuadRenderer.cs:264` | `Program.SetViewport(CommandBuffer)` | `KSA/Program.cs:4293` | Yes | None (body identical; sizes to `RenderedViewport.Size`) | |
 | 11 | Direct | `thug-life.lib/ThugLifeRenderManager.cs:98` | `Program.GetRenderer()` (Renderer) | `KSA/Program.cs:558` | Yes | None | Called from the lazy `EnsureGpuResources()`, not from the constructor. |
 | 12 | Direct (ego transform) | `thug-life.lib/ThugLifeQuadRenderer.cs:281,282,283` | `Vehicle.GetMatrixAsmb2Ego(Camera)`; `Part.PositionEgo(ref readonly double4x4)`; `Part.Asmb2Ego(doubleQuat)`; `Vehicle.Asmb2Ego` (doubleQuat) | `KSA/Vehicle.cs:1256,501`; `KSA/Part.cs:1155,1160` | Yes | None | Per-frame model-ego matrix; caller passes `in` to the `ref readonly` param. |
 | 13 | Direct (UI) | `thug-life.lib/ThugLifeSubmod.cs:123,129,138` | `Vehicle.Parts.Parts`; `Part.Template.Id`; `Part.Id`; `Part.SubParts` | `KSA/Part.cs:576,698,1079`; `KSA/PartTree.cs:95` | Yes | None | Combo population. |
-| 14 | GPU lib (Brutal/RenderCore) | `ThugLifeTextureFactory.cs:33,64`; `ThugLifeQuadRenderer.cs` (pipeline/descriptor/buffers) | `SimpleVkTexture`; `VkUtils.UploadBufferToImage`/`StageAndUploadToBuffer`; `BufferEx`, `DescriptorSetLayoutEx`, `DescriptorPoolEx`, `VertexInput`, `ShaderStages`, `CommandBuffer` | `Brutal.VulkanApi(.Abstractions)`, `RenderCore`, `Core` | Yes | None (`SimpleVkTexture.cs`, `VkUtils.cs` byte-identical @5402) | **4729 bumped Brutal packages** — highest churn surface; compile against 4750 DLLs passes, so the used API is intact. |
+| 14 | GPU lib (Brutal/RenderCore) | `ThugLifeTextureFactory.cs:33,64`; `ThugLifeQuadRenderer.cs` (pipeline/descriptor/buffers) | `SimpleVkTexture`; `VkUtils.UploadBufferToImage`/`StageAndUploadToBuffer`; `BufferEx`, `DescriptorSetLayoutEx`, `DescriptorPoolEx`, `VertexInput`, `ShaderStages`, `CommandBuffer` | `Brutal.VulkanApi(.Abstractions)`, `RenderCore`, `Core` | Yes | None @5402 (`SimpleVkTexture.cs`, `VkUtils.cs` byte-identical); **renamed @5707** — `SimpleVkTexture.ImageView` → `VkImageView` (fixed at `ThugLifeTextureFactory.cs:24`) | **4729 bumped Brutal packages** — highest churn surface; compile against 4750 DLLs passes, so the used API is intact. |
 | 15 | Abstraction | `thug-life.lib/ThugLifeSubmod.cs:104` | `VehicleProvider.GetAllVehicles()` (ksa-abstractions.lib) | `MeowSci.KsaAbstractions` | Yes | None | |
 | 16 | Direct (type test) | `thug-life.lib/KittenGlassesPreset.cs:35` | `KittenEva` (`: Vehicle`) — `vehicle is KittenEva`, gates the **animate thug** button | `KSA/KittenEva.cs:13` | Yes | **NEW (mod-side, 2026-08-23)** | Type identity only, no members touched. A rename/reparent of `KittenEva` is a compile error, not silent drift. Seated kittens are not vehicles and are out of scope here. |
 | 17 | Direct (UI) | `thug-life.lib/ThugLifeSubmod.cs:308` | `Vehicle.Parts.Parts` — first top-level part as the kitten fallback anchor | `KSA/PartTree.cs:95` | Yes | **NEW (mod-side, 2026-08-23)** | A `KittenEva` is constructed around its MMU backpack part as root (`KSA/EVADoor.cs:209`), so this is non-empty in practice; null-checked regardless. |

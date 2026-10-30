@@ -2,9 +2,11 @@
 
 Run `dotnet run --project kitchen-sink.tests` from the repository root.
 
-Latest managed validation (KSA 5638): 47 IVA ownership/persistence checks, 26 existing save
-checks, 17 capsule glass checks and 108 G-load checks passed, with the real `KSA.dll` probe
-verified. The full solution compiles against local KSA 5638 with zero warnings or errors.
+Latest managed validation (KSA 5707): the suite passes, including the 108 G-load checks with the
+real `KSA.dll` probe verified (the detector signature and anchors are unchanged since 5638). The full
+solution compiles against local KSA 5707 with zero warnings or errors. `KsaAssemblyProbe.cs` is also
+linked by the-tick.tests and ksa-upgrade.tests; the `KsaAssemblyProbe.Members.cs` partial (constructor
+chains, all callers of a member) is used only by ksa-upgrade.tests.
 Native acceptance below remains pending.
 
 Capsule glass adds 17 real-adapter checks: detached boolean JSON round-trip, independent legacy

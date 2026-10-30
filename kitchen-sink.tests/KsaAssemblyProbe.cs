@@ -14,9 +14,9 @@ using System.Reflection.PortableExecutable;
 /// Fixtures mirror private game methods by hand, so a game signature change used to pass silently
 /// (KSA 5638 added <c>SimStep</c> to <c>DetectStructuralFailure</c>). Comparing the method the
 /// production lookup resolved on the fixture with the shipped method closes that gap.
-/// Linked into kitchen-sink.tests and the-tick.tests.
+/// Linked into kitchen-sink.tests, the-tick.tests and (with KsaAssemblyProbe.Members.cs) ksa-upgrade.tests.
 /// </summary>
-internal sealed class KsaAssemblyProbe : ISignatureTypeProvider<string, object?>, IDisposable
+internal sealed partial class KsaAssemblyProbe : ISignatureTypeProvider<string, object?>, IDisposable
 {
     private sealed record Shape(bool IsStatic, string ReturnType, string[] ParameterTypes, string[] ParameterNames)
     {
@@ -104,9 +104,12 @@ internal sealed class KsaAssemblyProbe : ISignatureTypeProvider<string, object?>
     }
 
     /// <summary>Lists "Type::Member" for every call/callvirt in an IL body.</summary>
-    private List<string> ScanCalls(BlobReader il)
+    private List<string> ScanCalls(BlobReader il) => ScanCallTargets(il).Select(MemberName).ToList();
+
+    /// <summary>Lists the method handle of every call/callvirt in an IL body.</summary>
+    private static List<EntityHandle> ScanCallTargets(BlobReader il)
     {
-        var calls = new List<string>();
+        var calls = new List<EntityHandle>();
         while (il.RemainingBytes > 0)
         {
             short value = il.ReadByte();
@@ -123,7 +126,7 @@ internal sealed class KsaAssemblyProbe : ISignatureTypeProvider<string, object?>
                     break;
                 case OperandType.InlineMethod:
                     var target = MetadataTokens.EntityHandle(il.ReadInt32());
-                    if (op == OpCodes.Call || op == OpCodes.Callvirt) calls.Add(MemberName(target));
+                    if (op == OpCodes.Call || op == OpCodes.Callvirt) calls.Add(target);
                     break;
                 default: il.ReadInt32(); break;
             }

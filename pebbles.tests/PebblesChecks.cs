@@ -34,6 +34,7 @@ internal static class PebblesChecks
         recipe.CandidateBudget = long.MaxValue; Reject(() => RecipeValidation.Validate(recipe));
         SimpleAuthoring();
         BackfaceNormals();
+        CustomNormals();
         Console.WriteLine("PASS: Pebbles detached recipes, transform round trips, collider geometry, collision/placement constraints and resource budgets.");
     }
     /// <summary>KSA 5473 KeepBackfaceNormals: recipes saved before the flag inherit the stock material's value.</summary>
@@ -54,6 +55,26 @@ internal static class PebblesChecks
         Check(copy.KeepBackfaceNormals == true && RecipeCopy.Clone(new MaterialRecipe()).KeepBackfaceNormals == null, "The flag and its absence both round trip.");
         var saved = MeowSci.KsaAbstractions.Persistence.SaveJson.FromElement<PebblesRecipe>(MeowSci.KsaAbstractions.Persistence.SaveJson.ToElement(recipe));
         Check(saved.Ecotypes[0].Objects[0].Lods[0].Materials[0].KeepBackfaceNormals == null, "Sidecar serialization preserves an unset flag.");
+    }
+    /// <summary>KSA 5689 UsesCustomNormals: recipes saved before the flag inherit the stock tree value.</summary>
+    private static void CustomNormals()
+    {
+        var stock = new System.Collections.Generic.Dictionary<string, bool> { ["TreeLeaves"] = true, ["Grass"] = false };
+        var recipe = new PebblesRecipe { Ecotypes = [new() { Name = "Tree", Objects = [new() { SourceId = "Tree1" }] }] };
+        recipe.Ecotypes[0].Objects[0].Lods[0].Materials = [new() { SourceId = "TreeLeaves" }, new() { SourceId = "import/material/0" }];
+        var json = System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(recipe))!;
+        foreach (var material in json["Ecotypes"]![0]!["Objects"]![0]!["Lods"]![0]!["Materials"]!.AsArray()) material!.AsObject().Remove("UsesCustomNormals");
+        var legacy = JsonSerializer.Deserialize<PebblesRecipe>(json.ToJsonString())!.Ecotypes[0].Objects[0].Lods[0].Materials;
+        Check(legacy[0].UsesCustomNormals == null && legacy[0].ResolveUsesCustomNormals(stock), "5638-era recipes inherit the stock foliage custom-normals flag.");
+        Check(!legacy[1].ResolveUsesCustomNormals(stock), "Materials without a stock source keep inferred geometry normals.");
+        legacy[0].UsesCustomNormals = false;
+        Check(!legacy[0].ResolveUsesCustomNormals(stock), "An explicit captured value overrides inheritance.");
+        legacy[1].UsesCustomNormals = true;
+        Check(RecipeCopy.Clone(legacy[1]).UsesCustomNormals == true && RecipeCopy.Clone(new MaterialRecipe()).UsesCustomNormals == null,
+            "The flag and its absence both round trip.");
+        var saved = MeowSci.KsaAbstractions.Persistence.SaveJson.FromElement<PebblesRecipe>(MeowSci.KsaAbstractions.Persistence.SaveJson.ToElement(recipe));
+        Check(saved.Ecotypes[0].Objects[0].Lods[0].Materials[0].UsesCustomNormals == null, "Sidecar serialization preserves an unset flag.");
+        Check(saved.Ecotypes[0].Objects[0].Lods[0].Materials[0].KeepBackfaceNormals == null, "The new flag does not disturb the existing optional flag.");
     }
     private static void SimpleAuthoring()
     {

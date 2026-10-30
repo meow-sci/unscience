@@ -4,6 +4,46 @@
 
 Networking preload/diagnostic results are process startup state only. The source-linked helper holds no scene objects or durable user choices and adds no participant, record, sidecar field or game hook. Existing capture/reset/replay and ownership policies are unchanged; no save migration is needed.
 
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified against `2026.10.25.5707` (revs 5639–5703), diffed from `2026.10.19.5638`. Static/managed
+only: the solution builds with 0 warnings and the managed suites (including `saves.tests`,
+`pebbles.tests`, `iron-man.tests`, `doh.tests`) pass; no native save or load was run. Line numbers are
+NEW (`decomp/KSA/`). **No participant ID, record version or existing payload changed.**
+
+- ✅ **Hook targets unchanged.** `UncompressedSave.cs`, `GameSave.cs`, `SaveName.cs`, `GameSaves.cs`,
+  `SaveDirectory.cs`, `UniverseData.cs`, `CelestialSystemData.cs`, `VehicleData.cs`, `PartInstance.cs`,
+  `JobSystems.cs` and `SystemLibrary.cs` are byte-identical. `Universe.DeserializeSave` (`Universe.cs:2443`)
+  and `LoadSystem` (`:257`) have identical bodies, including the `JobSystems.WaitAll` join and the
+  skipped-vehicle `EndMission` loop.
+- ✅ **Preflight still mirrors native.** `CelestialSystem.DeserializeSave(CelestialSystemData, ISet<string>)`
+  (`CelestialSystem.cs:695`) changed only its `Connectors` loop (now an array) and log lines; the skip
+  rules are unchanged. `CreateTreeFrom` adds `LockToMoon` (tidal lock at system build), which affects no
+  sidecar state.
+- ℹ️ **New KSA-owned state, intentionally not in the sidecar.** Kitten radiation doses and retirement
+  (rev 5669: `Retired`, `AcuteDose`, `LifetimeDose`, `AcuteDoseTime` on `KittenRosterEntryData`) are
+  serialized by KSA inside `UniverseData.KittenRoster`; the preflight only requires a non-null roster.
+  The star activity cycle and space weather (revs 5684/5697) are seeded template data whose phase is
+  computed from elapsed time (`SpaceWeather.GetCyclePhase(seconds)`), so there is nothing to save.
+- ℹ️ **New vehicle destruction before our handoff.** `ApplyVehicleSolvers` (`Universe.cs:1969-1972`) now
+  runs `ApplyRadiationDeaths` → `Vehicle.KillLethallyDosedCrew` (`Vehicle.cs:3041`), which destroys a
+  lethally dosed `KittenEva` (`:3080`). Records targeting it then resolve as missing through the existing
+  exact-identity resolvers. The death queue is drained before our deferred `DeserializeSave` replays.
+  `DeserializeSave` does not reset the new `_stepLimitTime` (game-owned; at most one truncated step).
+  DOH now refuses spawn names held by the roster so its kittens do not inherit roster doses
+  (`doh.lib/Spawning/KittenSpawner.Naming.cs:30`); no save change.
+- ✅ **Iron Man marker load (fix, new in 5707).** Save loads now reach `Part` through a private 10-arg
+  constructor (`Part.cs:1566`), so the connector marker is decoded there
+  (`iron-man.lib/IronManConnectorPatches.cs:14-30`) instead of the removed 4-arg patch. The saved marker
+  format and Iron Man records are unchanged. See [iron-man](iron-man.md).
+- ✅ **Pebbles `UsesCustomNormals` (additive, rev 5689).** `MaterialRecipe.UsesCustomNormals` (`bool?`,
+  `pebbles.lib/Models/PebblesRecipe.cs:68,73`) is an optional payload field: absent or null inherits the
+  stock material, like `KeepBackfaceNormals`. The record ID and version are unchanged and legacy
+  records load unchanged (covered by `pebbles.tests`). See [ground-clutter](ground-clutter.md).
+- **Native acceptance pending:** save/load with a radiation-killed EVA kitten or a retired kitten
+  (unresolved targets reported, no stale-reference errors); a load while a radiation step limit is
+  active during warp; Iron Man connector round trip; Pebbles material with custom normals round trip.
+
 ## KSA 5638 shared handoff startup follow-up
 
 `NativeSaveHooks.Apply` requires the shared `PhysicsFrameHook` before installing save patches. A

@@ -5,5 +5,5 @@ integration map is [audio.md](audio.md). The development host still applies shar
 
 The retained `byo-music.lib/MusicPlayer` helper directly uses `ModLibrary.Get<MusicPlayList>(string)`
 and `MusicPlayList.PlayMusic(out ChannelWrapper?, ulong delaySamples=0)` (KSA 5402:
-`KSA/ModLibrary.cs`, `KSA/MusicPlayList.cs:21`). It is available to callers but the new panel uses
-owned FMOD streams. The old SabotageMusic demonstration assets do not drive the distributed UI.
+`KSA/ModLibrary.cs`, `KSA/MusicPlayList.cs:21`). Both files are byte-identical at 5707
+(2026-10-29). It is available to callers but the new panel uses owned FMOD streams. The old SabotageMusic demonstration assets do not drive the distributed UI.

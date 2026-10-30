@@ -112,13 +112,13 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [Hot Pursuit](../hot-pursuit.lib/HotPursuitSubmod.Saves.cs) | Mounted part, surface basis, transform, FOV, dimensions, visibility and whether its viewport was open. | Placement mode stops. Attempts to reopen saved viewports; slot exhaustion keeps the camera setup and reports that its viewport needs reopening. No native viewport/texture handles persist. |
 | [Humble Arteest](../humble-arteest.lib/HumbleArteestSubmod.Persistence.cs) | Paint activation/blend, global/template/per-part colors, named kitten material colors, visor hiding, global/per-module engine emissive settings. | Restores effective owned appearance and recreates relevant shader/material state. Requires compatible material names and module layouts; missing targets/uploads warn. Unapplied editor input is not generally captured. |
 | [I Feel Seen](../i-feel-seen.lib/IFeelSeenSubmod.Saves.cs) | Tracked vehicle identities and each force-visibility flag. | Rebuilds tracking on native-restored vehicles. Deleted/missing vehicles warn. |
-| [Iron Man](../iron-man.lib/IronManSubmod.Saves.cs) | Configured kittens, enabled mode, original EVA/control settings needed to disable the mode, current flight-computer preferences. | Mode restores with engines **disarmed**. Existing connectors are configured/reused through the normal code path. Runtime thrust/burn continuation is not promised; the player deliberately arms engines again. |
+| [Iron Man](../iron-man.lib/IronManSubmod.Saves.cs) | Configured kittens, enabled mode, original EVA/control settings needed to disable the mode, current flight-computer preferences. | Mode restores with engines **disarmed**. Existing connectors are configured/reused through the normal code path. Runtime thrust/burn continuation is not promised; the player deliberately arms engines again. Custom anchors travel in the native part-id marker; since KSA 5707 it is decoded at the private `Part` constructor that every load/copy path reaches (format unchanged). |
 | [It's So Shiny](../its-so-shiny.lib/ItsSoShinySubmod.Persistence.cs) | Existing host/light cell addresses, grid ownership/appearance, sparse mask, render flag, scroll recipe/offset and pending deletion. | Rebinds native cells without spawning or forcing ignition/switch state; scrolling resumes. Pending deletion restarts its delay. Shared light-template appearance retains the feature's existing shared-template semantics, with Zippo's template ledger restoring originals. |
 | [Kitchen Sink](../kitchen-sink.lib/KitchenSinkSubmod.Saves.cs) | Independent IVA visibility, capsule-glass experiment toggle, G-load target IDs, unlocked IVA camera/speed/exact seat/body pose in four separate v1 records. | Releases original-world controller/input before reconstruction; exact vehicle/part/seat replay requires matching native camera mode/follow. Missing/ambiguous/invalid targets and unavailable patches report and retain state. Absent legacy camera record resets to locked/default speed. Capsule glass reset releases its global interior requirement, with exact static-model filtering re-enabled on replay; absent records leave it off. Picker, held input, render/template caches and smoothing are transient. |
 | [Kitten Animations](../kitten-animations.lib/KittenAnimationsSubmod.Persistence.cs) | Selected kitten; forced clip by source/label, active/paused state and native clip phase; driver controls/global tuning; expression settings and latched expression clip identity. | Forced looping clips and frozen poses resume, and latched expressions return at their held weight. Unlatched one-shot expressions stay stopped; intermediate expression easing is not checkpointed. Missing/ambiguous clip identity or unavailable native phase fields warn/fail the block. |
-| [Kiwi's Marbles](../kiwis-marbles.lib/KiwisMarblesSubmod.Persistence.cs) | Celestial source/vehicle-or-celestial target/offset and original orbital parent, epoch and state vectors. | Restores ordered welds and their future Unweld baseline. Non-vehicle targets resolve by exact id among the offered orbiters, so orbiting stars restore (5638). Cycles through both target dependencies and actual parent ancestry are rejected. This is a weld/orbit recipe, not all possible arbitrary celestial-system mutations. |
+| [Kiwi's Marbles](../kiwis-marbles.lib/KiwisMarblesSubmod.Persistence.cs) | Celestial source/vehicle-or-celestial target/offset and original orbital parent, epoch and state vectors. | Restores ordered welds and their future Unweld baseline. Non-vehicle targets resolve by exact id among the offered orbiters, so orbiting stars restore (5638). Cycles through both target dependencies and actual parent ancestry are rejected. This is a weld/orbit recipe, not all possible arbitrary celestial-system mutations. KSA 5707: Pluto is now tilted 113° (rev 5649), so 5638-era offsets for welds whose target is under Pluto point a different world direction; payload unchanged, no migration. |
 | Parts Now (**removed @5638**) | Nothing; legacy sidecars may still hold a `parts-now` v1 dependency record. | No participant owns the id: the coordinator reports `parts-now: unsupported feature/version 1`, retains the record and writes it back unchanged; the native load and every other feature proceed. Pinned by `saves.tests` `RetiredFeatureTests`. |
-| [Pebbles](../pebbles.lib/PebblesSubmod.Saves.cs) | Applied per-body clutter recipes, including their imported mesh identities/settings (`pebbles`); removed/displaced clutter on non-stock-spacing grids (`pebbles.clutter-state`, v1, order 61, new @5482). | Recreates applied fields and releases old import ownership. Stock-spacing removed/displaced clutter is saved natively by KSA 5482; Pebbles keeps those native entries stock-grid and restores override grids after recipes (native state wins). Workshop previews and unapplied recipe edits are not captured; pending unsynced hits are lost as natively. A missing record (vanilla/older saves) restores recipes and stock state only. Imported GLB assets remain required; changed content hashes reject the saved selection. |
+| [Pebbles](../pebbles.lib/PebblesSubmod.Saves.cs) | Applied per-body clutter recipes, including their imported mesh identities/settings (`pebbles`); removed/displaced clutter on non-stock-spacing grids (`pebbles.clutter-state`, v1, order 61, new @5482). | Recreates applied fields and releases old import ownership. Stock-spacing removed/displaced clutter is saved natively by KSA 5482; Pebbles keeps those native entries stock-grid and restores override grids after recipes (native state wins). Workshop previews and unapplied recipe edits are not captured; pending unsynced hits are lost as natively. A missing record (vanilla/older saves) restores recipes and stock state only. Imported GLB assets remain required; changed content hashes reject the saved selection. KSA 5707 adds an optional recipe `UsesCustomNormals` flag; absent (older records) inherits the stock material's value, so record ids/versions are unchanged. |
 | [Pyro](../pyro.lib/PyroSubmod.Persistence.cs) | `pyro.templates`: edited shared plume templates. `pyro`: anchored plume settings, enabled flags and on/off cycling configuration, current phase and remaining interval. | Recreates plume instances after template edits, with cycling resumed without offline catch-up. Does not embed referenced assets or native renderer state; preset catalog remains separate. |
 | [Rocky McRockFace](../rocky-mcrock-face.lib/RockyMcRockFaceSubmod.Saves.cs) | Applied ring overlays still owning their target ring: LOD mesh/material/band selections and field overrides. | Reapplies after Bloomin' Onion. Superseded overlays and unapplied selection drafts are omitted. Referenced assets must remain available. |
 | [Save Yourself](../save-yourself.lib/AutoSaveSettingsStore.cs) | Nothing. Prefix, enabled flag and interval are a global Unscience preference (`.unscience/save-yourself.toml`), written through on change. | Intentional exclusion: auto saving is a session preference, not scene state, so loads never change it and the countdown continues across loads. Countdown position, last-save name and counters are transient. The feature produces native saves via `GameSaveProvider` so every other adapter runs as for a manual save. |
@@ -246,6 +246,16 @@ lifecycle checks incl. skipped-vehicle loads, plus 16 retired-feature checks), `
 `world-saves.tests` (star-target weld), `kitchen-sink.tests` (108 G-load), `the-tick.tests` (108); all
 18 suites and the full build pass. See [KSA_5638_UPGRADE](KSA_5638_UPGRADE.md).
 
+KSA 5707 upgrade (October 2026): no save IDs or versions changed. Iron Man's native anchor marker is
+decoded at the private `Part` constructor (the 5638 target no longer saw loads, so marked kittens lost
+anchors or failed to load) and re-created on `PartCloner` copies. Pebbles recipes gain an optional
+`UsesCustomNormals` field that legacy records inherit from the stock material. KSA now saves kitten
+radiation dose in its roster and derives space weather from seeds and time — both deliberately not
+sidecar state. Radiation can destroy an EVA kitten before the frame handoff; existing unresolved-target
+reporting covers it. Managed results: `iron-man.tests` (5707 load/copy constructor chain),
+`pebbles.tests` (legacy/explicit/round-trip flag), `doh.tests` (58), `ksa-upgrade.tests` (real KSA.dll
+constructor-chain probe); all 18 suites and the full build pass. See [KSA_5707_UPGRADE](KSA_5707_UPGRADE.md).
+
 October 25 startup follow-up (5638): the Windows log reports the shared frame hook failing to
 install, and the user confirmed welding did not work. Scene-save hooks require that same handoff
 before they install. A production-Harmony call-wrapper regression reproduces the failure shape;
@@ -298,6 +308,8 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
 - [ ] Load a save with a missing part mod and one with a missing character (5638): KSA alerts and skips
   the vehicle, Unscience shows one warning per vehicle, crew return to the roster, and feature records
   for that vehicle are kept across a re-save.
+- [ ] Load while a radiation step limit is active during warp (5707): the first resumed step may be
+  shortened once; no queued Unscience mutation or weld runs against the previous world.
 - [ ] Queue feature changes and a world load in the same frame, including grid deletion and Sphinx
   placement. Confirm stale actions cannot affect the new world; explicitly saved grid deletion still runs.
 - [ ] Inspect game logs and renderer validation output after repeated transitions. No disposed object,
@@ -335,6 +347,12 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
   of growing.
 - [ ] Save enabled Iron Man mode with customized EVA/flight preferences. Confirm connectors are not
   duplicated, engines load disarmed, manual arming works, and Disable restores original control settings.
+- [ ] Iron Man (5707): save and load a world and a blueprint with connected custom anchors; the kitten
+  keeps its name (no `iron-man:v1:` id), node order and fuel flow. Copy Tree an unconfigured kitten with
+  anchors; the copy has the same anchors and no crash.
+- [ ] Radiation (5707): save/load with an EVA kitten killed by radiation and with a retired kitten.
+  Records for the removed kitten are reported unresolved, with no stale-reference errors; KSA's roster
+  dose columns restore natively. DOH refuses a spawn name held by a rostered kitten.
 - [ ] Verify Eternal Flame monitoring, I Feel Seen visibility, IVA rendering, editor flags and Glass FOV
   resume their saved policies, including disabled/false values and missing-target diagnostics.
 - [ ] IVA unlock: save away from the second seat with a changed speed; reload twice and A-B-A across
@@ -365,6 +383,8 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
 - [ ] Save Bloomin' Onion rings with procedural bands and Rocky overlays on the same body. Test reset and
   reapplication order, original ring restoration, renderer rebuild, rings-disabled settings and missing assets.
 - [ ] Save Pebbles applied GLB recipes and Sphinx statics with UVs, visibility and each collision mode.
+- [ ] Pebbles (5707): load a 5638-era recipe on a body with stock trees; foliage AO matches stock
+  (`UsesCustomNormals` inherited) and the depth-normal pre-pass shows correct cutout silhouettes.
 - [ ] Pebbles (5482): save/load with removed and displaced clutter at the same and at a changed spacing;
   confirm no new holes in stock clutter, override removals persist and in-flight objects keep velocity.
   Confirm placement/collision behavior after restart and repeated loads; no duplicate instances or growth

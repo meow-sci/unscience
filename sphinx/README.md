@@ -86,8 +86,18 @@ for vehicle and cloth solvers before mutating shapes. Collider state is session-
 
 [SphinxLib](../sphinx.lib/README.md) owns the implementation and native render hooks.
 [Managed tests](../sphinx.tests/README.md) check grounding, transforms, UV mapping, conservative box detection and collider/render alignment. Full solution
-compilation checks typed APIs against KSA 2026.9.7.5402. Native rendering, terrain interaction and
+compilation checks typed APIs against KSA 2026.10.25.5707. Native rendering, terrain interaction and
 GPU lifetime acceptance still require an in-game run; see [integration scope](../scope/statics.md).
+
+## KSA 5707 compatibility
+
+- On GPUs that cannot build the game's static-object colour pipeline, KSA 5707 skips stock statics
+  (such as the launchpad) instead of crashing. Sphinx now skips its colour draws in the same case,
+  so those statics are not drawn rather than drawn without a pipeline.
+- Procedural erosion changed terrain height on mountains and valleys. Statics saved before 5707 keep
+  their saved position and may float or sink slightly there. Use **Snap current position to ground**
+  to re-seat them. Note that this also clears the local offset.
+- Managed and static checks only. The low-end GPU path and the eroded-terrain snap need an in-game check.
 
 ## KSA 5438 compatibility
 

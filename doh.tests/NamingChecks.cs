@@ -38,6 +38,30 @@ internal static partial class Checks
         system.All.UnsafeAsList().Add(new KittenEva("Squad_1"));
         Require(fresh.GenerateKittenName(system, batch) == "Squad_2",
             "a fresh spawner skips native-restored names without persisting its counter");
+
+        RosterNamingChecks(system);
+    }
+
+    /// <summary>KSA 5669: EVA kittens share roster dose/death state by name, so rostered names are occupied.</summary>
+    private static void RosterNamingChecks(CelestialSystem system)
+    {
+        var spawner = new DohSubmod().Spawner;
+        Universe.KittenRoster = new KittenRosterData();
+        Universe.KittenRoster.Names.Add("Valentina");
+        Universe.KittenRoster.Names.Add("Crew_0");
+        try
+        {
+            Require(spawner.GenerateKittenName(system, new SpawnRequest { VehicleName = "valentina" }) == null,
+                "a single name held by a rostered kitten at home is rejected case-insensitively");
+            Require(spawner.GenerateKittenName(system, new SpawnRequest { VehicleName = "Crew_", Count = 2 }) == "Crew_1",
+                "batch numbering skips rostered names");
+            Require(spawner.GenerateKittenName(system, new SpawnRequest { VehicleName = "Valentine" }) == "Valentine",
+                "names that only resemble a rostered kitten remain available");
+        }
+        finally
+        {
+            Universe.KittenRoster = new KittenRosterData();
+        }
     }
 
     private static void SpawnNameSaveChecks()

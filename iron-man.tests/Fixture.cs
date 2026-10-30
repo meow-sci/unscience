@@ -11,8 +11,10 @@ public static class Double3Ex
     public static double3 Transform(this double3 value, doubleQuat rotation) => double3.Transform(value, rotation);
 }
 
-// Minimal managed equivalents of the researched 5402 constructor/serialization seams.
-// Production connector code and Harmony patches are linked unchanged into this runner.
+// Minimal managed equivalents of the researched 5402 constructor/serialization seams, with the
+// KSA 5707 connector storage: a fixed Connector[] and a lazily allocated connection list whose
+// empty value is shared between parts. Production connector code and Harmony patches are linked
+// unchanged into this runner.
 [Flags]
 public enum ConnectorCapabilityFlags { None = 0, BulkFluid = 1 }
 [Flags] public enum ConnectorCapability { None = 0, BulkFluid = 1 }
@@ -42,6 +44,7 @@ public readonly struct ScaleFactors(double3 axes)
 
 public sealed class PartTemplate
 {
+    public static readonly Dictionary<string, PartTemplate> Library = new();
     public string Id = "KittenBackPackPart";
     public List<Part.Connector.TemplateBase> Connectors = new();
 }
@@ -49,7 +52,9 @@ public sealed class PartTemplate
 public sealed class PartInstance
 {
     [XmlAttribute] public string Id { get; set; } = "";
+    [XmlAttribute] public string InstanceOf { get; set; } = "";
     public List<int> ConnectedIndices = new();
+    public PartTemplate GetTemplate() => PartTemplate.Library[InstanceOf];
 }
 
 public sealed class Part : Part.Connection.IConnector
@@ -58,20 +63,43 @@ public sealed class Part : Part.Connection.IConnector
     public PartTemplate Template;
     public bool IsSubPart;
     public double3 Scale = double3.One;
-    public List<Connector> Connectors = new();
-    public List<Connection> Connections = new();
+    private static readonly List<Connection> SharedEmptyConnections = new();
+    private List<Connection>? _connections;
+    public Connector[] Connectors = Array.Empty<Connector>();
+    public List<Connection> Connections => _connections ?? SharedEmptyConnections;
     public PartTree Tree = new();
     public Part ConnectionPart => this;
     public bool CanConnect() => true;
-    public void AddConnection(Connection connection) => Connections.Add(connection);
-    public void RemoveConnection(Connection connection) => Connections.Remove(connection);
+    public void AddConnection(Connection connection) => EnsureConnections().Add(connection);
+    public void RemoveConnection(Connection connection) => _connections?.Remove(connection);
+    internal List<Connection> EnsureConnections() => _connections ??= new List<Connection>();
+
+    // KSA 5707 constructor chaining: save load, the public 4-argument constructor and PartCloner
+    // copies all reach the private constructor; only it may decode the Iron Man marker.
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public Part(PartInstance inInstance, Part? parent)
+        : this(inInstance.Id, inInstance.GetTemplate(), inInstance, parent, null, 0, 0, 0) { }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public Part(string inName, PartTemplate inTemplate, PartInstance? inInstance = null, Part? parent = null)
+        : this(inName, inTemplate, inInstance, parent, null, 0, 0, 0) { }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public Part(Part source, Part? parent)
+        : this(null, source.Template, null, parent, new TransformReference { ScaleValue = source.Scale }, 0, 0, 0, source) { }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private Part(string? inName, PartTemplate inTemplate, PartInstance? inInstance, Part? parent, TransformReference? transformReference,
+        int stage, int sequenceGroup, int sequenceOrder, Part? boundsSource = null, bool isTemplateSubPart = false)
     {
-        Id = inName;
+        Id = string.IsNullOrEmpty(inName) ? inTemplate.Id : inName;
         Template = inTemplate;
-        foreach (var template in inTemplate.Connectors) Connectors.Add(new Connector(template, this));
+        if (transformReference != null) Scale = transformReference.ScaleValue;
+        if (inTemplate.Connectors.Count > 0)
+        {
+            Connectors = new Connector[inTemplate.Connectors.Count];
+            for (int i = 0; i < Connectors.Length; i++) Connectors[i] = new Connector(inTemplate.Connectors[i], this);
+        }
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -80,8 +108,8 @@ public sealed class Part : Part.Connection.IConnector
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal PartInstance GetReferenceWithChildren(ref uint localRunningId, PartInstance? parent, bool includeSymmetry = false)
     {
-        var result = new PartInstance();
-        for (int i = 0; i < Connectors.Count; i++)
+        var result = new PartInstance { InstanceOf = Template.Id };
+        for (int i = 0; i < Connectors.Length; i++)
             if (Connectors[i].Connection != null) result.ConnectedIndices.Add(i);
         return result;
     }
@@ -131,8 +159,8 @@ public sealed class Part : Part.Connection.IConnector
         public readonly TemplateBase Authored;
         public Part ConnectionPart => Parent;
         public bool CanConnect() => Connection == null;
-        public void AddConnection(Connection connection) { Connection = connection; Parent.Connections.Add(connection); }
-        public void RemoveConnection(Connection connection) { if (Connection == connection) Connection = null; Parent.Connections.Remove(connection); }
+        public void AddConnection(Connection connection) { Connection = connection; Parent.EnsureConnections().Add(connection); }
+        public void RemoveConnection(Connection connection) { if (Connection == connection) Connection = null; Parent.RemoveConnection(connection); }
 
         public Connector(TemplateBase template, Part part)
         {

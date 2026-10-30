@@ -21,7 +21,7 @@ public sealed class ThugLifeTextureFactory : IDisposable
 {
     public SimpleVkTexture Texture { get; }
     public VkSampler Sampler { get; }
-    public VkImageView ImageView => Texture.ImageView;
+    public VkImageView ImageView => Texture.VkImageView;
 
     private readonly DeviceEx _device;
     private bool _disposed;

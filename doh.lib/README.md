@@ -28,6 +28,11 @@ Headless library providing programmatic kitten spawning and per-kitten GPU mater
   - The name field starts at `Kitten_doh_` and applies to both spawn buttons. A single spawn uses
     nonblank text verbatim, refusing an occupied name; a batch appends collision-free numbers.
     Blank text uses automatic default-prefix numbering, including for a single spawn.
+    "Occupied" means a live vehicle in `CurrentSystem.All` **or** a `Universe.KittenRoster` entry
+    (`KittenSpawner.Naming.cs:30`, case-insensitive `KeyHash`). KSA 5707 (rev 5669) binds an EVA
+    kitten to the same-named roster entry for radiation dose, sickness, death (KIA) and retirement,
+    so a DOH kitten with a rostered name would share that kitten's fate. Unrostered DOH kittens get
+    no dose.
   - The spawn target is held as the selected `Vehicle` object, never as a list index. KSA's vehicle
     list swap-removes on deregister, and `VehicleProvider` filters debris, so an index silently moved
     onto another vehicle (often a spawned kitten) whenever something was removed. Spawns then ignored
@@ -109,7 +114,9 @@ kitten's particle emitters to the parent body. Then it disposes the kitten, whic
 
 `Boarded` is the only disposition that leaves crew records alone. `EndMission` and `Kill` end or kill a
 roster entry named after the vehicle. doh kittens are not roster crew, so neither applies. Material-set
-release, the solver-idle wait and the prune, unload and stale-restore order are unchanged.
+release, the solver-idle wait and the prune, unload and stale-restore order are unchanged. KSA 5707
+did not change `DestroyVehicle` or the dispositions. Its new radiation death destroys rostered EVA
+kittens only, which the roster-name rule above keeps doh kittens out of.
 
 ## Dependencies
 

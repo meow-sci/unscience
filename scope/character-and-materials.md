@@ -8,7 +8,8 @@ sources **and** the Content shader tree, in both game builds.
 
 **Verified game versions**
 
-- @5638: the top section below was verified against `2026.10.19.5638` (`ksa-game-assemblies` `edda844`;
+- @5707: `2026.10.25.5707`; see the 5707 section (line numbers there are @5707).
+- @5638: the 5638 section below was verified against `2026.10.19.5638` (`ksa-game-assemblies` `edda844`;
   OLD = `a2f724f`, read with `git show`). Only rows marked `@5638` were refreshed. The list below records
   the 5482 pass.
 - NEW decomp `2026.9.22.5482` root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
@@ -24,6 +25,57 @@ decomps and (for shaders) BOTH Content trees; "Δ vs OLD" records the real delta
 are not deltas). Rows marked `@5482` carry 5482 line numbers; other table line numbers were last
 refreshed against **5438**. Earlier per-pass sections keep the line numbers of the build they were
 written against.
+
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified against `2026.10.25.5707` (revs 5639–5703, all logged), diffed from `2026.10.19.5638`.
+Static/managed only: the solution builds with 0 warnings, and `doh.tests` (with the new
+`RosterNamingChecks`) passes. No native KSA run. Line numbers are @5707.
+
+- 🔴 **doh name collision with the kitten roster (fixed; new in 5707, rev 5669).** EVA kittens now bind
+  to the roster entry with the same case-insensitive name for radiation dose, sickness and death.
+  doh kittens normally have no roster entry, so they get no dose, sickness or death. A doh kitten
+  given a rostered kitten's name, however, would have accumulated that kitten's dose, could die (KIA)
+  and stop time warp. `IsOccupied` (`doh.lib/Spawning/KittenSpawner.Naming.cs:30`) now also rejects
+  names held by `Universe.KittenRoster` (`Universe.cs:126`, `Find`). Exact single names are refused
+  (message `KittenSpawner.cs:122`); batch and automatic numbering skip them. No save change.
+- ✅ **doh teardown unchanged.** `Universe.DestroyVehicle(Vehicle, CrewDisposition)` is at
+  `Universe.cs:2040`; `Boarded` still performs no crew action. `Vehicle.UpdatePerFrameData` now also
+  credits dose. This is harmless for doh: the call at spawn runs after `ApplyVehicleSolvers`, so it
+  credits zero dose seconds.
+- ✅ **Descriptor-wrapper API moved; no mod here uses it.** `IDescriptorSetWrapper` and
+  `IDescriptorSetLayoutWrapper` moved from `RenderCore` to `Brutal.VulkanApi.Abstractions` (rev 5652).
+  `DescriptorDynamicOffset` (`ByteSize?`) was replaced by a default `ReadOnlySpan<ByteSize32> DynamicOffsets`.
+  `GpuMaterialSystem` (`:25`), `GpuTextureSystem` and `BindlessTextureLibrary` dropped their `=> null`
+  overrides. `GpuTextureSystem` only renames `texture.ImageView` → `VkImageView` internally.
+- ✅ **Kitten visor transpiler anchor intact.** The `KittenRenderable.cs` diff is one line in
+  `UpdateMmuBodyAnimationAsset` (`:721`, `X = _smoothAccel.Y * -1f`, rev 5671 MMU leg direction).
+  The `UpdateRenderData` IL from both DLLs differs only in RVA (ilspycmd dump). It still has exactly one
+  `ldfld Helmet::VisorMesh; ldloc.s 4; callvirt StaticMeshRenderable::Draw(ViewHandle)` (`:369`).
+  The MMU sign flip changes only the game-driven `_blendSampler` position. kitten-animations only
+  reads that sampler.
+- ✅ **Vehicle Paint / Engine Emissive (part-tree render).** The bodies of `PartTreeRenderData`
+  `Compose*`, `WriteState` (`:1297`) and `WriteDynamicState` (`:1175`) are byte-identical; `EnsureBuilt`
+  is at `:548` and `InvalidateStates` at `:423`. The `StateBit` constants still use bits 0..10 only, so
+  paint bits 11..31 stay free. The static, dynamic and glass `PerInstanceData` structs are byte-identical.
+  The Engine Emissive mirror (`Temperature`@68, `TfiThickness`@72) still matches, and every Mesh shader is
+  byte-identical. *Speculative:* the new editor symmetry ghost previews (rev 5643) compose without
+  `EnsureBuilt`, so paint on a ghost may lag mid-drag.
+- ✅ **Byte-identical:** `MaterialData`, `GpuObjectSystem`, `AssetManager`, `GpuObjectAssetRef`,
+  `LoadedAssetRef`, `FreeListIndexPool`, `CharacterRenderSystem`, `CharacterRenderResources`,
+  `CharacterAvatar` (`Core` is still a struct field), `AnimatedRenderable`, `CatFurRenderable`,
+  `StaticMeshRenderable`, `Cat{Expression,Eye,Ear,Post}Anim`, `KittenEva`, `ModLibrary`,
+  `SerializedCollection`, the Pbr/Character references, `GltfPbrSystem`, `BoneAnimRuntime`,
+  `KittenLocomotion(Tuning)`, `AnimationPairBlendSampler`, `AnimationAssetRef`, `CharacterAssets.xml`.
+  The `StagingPool`, `VkUtils` and `IVulkanContext` upload path is unchanged; `QueueExtensions.Submit`
+  only adds span-length checks, which the default spans satisfy.
+- ✅ **Line moves only:** `Program.Instance :510`, `.MaterialSystem :121`, `.SuperMeshRenderSystem :123`,
+  `.CharacterRenderSystem :127`. The pool is still `new GpuMaterialSystem(…, 512, …)` (`Program.cs:1093`),
+  and bindless is still 1024 (`:921`). All 17 animation fields, the 4 processors and `ModelToBodyMatrix`
+  (`:107`) keep their 5638 lines.
+- **Native acceptance pending:** a doh spawn using a rostered name is refused, and batch numbering skips
+  rostered names. Earlier items still stand: doh/Kitten Color tint, visor, kitten-animations forced
+  clips, and paint during editor symmetry drags.
 
 ## KSA 5638 (5482 → 5638) verification
 
@@ -219,8 +271,9 @@ GPU material internals) plus a **typed** spawn path (`KittenEva`, `Orbit`, `Univ
 Vehicle/character filterable combos, editable vehicle name / batch prefix (default `Kitten_doh_`),
 offset/count, color picker + XKCD combo, per-kitten list. Both spawn buttons pass `SpawnRequest.VehicleName`
 to `KittenSpawner.Naming`: exact nonblank single names, numbered batch prefixes, blank automatic
-default-prefix numbering. The existing native `All.TryGet` lookup rejects occupied exact names
-and skips occupied numbered names before constructing `KittenEva`; native keys ignore case.
+default-prefix numbering. The existing native `All.TryGet` lookup, and since 5707 the
+`Universe.KittenRoster` lookup, rejects occupied exact names and skips occupied numbered names before
+constructing `KittenEva`. Native keys ignore case.
 
 **Persistence** — `DohSubmod.Persistence.cs` (`doh` sidecar record, v1). Rebinds native-restored
 kittens and their cloned materials; additive `SpawnName` preserves the name field (absent legacy

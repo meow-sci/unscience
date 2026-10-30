@@ -1,5 +1,49 @@
 # Sphinx — body-fixed imported GLB statics
 
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified statically against `2026.10.25.5707` (revs 5639–5703) from `2026.10.19.5638`. This is
+static/managed only: the full solution builds with 0 warnings and 0 errors, and `sphinx.tests` passes.
+`sphinx.lib` compiled again once the `pebbles.lib` `VkImageView` rename was fixed. Nothing has run in
+game. Line numbers below are 5707.
+
+- **Null static pipeline guard (new reachability, rev 5640). Fixed.**
+  - `StaticObjectRenderer.BuildColorPipeline` now logs an error when the device cannot build the 10-set
+    layout and returns a null pipeline (`:196`).
+  - `WriteCommandsColor` (`:321`) then binds nothing, because `&& !pipeline.IsNull()` was added (`:330`).
+  - Sphinx's `AfterColor` postfix still recorded its sets 2/3 and `DrawIndexed`, against whatever pipeline
+    was bound last. Undefined behaviour, likely a validation error or lost device, on low-limit GPUs.
+  - `sphinx.lib/SphinxPatches.cs:43-49` now takes `VkPipeline pipeline` and returns when `pipeline.IsNull()`.
+    On such devices Sphinx statics are not drawn in colour, as with stock statics.
+  - The pre-pass postfix is unchanged: the 4-set pre-pass pipeline is still bound unconditionally (`:377`).
+  - `ksa-upgrade.tests/Ksa5707Checks.cs` verifies on the real KSA.dll that `WriteCommandsColor` still calls
+    `VkPipeline.IsNull` exactly once.
+- **Hook line numbers.** `UpdateRenderData` `:291`, `WriteCommandsColor` `:321`, `WriteCommandsPrePass` `:377`.
+  Signatures and parameter names are unchanged.
+- **CPU terrain height drift (rev 5681). No code change.**
+  - `Celestial.GetTerrainHeightFromDirCcf` (`:789`) changed: erosion now applies an inverse-relief falloff
+    (`ErosionInverseRelief`, `:877,893`) and scales the gradient (`:837-838`).
+  - Sphinx saves and restores an absolute body-fixed `PositionCcf` without re-grounding
+    (`SphinxSubmod.Saves.cs:30,65`). Statics saved on eroded mountain/valley terrain in 5638 may therefore
+    float or sink after the upgrade. Render and collider stay consistent with each other.
+  - The remedy is the existing **Snap current position to ground** (`SphinxSubmod.Editing.cs:58-73`), which
+    re-samples the current terrain. New placements use the 5707 terrain.
+- **Pre-pass ordering (rev 5657).** The planet now draws into the same opaque depth/normal pre-pass
+  before vessels and statics (`PrePassRenderer.cs:269-288`), and clutter draws after them. Sphinx's
+  pre-pass draws are unaffected.
+- **Verified unchanged.**
+  - `NarrowPhaseCallbacks`, `BepuHandles`, `ConstraintSim`, `ConstraintSimPool`, `PhysicsBubble`,
+    `VehicleUpdateTask`, `StaticObjectModel`, `Camera`, `Cursor` and `MeshColliderTemplate` are
+    byte-identical. The single-call `IsGroundSurface` transpiler and the `Sim` field still hold.
+  - The three StaticObject shaders are identical.
+  - The 10-set `PipelineLayout` order (sets 2/3 per-draw/instance, AO at set 7) and the 4-set
+    `PrePassPipelineLayout` are unchanged, and so is the 32-byte vertex input.
+- **Native acceptance still required.**
+  - Sphinx statics on a device or driver that cannot build the static colour pipeline: they should not
+    draw and the game should not crash. Alternatively, force the pipeline null in a debug build.
+  - Statics from 5638 saves on eroded terrain, then snap-to-ground.
+  - The existing lists below.
+
 ## KSA 5482 (5438 → 5482) verification
 
 No code migration is required in Sphinx. This pass compared `2026.9.22.5482` (NEW) with
@@ -61,7 +105,7 @@ Verified against `2026.9.10.5438` using both supplied source/Content trees.
 See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
 Older catalog tables below retain their explicitly cited build/line numbers unless marked @5482.
 
-Baseline: KSA **2026.9.7.5402** (re-verified at 5438 and 5482, see above); source paths below are relative to
+Baseline: KSA **2026.9.7.5402** (re-verified at 5438, 5482 and 5707, see above); source paths below are relative to
 `../ksa-game-assemblies/current/decomp`, shaders to its sibling `Content` directory.
 Implementation: `sphinx.lib`; hosts: Unscience (distributed), Sphinx (development only).
 
@@ -86,7 +130,7 @@ They receive native lighting/shadows, are occluded by depth and write native opa
 | Integration | Current source / use | Update requirement |
 |---|---|---|
 | `StaticObjectRenderer.UpdateRenderData(IViewport,int)` postfix | `KSA/StaticObjectRenderer.cs:275`; Sphinx prepares camera-relative matrix slices | Must run before recording each viewport for the same resource frame. |
-| **Private string lookup** `StaticObjectRenderer.WriteCommandsColor(CommandBuffer,IViewport,int,VkPipeline,StaticObjectModel.DrawBucket)` postfix | `:306`; hooks opaque/blended calls while stock pipeline and globals remain bound | Exact overload and parameter names `commandBuffer`, `viewport`, `frameIndex`, `bucket` are Harmony dependencies. Nonterrain buckets must always bind full state when NearbyCelestial exists, even with zero stock draws. |
+| **Private string lookup** `StaticObjectRenderer.WriteCommandsColor(CommandBuffer,IViewport,int,VkPipeline,StaticObjectModel.DrawBucket)` postfix | `:306`; hooks opaque/blended calls while stock pipeline and globals remain bound | Exact overload and parameter names `commandBuffer`, `viewport`, `frameIndex`, `pipeline` (5707), `bucket` are Harmony dependencies. Nonterrain buckets must always bind full state when NearbyCelestial exists, even with zero stock draws. From 5640 on, stock binds nothing when that bucket's pipeline is null, so Sphinx returns too. |
 | `StaticObjectRenderer.WriteCommandsPrePass(CommandBuffer,IViewport,int)` postfix | `:367`; opaque Sphinx normal/depth draw | Must bind native prepass and globals before return. Do not emit alpha primitives: stock normal shader ignores alpha. |
 | `StaticObjectRenderer.{PerDrawDataDescriptorSetLayout,PerInstanceDataDescriptorSetLayout,PipelineLayout,PrePassPipelineLayout}` | `KSA/StaticObjectRenderer.cs`; private descriptor allocation/binds | Set layouts and lifetime must stay compatible. Current Rebuild replaces pipelines while retaining these layouts and the native sampler. |
 | `StaticObjectModel.PerDrawData` / `DrawBucket` | `KSA/StaticObjectModel.cs:16,28` | Six int fields and Opaque/Blended semantics; skip OpaqueTerrain entirely. |
@@ -169,6 +213,8 @@ Shaders: `Core/Shaders/Mesh/StaticObject.vert`, `StaticObject.frag`,
   CSM (set4), terrain shadows (set5), viewport lights (set6), AO (set7), cloud shadows (set8),
   optional planet uniforms (set9), and PBR push constants. Sphinx borrows all that state, replacing
   only sets2/3 and vertex/index buffers. Recheck these **method bodies**, not just signatures.
+  From 5640 on, a pipeline that fails to build is null and stock skips all binding, so the Sphinx
+  colour postfix must skip as well. See the 5707 section.
 - Private GLB/PNG images are allocated in the game's bindless texture library, also backing
   TextureSystem's descriptor set. GLB factors are baked by Pebbles. Shader expects gamma-encoded
   diffuse and AO/roughness/metallic channels; opacity is a separate alpha map. PNG overrides use
@@ -208,7 +254,7 @@ RGBA decoder and `GlbTexture.Upload/Release`; it does not dispose borrowed stock
 
 ## Validation
 
-Full solution build: zero warnings/errors against 5402, 5438 and 5482. Managed sphinx.tests exercises 200
+Full solution build: zero warnings/errors against 5402, 5438, 5482 and 5707. Managed sphinx.tests exercises 200
 scale/rotation/offset grounding cases plus invalid and overflowing inputs. UV mapping tests cover
 scale/offset ordering, matching backfaces, 200 repeated edits/resets, unchanged source vertices and
 geometry, invalid/overflow rejection and the vertex ABI. Pebbles managed tests cover importer and

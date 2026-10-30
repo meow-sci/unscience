@@ -2,7 +2,7 @@
 
 Run `dotnet run --project doh.tests` from the repository root.
 
-Current suite: 55 checks.
+Current suite: 58 checks.
 
 Links the production DOH save adapter (`DohSubmod.Persistence.cs`), `SpawnedKittenRegistry`,
 `KittenMaterialSet`, the material-set release code (`MaterialFactory.Lifetime.cs`), the spawner
@@ -18,6 +18,8 @@ Checks:
 - exact single names (including the prefilled value and significant whitespace), case-insensitive
   occupied-name refusal, numbered batches skipping occupied names, blank/default fallback and
   a fresh spawner avoiding names restored by KSA;
+- KSA 5707 roster names: a single name held by a rostered kitten is refused case-insensitively, a
+  batch numbering past a rostered name skips it, and a merely similar name stays available;
 - real-adapter JSON round-trips of a Unicode name/prefix and blank input, detached capture,
   repeated/cross-scene loads, legacy records without `SpawnName`, vanilla reset, and diagnosed,
   retained null/NUL/over-capacity (UTF-8) names;

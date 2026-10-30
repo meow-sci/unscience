@@ -119,7 +119,7 @@ public sealed partial class KittenSpawner
             // Preserve exact single names; batch/automatic names skip occupied IDs.
             string? kittenName = GenerateKittenName(system, request);
             if (kittenName == null)
-                return Stopped(results, request.Count, $"The vehicle name '{request.VehicleName}' is already in use. Choose another name");
+                return Stopped(results, request.Count, $"The name '{request.VehicleName}' is already used by a vehicle or a rostered kitten. Choose another name");
 
             // Create backpack part
             Part? backpackPart = CreateBackpackPart();

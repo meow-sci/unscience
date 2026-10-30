@@ -1,5 +1,46 @@
 # Camera / View Mods — Game Integration Scope
 
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified against `2026.10.25.5707` (revs 5639–5703) vs `2026.10.19.5638`. Static/managed only: the
+solution builds against the 5707 DLLs with 0 warnings and the managed suites pass; no native run.
+**No code change in this area.** Line numbers in this section are @5707.
+
+- ℹ️ **hot-pursuit: secondary feeds now render clouds (rev 5663, new).** Hot Pursuit passes no option
+  flags (`HotPursuitSubmod.ConfigureViewport`). It leases the four boot-allocated secondaries, which
+  now include `RenderClouds` (`Program.cs:1043`, was `:994`). `GameViewport.ResetToDefaults` restores
+  `DefaultOptionFlags` on every lease (`GameViewport.cs:81`, file unchanged). The secondary pass is now
+  `PlanetTransparenciesRenderer.RenderAtmosphereAndClouds` (`:233`, called from `Program.cs:4839`).
+  It renders clouds when the viewport has `RenderClouds` (`:243`); rings stay main-only (`:244`).
+  Missing in secondaries per the changelog: cloud self-shadowing, cloud shadows on the ground, and
+  plume, explosion and exhaust volumes.
+  - **Lifetime: no lease work needed.** Per-viewport cloud resources are new in 5707. `CloudRenderer`
+    creates them per registered slot (`RendersClouds :365-368`, `BuildViewportRenderTargets :891-905`,
+    `OnViewportRegistered/Unregistered :1890-1922`), which happens at boot before sealing. A resize
+    reallocates them (`Program.RebuildViewport :5412-5418` → `PlanetTransparenciesRenderer.RebuildViewportTarget
+    :376-380` → `CloudRenderer.RebuildViewportTarget :1864-1873`). Claiming or releasing a lease neither
+    allocates nor frees them. The 8-slot layout is unchanged.
+  - **VRAM (estimate from the decompiled formats).** Each secondary owns 10 full-resolution cloud targets,
+    about 34 B/px (`CreateViewportRenderTargets :929-945`). That is about 8.5 MB at the 500×500 default and
+    about 143 MB at Hot Pursuit's 2048×2048 clamp, roughly 570 MB for four feeds. The shared low-resolution targets
+    grow to fit the largest viewport and never shrink (`EnsureSharedTargetsFit :1003-1033`). Each Hot
+    Pursuit resize does a `WaitIdle` and a reallocation.
+  - **Temporal history.** Cloud history resets when the camera object changes or a frame is skipped
+    (`GetPreviousFrameViewProjection :1755-1773`). It does not reset when an already visible feed is
+    retargeted in one frame, so expect brief ghosting (cosmetic).
+- ✅ **5659 per-view lighting** (`Program.UpdatePlanetShaderData :3244-3283`) uses the effective nearby
+  celestial (`:3220`), so the Hot Pursuit mirror stays consistent with it. Airless bodies now also get
+  `PlanetPosition`/`PlanetRadius`, with `AtmosphereHeight` zeroed.
+- ✅ **Verified byte-identical:** `Camera.cs` (glass `_fovRadians`, `ChangeFieldOfView`, `UpdateProjection`;
+  `PositionCce`; `GetEffectiveNearbyCelestial`), `OrbitController`, `FlyController`, `FixedController`,
+  `Controller`, `ViewportRegistry`, `GameViewport`, `IGameViewport`, `IViewport`, `IVASeat`,
+  `IVAController`, `Cursor`. The body of `Program.FindNearbyCelestial` (`:5557`) and the Vehicle members used by
+  Kitchen Sink and Hot Pursuit are unchanged. `Part.RayCastEgo` is unchanged. `Part.MatrixAsmb2Ego` (`:1243`)
+  now delegates to the cached `MatrixAsmb2ParentAsmb` (`:792`), which is equivalent.
+  `GameSettings.OnKeyAll` is `:3695`.
+- **Live checks pending (native):** four Hot Pursuit feeds at 2048² with clouds (VRAM, frame time,
+  resize hitch); ghosting after retargeting; clouds seen from a hull mount over Earth; close and reopen.
+
 ## KSA 5638 (5482 → 5638) verification
 
 Verified 2026-10-22 against `2026.10.19.5638` (ksa-game-assemblies `edda844`; 5541 = `47703f3`,
@@ -365,10 +406,13 @@ docking cameras, or another mod.
   changes.
 - `Camera.OnFrame` calls terrain clamping, so a hull mount below 0.5 m AGL will be raised.
 - Secondary viewports are substantial additional scene renders and expensive. Since 5541/5638
-  `Program.RenderViewport` also renders terrain (depth pre-pass + `_planetRenderer.Render`) and an
-  atmosphere-only transparency pass, without clouds or rings, reusing the main viewport's shadow maps
-  (rev 5534). It still does not run `ParticleSystem`, `VolumetricExhaustRenderer`, the
-  ocean/cloud pipeline, part-glass, or overall-bloom passes. Engine plumes and generic
+  `Program.RenderViewport` also renders terrain (depth pre-pass + `_planetRenderer.Render`) and a
+  transparency pass without rings, reusing the main viewport's shadow maps (rev 5534). Since 5707
+  (rev 5663) that pass also renders clouds (`RenderAtmosphereAndClouds`). Cloud self-shadowing, cloud
+  shadows on the ground, and plume/explosion/exhaust volumes are still missing, and each slot carries its own
+  full-resolution cloud targets (about 143 MB at 2048²; see the 5707 section). It still does not run
+  `ParticleSystem`, `VolumetricExhaustRenderer`, the ocean pipeline, part-glass, or overall-bloom
+  passes. Engine plumes and generic
   particles are therefore absent by design; those game-owned passes bind main-camera
   targets/resources and are not safe to inject from Hot Pursuit. Other effects/shadows are not
   guaranteed identical to the main view; verify the nearby-body artifact, vehicles, night lighting,

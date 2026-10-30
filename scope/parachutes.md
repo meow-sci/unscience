@@ -3,8 +3,9 @@
 Permanent reference for detecting when KSA game updates break **free-fallin**, the global parachute
 texture/tint/PBR customizer. Cataloged against KSA build **2026.9.22.5482** at
 `../ksa-game-assemblies/current/decomp` and `../ksa-game-assemblies/current/Content` (diffed from
-2026.9.10.5438; see the 5482 verification section) and re-verified against **2026.10.19.5638**
-(see the 5638 section; the touchpoint table carries 5638 line numbers where they moved).
+2026.9.10.5438; see the 5482 verification section), re-verified against **2026.10.19.5638**
+(see the 5638 section; the touchpoint table carries 5638 line numbers where they moved), and against
+**2026.10.25.5707** (see the 5707 section).
 
 All logic is in `free-fallin.lib` (`FreeFallinSubmod : ISubmod`,
 `FreeFallinPatches.Apply/Remove`), consumed by both the standalone `free-fallin` host and
@@ -149,6 +150,34 @@ no native KSA run. **No free-fallin code change was needed.** Evidence:
   viewport, including shadows; Full Canopy compiles for `Model_Skinned.vert` and `ModelPbr.frag`;
   uniform roughness/metallic 0 vs 1 under the corrected BRDF; Restore Stock; the multi-style restore
   check above (outstanding since 5438).
+
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified against `2026.10.25.5707` (revs 5639–5703) and diffed from `2026.10.19.5638`. Static/managed
+only; no native KSA run. **No free-fallin code change was needed.** Line numbers are @5707.
+
+- ✅ **The shader contract is byte-identical.** `Model.vert`, `Model_Skinned.vert`, `ModelPbr.frag`,
+  `ModelNormal.frag`, `ModelTranslucent.frag`, `Common/TextureSet.glsl` and `Common/MaterialSet.glsl` are
+  unchanged. The parsed sets (`SET_TEXTURE 5`, `SET_MATERIAL 1`), the anchors and free varying location 3
+  therefore all hold.
+- The pipelines that compile `ModelSkinnedVert`, `ModelVert` and `ModelPbrFrag` are the same set as in
+  5638. `SuperMeshRenderSystem` shifted by 7 lines (`:664-665`, `:902-951`); `CharacterRenderResources:80,82`
+  and `PbrSpheres` are unchanged. The `DefaultAssets.xml` ids are still at `:74,78-81`.
+- ✅ **The seams are unchanged.**
+  - `ChuteRenderable`, `Parachute`, `ChuteCanopyBones`, `ChuteCanopyPose`, the cloth system and
+    `ParachuteAssets.xml` are byte-identical.
+  - `AnimatedRenderable` (`MaterialIndices :32`) is byte-identical.
+  - `ShaderModuleUtils.FromFile` (`:84`) and `MaterialData` are byte-identical.
+  - `KSA.Rendering.Utils.SetShaderFromMod` has the same body and moved to `:610` (it was `:625`),
+    because the unused `BindDescriptorSet` extension was removed above it.
+  - `GpuTextureSystem.TryAddTexture` (`:101`) is unchanged apart from an internal
+    `ImageView` → `VkImageView` rename.
+  - The material layout (`GpuMaterialSystem.cs:31`) and bindless layout
+    (`BindlessTextureLibrary.cs:77-80`) still include `VertexBit`.
+  - `Program.RendererRebuildNeeded` is now at `:488`.
+- ℹ️ Rev 5640 skips pipelines that need more than the device's descriptor-set limit (static objects use
+  10 sets). The Full Canopy skinned PBR pipelines use 8 sets (0–7), so they are unaffected.
+- **Native acceptance pending:** unchanged from the 5638 list below.
 
 ## KSA 5638 (5482 → 5638) verification
 

@@ -1,4 +1,25 @@
-## Current triage — KSA 2026.10.19.5638
+## Current triage — KSA 2026.10.25.5707
+
+See [upgrade review](plans/KSA_5707_UPGRADE.md). Upgrade from 5638 (revs 5639–5703, all logged). Fixed in
+code and verified by the full build plus all 18 managed suites (including real-KSA.dll metadata checks)
+on macOS; no native KSA run. **Every item below still needs an in-game pass.**
+
+- **Iron Man anchors on load/copy (critical):** 5707 routes save load through a private `Part`
+  constructor the old patch did not cover — marked kittens lost nodes, kept an `iron-man:v1:` id, or
+  failed to load when a node was connected; editor Copy Tree crashed. Fixed (private-constructor patch +
+  copy-constructor postfix). Live check: load a world save and a blueprint with connected nodes; Copy Tree.
+- **Sphinx on low-end GPUs:** drew statics with no pipeline bound when KSA's 10-set static pipeline fails
+  to build (rev 5640). Fixed (skip like stock).
+- **Pebbles AO / foliage:** new depth-normal pre-pass read stock materials for Pebbles ids; the new
+  `UsesCustomNormals` flag was dropped. Both fixed; check AO around owned foliage.
+- **DOH rostered names:** a custom name matching a roster kitten bound that entry's radiation dose/KIA.
+  Now refused.
+- **Radiation (new, by design):** The Tick and Kitchen Sink protect against impacts/G-loads only; radiation
+  death (4 Sv) still kills protected kittens and IVA crew. Not a regression.
+- **Hot Pursuit:** feeds render clouds (~140 MB VRAM per 2048² feed). Check frame time and memory.
+- **StarMap (upstream):** its restart popup may render black with experimental HDR enabled (unconfirmed).
+
+## Previous triage — KSA 2026.10.19.5638
 
 See [upgrade review](plans/KSA_5638_UPGRADE.md). Upgrade from 5482 (revs 5483–5637; 5555–5602
 unlogged). Fixed in code and verified by the full build plus all 18 managed suites on macOS; no native

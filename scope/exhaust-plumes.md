@@ -5,7 +5,7 @@ plumes). Every game-facing member the mod touches is enumerated with its decompi
 
 **Verified game versions**
 
-- Re-verified **`2026.10.19.5638`** (see the 5638 section; table line numbers remain 5482 unless noted there)
+- Re-verified **`2026.10.25.5707`** (see the 5707 section) and **`2026.10.19.5638`** (see the 5638 section; table line numbers remain 5482 unless noted there)
 - NEW decomp **`2026.9.22.5482`** root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp` (namespace-foldered)
 - OLD decomp **`2026.9.10.5438`** root: `~/repos/meow-sci/ksa-game-assemblies_prev/current/decomp`
 - NEW Content root: `~/repos/meow-sci/ksa-game-assemblies/current/Content`
@@ -248,6 +248,34 @@ Verified statically against `2026.10.19.5638` (`ksa-game-assemblies` `edda844`) 
 - **Refraction is still inert (standing).** `_hasRefractionInstances` is only reset (`:765`) and read
   (`:1243, 1452, 1494`).
 - Live checks are unchanged from the 5482 list.
+
+### KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified statically against `2026.10.25.5707` (revs 5639–5703) vs `2026.10.19.5638`. The solution
+build passes; there was no native run. **No Pyro change is needed.**
+
+- **Byte-identical:**
+  - `VolumetricExhaustRenderer`, `VolumetricExhaustInstance`, `VolumetricExhaustTemplate` and
+    `VolumetricExhaustReference`;
+  - `ExhaustInstance`, `PlumeData`, `RocketNozzle`, `GasProperties`, `GasConditions` and `RocketDesign`;
+  - `ColorRgbReference`, `SerializedCollection`, `Camera`, and the bend/fade/submission structs;
+  - `ExhaustAssets.xml`, `PlumeTrailAssets.xml` and every `Shaders/VolumetricExhaust/**` file.
+
+  Every touchpoint row (#2–#21) therefore holds at its 5638 line.
+- **`Vehicle.AddVolumetricExhaustInstances(Camera, VolumetricExhaustRenderer, double)`** has the same
+  body and parameter names and moved to `:5788`. `Program` still calls `UpdateFrameData` →
+  `BeginPlumeGrouping` → vehicles → `EndPlumeGrouping` (`Program.cs:2581-2588`).
+  `Universe.GetElapsedSeconds` (`:2406`) and `GetSimulationSpeed` (`:2324`) are unchanged.
+  `PhysicalAtmosphereReference` only clamps its visual height at 0 (`:51`).
+- **Native churn that does not reach Pyro.**
+  - `VolumetricTrailRenderer.OnCloudTargetsRecreated()` (`:566`, called from `CloudRenderer.cs:1042`) is
+    trail-only, as is the `RaymarchVolumetricTrail.comp` low-resolution dimension fix.
+  - Rev 5663 adds clouds to secondary viewports but explicitly not plumes. Pyro submits through the
+    stock main-viewport path, so it behaves like stock plumes.
+  - With HDR on (rev 5645), plumes are tonemapped by GT7 HDR like the rest of the scene. This is visual
+    only.
+- **Refraction is still inert (standing).** `VolumetricExhaustRenderer.cs` is byte-identical.
+- Live checks are unchanged from the 5482 list; add one look at plumes with HDR on.
 
 ## Runtime on/off cycling
 

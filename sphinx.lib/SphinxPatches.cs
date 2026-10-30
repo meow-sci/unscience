@@ -40,11 +40,13 @@ public static class SphinxPatches
         harmony.Unpatch(Prepass(), AccessTools.Method(typeof(SphinxPatches), nameof(AfterPrepass)));
     }
     private static void AfterPrepare(IViewport viewport, int frameIndex) => SphinxSubmod.Instance?.Prepare(viewport, frameIndex);
-    private static void AfterColor(CommandBuffer commandBuffer, IViewport viewport, int frameIndex, StaticObjectModel.DrawBucket bucket)
+    private static void AfterColor(CommandBuffer commandBuffer, IViewport viewport, int frameIndex, VkPipeline pipeline, StaticObjectModel.DrawBucket bucket)
     {
         // Opaque and blended calls always bind complete game lighting state when a nearby body
         // exists. The terrain variant has a different shader and must never submit these meshes.
-        if (viewport.GetCamera().NearbyCelestial == null || bucket == StaticObjectModel.DrawBucket.OpaqueTerrain) return;
+        // KSA 5640+ leaves a bucket's pipeline null (and binds nothing) when the device cannot
+        // build its 10-set layout; drawing then would use whatever pipeline was bound last.
+        if (pipeline.IsNull() || viewport.GetCamera().NearbyCelestial == null || bucket == StaticObjectModel.DrawBucket.OpaqueTerrain) return;
         SphinxSubmod.Instance?.Record(commandBuffer, viewport, frameIndex, false, bucket == StaticObjectModel.DrawBucket.Blended);
     }
     private static void AfterPrepass(CommandBuffer commandBuffer, IViewport viewport, int frameIndex) =>

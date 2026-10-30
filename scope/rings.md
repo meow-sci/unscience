@@ -1,5 +1,38 @@
 # Planetary rings — rocky-mcrock-face
 
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified against `2026.10.25.5707` vs `2026.10.19.5638`. Static/managed only: the solution builds with
+0 warnings and no native run was possible. **No code change** in rocky-mcrock-face or bloomin-onion.
+Line numbers in this section are @5707.
+
+- ✅ **Reflected members present.** `Program._planetTransparenciesRenderer` is `:181` (was `:178`).
+  `PlanetTransparenciesRenderer._ringsRenderer :41`, `_ringRendererCreated :47`, `_anyRings :71`,
+  `PopulatePlanets :158` and `RebuildFrameResources :382` are present; the ring branch (`:406-419`) is
+  identical. These files are byte-identical: `StaticCelestial`, `DistantSphereRenderer`, `DistantSphereMaterialData`,
+  `TextureReference`, `MeshReference`, `ModLibrary`, `PlanetaryRingsReference`, `RingObjectsReference`,
+  `RingLodReference`, `MeshFileReference`, `PbrMaterialReference`, `PlanetaryRingsRenderData` and
+  `AtmosphereRenderer`. The 2-line `PlanetaryRingsRenderer` diff (`:183`) is the internal
+  `SimpleVkTexture.Image` → `VkImage` rename, which neither mod uses. The `PlanetRenderer` ring-shadow
+  read (B10) moved into `UpdateRenderUbo` (`PlanetRenderer.cs:2142,2165-2174`, called per frame from
+  `:2080,2107`). Its logic is unchanged and it still reads `RingsReference` live.
+- ℹ️ **Secondary pass is now atmosphere and clouds (rev 5663).** `RenderAtmosphereOnly` became
+  `RenderAtmosphereAndClouds(…, frameNumber)` (`:233`), and `inAtmosphereOnly` became `inSecondaryViewport`.
+  Rings stay main-only (`flag2 = !inSecondaryViewport && …` `:244`); clouds render when the viewport has
+  `RenderClouds` (`:243`). The new `RebuildViewportTarget` (`:376-380`) also rebuilds per-viewport cloud targets.
+- ℹ️ **Rebuild cost.** `Program.RebuildRenderer` (`:5431`) only adds `_mainPass.Update`,
+  `_hdrPresent.Rebuild()` and `GetCompositeTarget`, and `WaitIdle` still comes first. The cloud
+  `OnRebuildFrameResources` → `Build` → `BuildViewportRenderTargets` (`CloudRenderer.cs:528-549,891-905`)
+  now reallocates cloud targets for every cloud-rendering viewport, the four secondaries included. A
+  Rocky or Bloomin Apply therefore hitches a little more, and the hitch grows with Hot Pursuit feed size.
+- ℹ️ **More AtmosphericBody bodies (revs 5644/5647/5648).** In the Sol and interstellar systems, Io,
+  Ganymede, Triton and Pluto now load from `Content/Core/Astronomicals.xml` as `AtmosphericBody`, with
+  the same ids. A Bloomin ring on them now takes the per-frame atmospheric ring-shadow read (B10), which
+  needs a non-null `Texture`; `RingReferenceBuilder.cs:74` always sets one. Pluto's new 113° tilt (rev 5649) also tilts an
+  equatorial Bloomin ring there (cosmetic). Saved body ids still resolve.
+- **Live checks pending (native):** Apply/Remove with Hot Pursuit feeds open; a Bloomin ring on
+  Pluto, Triton or Io.
+
 ## KSA 5638 (5482 → 5638) spot check
 
 Spot-checked 2026-10-22 against `2026.10.19.5638` (ksa-game-assemblies `edda844`) for the string-reflection
@@ -24,7 +57,8 @@ the catalog below.
   (`flag2 = !inAtmosphereOnly && …` `:244`). Hot Pursuit, docking and Add Camera feeds therefore show no
   ring meshes, stock or Bloomin, though ring shadows in the atmosphere data still apply. `PopulatePlanets`
   now sizes both `_bodiesSortedBackToFront` and the new `_bodiesSortedForViewport` (`:178-179`), so
-  Bloomin's re-populate after adding a ring keeps both arrays in step.
+  Bloomin's re-populate after adding a ring keeps both arrays in step. (@5707 the pass is
+  `RenderAtmosphereAndClouds` and renders clouds; rings are still skipped. See the 5707 section.)
 - ℹ️ **Bindless capacity (rev 5546).** `BindlessTextureLibrary` clamps capacity to device update-after-bind
   limits, which only matters for painted-ring textures on low-limit GPUs (see
   [decals](decals.md#ksa-5638-5482--5638-verification)).

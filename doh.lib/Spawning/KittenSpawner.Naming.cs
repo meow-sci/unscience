@@ -12,14 +12,21 @@ public sealed partial class KittenSpawner
     {
         bool automatic = string.IsNullOrWhiteSpace(request.VehicleName);
         if (request.Count == 1 && !automatic)
-            return system.All.TryGet(request.VehicleName!, out _) ? null : request.VehicleName;
+            return IsOccupied(system, request.VehicleName!) ? null : request.VehicleName;
 
         string prefix = automatic ? SpawnRequest.DefaultNamePrefix : request.VehicleName!;
         string name;
         do
         {
             name = $"{prefix}{_nextKittenIndex++}";
-        } while (system.All.TryGet(name, out _));
+        } while (IsOccupied(system, name));
         return name;
     }
+
+    /// <summary>
+    /// KSA 5669+ binds an EVA kitten to the roster entry with the same (case-insensitive) name for
+    /// radiation dose, sickness and death, so a name held by a rostered kitten at home is taken too.
+    /// </summary>
+    private static bool IsOccupied(CelestialSystem system, string name)
+        => system.All.TryGet(name, out _) || Universe.KittenRoster.Find(name) != null;
 }

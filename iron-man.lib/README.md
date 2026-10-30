@@ -13,9 +13,15 @@ Iron Man development host. See [player controls](../iron-man/README.md) and the 
   feature rather than leaving the UI capable of activating a partial integration.
 - `IronManConnectors` owns private connector templates per instance. It maintains authored
   transforms when stock scaling refreshes connectors; attached nodes cannot be edited/deleted.
+  Since KSA 5707 `Part.Connectors` is a fixed array, so adding or removing a node replaces the array.
+  The shared empty array is never mutated.
 - `IronManConnectorData` stores bounded versioned JSON/base64 in serialized `PartInstance.Id`.
-  `IronManConnectorPatches` restores runtime Id and connectors in the four-argument Part constructor
-  before native index regeneration. Ordinary parts have no metadata or changed construction.
+  `IronManConnectorPatches` restores the runtime Id and connectors in KSA 5707's private Part
+  constructor, which every load and construction path reaches, before native index regeneration.
+  Only that constructor is patched, because also patching the public 4-argument one would add the
+  nodes twice. A postfix on the copy constructor `Part(Part, Part)` (`PartCloner` copies) calls
+  `CopyOwned`, which re-adds the source's nodes in order. Ordinary parts have no metadata or changed
+  construction.
 - `IronManConnectorUnload` finds weakly retained authored roots, including inactive loaded roots
   and editor copies, and converts attachment endpoints before removing hooks. Failed conversion
   retains passive hooks instead of creating invalid saved indices or dropping fuel capabilities.

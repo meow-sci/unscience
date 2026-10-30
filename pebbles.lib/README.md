@@ -53,7 +53,7 @@ See [ground-clutter integration](../scope/ground-clutter.md) for native dependen
 
 ## Verification
 
-Run `dotnet run --project pebbles.tests/pebbles.tests.csproj` from the repository root. Managed checks cover detached copying/serialization, placement and collider constraints, camera/gizmo math, undo history, GLB geometry/container validation, transform baking, exact file identities, material-slot isolation, pure pixel conversion, hull volume/recentring math, the backface-normals recipe default, grid memory carry-over rules, the `pebbles.clutter-state` record, nested mapped-memory field selection for partial retirement and the detached-array viewport-residency release (against managed stand-ins of the 5638 residency surface). Compilation verifies typed APIs against KSA 2026.10.19.5638. Native acceptance must cover private material descriptors, shadows, GPU retirement, stationary-cell collision refresh, exclusions, same-body replacement/restoration, scene changes, and Luna/Mars isolation. The preview uses conservative synchronization and may hitch while changing a large mesh or resizing; native rendering and gameplay are not established by managed checks. GLB acceptance additionally needs actual PNG/JPEG decode/upload, transformed atlases and secondary UVs, skipped detail maps, masks/blend cutouts, wrap approximations, alternate-image fallbacks, multi-material scenes, file changes, preview/live sharing and cache release.
+Run `dotnet run --project pebbles.tests/pebbles.tests.csproj` from the repository root. Managed checks cover detached copying/serialization, placement and collider constraints, camera/gizmo math, undo history, GLB geometry/container validation, transform baking, exact file identities, material-slot isolation, pure pixel conversion, hull volume/recentring math, the backface-normals and custom-normals recipe defaults, grid memory carry-over rules, the `pebbles.clutter-state` record, nested mapped-memory field selection for partial retirement and the detached-array viewport-residency release (against managed stand-ins of the 5638 residency surface). Compilation verifies typed APIs against KSA 2026.10.25.5707. Native acceptance must cover private material descriptors, shadows, GPU retirement, stationary-cell collision refresh, exclusions, same-body replacement/restoration, scene changes, and Luna/Mars isolation. The preview uses conservative synchronization and may hitch while changing a large mesh or resizing; native rendering and gameplay are not established by managed checks. GLB acceptance additionally needs actual PNG/JPEG decode/upload, transformed atlases and secondary UVs, skipped detail maps, masks/blend cutouts, wrap approximations, alternate-image fallbacks, multi-material scenes, file changes, preview/live sharing and cache release.
 
 Bound source textures must remain loaded while their recipes are applied or previewed. Native construction failure can leave allocations hidden in game-local variables; reachable resources are retired once and failures are reported, but a renderer/game restart may be required. See the [runtime failure limits](../scope/ground-clutter.md#failure-handling-and-verification-limits).
 
@@ -113,6 +113,21 @@ state into the native save and keeps its own spacing's removed/displaced objects
 `pebbles.clutter-state` sidecar record, restored after the recipes. Older saves without that
 record load their recipes and stock state only. A type applied at the stock spacing saves its
 live state natively; if Pebbles is later absent, those objects appear with stock meshes.
+
+## KSA 5707 compatibility
+
+- Fixed a compile break: the game renamed `SimpleVkTexture.ImageView` to `VkImageView`.
+- KSA 5707 now renders ground clutter into the main viewport's depth/normal pre-pass, which feeds ambient
+  occlusion. Pebbles now redirects that new pipeline to its own materials too, so opacity-mapped clutter on
+  an overridden body gets correct cutouts and normals there. The redirected pipelines are listed in
+  `Runtime/ClutterMaterialBindings.cs`, and a managed check compares that list with the real KSA.dll.
+- Stock Earth tree materials gained a `UsesCustomNormals` flag, which stops foliage AO from over-darkening.
+  Captured recipes keep it. Recipes saved before it (and GLB imports) inherit the stock material's value,
+  like the backface-normals flag. The save format change is additive, so older saves load unchanged.
+  GLB imports do not read the bundler's `usesCustomNormals` extra.
+- Managed and static checks only. Needs in-game acceptance:
+  - AO around overridden foliage, compared with stock trees;
+  - an MSAA change while an override is applied.
 
 ## KSA 5638 compatibility
 

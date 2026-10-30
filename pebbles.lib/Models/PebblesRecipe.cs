@@ -62,8 +62,16 @@ public sealed class MaterialRecipe
     /// or imports) inherits the stock material named by <see cref="SourceId"/>, otherwise false.</summary>
     public bool? KeepBackfaceNormals { get; set; }
 
+    /// <summary>KSA 5689 foliage ambient-occlusion flag (stock trees with authored normals). Null
+    /// (recipes saved before it existed, or imports) inherits the stock material like
+    /// <see cref="KeepBackfaceNormals"/>.</summary>
+    public bool? UsesCustomNormals { get; set; }
+
     public bool ResolveKeepBackfaceNormals(IReadOnlyDictionary<string, bool> stockFlags)
         => KeepBackfaceNormals ?? (stockFlags.TryGetValue(SourceId, out var stock) && stock);
+
+    public bool ResolveUsesCustomNormals(IReadOnlyDictionary<string, bool> stockFlags)
+        => UsesCustomNormals ?? (stockFlags.TryGetValue(SourceId, out var stock) && stock);
 }
 
 public sealed class LodRecipe

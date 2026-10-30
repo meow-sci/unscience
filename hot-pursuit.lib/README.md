@@ -20,9 +20,11 @@ consistent with that pick. Stock never clears a secondary camera's `NearbyCelest
 would otherwise override the next owner's lookup and render the wrong planet.
 
 Since 5541/5638 the secondary `Program.RenderViewport` path also renders terrain and an
-atmosphere-only pass, without clouds or rings, reusing the main viewport's shadow maps. It still
-omits the `ParticleSystem`, `VolumetricExhaustRenderer`, ocean/cloud, part-glass and overall-bloom
-passes. Engine plumes and generic particles are therefore not available in these feeds; the game-owned
+atmosphere pass without rings, reusing the main viewport's shadow maps. Since 5707 that pass also
+renders clouds, without cloud self-shadowing, ground cloud shadows or plume/explosion volumes. Each
+secondary slot owns full-resolution cloud targets of about 34 B/px, roughly 143 MB at the 2048×2048
+maximum; they are allocated per slot, not per lease. It still omits the `ParticleSystem`,
+`VolumetricExhaustRenderer`, ocean, part-glass and overall-bloom passes. Engine plumes and generic particles are therefore not available in these feeds; the game-owned
 passes bind main-camera targets/resources and are intentionally not re-injected by this library.
 
 See [`../hot-pursuit/README.md`](../hot-pursuit/README.md) for features, user controls, limitations,

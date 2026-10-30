@@ -10,6 +10,64 @@ seat-head postfix and owns a temporary main IVA controller replacement. It contr
 order-190 save participant via the existing Kitchen Sink `ISaveParticipantSource`. See
 [camera integration](camera.md#kitchen-sink-unlocked-iva-camera) and [save scope](saves.md).
 
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified against `2026.10.25.5707` (revs 5639–5703, all logged), diffed from `2026.10.19.5638`.
+Static/managed only: the solution builds with 0 warnings against the 5707 DLLs and the managed suites
+pass; no native KSA run. Line numbers are NEW unless marked OLD. **No shell or `ksa-abstractions.lib`
+code change was needed**; the suite's two compile breaks (SimpleVkTexture, `Part.Connectors`) are owned
+by other areas.
+
+- ✅ **`MenuBarPatch`.** `Program.DrawProgramMenusHook()` is still the empty public hook (`Program.cs:4271`,
+  OLD `:4182`), called once from `DrawMenuBar` after the HUD menu (`:4258`). The new "Kitten Roster"
+  (`:3803`), Universe "Space Weather" (`:3896`) and View > Debug "Show Magnetosphere/Space Weather"
+  (`:4133-4134`) items sit above it; the patch binds by `nameof`, not IL. (jplrepo's `DrawMenuBar`
+  transpiler anchor, the single `SetCursorPosY`, is still unique at `:4261`.)
+- ✅ **`HotkeyGuard`.** `GameSettings.OnKeyAll(GlfwKeyEvent)` is byte-identical (`GameSettings.cs:3695`,
+  OLD `:3579`); the 156-line file diff is HDR settings. `Program.OnKey` (`:1946-1953`) still calls it
+  before `DispatchKeyEvent`. `Input.cs` is unchanged, so no new default bindings. The rev 5642 paste fix
+  is only a null return in `ImGuiBackendGlfwImpl`'s clipboard callback; no repo code uses the clipboard.
+- ✅ **`HiddenUiFrameHook`.** `private void OnDrawUiConsole(double)` (`:3360`, single overload) is still
+  called unconditionally at `:2480`, after both `if (DrawUI)` blocks (`:2470`, `:2475`) and `DrawFps`,
+  before `ImGui.Render()` (`:2491`). The `OnFrame` body is unchanged.
+- ℹ️ **`PhysicsFrameHook` — new drift, no code.** The single `Universe.GetJobSimStep` call is at `:2421`.
+  `GetJobSimStep` (`Universe.cs:2636`) now clamps the step to `_stepLimitTime` (rev 5669, warp stops on a
+  radiation threshold). `GetStepAndDispatch` calls the original, so the clamp applies, and deferred
+  world changes still replay before it. `ApplyVehicleSolvers` (`:1969-1972`) now also resets the
+  limit, runs `ApplyRadiationDeaths` → `Vehicle.KillLethallyDosedCrew` (`Vehicle.cs:3041`), which can
+  `Universe.DestroyVehicle` a lethally dosed `KittenEva` (`:3080`), and updates `SpaceWeatherAlerts`.
+  All of this runs before our handoff, so queued mutations must keep tolerating a disposed target.
+  See [saves](saves.md#ksa-5707-verification-5638--5707-2026-10-29).
+- ✅ **`PartRenderFilter` / `IvaForceRender` seams unchanged.** `Compose`/`ComposeDynamic`/`ComposeGlass`,
+  the nested `Batch`/`DynamicBatch`/`GlassBatch` types, `_batches`/`_dynamicBatches`/`_glassBatches`
+  and the `RendersInterior()`/`ShadowProxy` gate have unchanged bodies. **New reach:** editor ghost
+  previews compose through `PartTree.ComposeRenderData` (`PartTree.cs:1344-1351`, called from
+  `VehicleEditor.UpdateGhostRenderData`, `VehicleEditor.cs:4335-4346`), which calls the three `Compose*`
+  methods directly without `EnsureBuilt`. The filter and the editor IVA reveal therefore apply to ghosts
+  too, consistently with the edited vehicle. Raytraced IVA submissions are still not filtered; rev 5670
+  fixed IVA ray tracing on AMD, so that path is now reachable on more hardware.
+- ✅ **Providers and helpers.** `Universe.CurrentSystem` (`Universe.cs:124`), `CelestialSystem.All`
+  (`:69`), `Vehicle.IsDebris` (`:415`), `Program.IsEditorOpen` (`:538`) are unchanged; `LookupCollection.cs`,
+  `KSAColor.cs`, `ConsoleWindow.cs`, `UncompressedSave.cs` and `SaveName.cs` are byte-identical
+  (`GameSaveProvider` and `XkcdColorHelper` are unaffected). `IOrbiter`/`Celestial` changed only UI and
+  added `LockRotationTo`.
+- ✅ **StarMap lifecycle.** `OnDrawUiFrame` (`:3372`) and `OnDrawUiViewports` (`:3403`) keep their
+  signatures and bodies; `ModLibrary.cs` and `Mod.cs` are byte-identical; `Constants.cs` only adds a const.
+  StarMap HEAD compiled against both DLL sets produces byte-identical IL, every `Brutal*.dll` keeps
+  AssemblyVersion 1.0.0.0, and `KSA.dll` moves up to 2026.10.25.5707 (StarMap's load contexts match by
+  simple name), so **no StarMap rebuild is needed**. Upstream-only drift: StarMap's
+  `ConfirmRestart` copies the old `ConfirmMods` frame loop and lacks the new
+  `Program.HdrPresent.Record(…, hasScene: false)` / `MainPass.Update(…)` calls (`ConfirmMods.cs:109,121`),
+  so its restart popup may present nothing with experimental HDR on (a no-op in SDR,
+  `HdrPresentPass.cs:168`). Unscience uses no `StarMapAfterOnFrame` hook.
+- ✅ **Brutal package bump (rev 5652).** `Brutal.ImGuiApi` (+ `.Abstractions`, `.Extensions`) and
+  `Brutal.GlfwApi` decomp are byte-identical; native ImGui is 1.92.2 in both builds. `ImGuiHelper` only
+  adds `DrawComboWithTooltips` (unused here). Rev 5702's Windows monitor-list change touches no repo
+  code (no Glfw or platform-monitor use). Packages: StarMap.API 0.3.6, Lib.Harmony 2.4.2, Tomlyn 0.19.0.
+- **Native acceptance pending:** F2 hidden-HUD replay; the Unscience menu item beside StarMap's Mods
+  menu; hotkey guard while typing; editor ghost previews with blinky/its-so-shiny filters and Force IVA;
+  StarMap restart popup and Unscience windows with HDR enabled.
+
 ## KSA 5482 (5438 → 5482) verification
 
 Verified 2026-09-25 against `2026.9.22.5482` (revs 5439–5481), diffed from `2026.9.10.5438`.

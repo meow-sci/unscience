@@ -1,5 +1,69 @@
 # Scope: Celestial Welding & Lights (kiwis-marbles, zippo)
 
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified against `2026.10.25.5707` (revs 5639–5703) vs `2026.10.19.5638`. Static/managed only: the
+solution builds with 0 warnings and the managed suites pass; no native run. **No code change** in
+kiwis-marbles or zippo. Line numbers in this section are @5707 (`decomp/KSA/`, `Content/Core/`).
+
+- ℹ️ **LockedTo rotation (rev 5649, new, no interaction).** `RotationTemplate.LockedTo` (`:28-29`) is
+  applied once, while the system is built (`CelestialSystem.CreateTreeFrom :258-273` → `LockToMoon :297-320`
+  → `Celestial.LockRotationTo :638-644`). It writes `AngularVelocity`/`InitialRotation`, which are no longer
+  `readonly` (`:38,40`). Nothing re-locks per frame.
+  - Welding Charon leaves Pluto spinning at Charon's stock period, so Pluto stops facing it (cosmetic).
+  - Welding Pluto does not touch its rotation, which stays time-based (`:558`).
+  - On load the lock is recomputed from the template orbit before weld replay, so results are deterministic.
+- ℹ️ **Pluto tilt changes Pluto's CCI frame (rev 5649, semantic drift, no migration).** Pluto now has an
+  Ecliptic rotation with `Tilt 112.82` (`Astronomicals.xml:4765-4769`). At 5638 it had no rotation block
+  (`SolSystem.xml:1247-1262`). CCI is `(Orbit.GetParentCce2Orb()·Orb2Cci)⁻¹` (`Celestial.cs:593`).
+  - Charon's orbit uses the default Equatorial frame (`OrbitTemplate.cs:10,96-100`). Saved CCI state
+    vectors for bodies under Pluto therefore replay into the new stock plane.
+  - A 5638-era weld offset whose target is under Pluto (target Charon) is CCI-relative, so it now points
+    about 113° differently in world space. The payload is unchanged.
+  - **Pre-existing, magnitude unconfirmed:** `:593` composes the current orbit's perifocal frame with
+    `_orb2Cci`, which was baked from the original orbit (`:228-240`). A welded source's spin axis and its
+    moons' frame therefore follow the per-frame osculating weld orbit. Welding Pluto may swing Charon's
+    plane. Live check.
+- ✅ **Bodies moved into the shared library; ids unchanged (revs 5644/5647/5648).** Io, Ganymede, Triton
+  and Pluto are defined in `Astronomicals.xml:4303,4364,4708,4755`. The Sol and interstellar systems use
+  `LoadFromLibrary` (`SolSystem.xml:117,134,1199,1201`; 5638 had them inline at `:117,152,1231,1247`). Orbit
+  elements, radius, mass and child order are identical, so saved weld ids still resolve by exact id.
+  - The body type changed from `PlanetaryBody`/`MinorBody` to `AtmosphericBody`. That is still a
+    `Celestial`, so these bodies stay weld sources.
+  - The dense system keeps its own Io, Ganymede and Triton and loads Pluto from the library
+    (`SolSystemDense.xml:1272`).
+- ℹ️ **Space weather (revs 5675–5700, new, no change needed).**
+  - `StormState` caches static per-body `PassHistory` records keyed by `Celestial` reference (`:27-44`,
+    `GetHistory :372-388`, clearing at 64 bodies).
+  - It samples body-from-star via `IOrbiter.GetPositionEcl(t)` from the current `Orbit` (`:447-453`).
+  - The star is re-resolved on every `Compute` and records are cleared when it changes (`:262,275-279`).
+    Records already marked settled are not recomputed. A welded body's storm, belt and dose history is
+    therefore approximate.
+  - `Radiation.ComputeSolarWind :318` and `SampleHostField :454` read `celestial.Parent` live, so a
+    re-parented Ganymede uses its new host's flow and field.
+  - `MagnetosphereReference`/`AuroraReference` are template data: `Mag2Ccf`/`Pole2Ccf` are computed at load.
+- ✅ **Solver window unchanged.** `Program.PrepareFrame` `:2368-2426` is identical to 5638 `:2297-2355`. The
+  bodies of `ExecuteNextVehicleSolvers` (`Universe.cs:2149`, single overload), `ApplyOrbitSolvers` (`:1918`),
+  `ExecuteNextOrbitSolvers` (`:2121`) and `GetElapsedTime` (`:2412`) are identical. `ApplyVehicleSolvers`
+  (`:1935`) now also runs `ApplyRadiationDeaths` and `SpaceWeatherAlerts.Update` (`:1971-1972`). Both
+  still run before the weld prefix; they kill crew only and never mutate a `Celestial`.
+- ✅ **Byte-identical:** `Orbit`, `IParentBody`, `OrbitingStar`, `Barycenter`, `FixedStar`, `LookupCollection`,
+  `Astronomical`, `CelestialUpdateTask`. `Celestial.SetOrbit :158`, `Orbit :64` and `OrbitColor :72` are
+  unchanged. The `IOrbiter` diff is a UI rule only.
+- ✅ **zippo:** these files are byte-identical: `LightModule`, `ColorRgbReference`, `FloatReference`,
+  `KeyframeAnimationModule`, `KeyframeAnimationData`, `PowerConsumer`, `PartTemplate`, `KSAColor` and
+  `IndexedColor`.
+  - The `Part` members used are unchanged: `LightSwitch :670`, `FullPart :1177`, `Template :571`,
+    `InstanceId :569`, `SubParts :1124` (null-safe getter), and the `IsLightSwitchedOff :1499` body.
+  - `LightModule.UpdateRenderData` is still called from `PartTree.UpdateRenderData :1325-1328`, and light
+    flag 64 is still set in `PartTreeRenderData.ComputeOwnerDynamicState :734-736`.
+  - `ModuleList` only builds its module-id index lazily. `TemplateDataBase` gains a lazily computed
+    `IdHash` (`ModuleBase.cs:17`), so Disco's `new LightModule.TemplateData` stays complete.
+  - `GameSettings.OnKeyAll` is `:3695` and `Program.OnDrawUiFrame` is `:3372`.
+- **Live checks pending (native):** weld Charon and check Pluto's facing; weld Pluto with Charon present
+  (axis swing); load a 5638 save that has a Charon-target weld; a welded or re-parented Ganymede
+  (magnetosphere, aurora, dose); the 5638 list below.
+
 ## KSA 5638 (5482 → 5638) verification
 
 Verified against `2026.10.19.5638` (NEW, `edda844`) vs `2026.9.22.5482` (OLD, `a2f724f`). Managed/static

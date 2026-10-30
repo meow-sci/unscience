@@ -34,7 +34,7 @@ internal static class ClutterHooks
         foreach (var type in new[] { typeof(GroundClutterPlacementData), typeof(ClutterEcotypeRenderData), typeof(ClutterEcotypePhysicalData), typeof(ClutterCubeCellGrid), typeof(ClutterViewResources), typeof(SimpleVkMeshAtlas) })
             foreach (var constructor in type.GetConstructors()) harmony.Patch(constructor, prefix: Method(nameof(BeforeConstruct)));
         // Patch callers rather than tiny getters, which the JIT may inline.
-        foreach (var name in new[] { "SortMaterialIds", "CreateColorRenderer", "CreateDepthPrePassRenderer", "CreateShadowDepthRenderer" })
+        foreach (var name in ClutterMaterialBindings.Methods)
             harmony.Patch(Required(typeof(ClutterEcotypeRenderData), name), transpiler: Method(nameof(MaterialCalls)));
         harmony.Patch(Required(typeof(Universe), nameof(Universe.ExecuteNextClothSolvers)), prefix: Method(nameof(BeforeCloth)));
         harmony.Patch(Required(typeof(GroundClutterRenderer), nameof(GroundClutterRenderer.RebuildFrameResources)), postfix: Method(nameof(RebuildOriginals)));

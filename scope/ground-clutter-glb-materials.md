@@ -1,6 +1,28 @@
 # Ground clutter: imported GLB materials
 
-## Current verification — 5482 → 5638
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Checked statically against `2026.10.25.5707`. The solution build and `pebbles.tests` pass, and nothing
+has run in game. The GLB conversion itself is unchanged.
+
+- **Compile fix.** `SimpleVkTexture.ImageView` was renamed `VkImageView` (`RenderCore/SimpleVkTexture.cs:77`).
+  `GlbTexture.Upload` now reads `Texture.VkImageView` (`pebbles.lib/Assets/GlbTextures.cs:87`).
+  `BindlessTextureLibrary.AddTexture(VkImageView, …)`/`FreeTexture(int)` moved to `:182`/`:208` with unchanged signatures.
+- **Conventions hold.**
+  - Opacity is still the red channel (`SolidDepth.frag:68`); the A2C edge now drives `gl_SampleMask`.
+  - Diffuse uses the same terrain-alpha convention (`Solid.frag:319-327`), and AO/roughness/metal still
+    come from R/G/B (`:334-336`).
+  - Every clutter pipeline still binds bindless textures at set 2 (`ClutterEcotypeRenderData.cs:575,621,673,725`),
+    including the new depth-normal pipeline.
+  - `TextureReference`'s `Texture`/`ImageView`/`BindlessHandle` setters are unchanged.
+- **Not implemented.** The 5707 asset bundler accepts a `usesCustomNormals` material extra
+  (`KSA.GlbImport/ClutterAssetBundler.cs:20,367`), but Pebbles' importer does not read it. Imported
+  materials resolve `MaterialRecipe.UsesCustomNormals` to false, so the depth-normal pass uses the
+  imported mesh normals. Stock-derived recipes inherit the stock flag; see [ground-clutter](ground-clutter.md).
+- **Needs a live check.** Imported alpha-mask foliage now also feeds the main-viewport AO pre-pass, so
+  check its AO look in game.
+
+## Previous verification — 5482 → 5638
 
 Checked against `2026.10.19.5638` (`edda844`); there is no GLB conversion change.
 
@@ -62,7 +84,7 @@ Owner disposal must retire preview and live consumers first. `GlbMaterials.Dispo
 
 - `Brutal.TextureApi.TextureLoader.LoadFromMemory` / `Unload`, `FormatType.Png` / `Jpg`; `Brutal.TextureApi.Stb.Loader.LoadSettings.ForceRgba8`.
 - Decoded `ITexture.Extent` and `Data` must agree with bounded RGBA8 dimensions. CPU data is copied before native image unload.
-- `SimpleVkTexture(string, IImageAllocator, width, height, depth, VkFormat, mipLevels, ...)`, `CalculateMaxMipLevels`, `UploadData`, `ImageView`, `Dispose`.
+- `SimpleVkTexture(string, IImageAllocator, width, height, depth, VkFormat, mipLevels, ...)`, `CalculateMaxMipLevels`, `UploadData`, `VkImageView` (named `ImageView` before 5707), `Dispose`.
 - `TextureReference.Texture` / `ImageView` protected setters; `BindlessHandle` public property/private setter reflection; `SerializedId.SetHash`.
 - `Program.GetRenderer`, `Program.Instance.BindlessTextures.AddTexture` / `FreeTexture`; `AssetUploadSubmission` owns producer completion.
 - Source: `Brutal.GltfApi/GltfLoader.cs` image-buffer-view decoding; `RenderCore/SimpleVkTexture.cs:170`, `:378` explicit image allocation/upload; `KSA/TextureReference.cs:64`, `:145` binding ownership; `Brutal.VulkanApi.Abstractions/StagingPool.cs:167` implicit submission hazard.

@@ -1,6 +1,94 @@
 # Ground clutter: Pebbles
 
-## Current verification — 5482 → 5638
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified statically against `2026.10.25.5707` (revs 5639–5703) from `2026.10.19.5638`. This is
+static/managed only. The full solution builds with 0 warnings and 0 errors, and `pebbles.tests` passes.
+`ksa-upgrade.tests/Ksa5707Checks.cs` checks metadata in the real 5707 KSA.dll: it passes on 5707 and
+fails on 5638. Nothing has run in game. Line numbers below are 5707.
+
+Fixes:
+
+- **Compile.** `SimpleVkTexture.Image`/`ImageView` became `VkImage`/`VkImageView` (`RenderCore/SimpleVkTexture.cs:75,77`),
+  fixed at `pebbles.lib/Assets/GlbTextures.cs:87`. This one break also masked `sphinx.lib`.
+- **Depth-normal pre-pass material redirect (new, revs 5677/5678).**
+  - The new private `ClutterEcotypeRenderData.CreateDepthNormalPrePassRenderer` (`:668`, called from
+    `CreatePipelinesFromMaterials` `:425`) binds `GroundClutterRenderer.MaterialBuffer` at binding 1 (`:735`).
+  - The pass runs every frame in the main viewport: `PrePassRenderer.cs:287` → `PlanetRenderer.RenderClutterDepthNormalPrePass`
+    (`:2064`) → `GroundClutterRenderer.RenderGroundClutterDepthNormal` (`:1987`), which iterates `PlanetEcotypeRenderData`.
+  - Without the patch, Pebbles-owned ecotypes looked up their private material IDs in the vanilla buffer
+    (`SolidDepth.frag:68`). Opacity-mapped clutter therefore wrote wrong cutouts and normals into the
+    ambient-occlusion (AO) pre-pass.
+  - The target list now lives in the dependency-free `Runtime/ClutterMaterialBindings.cs`, five methods
+    including the new one, and `ClutterHooks.cs:37` iterates it. Each method still has exactly one
+    `MaterialBuffer` getter or `GetMaterialIndex` call.
+  - `Ksa5707Checks` proves that the set of `ClutterEcotypeRenderData` methods calling
+    `get_MaterialBuffer`/`GetMaterialIndex` in the real KSA.dll equals that list. A future binding method
+    therefore fails a managed check.
+  - The ecotype `RebuildFrameResources` (`:1323`) recompiles and recreates pipelines without calling
+    `SetBuffer` again, so the redirected buffer persists. The colour pass still depth-tests (Equal)
+    against the redirected `DepthOnlyPrePass`.
+- **`UsesCustomNormals` (new, rev 5689).**
+  - `GroundClutterMaterialReference.UsesCustomNormals` is `PipelineFlags` 0x200 (`:25,61,141,190`).
+    Its `USES_CUSTOM_NORMALS` macro is used only by the depth-normal pass, which then infers geometric
+    normals for AO (`SolidDepth.frag:122`). 16 stock `EarthTreesAssets.xml` materials set it.
+  - The new nullable `MaterialRecipe.UsesCustomNormals` (`Models/PebblesRecipe.cs:68,73`) is captured at
+    `ClutterCapture.cs:73` and applied at `ClutterGraph.cs:26-27,135` through a shared `StockFlags` helper.
+    A null value inherits the stock material by `SourceId`, like `KeepBackfaceNormals`. Without it,
+    Pebbles-owned trees would get the over-darkened foliage AO that rev 5689 fixed.
+  - It is a CPU pipeline key, not a GPU material flag, so flags bits 31/30 are unaffected.
+  - The GLB importer does not read the bundler's new `usesCustomNormals` extra (`KSA.GlbImport/ClutterAssetBundler.cs:20,367`),
+    so imports resolve to false. This is not implemented.
+
+New native behaviour that needs no code, because Pebbles builds its pipelines through the native `Create*` methods:
+
+- Rev 5676 removed the clutter pre-pass A2C colour target (`ClutterPrePass(context, depthFormat, samples)`,
+  `Rebuild(samples)`). A2C now writes `gl_SampleMask` from a `SAMPLE_COUNT` specialization constant
+  (`SolidDepth.frag:35-37,117-118`).
+- Rev 5678 added AO receiving: `Solid.frag` `SET_AO 8` (`:16,66,380`), plus a seventh external set in
+  `CreateColorRenderer` (`:592`).
+- Rev 5660 added viewport/scissor dynamic states.
+- `Generate.comp:267,275-276` and `GenerateCollision.comp:214,222-223` changed their gradient scaling
+  identically, so render and collision placement still agree.
+- Partial retirement:
+  - The new `_opaqueDepthNormalPrePassRenderers` (`List<SimpleGraphicsPipeline>`, `:118`) is covered by
+    the generic collection rule and disposed by native `Dispose`.
+  - `_depthBlendState` was renamed `_depthNormalPrePassBlendState` (`:156`). It is a `PtrOwner` and, as
+    before, is not retired.
+  - The descriptor pool now holds `4 × materials` sets (`:367`).
+
+Verified unchanged:
+
+- **Hooks.**
+  - `Universe.ExecuteNextClothSolvers(double,SimStep)`: `:2137`; its body and the `Program.cs:2422` call site are identical.
+  - `GroundClutterRenderer`: `RebuildFrameResources(DeviceEx)` `:2083`, `SerializeSave(List<…>)` `:2194`, `Dispose` `:2216`.
+    Its other changes are additive.
+  - `ShaderReference.CompileVariantWithCustomOptions` (`:128`): the file is byte-identical.
+- **Source-colour injection.** The `Solid.frag` marker occurs once (`:327`). Its identifiers are present:
+  `textureSampler` `:64`, `inUv` `:47`, `materialData` `:277`.
+- **Material layout.** `Common/GroundClutterCommon.glsl` and the C# `GroundClutterGpuMaterial` (6×uint)
+  are identical. No shader reads flags bits 30/31.
+- **Reflection.** `_renderPassInfo` `:195`, `_planetClutterMaxBoundingRadius` `:317`,
+  `PlanetRenderer._groundClutterRendererCreated` `:340`, `Universe._vehicleUpdateTask` `:44`,
+  `StagingPool._commandBufferIndex`/`_submitted` `:29,31`, physical `_primitiveShapes`/`_compoundShapes` `:90,92`.
+  `Celestial.BodyTemplate` is still an auto-property, and `Astronomical.bodyTemplate` is unchanged.
+- **`SyncGroundClutter`.** Its body is identical, so the `DrainExclusions` mirror holds.
+- **Ownership classes.** `ClutterEcotypePhysicalData`, `ClutterCubeCellGrid`, `ClutterViewResources` and
+  `SimpleVkMeshAtlas` are byte-identical; `GroundClutterPlacementData` only has the rename.
+- **Other unchanged types.** `GroundClutterLodReference`, `MeshReference`, `ModLibrary`, `TextureReference`,
+  `TextureLoader` and `ShaderModuleUtils` are unchanged. Residency changed only in log line numbers.
+  `AstronomicalTemplate` adds `AuroraReference`, which the shallow template clone shares.
+
+Native acceptance still required:
+
+- On a Pebbles-owned body in the main viewport with AO on, check the AO and normals around opacity-mapped
+  foliage. There should be no rectangles or halos.
+- Captured and legacy tree recipes should match stock foliage AO (`UsesCustomNormals`).
+- Change the MSAA sample count with overridden ecotypes. The depth-normal pipelines should rebuild with the
+  new specialization constant.
+- Check source-colour materials under the new AO receive.
+
+## Previous verification — 5482 → 5638
 
 Verified statically against `2026.10.19.5638` (`ksa-game-assemblies` `edda844`, revs 5483–5638) from
 `2026.9.22.5482` (`a2f724f`). The full solution builds and the `pebbles.tests` checks pass. Native
@@ -145,7 +233,7 @@ Targets:
 - `GroundClutterRenderer.Dispose`: prefix restores native ownership before native destruction.
 - `GroundClutterRenderer.SerializeSave(List<ClutterEcotypeSaveData>)` (KSA 5482): postfix rewrites entries of this renderer's override ecotypes whose grid differs from stock, or that are disabled, with the remembered stock-grid state; per-record failures clear those entries rather than leave override-grid cells.
 - `ClutterEcotypeRenderData.RebuildFrameResources`: prefix/finalizer scopes private material/shader bindings.
-- `ClutterEcotypeRenderData.SortMaterialIds`, `CreateColorRenderer`, `CreateDepthPrePassRenderer`, `CreateShadowDepthRenderer`: transpilers replace exactly one `GroundClutterRenderer.MaterialBuffer` getter or `GetMaterialIndex` call per method. Unexpected match counts fail patch activation.
+- `ClutterEcotypeRenderData.SortMaterialIds`, `CreateColorRenderer`, `CreateDepthPrePassRenderer`, `CreateDepthNormalPrePassRenderer` (5707), `CreateShadowDepthRenderer`: the list lives in `Runtime/ClutterMaterialBindings.cs`. Transpilers replace exactly one `GroundClutterRenderer.MaterialBuffer` getter or `GetMaterialIndex` call per method, and unexpected match counts fail patch activation. `ksa-upgrade.tests` (`Ksa5707Checks`) requires that the list equals every binding method in the real KSA.dll.
 - `ShaderReference.CompileVariantWithCustomOptions`: prefix substitutes only `ClutterSolidFrag` compiled inside the owned material context.
 - Public constructors of `GroundClutterPlacementData`, `ClutterEcotypeRenderData`, `ClutterEcotypePhysicalData`, `ClutterCubeCellGrid`, `ClutterViewResources`, `RenderCore.Mesh.SimpleVkMeshAtlas`: prefixes retain partial owned objects only inside construction context for failure cleanup.
 
@@ -156,12 +244,12 @@ Targets:
 - `PlanetRenderer._groundClutterRendererCreated`: distinguishes a live renderer from the nonnull disposed object retained when clutter is disabled.
 - `Universe._vehicleUpdateTask`, `VehicleUpdateTask.SyncWindowBubbles`; bubble `Parent`, `ConstraintSim`, `GroundClutterStatics.Clear` (syncs then settles displaced bodies in the described placement), `PopulatePendingExclusions(List<BubbleClutterStatics.ClutterRemoval>)`, `RemoveExcludedClutterInstance`; `ClutterRemoval.Key/Type/Displaced`, `ClutterExclusionType.Displaced`, `ClutterInstanceKey(KeyHash, int, Cell, uint)`.
 - Public `GroundClutterPlacementData.SerializeSave(ClutterEcotypeSaveData)`, `GetExclusionData`, `ExcludeCell`, `AddDisplacedObject`, `RemoveDisplacedObject`, `DeserializeDisplacedObject(key, record, loose)` and `DisplacedObject` fields; `ClutterEcotypeSaveData.Cell`/`DisplacedObject` (rest pose saved as `RestOffsetCcf`); eight uint exclusion words per native cell (`ExclusionData` InlineArray(8)); `GroundClutterRenderer.ExclusionData.AllIncluded`. No private placement fields are used.
-- `ColliderTemplate.VolumeCubicMetres` (virtual, base 0) and `ShapeOffsetCollider` overridden by the private hull; Bepu `ConvexHull.FaceToVertexIndicesStart`, `GetVertexIndicesForFace`, `GetPoint`. `ClutterObjectTemplate.AngularDamping`; `GroundClutterMaterialReference.KeepBackfaceNormals`.
+- `ColliderTemplate.VolumeCubicMetres` (virtual, base 0) and `ShapeOffsetCollider` overridden by the private hull; Bepu `ConvexHull.FaceToVertexIndicesStart`, `GetVertexIndicesForFace`, `GetPoint`. `ClutterObjectTemplate.AngularDamping`; `GroundClutterMaterialReference.KeepBackfaceNormals` and (5707) `UsesCustomNormals`.
 - `GroundClutterLodReference.BuildMaterialIndirection`; private setters of `MeshReference.HostPrimitives` and `PrimitiveMaterialIds`.
 - `ModLibrary.AllMeshes`, `AllFiles`, `AllGltfs`; `SerializedCollection<T>.GetList`; glTF model/named mesh indexes and `MeshReference.Load(..., createDeviceMesh: false)`.
 - `StagingPool._submitted`, `_commandBufferIndex`: discard the outer transaction's unsubmitted command buffers after preparation failure before pool disposal.
 - `ClutterEcotypePhysicalData._compoundShapes`, `_primitiveShapes`: reachable partial-shape retirement; `ConstraintSim.UnlockShapes`, Bepu shape ownership/removal.
-- Partial retirement inspects direct public/nonpublic instance fields only on the six captured native ownership classes. It recognizes `BufferEx`, `BufferPartitionInfo`, mapped memories, descriptor pools/layouts, samplers/image views, `SimpleVkTexture`, `SimpleComputePipeline`, `SimpleGraphicsPipeline`, and their collections. Fields holding `MappedMemory` at any nesting (`FieldShapes.Holds`; 5638 `MappedMemory[][]`) are unmapped before any other field is released. Physical `MeshAtlas`/`PlacementData` references are borrowed and skipped. Resource field layout changes require re-audit.
+- Partial retirement inspects direct public/nonpublic instance fields only on the six captured native ownership classes. It recognizes `BufferEx`, `BufferPartitionInfo`, mapped memories, descriptor pools/layouts, samplers/image views, `SimpleVkTexture`, `SimpleComputePipeline`, `SimpleGraphicsPipeline`, and their collections. Fields holding `MappedMemory` at any nesting (`FieldShapes.Holds`; 5638 `MappedMemory[][]`) are unmapped before any other field is released. Physical `MeshAtlas`/`PlacementData` references are borrowed and skipped. Resource field layout changes require re-audit. The 5707 re-audit found only the new `_opaqueDepthNormalPrePassRenderers` pipeline list, which the collection rule covers.
 - KSA 5629+ residency surface (public, no reflection): `ViewportRegistry.Views`, `IViewport.ShaderSlot`, `ClutterEcotypeRenderData.ReleaseViewport(IViewport)`, `ResolvePendingReleases()`, `GenerationViewport`. The release sequence must keep mirroring `GroundClutterRenderer.OnViewportUnregistered`; if residency moves to the renderer or gains other per-viewport state, `ClutterResidency` needs review.
 - `GroundClutterGpuMaterial` native layout, texture bindless IDs, flags bits 31/30 reserved by Pebbles, and the shader's `materialData.flags`, `diffuseTextureId`, `globalTextures`, `textureSampler`, `inUv`, diffuse conversion and terrain modulation statement.
 - Native 256 candidates/cell, 16 physical scale buckets, five LODs, uint object/material indirection and transformed position/normal/UV layout; `CubeCellGrid.GetCellWidth` call convention follows the renderer's actual MeanRadius argument.
@@ -225,7 +313,7 @@ KSA 5482 saves live clutter state natively (see the 5482 section). Division of o
 
 - **Native save:** each body's *stock-grid* masks and displaced records. When an enabled override uses the stock spacing, its live state is valid for the stock grid and saved as-is (object/scale IDs are override slots; the slot count is identical, so a vanilla load only renders stock meshes in those slots). Otherwise the `SerializeSave` postfix substitutes the remembered stock-grid state.
 - **`pebbles.clutter-state` (new separate v1 record, order 61, `ClutterBodyState[]`):** override grids whose key differs from every stock grid of that body, captured after syncing the live placement into memory. Validation bounds 256 bodies, 64 grids/body, 262,144 cells and 65,536 displaced records per grid, faces 0–5, subcells < 256, scale IDs < 16, finite 3/4-component vectors and unique keys. Restore runs after `pebbles` reapplied the recipes, seeds only unknown non-stock grids into the live record (native state wins) and replays matching live grids. A body without an applied recipe warns and the record is retained by the coordinator. Its reset is a no-op because the memory lives on records that the `pebbles` reset discards.
-- The existing `pebbles` payload is unchanged except the additive nullable `MaterialRecipe.KeepBackfaceNormals`; saves without the new record restore recipes and stock-grid state only.
+- The existing `pebbles` payload is unchanged except for the additive nullable `MaterialRecipe.KeepBackfaceNormals` and (5707) `MaterialRecipe.UsesCustomNormals`. When either is absent or null, it inherits the stock material by `SourceId`. The record id and version are unchanged, and legacy records load unchanged. Saves without the new record restore recipes and stock-grid state only.
 
 `GlbImportLibrary.ResolveSource` now resolves saved imported identities by
 `GlbIdentity.LibraryFileName` within `GlbLibrary.Files`, retaining SHA-256 verification.

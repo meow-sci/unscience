@@ -154,7 +154,7 @@ internal sealed class DecalTextureCache
         var handle = -1;
         try
         {
-            handle = bindless.AddTexture(image.ImageView);
+            handle = bindless.AddTexture(image.VkImageView);
             return new Bound(image, handle, lastWrite);
         }
         catch

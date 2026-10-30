@@ -1,5 +1,30 @@
 # UI / Customization Mods — Game Integration Scope
 
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified against `2026.10.25.5707` (revs 5639–5703), diffed from `2026.10.19.5638`. Static/managed only:
+the solution builds with 0 warnings and `kitchen-sink.tests` passes; no native KSA run. **No skittles or
+kitchen-sink code change was needed.**
+
+- ✅ **skittles.** `Brutal.ImGuiApi` (including `ImGuiStyle.cs`, `ImGuiStylePtr.cs`, `ImGuiCol.cs`, 60
+  slots) and `Brutal.GlfwApi` decomp are byte-identical; native ImGui is 1.92.2 in both builds. The rev
+  5652 Brutal bump changes package versions only (ImGui 2026.10.2 → 2026.10.3, AssemblyVersion 1.0.0.0).
+  `KSAColor.cs` is byte-identical. HDR output (rev 5645) composites the UI through a new present pass;
+  whether themes look the same at non-default paper-white is unverified.
+- ✅ **Editor refresh (rows 1–5).** `PartTree.ReinitializeDerivedValues(ModuleStateList)` has the same body
+  (`PartTree.cs:446`, OLD `:423`); `PartTree.States` `:72`, `VehicleEditor.EditingSpace` `:578`,
+  `VehicleEditingSpace.Parts` `:16`. The new editor deferred staging (`VehicleEditor.FlushDeferredStaging`,
+  `:4461`) is unrelated.
+- ✅ **G-load target.** `PhysicsBubble.cs` is byte-identical (`DetectStructuralFailure(VehicleUpdateState,
+  SimStep)` `:1080`).
+- ✅ **Capsule glass.** `CoreCommandAAssets.xml` (window model IDs `:56`, `:68`) and
+  `CoreIVASpaceAAssets.xml` are byte-identical. The shared filter seams are unchanged; editor ghost
+  previews now also go through `Compose*` (see [00-architecture](00-architecture-and-abstractions.md#ksa-5707-verification-5638--5707-2026-10-29)).
+  Raytraced IVA submissions remain unfiltered and are now reachable on AMD (rev 5670); the selected
+  window templates still have ray tracing disabled.
+- **Native acceptance pending:** skittles apply/restore (also with HDR on); Refresh Vehicle in the editor;
+  Force IVA on editor ghosts; capsule glass on AMD with IVA ray tracing.
+
 ## KSA 5482 (5438 → 5482) verification
 
 Verified 2026-09-25 against `2026.9.22.5482` (revs 5439–5481), diffed from `2026.9.10.5438`.

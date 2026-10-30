@@ -45,9 +45,20 @@ public static class IronManConnectors
         var connector = new Part.Connector(template, root);
         Owned.Add(connector, template);
         WriteTransform(connector, template, position, direction, radius);
-        root.Connectors.Add(connector);
+        // KSA 5707 stores connectors in a fixed array; grow it by replacement.
+        root.Connectors = [.. root.Connectors, connector];
         if (GetOwned(root).Count == 1) Owners.Add(new WeakReference<Part>(root));
         return connector;
+    }
+
+    /// <summary>
+    /// Re-creates a source's anchors on a stock copy (KSA 5707 <c>Part(Part, Part)</c>), appended in
+    /// order so the copy keeps the stock-prefix/owned-suffix indices cloned connections refer to.
+    /// </summary>
+    public static void CopyOwned(Part source, Part copy)
+    {
+        foreach (var anchor in GetOwned(source))
+            Add(copy, anchor.Id, anchor.PositionParentAsmb, double3.UnitX.Transform(anchor.Asmb2ParentAsmb), anchor.Scale.Y);
     }
 
     public static bool Update(Part.Connector connector, double3 position, double3 direction, double radius)
@@ -61,7 +72,10 @@ public static class IronManConnectors
     public static bool Remove(Part.Connector connector)
     {
         if (connector.Connection != null || !IsOwned(connector)) return false;
-        if (!connector.Parent.Connectors.Remove(connector)) return false;
+        var connectors = connector.Parent.Connectors;
+        int index = Array.IndexOf(connectors, connector);
+        if (index < 0) return false;
+        connector.Parent.Connectors = [.. connectors[..index], .. connectors[(index + 1)..]];
         Owned.Remove(connector);
         return true;
     }

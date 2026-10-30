@@ -64,9 +64,17 @@ namespace KSA
         public static Vehicle? ControlledVehicle { get; set; }
     }
 
+    /// <summary>KSA 5707: roster entries are found by a lowercased name hash.</summary>
+    internal sealed class KittenRosterData
+    {
+        public List<string> Names { get; } = new();
+        public string? Find(string name) => Names.Find(entry => string.Equals(entry, name, StringComparison.OrdinalIgnoreCase));
+    }
+
     internal static class Universe
     {
         public static CelestialSystem? CurrentSystem { get; set; }
+        public static KittenRosterData KittenRoster { get; set; } = new();
         public static bool FailDestroy { get; set; }
 
         /// <summary>KSA 5638: crew handling, camera/control/target hand-off, then Dispose, which deregisters.</summary>

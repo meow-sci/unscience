@@ -1,4 +1,4 @@
-# KSA 5438/5482/5638 managed upgrade checks
+# KSA 5438/5482/5638/5707 managed upgrade checks
 
 Run from the repository root:
 
@@ -6,7 +6,7 @@ Run from the repository root:
 dotnet run --project ksa-upgrade.tests/ksa-upgrade.tests.csproj
 ```
 
-The executable is a small managed regression suite for the KSA 5438, 5482 and 5638 integration fixes.
+The executable is a small managed regression suite for the KSA 5438, 5482, 5638 and 5707 integration fixes.
 For 5438 it links the production `PropellantFeedDiagnostics` helper and the Free Fallin patch. For
 5482 it links `PartRenderFilter` and the Vehicle Paint patches (sections below). The feed fixture
 (`PropellantFeedFixture.cs`) supplies the managed `ResourceManager.ConsumptionOrder` surface and
@@ -114,3 +114,19 @@ They do not prove that native Harmony targets install or that optional self-disa
 The test does not prove native resource graph construction or renderer behavior. The upgrade
 workflow should pair it with a metadata-only check of the supplied current KSA DLL's `ResourceManager`/`FlowOrder<Tank>` members and the live-game
 acceptance checks documented in `scope/`.
+
+## KSA 5707 metadata checks
+
+`Ksa5707Checks.cs` links the shared metadata-only `KsaAssemblyProbe` (from `kitchen-sink.tests`, plus its
+`KsaAssemblyProbe.Members.cs` constructor/overload queries) and the dependency-free
+`pebbles.lib/Runtime/ClutterMaterialBindings.cs`. Against the real `KSA.dll` (never loaded or run) it proves:
+
+- `Part` has the private 10-argument constructor Iron Man patches, the save-load, public 4-argument and
+  `PartCloner` copy constructors exist, and **every** other constructor chains to the private one — the
+  invariant that lets one patch restore anchors on every path (rev 5643);
+- the `ClutterEcotypeRenderData` methods calling `GroundClutterRenderer.get_MaterialBuffer` or
+  `GetMaterialIndex` are exactly Pebbles' redirect list (so a future stock pipeline cannot be missed),
+  each with one overload and one binding (rev 5677 added the depth-normal pre-pass);
+- `StaticObjectRenderer.WriteCommandsColor` still skips a null pipeline, which Sphinx's postfix mirrors (rev 5640).
+
+The checks pass on 5707 and fail on the 5638 DLL. Without a resolvable `KSA.dll` they print a WARN and skip.

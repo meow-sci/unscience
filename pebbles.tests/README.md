@@ -12,7 +12,8 @@ and pixel conversion. `HullChecks` verify the hull volume/recentring math ported
 known polyhedra; `ClutterStateChecks` verify grid-memory carry-over (AND masks, authoritative vs
 merged displaced records, per-spacing isolation, seed/export) and the `pebbles.clutter-state`
 record's validation and round trip through the linked production `SaveParticipant`/`SaveJson`;
-`PebblesChecks` covers the legacy-recipe `KeepBackfaceNormals` default. `RetirementShapeChecks` link
+`PebblesChecks` covers the legacy-recipe `KeepBackfaceNormals` and (KSA 5707) `UsesCustomNormals`
+defaults: stock inheritance, explicit override, clone and sidecar round trip of an unset flag. `RetirementShapeChecks` link
 `Runtime/FieldShapes.cs` and verify that partial retirement selects every mapped-memory field before buffers,
 including the KSA 5638 jagged `MappedMemory[][]` cell-grid shapes. `ClutterResidencyChecks` link
 `Runtime/ClutterResidency.cs` against `ClutterResidencyFixture.cs`, managed stand-ins of the 5638

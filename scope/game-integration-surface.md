@@ -99,10 +99,10 @@ Single consolidated lookup of every game-side touchpoint (KSA.* types + risk-bea
 Brutal.*/RenderCore.* members) across all unscience mods, aggregated from the per-area `scope/`
 files. Use it on every KSA update to find which mods a changed game member puts at risk.
 
-**Verification baseline:** KSA **2026.10.19.5638**, compared with the recorded baseline **2026.9.22.5482**
-(`ksa-game-assemblies` git history `a2f724f..edda844`; the on-disk PREVIOUS tree is 5554). Logged
-revisions 5483–5540, 5542–5553, 5603–5637; **5555–5602 are logged nowhere** and were covered by the
-source diff only. Full evidence and exact build/test results: [KSA_5638_UPGRADE](../plans/KSA_5638_UPGRADE.md).
+**Verification baseline:** KSA **2026.10.25.5707**, compared with the recorded baseline **2026.10.19.5638**
+(`ksa-game-assemblies` git history `edda844..4b3e9e2`; the on-disk PREVIOUS tree is 5638). Revisions
+5639–5703 are all logged. Full evidence and exact build/test results: [KSA_5707_UPGRADE](../plans/KSA_5707_UPGRADE.md)
+(previous span 5482 → 5638: [KSA_5638_UPGRADE](../plans/KSA_5638_UPGRADE.md)).
 Native game acceptance remains pending. Dated historical rows retain their original line citations;
 the current summary and owning area updates below supersede their compatibility status.
 The [October 25 startup follow-up](../plans/KSA_5638_UPGRADE.md#startup-follow-up-2026-10-25)
@@ -158,7 +158,7 @@ Compiled and managed-checked; native acceptance of the main integration remains 
 | `GroundClutterRenderer.SerializeSave(List<ClutterEcotypeSaveData>)` (5482) | `Runtime/ClutterHooks.cs` postfix → `ClutterController.Grids.WriteNativeSave` | Native entries are keyed only by CelestialId/EcotypeId; override types at a non-stock spacing (or disabled) are rewritten with remembered stock-grid state, or cleared if that fails |
 | `GroundClutterRenderer.RebuildFrameResources`, `Dispose` | postfix / prefix | Retained-original pipelines and renderer recreation |
 | `ClutterEcotypeRenderData.RebuildFrameResources` | prefix/finalizer | Exact owned material binding context |
-| `ClutterEcotypeRenderData.SortMaterialIds`, `CreateColorRenderer`, `CreateDepthPrePassRenderer`, `CreateShadowDepthRenderer` | transpilers | Exactly one `GroundClutterRenderer.MaterialBuffer` getter or `GetMaterialIndex` call per method |
+| `ClutterEcotypeRenderData.SortMaterialIds`, `CreateColorRenderer`, `CreateDepthPrePassRenderer`, `CreateDepthNormalPrePassRenderer` (5707), `CreateShadowDepthRenderer` | transpilers (`Runtime/ClutterMaterialBindings.cs`) | Exactly one `GroundClutterRenderer.MaterialBuffer` getter or `GetMaterialIndex` call per method; ksa-upgrade.tests requires this list to equal every binding method in KSA.dll |
 | `ShaderReference.CompileVariantWithCustomOptions` | prefix | Private source-color `ClutterSolidFrag` adaptation only |
 | Public constructors of `GroundClutterPlacementData`, `ClutterEcotypeRenderData`, `ClutterEcotypePhysicalData`, `ClutterCubeCellGrid`, `ClutterViewResources`, `SimpleVkMeshAtlas` | prefixes | Reachable partial-construction ownership capture |
 | `CelestialTemplate.GroundClutterReference`, ecotype/object/LOD/material references; renderer `PlanetPlacementData`, `PlanetEcotypeRenderData`, `PlanetPhysicalData` | `Runtime/ClutterCapture.cs`, `ClutterGraph.cs`, `ClutterController.cs` | Private per-body graphs; original arrays retained; five LODs, 51 object slots, 256 candidates/cell, 16 physics scale buckets |
@@ -194,6 +194,35 @@ vertex/push/descriptor layouts must agree. Registry meshes/textures are selected
 external GLBs use absolute paths plus SHA-256 content identities and are not globally registered.
 
 ---
+
+## 5707 verification summary
+
+Verified 2026-10-29 against **2026.10.25.5707** (revs 5639–5703, all logged), diffed from 5638. Full
+evidence and native acceptance: [KSA_5707_UPGRADE](../plans/KSA_5707_UPGRADE.md). This table supersedes
+older row statuses.
+
+| Game surface | Consumers | Change in 5638 → 5707 and resolution |
+|---|---|---|
+| `RenderCore.SimpleVkTexture.Image/ImageView` → `VkImage/VkImageView` (rev 5652); RenderCore descriptor/image interfaces → `Brutal.VulkanApi.Abstractions` | graffiti, pebbles, thug-life | Compile break; one-line renames. No repo use of the removed `Utils.BindDescriptorSet` or `DescriptorDynamicOffset`. |
+| `Part.Connectors` `List` → `Connector[]`; `Connections`/`SubtreeModules` lazy getters (shared empty list) (rev 5643) | iron-man (compile); blinky, its-so-shiny, doh, dont-stifle-me (read-only, clear) | Iron Man grows/removes anchors by array replacement. No mod mutates `Connections`. |
+| Every `Part` constructor (save load `Part(PartInstance, Part)`, public 4-arg, template sub-parts, new copy `Part(Part, Part)`) chains to a private 10-arg constructor (`Part.cs:1566`) | iron-man | **Silent break**: the 4-arg patch never saw loads (marker leaked into `Id`, anchors lost, connected anchors threw). Patch moved to the private seam; copy-constructor postfix re-adds anchors for `PartCloner`. Real-KSA.dll probe proves every constructor reaches the seam. |
+| `StaticObjectRenderer` skips null pipelines (10 descriptor sets; rev 5640) | sphinx | **Silent break** on low-end GPUs: the color postfix drew with no pipeline bound. Now returns when the pipeline is null. |
+| `ClutterEcotypeRenderData.CreateDepthNormalPrePassRenderer` (rev 5677/5678) | pebbles | **Missed caller**: stock material buffer used for owned ids (AO/silhouettes). Added to the dependency-free `ClutterMaterialBindings` list; probe compares it with every binding method in KSA.dll. |
+| `GroundClutterMaterialReference.UsesCustomNormals` (`PipelineFlags` 0x200, rev 5689) | pebbles | Dropped flag; optional recipe field inherits stock by `SourceId` (additive payload). |
+| Kitten radiation (rev 5669/5688): roster dose/sickness/death by name, `KillLethallyDosedCrew` in `ApplyVehicleSolvers`, `GetJobSimStep` step limit, `UpdatePerFrameData` dose credit | doh (fixed: rostered names refused); the-tick, kitchen-sink, PhysicsFrameHook, torch/dent-wizard/godzilla (documented) | New non-force kill path; existing disposed-vehicle guards cover it; clamp passed through. Live checks. |
+| Editor ghost previews via `PartTree.ComposeRenderData`; `PartCloner` symmetry copies (rev 5643) | PartRenderFilter, IvaForceRender, dont-stifle-me, godzilla | Filter/reveal apply to ghosts consistently; copies keep 3-axis scale; godzilla does not scale ghosts (cosmetic). |
+| Collider-based spawn bounds; StrutA/B/C colliders (rev 5646) | godzilla, garrys-torch | No code change; live check. |
+| Clouds in secondary viewports, per-slot cloud targets (rev 5663) | hot-pursuit, ring rebuild | No code change; ~140 MB VRAM per 2048² feed; live check. |
+| Shared astronomicals library (Io, Ganymede, Triton, Pluto; ids unchanged), Pluto `LockedTo` + 113° tilt (5644–5649) | kiwis-marbles, bloomin-onion | Ids resolve; Charon-relative 5638 offsets point differently in world space (cosmetic). |
+| Gas tanks with rated pressure (5701/5703) | eternal-flame, blinky | Refill to rated-pressure mass (same as stock); `CanHold` gas rule — Hydrolox presets unaffected. |
+| HDR present pass (5645); terrain/clutter depth-normal pre-pass, compute tessellation, erosion (5654–5682) | thug-life, graffiti, sphinx | Scene format unchanged; decals and static grounding need visual checks. StarMap's restart popup may render black with HDR (upstream). |
+
+Unchanged and re-verified: StarMap targets; HotkeyGuard `OnKeyAll`; HiddenUiFrameHook; MenuBarPatch;
+PhysicsFrameHook's seven seams; native save types and skip rules; PartRenderFilter/Vehicle Paint/
+IvaForceRender bodies and fields; `PerInstanceData` and `MaterialData` layouts; paint bits 11–31; all mesh
+shaders; avatar reflection chain and kitten-animation fields; visor IL anchor; doh render bridge; pyro;
+free-fallin sets; glass; camera controllers; zippo; ring reflection; G-load/The Tick anchors; dont-stifle-me
+targets; eternal-flame refill path; every hard-coded asset id. Static/managed verification only.
 
 ## 5638 verification summary
 
@@ -1090,7 +1119,9 @@ Sink's `Universe.ExecuteNextVehicleSolvers` patch were removed. See [current sur
 
 **Iron Man additions:** recheck every exact target/signature in [its Harmony table](iron-man.md#harmony-and-reflection-watchlist),
 especially private `VehicleEditor.DuplicateHighlightedPart`, `RequestNewVehicle`, `FinalizeNewVehicle`,
-the internal three-argument Part serializer and four-argument Part constructor. The flight-computer
+the internal three-argument Part serializer, the **private 10-argument Part constructor** (`Part.cs:1566`
+@5707; every constructor, including save load, chains to it — the former four-argument target missed
+loads) and the `Part(Part, Part)` copy-constructor postfix used by `PartCloner`. The flight-computer
 follow-up also requires exactly two EVA type checks in `GaugeCanvas.IsContextVisible` and one closed
 `IsFlightComputerDisabled<Enum>` call each in gauge-button `IsDisabled`/`PackData`. Preserve constructor
 restoration before connection-index regeneration and Program render upload/bucket ordering.

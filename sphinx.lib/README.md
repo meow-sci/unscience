@@ -78,6 +78,17 @@ skip the affected entry while the coordinator retains the source feature payload
 handles, physics shapes, bubble handles and preview state are reconstructed, not saved.
 Native rendering/contact verification is still required.
 
+## KSA 5707 compatibility
+
+- `SphinxPatches.AfterColor` takes the hooked `VkPipeline pipeline` and returns when `pipeline.IsNull()`.
+  This mirrors `StaticObjectRenderer.WriteCommandsColor`, which since rev 5640 binds nothing when the
+  10-set static pipeline failed to build. The pre-pass postfix is unchanged. `ksa-upgrade.tests` verifies
+  the stock `IsNull` check on the real KSA.dll.
+- `sphinx.lib` compiles again once `pebbles.lib`'s `VkImageView` rename is fixed. No Sphinx compile change was needed.
+- Rev 5681 erosion changes `Celestial.GetTerrainHeightFromDirCcf`. Saved absolute anchors are not
+  re-grounded on load; snap-to-ground re-samples the terrain.
+- Physics hooks and shaders are byte-identical to 5638. Native acceptance is still open.
+
 ## KSA 5438 compatibility
 
 The index binding uses KSA 5438’s renamed UInt32 enum member. Native render layouts and collision hooks remain compatible; mid-step bubble merges and live collision/resource lifetime still need an in-game pass.

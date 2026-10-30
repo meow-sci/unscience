@@ -44,8 +44,9 @@ is a development host and does not produce a separate release.
 ## Saves and limits
 
 Node definitions persist inside the existing part-instance save data. Runtime part IDs and shared
-stock templates remain unchanged. Deep-copy/serialization restores the nodes before resolving
-connection indices. Activation is never serialized.
+stock templates remain unchanged. Loading a save or blueprint restores the nodes before the game
+resolves connection indices. Editor copies of an authored kitten, such as Copy Tree, get the same
+nodes in the same order. Activation is never serialized.
 
 In **iron man** mode, physics-debug **Teleport To...** and its named surface destinations place the
 kitten head-up with feet/equipment clearance calculated from the full vehicle bounds. This applies
@@ -70,6 +71,7 @@ separate from walking/posed feet. Stock EVA part picking remains specialized, so
 in the vehicle editor. The native vessel flight-computer gauges are enabled only for activated
 kittens. Normal vessel collisions, structural failure and G-load rules apply while activated; the
 EVA-only kitten landing-impact death (KSA 5638) does not, nor does the kitten G-load allowance.
+Kitten radiation dose and radiation death (KSA 5707) still apply in both modes, unshielded.
 Test balanced, low-thrust setups first; this is not a tuned flight assist.
 Only stock `KittenBackPackPart` roots are supported. Shared templates/assets are not modified.
 
@@ -87,7 +89,7 @@ both modes. See the [mode-switch design](../plans/iron-man/FLIGHT_MODES.md), the
 
 ## Validation
 
-Built against KSA **2026.10.19.5638** (originally 5402). Managed checks exercise real production connector persistence
+Built against KSA **2026.10.25.5707** (originally 5402). Managed checks exercise real production connector persistence
 and Harmony dispatch, native HUD eligibility/button state, and control-settings restoration with
 small game fixtures. They do not run Vulkan/Bepu or simulate rocket flight. **In-game acceptance
 is still required**, especially for the new autopilot panel and physical attitude response.

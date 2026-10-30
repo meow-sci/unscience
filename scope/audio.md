@@ -1,5 +1,22 @@
 # Audio — BYO Music integration
 
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+No code change is required. Verified against `2026.10.25.5707` (revs 5639–5703) vs `2026.10.19.5638`.
+This pass is static/managed only.
+
+- **FMOD wrapper.** Rev 5662 ("Add extra Fmod package that was missing") changed the `Brutal.Fmod.dll`
+  bytes. The `Brutal.FmodApi` / `Brutal.FmodApi.Studio` decomp and `Brutal.Fmod.csproj` are
+  identical, so this is a rebuild only.
+- **Native FMOD library (speculative).** The added package is probably a native FMOD library outside
+  these trees.
+- **Byte-identical:** `GameAudio`, `SpatialAudio`, `MusicPlayList`, `ChannelGroupReference`,
+  `ChannelWrapper`, `SoundReference`, `ModLibrary` and `Content/Core/Sounds.xml` (the `Sfx` parent
+  group is unchanged).
+- **Line move only:** `Vehicle.IsDisposed` is now `:684`.
+- **Native acceptance pending:** a stream-playback smoke test on each OS, because of the FMOD
+  packaging change. The earlier live audio checklist is unchanged.
+
 ## KSA 5482 (5438 → 5482) verification
 
 No code migration required. Verified against `2026.9.22.5482` (NEW) vs `2026.9.10.5438` (OLD) with

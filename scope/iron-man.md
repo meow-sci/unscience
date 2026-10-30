@@ -1,5 +1,76 @@
 # Iron Man — EVA editor, connectors and vessel physics
 
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified against `2026.10.25.5707` (revs 5639–5703), diffed from `2026.10.19.5638`. Static/managed
+only: the solution builds, the `iron-man.tests` suite passes, and `ksa-upgrade.tests/Ksa5707Checks.cs`
+confirms on the real KSA.dll that every `Part` constructor reaches the private seam. No native run.
+Paths are under `KSA/` in the new decomp tree.
+
+- 🔴 **Saved anchors never restored on load (fixed; new in 5707).** Rev 5643 routes
+  `Part(PartInstance, Part)` (`Part.cs:1532`, save load through `RegenerateFromPartInstance` `:2618`),
+  the public 4-arg constructor (`:1551`), template sub-parts (`CreateTemplateSubPart` `:1536`) and the new
+  copy constructor (`:1556`) through a private 10-arg constructor (`:1566`). Every remaining 4-arg caller
+  passes no instance, so the old 4-arg patch never saw a marked save: the marker became `Part.Id`, no
+  anchors were added, and `RegenerateConnectionsFromPartInstance` (`:2634-2648`) indexed past the
+  backpack's empty connector array (IndexOutOfRange, so the save failed to load). Unconnected anchors were
+  silently lost. `IronManConnectorPatches.cs:14-30,73-80` now patches the private constructor
+  `(string?, PartTemplate, PartInstance?, Part?, TransformReference?, int, int, int, Part? boundsSource,
+  bool isTemplateSubPart)` with the same `ref string? __0`, `PartTemplate __1`, `PartInstance? __2` prefix
+  and `Restore` postfix. The 4-arg patch is **removed**: keeping both would decode the still-marked
+  `__2.Id` twice and add the anchors twice.
+- 🔴 **Copies dropped anchors and could crash (fixed; new in 5707).** New `PartCloner` (editor
+  `DuplicateHighlightedPart` `VehicleEditor.cs:6086-6088`, part-menu Copy Tree `:6500-6502`, symmetry and
+  radial clones `:4607,4770,4811,4873,4935`, engine clusters `:5329`) uses `Part(Part source, Part? parent)`.
+  That constructor passes no name or instance and rebuilds `Connectors` from the template only
+  (`Part.cs:1609-1616`). `RecordConnections` then records source connector indices, including owned anchors
+  (`PartCloner.cs:162-185`), and `Connect` indexes the clone by them (`:258-280`). Cloning a kitten root
+  with connected anchors therefore threw IndexOutOfRange. Before 5707, copies serialized and deserialized,
+  so the marker restored their anchors. A new postfix on the public copy constructor
+  (`IronManConnectorPatches.cs:34,42,82`) calls `IronManConnectors.CopyOwned` (`IronManConnectors.cs:58`),
+  which re-adds the source's anchors in order (stock prefix, owned suffix), once per copy. Reachability is
+  low: a configured body cannot be duplicated (`AllowDuplicate`), and its part menu (right-click on
+  `Highlighted`, `VehicleEditor.cs:3746-3770`) is blocked by the root-selection guards. Equipment clones
+  never involve anchors, and symmetry ghost previews are now transform-only (`:4318-4345`).
+- 🔴 **`Part.Connectors` is `Connector[]` (fixed; compile break, rev 5643).** A part without template
+  connectors, which includes `KittenBackPackPart`, starts on the shared `Array.Empty` (`Part.cs:652`).
+  Anchors grow and shrink the array by replacement and never mutate it in place
+  (`IronManConnectors.cs:49,78`; also `IronManConnectorData.cs:31`, `IronManEvaSettings.Saves.cs:24,37,39`).
+  No game code keeps the array reference: `GetConnectorInstance` scans it (`Part.cs:3665`), and the editor's
+  snap target stores connector indices that it re-resolves every frame.
+- ℹ️ **`Part.Connections` returns a shared empty list** (`Part.cs:1183`) until `EnsureConnections`
+  (`:1494`) allocates one. Iron Man only reads it after `Connect` (`IronManConnectorUnload.cs:46`).
+  `Part.Connection` is no longer `IDisposable`; Iron Man never disposed connections.
+- ℹ️ **Kitten radiation death (rev 5669) applies to enabled kittens.** `Vehicle.KillLethallyDosedCrew`
+  (`Vehicle.cs:3041-3080`) tests `this is KittenEva`, not `IsKitten`, and calls
+  `Universe.DestroyVehicle(Kill)`. Iron Man already skips disposed kittens. EVA dose is unshielded in
+  either mode. MMU leg animation sign flip (rev 5671, `KittenRenderable.cs:721`) is cosmetic; the
+  editor avatar uses zero acceleration.
+- ✅ **Checked unchanged:**
+  - Files byte-identical or differing only in log lines: `TeleportToLocation` (one placement call,
+    `Vehicle.cs:4322`); `get_Helm2Body` (`:621`); `UpdateNavBallMarkers` (`:2833`) and
+    `_navBallMarkerData`; `OrbitController` (`GetFrame2Ecl`, `EditorOnScroll`: two UnitX, two
+    `CameraOffset.X`); `ThrusterController`/`ManualControlMap`; `Rocket`; `FlightComputer`;
+    `GaugeCanvas` (two `isinst KittenEva`); `GaugeButtonFlightComputer`; `KittenEva`;
+    `VehicleUpdateState`; `VehicleEditingSpace`; `VehicleSaveData`; `PartModelRenderer`; `PhysicsBubble`.
+  - Same bodies: Vehicle `OnKey`, `ProcessInput`, `UpdateRenderData`, `Dispose(bool)`,
+    `IsFlightComputerDisabled<T>`, `SetControlPart`.
+  - Editor hooks: same single-overload signatures and parameter names (`part`, `newFocus`);
+    `RequestNewVehicle`/`FinalizeNewVehicle` bodies unchanged; `DeletePart` only adds grab-preview cleanup.
+  - Render: `ClearBuckets(IViewport)` is still one overload; `RenderEditor` still clears buckets before
+    the prepass (`Program.cs:5296-5303`); the early, upload and late EVA render order is unchanged.
+  - Serialization: the 3-arg serializer is unchanged; `PartTree.Deserialize` still constructs every
+    part before indexing connections.
+  - Assets: `KittenBackPackPart` XML and the `AutopilotSettings`/`KittenFlightControl` canvases.
+- ℹ️ Test fidelity: `iron-man.tests/Fixture.cs` now models 5707 chaining (load, 4-arg and copy into the
+  private constructor). `Program.cs` adds load-through-`Part(PartInstance, Part)` and copy checks
+  (order, poses, radii, independent unconnected anchors, index reconnection, no anchors on plain copies).
+- **Native acceptance pending:**
+  - Load a world save and a blueprint with connected anchors; check node order, fuel flow and Character.
+  - Copy Tree or duplicate an unconfigured kitten that has anchors.
+  - Add or remove a node while a part is grabbed.
+  - Let an enabled kitten die of radiation.
+
 ## KSA 5638 (5482 → 5638) verification
 
 Verified 2026-10-22 against `2026.10.19.5638` (via 5554) from decomp and a real-IL dump of KSA.dll.
@@ -124,7 +195,7 @@ See [upgrade evidence and acceptance](../plans/KSA_5438_UPGRADE.md).
 Older catalog tables below retain their explicitly cited build/line numbers; this section records the current delta.
 
 Original baseline: **KSA 2026.9.7.5402**, `ksa-game-assemblies/current/decomp`. Added 2026-09-07.
-Current verification: **2026.10.19.5638** (top section); watchlist rows marked `@5638` / `@5482` carry those builds' lines.
+Current verification: **2026.10.25.5707** (top section); watchlist rows marked `@5707` / `@5638` / `@5482` carry those builds' lines.
 [Research evidence](../plans/iron-man/RESEARCH.md) explains the design;
 [player instructions](../iron-man/README.md) describe activation and save dependencies.
 The [flight-computer follow-up](../plans/iron-man/FLIGHT_COMPUTER.md) records the native HUD fix.
@@ -185,10 +256,11 @@ signature/overload changes; private string names must be re-grepped on every gam
 | `SuperMeshRenderSystem.ClearBuckets(IViewport)` | editor postfix | **Signature @5482** (was parameterless; per-view buckets, rev 5474); still one overload, postfix binds only `__instance`. Only matching Program renderer/main viewport/editor: submit avatar after clearing and before prepass (`Program.cs:4901` @5482). Also invoked per viewport from `RenderViewport` (`:4419`) and `RenderGame` (`:4613`), where the editor-kitten gate returns early. |
 | `VehicleEditor.OnFrame`, `OnMouseButton`, `OnKey`, `UpdateSelected` | editor root-selection guards | Clear body selection/grab without interfering with accessory parts. |
 | `VehicleEditor.DeletePart(Part)`, `SetFocusedTree(PartTree)` | editor prefixes | Preserve existing body root and focused tree. |
-| private `VehicleEditor.DuplicateHighlightedPart`, `RequestNewVehicle`, `FinalizeNewVehicle` | editor prefixes | Block body duplication/replacement/new-vessel actions during a configured kitten edit in either flight mode. |
+| private `VehicleEditor.DuplicateHighlightedPart`, `RequestNewVehicle`, `FinalizeNewVehicle` | editor prefixes | Block body duplication/replacement/new-vessel actions during a configured kitten edit in either flight mode. @5707 duplication copies through `PartCloner.CloneSubtreeAsTree` (`VehicleEditor.cs:6088`) instead of serialize/deserialize; the copy-constructor row covers anchors on any permitted copy. |
 | `VehicleSaveData.Create(string,PartTree)` | metadata postfix | Preserve Character for a live KittenEva with this exact authored root, including after disabling; no character guessed for unrelated trees. |
 | internal `Part.GetReferenceWithChildren(ref uint,PartInstance,bool)` | connector serialization postfix | Set marked instance Id only for owned nodes, preserving original Id, stock prefix count and ordered owned suffix. |
-| `Part(string,PartTemplate,PartInstance,Part)` | constructor prefix/postfix | Decode valid marked data, restore runtime Id, append nodes BEFORE `RegenerateConnectionsFromPartInstance` indexes them. @5482 the ctor (`Part.cs:1490`) no longer creates a tree; the postfix touches only template/sub-part/scale/connectors, so a root is registered while its `Tree` is still null (unload filters those out). |
+| private `Part(string?,PartTemplate,PartInstance?,Part?,TransformReference?,int,int,int,Part?,bool)` (**@5707**, `Part.cs:1566`; was the public 4-arg ctor) | constructor prefix/postfix | Every construction path reaches this one constructor: load `Part(PartInstance,Part)`, the 4-arg ctor, template sub-parts and copies. Patch it, and only it: `__0` inName (rewritten to the original Id), `__1` template, `__2` instance (decoded); `__8` boundsSource, `__9` isTemplateSubPart unused. Decode valid marked data, restore runtime Id, append nodes BEFORE `RegenerateConnectionsFromPartInstance` indexes them. Also patching the 4-arg ctor would add the anchors twice. A root is registered while its `Tree` is still null (since 5482; unload filters those out). |
+| `Part(Part source, Part? parent)` (**new @5707**, `Part.cs:1556`) | copy-constructor postfix | Used by `PartCloner` (duplicate, Copy Tree, symmetry/radial, clusters). Connectors are rebuilt from the template, then reconnected by source index (`PartCloner.cs:162-185,258-280`), so `CopyOwned` must re-add the source's anchors in order before `Connect`. Unmodified kittens and stock parts gain nothing. |
 
 One private field (`Vehicle._navBallMarkerData`, type-checked before patching) is reached through Harmony's
 `____navBallMarkerData` injection. No shader strings, GPU byte offsets or game DLL modifications.
@@ -241,7 +313,9 @@ Unexpected IL match counts fail installation with rollback; removed hooks restor
   calls the patched `IsDisabled` before queuing native `InputEvents.FlightComputerInputData`; unchanged
   `Vehicle.SetEnum/ToggleEnum` applies action + navball frame and native input reset. `IsSet<Enum>`
   already delegates to base for ordinary actions. Missing target/burn/engine restrictions stay active.
-- `Part.Connectors`, `Template.Id/Connectors`, `FullPart`, `Tree`, `Scale`, `PositionParentAsmb`,
+- `Part.Connectors` (`Connector[]` since 5707; starts on the shared `Array.Empty` and is replaced, never
+  mutated in place), `Part.Connections` (shared empty list until first connect; read-only here),
+  `Template.Id/Connectors`, `FullPart`, `Tree`, `Scale`, `PositionParentAsmb`,
   `Asmb2ParentAsmb`; `Part.Connector.TemplateBase`, mutable `TransformReference`, capabilities,
   `Connection`, owner, scale and transforms. `ScaleFactors` reduces scale to a single scalar.
 - `Part.Connection.Connect/Disconnect`, `Connection.Connectors[0/1]`, `IConnector.ConnectionPart`;

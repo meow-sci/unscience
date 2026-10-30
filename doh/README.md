@@ -23,7 +23,10 @@ Programmatic kitten spawning mod for KSA with per-kitten material customization.
 2. Select a reference vehicle from the **Vehicle** dropdown (with filter)
 3. Optionally select a specific **Character** (defaults to random), and edit **Vehicle name** /
    **Name prefix**. A single spawn uses the text exactly; a batch appends a unique numeric suffix.
-   Leave it blank for automatic `Kitten_doh_` names. An occupied single name is refused.
+   Leave it blank for automatic `Kitten_doh_` names. An occupied single name is refused, and so is
+   the name of a kitten in the Kitten Roster (case-insensitive); batch and automatic numbering skip
+   such names. Since KSA 5707 an EVA kitten shares radiation dose, sickness and death with the
+   roster kitten of the same name, so reusing that name could kill or ground the roster kitten.
 4. Adjust the **Offset** in the vehicle's body frame (X=right, Y=up, Z=forward)
 5. Set **Count** for batch spawning (1–20)
 6. Enable **Custom Color** and pick a tint with the color picker

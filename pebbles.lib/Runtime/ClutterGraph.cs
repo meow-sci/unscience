@@ -23,7 +23,8 @@ internal sealed class ClutterGraph : IDisposable
         var recipes = recipe.Ecotypes.ToDictionary(e => e.Name, StringComparer.Ordinal);
         if (recipes.Keys.Any(name => baseline.Ecotypes.All(e => e.Name != name))) throw new InvalidOperationException("An ecotype target is unresolved.");
         var stock = ClutterCapture.Capture(body, baseline);
-        var stockBackfaceNormals = StockBackfaceNormals(baseline);
+        var stockFlags = new StockMaterialFlags(StockFlags(baseline, m => m.KeepBackfaceNormals.Value),
+            StockFlags(baseline, m => m.UsesCustomNormals.Value));
         PhysicalRadii = new double[baseline.Ecotypes.Count];
         PhysicalObjectRadii = new float[baseline.Ecotypes.Count][];
         long candidates = 0;
@@ -63,7 +64,7 @@ internal sealed class ClutterGraph : IDisposable
                     for (var mi = 0; mi < slots.Count; mi++)
                     {
                         var mr = l.Materials[l.Materials.Count == 1 ? 0 : mi];
-                        var material = Material(mr, assets, stockBackfaceNormals);
+                        var material = Material(mr, assets, stockFlags);
                         lod.MaterialReferences.Add(material); e.MaterialReferences.Add(material); Materials.Add(material);
                         if (mr.SourceColors) SourceColorMaterials.Add(material.Hash);
                     }
@@ -109,17 +110,19 @@ internal sealed class ClutterGraph : IDisposable
         };
     }
 
-    /// <summary>Stock KeepBackfaceNormals by material ID, inherited by recipes that predate the flag.</summary>
-    private static Dictionary<string, bool> StockBackfaceNormals(GroundClutterReference baseline)
+    /// <summary>Stock per-material lighting flags by material ID, inherited by recipes that predate each flag.</summary>
+    private sealed record StockMaterialFlags(IReadOnlyDictionary<string, bool> BackfaceNormals, IReadOnlyDictionary<string, bool> CustomNormals);
+
+    private static Dictionary<string, bool> StockFlags(GroundClutterReference baseline, Func<GroundClutterMaterialReference, bool> flag)
     {
         var result = new Dictionary<string, bool>(StringComparer.Ordinal);
         foreach (var lod in baseline.Ecotypes.SelectMany(e => e.ClutterObjects).SelectMany(o => o.Lods))
             foreach (var material in lod.MaterialReferences!.Select(m => m.Get()))
-                result.TryAdd(material.Id, material.KeepBackfaceNormals.Value);
+                result.TryAdd(material.Id, flag(material));
         return result;
     }
 
-    private static GroundClutterMaterialReference Material(MaterialRecipe r, ClutterAssets assets, IReadOnlyDictionary<string, bool> stockBackfaceNormals)
+    private static GroundClutterMaterialReference Material(MaterialRecipe r, ClutterAssets assets, StockMaterialFlags stockFlags)
     {
         TextureReference? Texture(string id) => string.IsNullOrEmpty(id) ? null : assets.ResolveTexture(id);
         var normal = Texture(r.NormalId) ?? TextureReference.EmptyNormal;
@@ -128,7 +131,8 @@ internal sealed class ClutterGraph : IDisposable
             Id = "Pebbles/" + Guid.NewGuid().ToString("N"), DiffuseReference = Texture(r.DiffuseId) ?? TextureReference.EmptyWhite,
             NormalReference = new BorrowedNormal(normal), PBRMap = Texture(r.PbrId) ?? TextureReference.EmptyWhite,
             OpacityMap = Texture(r.OpacityId), ThicknessMap = Texture(r.ThicknessId), UseTerrainMask = new(r.UseTerrainMask && !r.SourceColors),
-            DoubleSided = new(r.DoubleSided), KeepBackfaceNormals = new(r.ResolveKeepBackfaceNormals(stockBackfaceNormals)), CastShadows = new(r.CastShadows), ReceiveShadows = new(r.ReceiveShadows),
+            DoubleSided = new(r.DoubleSided), KeepBackfaceNormals = new(r.ResolveKeepBackfaceNormals(stockFlags.BackfaceNormals)),
+            UsesCustomNormals = new(r.ResolveUsesCustomNormals(stockFlags.CustomNormals)), CastShadows = new(r.CastShadows), ReceiveShadows = new(r.ReceiveShadows),
             BiasNormalsUp = new(r.BiasNormalsUp), ApplyExtraSpec = new(r.ApplyExtraSpec), DistanceFadeDither = new(r.DistanceFadeDither)
         };
         m.SetHash(); m.ColorPipelineFlags = m.CreatePipelineFlags(); return m;

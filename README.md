@@ -10,11 +10,13 @@ I describe it as a *supermod* that includes a suite of *submods*, each one has a
 
 # game compatibility
 
-The current checkout compiles against KSA **2026.10.19.5638**, and the full integration audit was
-run against that build (diffed from 2026.9.22.5482). The build and all 18 managed test suites pass;
-in-game acceptance is pending. Parts Now was removed in this upgrade. See
+The current checkout compiles against KSA **2026.10.25.5707**, and the full integration audit was
+run against that build (diffed from 2026.10.19.5638). The build and all 18 managed test suites pass;
+in-game acceptance is pending. This upgrade fixes Iron Man anchors on save load and editor copies,
+Sphinx on low-end GPUs, Pebbles' ambient-occlusion pre-pass and foliage flag, and DOH spawn names that
+matched a rostered kitten. See [KSA_5707_UPGRADE](plans/KSA_5707_UPGRADE.md),
 [KSA compatibility](unscience/README.md#ksa-compatibility) for user-visible changes and
-[ISSUES.md](ISSUES.md) for known gaps.
+[ISSUES.md](ISSUES.md) for known gaps. The previous (5638) upgrade removed Parts Now.
 
 The October 25 startup follow-up fixes Full Canopy parsing of Windows shader line endings,
 orders the shared physics handoff before existing call-wrapping transpilers, and reports complete

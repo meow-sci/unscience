@@ -268,6 +268,8 @@ Also covers production IVA controller ownership/head patch and actual camera ada
 resolvers: focus cleanup, seat return, repeated/cross-scene replay, missing/invalid targets and
 unload. Capsule glass adds real-adapter boolean round-trip/reset/replay, independent toggle, legacy/invalid/unavailable-patch retention checks. Free-flight input/rendering is substituted at the native boundary.
 Native cart/ImGui acceptance remains in-game; see its [README](kitchen-sink.tests/README.md).
+Its `KsaAssemblyProbe` (metadata-only real-KSA.dll reader) is shared with the-tick.tests and, with the
+`KsaAssemblyProbe.Members.cs` overload/constructor-chain queries, ksa-upgrade.tests.
 
 ## Animation & Visual Effects Mods
 
@@ -376,7 +378,8 @@ Programmatic kitten spawning with per-kitten GPU material customization. Spawns 
 - Vehicle-relative positioning with configurable body-frame offset (XYZ)
 - Batch spawning (1–20 kittens) with chain offsets
 - Editable vehicle name / batch prefix (default `Kitten_doh_`) for both spawn buttons: exact single
-  names, collision-free numbered batches, blank automatic fallback; name/prefix is scene-saved
+  names, collision-free numbered batches, blank automatic fallback; name/prefix is scene-saved.
+  Names held by a rostered kitten are also refused (KSA 5707 ties radiation dose/KIA to the name)
 - Character selection from ModLibrary or random assignment
 - Per-kitten material tinting via custom AlbedoColor on cloned GPU materials
 - Unique or shared material sets for batch spawns
@@ -389,7 +392,7 @@ Programmatic kitten spawning with per-kitten GPU material customization. Spawns 
 - **Unscience integration**: DOH is available as a submod in the unscience supermod via `DohSubmod`.
 
 ### [doh.tests](doh.tests)
-Native-free managed checks that link the real DOH save adapter, naming, kitten registry, material set and material-set release code. Cover exact/prefixed/automatic names and collisions, name/prefix round-trips and legacy/reset/invalid-name handling, shared `MaterialGroup` capture/restore, same-save reuse without new allocations, legacy records without groups, missing kittens releasing their sets, vanilla-load cleanup, no reuse after release and malformed groups. Run `dotnet run --project doh.tests`; see its [README](doh.tests/README.md).
+Native-free managed checks that link the real DOH save adapter, naming, kitten registry, material set and material-set release code. Cover exact/prefixed/automatic names and collisions (including rostered-kitten names, 5707), name/prefix round-trips and legacy/reset/invalid-name handling, shared `MaterialGroup` capture/restore, same-save reuse without new allocations, legacy records without groups, missing kittens releasing their sets, vanilla-load cleanup, no reuse after release and malformed groups. Run `dotnet run --project doh.tests`; see its [README](doh.tests/README.md).
 
 ---
 
@@ -511,7 +514,8 @@ self-contained GLB 2.0 scenes/materials, set uniform scale, and author fitted bo
 cylinder colliders in a textured floating editor. Applies every variant/LOD of selected clutter
 types while preserving native placement and untouched types. Session-owned controller queues
 safe native apply/restore, retains per-body originals and manages private GPU/physics resources.
-Applied-state and import-release controls live in the submod panel. Remembers removed/displaced
+Applied-state and import-release controls live in the submod panel. On KSA 5707 its private materials
+also feed the depth-normal (AO) pre-pass and keep the stock `UsesCustomNormals` foliage flag. Remembers removed/displaced
 clutter per spacing across apply/restore; KSA 5482 native saves keep stock-spacing state and a
 `pebbles.clutter-state` sidecar record keeps override spacings. Uses main's consolidated
 Harmony instance; no standalone host or workspace/contracts dependency.
@@ -521,7 +525,8 @@ See [README](pebbles.lib/README.md) and [integration scope](scope/ground-clutter
 
 Game-independent executable checks for Pebbles recipes, collider scaling, Workshop camera/gizmo
 math and undo history, GLB geometry/material parsing, texture mapping and pixel conversion, hull
-volume math, grid-memory carry-over and `pebbles.clutter-state` record checks.
+volume math, grid-memory carry-over and `pebbles.clutter-state` record checks, plus optional
+material-flag inheritance (`KeepBackfaceNormals`, 5707 `UsesCustomNormals`).
 Run `dotnet run --project pebbles.tests/pebbles.tests.csproj`; see its [README](pebbles.tests/README.md).
 
 ### [godzilla](godzilla) / [godzilla.lib](godzilla.lib)
@@ -564,7 +569,8 @@ alignment, live XYZ transforms, shared PNG overrides, live per-static UV scale/o
 visibility, duplicate and removal controls. UV edits replace only private vertex buffers and
 preserve source UVs for repeatable edits; texture failures retain the previous texture.
 Reuses Pebbles' bounded importer/material fallbacks and shared GLB/PNG catalogs. Private GPU
-buffers use native StaticObjectRenderer pipelines through three scoped postfixes; no global mesh
+buffers use native StaticObjectRenderer pipelines through three scoped postfixes (color draws are skipped
+when KSA 5707 could not build that pipeline, as stock does); no global mesh
 allocation or shadow casters. Scoped Bepu hooks manage per-bubble colliders, ground-contact
 filtering, origin snaps and pooled-simulation cleanup; Auto conservatively detects closed boxes
 and otherwise preserves mesh openings, with explicit box/mesh/off overrides and triangle budgets. Session placements; files persist. See the project READMEs
@@ -579,7 +585,8 @@ box detection, openings, degenerates, triangle budgets and 200 collider/render a
 ### [iron-man](iron-man) / [iron-man.lib](iron-man.lib)
 
 Opt-in existing EVA kitten vehicle editing and rocket flight. Keeps the `KittenEva` identity and
-avatar, adds private up/down or editable body nodes, preserves connector indices in saves/copies,
+avatar, adds private up/down or editable body nodes, preserves connector indices in saves/copies (KSA 5707: restored
+at the private `Part` constructor every load path uses, and re-created on editor `PartCloner` copies),
 uses ordinary vessel physics/input only after explicit per-kitten activation, and submits attached
 equipment at the correct render phase. Full-width EVA/Iron Man mode buttons separate native kitten
 behavior from rocket flight; editing remains available in both modes. Starts in EVA after save load. Body parts
@@ -596,7 +603,9 @@ the standalone host is development-only. See [usage](iron-man/README.md),
 
 Managed production connector/codec/Harmony-construction checks with real Brutal numerics: private
 node isolation, coordinate/scale validation, occupied-node guards, XML and connection-index round
-trips, malformed metadata, transactional unload and rollback. No native KSA initialization.
+trips, malformed metadata, transactional unload and rollback. The fixture models KSA 5707 constructor
+chaining (load, 4-argument and copy constructors reach one private constructor) with load and copy checks.
+No native KSA initialization.
 
 ### [iron-man-flight.tests](iron-man-flight.tests)
 
@@ -627,9 +636,26 @@ The previous integration baseline was KSA **2026.9.10.5438**, compared with **20
 - `graffiti.lib`: decals draw after final depth resolve; Vulkan index enum migration.
 - `pebbles.lib`, `sphinx.lib`, `thug-life.lib`: current Vulkan index enum bindings.
 
+## KSA 5707 upgrade
+
+The current integration baseline is KSA **2026.10.25.5707**, compared with **2026.10.19.5638**.
+[Upgrade evidence and native acceptance](plans/KSA_5707_UPGRADE.md) covers the full suite. Build and
+all 18 managed suites pass (including new real-KSA.dll metadata checks); in-game acceptance is pending.
+
+- `graffiti.lib`, `pebbles.lib`, `thug-life.lib`: `SimpleVkTexture.VkImageView` rename.
+- `iron-man.lib`: `Part.Connectors` is an array; anchor save/restore now patches the private `Part`
+  constructor every load path reaches (anchors were lost on load), and a copy-constructor postfix keeps
+  anchors on editor `PartCloner` copies (Copy Tree crashed).
+- `sphinx.lib`: skips static color draws when KSA's 10-set pipeline failed to build (low-end GPUs).
+- `pebbles.lib`: redirects the new depth-normal pre-pass (`ClutterMaterialBindings`) and keeps the stock
+  `UsesCustomNormals` foliage flag (optional recipe field).
+- `doh.lib`: spawn names already used by a rostered kitten are refused (radiation dose/KIA follow the name).
+- Documented, no code: kitten radiation deaths outside The Tick, step-limited warp, collider-based spawns,
+  Hot Pursuit clouds/VRAM, Pluto's tilt/lock, terrain height under statics and decals.
+
 ## KSA 5638 upgrade
 
-The current integration baseline is KSA **2026.10.19.5638**, compared with **2026.9.22.5482**.
+Previous baseline: KSA **2026.10.19.5638**, compared with **2026.9.22.5482**.
 [Upgrade evidence and native acceptance](plans/KSA_5638_UPGRADE.md) covers the full suite. Build and
 all 18 managed suites pass; in-game acceptance is pending.
 
@@ -686,4 +712,7 @@ views, per-canopy originals and re-enable behavior, external material changes; s
 alignment and fail-open cases; paint in cached static/dynamic state flags and single invalidation. Also links production capsule-glass filtering and shared IVA ownership for exact window isolation, late models, independent toggle orders, shadow-proxy preservation and unpatch cleanup.
 Managed Harmony fixtures avoid native game and GPU initialization; see [README](ksa-upgrade.tests/README.md).
 Additional startup regressions exercise the production patch-group report and LF/CRLF/mixed shader
-parsing, including malformed definitions and real game shader transforms.
+parsing, including malformed definitions and real game shader transforms. KSA 5707 adds metadata-only
+checks on the real KSA.dll (`Ksa5707Checks`, via the shared `KsaAssemblyProbe`): every `Part`
+constructor reaches the private seam Iron Man patches, Pebbles' material-binding list equals every stock
+binding method, and the static color pass skips null pipelines.

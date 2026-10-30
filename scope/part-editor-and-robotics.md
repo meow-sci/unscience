@@ -1,5 +1,58 @@
 # Part Editor & Robotics — Game Integration Scope
 
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified against `2026.10.25.5707` (NEW, revs 5639–5703) vs `2026.10.19.5638` (OLD) using both supplied
+decomp/Content trees and the changelog. Static/managed only: the whole solution builds with 0 warnings
+and 0 errors and every managed suite passes. No native KSA run was possible. No code change was needed
+in this area (Iron Man's 5707 constructor and copy fixes are in [iron-man.md](iron-man.md)).
+
+- **Don't Stifle Me targets are unchanged.** Each by-name target still has exactly one declaration,
+  the same parameter names and an identical body:
+  - `UpdateSelectedScale :4116` (call site `:3947`), `ScaleBoundsFor :4150`, `ForEachPartWithSymmetry :4159`,
+    `QuantizeScale :4179`, `UpdateScaleGizmo :3896`, `DrawParachuteSection :2021`,
+    `ForEachModuleWithSymmetry :1473`;
+  - consts `:853/:855` (still 0.5 / 2.0); fields `Selected :584`, `ScaleGizmo :606`,
+    `HighlightedGizmoSegmentIndex :612`, `GizmoGrabbed :614`, `CursorPositionScreen(LastFrame) :722/:724`;
+  - the `ScaleGizmo` constructor (`:1281`) is identical, so the segment → axis mapping holds.
+
+  `GenericGizmo`, `Parachute`, `ChuteTuning`, `ScaleFactors`, `PartTemplate`, `Camera` and `IViewport` are
+  byte-identical. `Part.RefreshScale :1778` / `RefreshScaleAndReposition :1798` changed only for the
+  `Connector[]` iteration; `PartTree.RefreshStaticMass :1142`; `Program.DrawProgramMenusHook :4271`
+  (called at `:4258`); `DrawTransformMenu :6925` still writes per-axis `part.Scale` (`:6555`).
+  `ScaleBoundsFor` still has two callers and `QuantizeScale` one.
+- **Symmetry is now ghost previews while held, with real copies built at drop (rev 5643).** This is a
+  semantic change that needs no code change.
+  - While a part is held, its symmetry copies are render-only `GhostTransform`s. They re-compose the
+    grabbed part's own tree at each transform (`VehicleEditor.cs:52-68,4335-4347`) and are not `Part`s.
+    `Part.GrabPreview` and the old preview copies are gone.
+  - On drop, `CreateRadialCopies` (`:4604`, called at `:4548`) builds the copies with
+    `PartCloner.BeginBatch(...).CloneInto` (`PartCloner.cs:30-37`). OLD used
+    `PartTree.Deserialize(GetReferenceWithChildren)` (OLD `:4701`).
+  - The new `Part(Part source, Part? parent)` constructor (`Part.cs:1556-1563`) copies the full 3-axis
+    `source.Scale`, so per-axis scales carry over to the copies. Module save data, such as a parachute's
+    diameter, is copied through `GetSaveData` / `ApplySaveData` as before.
+  - Clones join the tree through `PartTree.AdoptNewSubtree` (`PartTree.cs:1678`). `SymmetryLink` is still
+    assigned (`VehicleEditor.cs:4775,5002`), so a per-axis drag of a placed part still reaches its
+    siblings through the unchanged `ForEachPartWithSymmetry`.
+- **Bounds update on gizmo release (rev 5643).** The stock release handler, which the mod does not patch,
+  now calls `FullPart.UpdateBounds()` for every symmetry sub-part before the existing tank and derived-data
+  refresh (`:3636-3650`; absent in OLD `:3548-3570`). A rotation reset now does the same (`:3496-3499`).
+  Per-axis drags of sub-parts get the fix for free.
+- **`EditorSnapMath` (new file).** Grab seating (`SeatFaceSnap` / `SeatStack` / `SeatFromSurface`) takes a
+  `double3 Scale` and builds its matrix with `double4x4.CreateScale(scale)` (`EditorSnapMath.cs:16-18,32,42,118`),
+  so a non-uniform scale feeds the snap math. No mod patches it.
+- The other rev 5643 editor changes (staging, delta-V and fuel-flow recompute deferred until commit;
+  faster drop/detach) do not touch the scale path. Quick-checklist items 1–4 still hold
+  (`Universe.ExecuteNextVehicleSolvers :2149`, single overload).
+- **Live checks pending (native).**
+  - Drop a per-axis-scaled part under radial symmetry. Check the ghost shape, that the copies keep
+    their non-uniform scale, and that later per-axis drags propagate to them.
+  - Check face, stack and surface snap seating of a non-uniformly scaled part.
+  - Carried over: the 2–1000 m parachute slider on symmetry copies; picking a heavily non-uniformly
+    scaled part; Godzilla-scaled re-imported parts (collisions and hoses); capsule window alignment
+    (`CoreCommandAAssets.xml` is byte-identical in 5707).
+
 ## KSA 5638 (5482 → 5638) verification
 
 Verified against `2026.10.19.5638` (NEW) vs `2026.9.22.5482` (OLD) using both supplied decomp/Content

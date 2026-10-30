@@ -21,7 +21,7 @@ internal sealed partial class IronManEvaSettings
         {
             data.ControlPart = SavedPartReference.Capture(kitten, _controlPart);
             if (_controlConnector != null)
-                for (int i = 0; i < _controlPart.Connectors.Count; i++)
+                for (int i = 0; i < _controlPart.Connectors.Length; i++)
                     if (ReferenceEquals(_controlPart.Connectors[i], _controlConnector)) data.ConnectorIndex = i;
         }
         return data;
@@ -34,9 +34,9 @@ internal sealed partial class IronManEvaSettings
         if (data.ControlPart != null && (_controlPart == null || _controlPart.Tree != kitten.Parts))
             throw new InvalidOperationException("The saved EVA control part is unavailable; its original settings were retained for recovery.");
         if (data.ConnectorIndex < -1 || (data.ConnectorIndex >= 0
-            && (_controlPart == null || data.ConnectorIndex >= _controlPart.Connectors.Count)))
+            && (_controlPart == null || data.ConnectorIndex >= _controlPart.Connectors.Length)))
             throw new InvalidOperationException("The saved EVA control connector is unavailable; its original settings were retained for recovery.");
-        if (_controlPart != null && data.ConnectorIndex >= 0 && data.ConnectorIndex < _controlPart.Connectors.Count)
+        if (_controlPart != null && data.ConnectorIndex >= 0 && data.ConnectorIndex < _controlPart.Connectors.Length)
             _controlConnector = _controlPart.Connectors[data.ConnectorIndex];
         _controlMode = data.ControlMode;
     }

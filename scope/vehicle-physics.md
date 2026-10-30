@@ -1,5 +1,89 @@
 # Vehicle Manipulation / Physics Mods — Game Integration Scope
 
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Static/managed only: NEW `2026.10.25.5707` (revs 5639–5703) diffed from the 5638 baseline; whole
+solution builds with 0 warnings/errors and all managed suites pass. No native run. Line numbers are NEW.
+No compile break or Harmony anchor change in this area; findings are new semantic drift from
+radiation (revs 5669/5688/5694/5700), collider placement (5646) and the Part rework (5643).
+
+- **Handoff seams (PhysicsFrameHook).** `Program.PrepareFrame` (`Program.cs:2346`) is unchanged; the
+  seven seams remain unique and ordered at `:2369-2426`. `ApplyOrbit/ClothSolvers` and
+  `ExecuteNextCloth/Vehicle/OrbitSolvers` (`Universe.cs:2121-2149`) are identical. Two targets drift:
+  - `Universe.GetJobSimStep` (`Universe.cs:2636-2659`) clamps `NextTime`/`DeltaTime` to
+    `_stepLimitTime`, set by `LimitNextStep` (`:2661`) from the crew dose-threshold search. `PreviousTime`
+    is unchanged. The hook calls the original once and returns it unchanged
+    (`PhysicsFrameHook.cs:183,197`), and callbacks use only `dtPlayer`/`PreviousTime`, so the clamp
+    is preserved. No change needed. Speculative, low: a deferred world change runs before the step
+    and may see a stale limit; the `_stepLimitTime > nextTime` guard bounds it to one shorter step, as on native loads.
+  - `Universe.ApplyVehicleSolvers` (`:1935-1974`) now resets the limit, then runs
+    `ApplyRadiationDeaths` (`:2677`) → `Vehicle.KillLethallyDosedCrew` (`Vehicle.cs:3041-3081`) and
+    `SpaceWeatherAlerts.Update` (may stop warp). An EVA kitten can therefore be **disposed between
+    result application and the handoff**. Existing `IsDisposed` guards cover it
+    (`WeldEngine.cs:23`, `GarrysTorchSubmod.cs:79`, `LaunchRequest.cs:14-20`, `GodzillaSubmod.cs:133`,
+    DOH prune). Live check.
+- **`Vehicle.UpdatePerFrameData()` credits radiation dose** (`Vehicle.cs:2701-2714` →
+  `CreditCrewStats` `:3097-3186`): may call `QueueRadiationDeath`, `LimitNextStep`, `AutoWarpStop` +
+  `SetSimulationSpeed(1.0)` (`:3166-3167`) and raise alerts. Callers: Garry's Torch
+  (`WeldEngine.cs:122`), Dent Wizard (`LaunchRequest.cs:47`), DOH spawn (`KittenSpawner.cs:166`).
+  Dose time is `GetElapsedTime() - _lastDoseTime`; `ApplyVehicleSolvers` already updated every
+  vehicle at that time (`CelestialSystem.UpdatePerFrameData` → `UpdatePerFrameDataTree`), so these
+  extra calls get zero dose seconds and return early; a new kitten has no `_lastDoseTime`. Teleport
+  distance credited as travel is pre-existing (5650 now measures it against the ground inside the
+  atmosphere). No change needed.
+- **The Tick / Kitchen Sink.** `PhysicsBubble.cs` is byte-identical (`DetectKittenImpact :1057`,
+  `DetectStructuralFailure :1080`, one `GLoadFraction` getter, same `DestructionEvent` writers);
+  `StructuralLoad`, `PartFailure`, `PartStructuralLimits`, `FxDeformation`, `VehicleUpdateState` are
+  unchanged; `Part.CrashTolerancePascals` is at `Part.cs:866`. The only new `DestroyVehicle` caller
+  in the game is radiation death (`Vehicle.cs:3080`, `CrewDisposition.Kill`): a non-force path outside
+  the detector, so registered EVA kittens can die and a registered vessel's IVA crew are
+  killed/unseated (`:3048-3063`) while the vessel survives. Both stated contracts still hold; The Tick's
+  "not covered" list and README now name it. Radiation immunity would need a new
+  `KillLethallyDosedCrew` patch while the roster dose stays lethal; not proposed.
+- **Godzilla / Garry's Torch colliders (5646).** Landed spawn (`Vehicle.GetSituationState`,
+  `Vehicle.cs:1926`) and `VehicleLaunchMenu.cs:248` now use `PartTree.ComputeSpawnBoundingBoxAsmb`
+  (`PartTree.cs:1264-1287`), which reads `ColliderModule.PositionVehicleAsmb` (Godzilla's postfix
+  target) and collider shape bounds. Only template/launch trees use it, and their fresh modules are
+  never in Godzilla's registry. `Vehicle.UpdateCollisionGeometry` (`:2006`) is body-identical.
+  StrutA/B/C gained colliders (`Content/Core/CoreStructuralAGameData.xml`): fewer fallback-only vessels
+  for Godzilla mixed mode, and struts now take part in contacts and Garry's per-source shape
+  suppression. Live check.
+- **Part rework (5643) in this area.** `Part.Scale`/`PositionParentAsmb` setters still call
+  `ResetCachedPosMatrixValues` (`Part.cs:1263`); the old `_matrixAsmb` cache folded into
+  `MatrixAsmb2ParentAsmb`, with the same invalidation. `UpdateBounds` (`:1272`) and `RefreshScale`
+  (`:1778`) are equivalent. `SubParts` (`:1124`) is null-backed, and `SubtreeModules` can alias
+  `Modules` on leaf template sub-parts. `PartCloner` (copy ctor) is editor-only. No change needed.
+- **i-feel-seen.** `GetWorldMatrix` `:3815`, `IsLargeEnoughToRender` `:3826`, `UpdateRenderData`
+  `:3832` and `PartTree.UpdateRenderData` `:1308` bodies are identical. The new
+  `PartTree.ComposeRenderData` is editor-only (`VehicleEditor.cs:4345`).
+- **Eternal Flame (parts audit).** `ExecuteNextVehicleSolvers` is a single, identical overload
+  (`Universe.cs:2149`); `Vehicle.RefillConsumables` (`:3338`) and `PartTree.RefillConsumables`
+  (`PartTree.cs:1162`) are identical. `Mole.Refill` is identical, but `GetStoredMass` now handles gas
+  (volume × ρ(ContainerPressure)), so gas tanks refill to their `RatedPressure` mass (5701;
+  Ti-6Al-4V rating about 2× in 5703), the same as stock refill. `Battery`/`BatteryState` are
+  byte-identical; 5667 (Joules/Watts `Equals`) and 5674 (solar luminosity) are irrelevant. Live check:
+  a gas-filled tank and a fuel-line-only tank (5651).
+- **Kittens.** `KittenEva` (ctor; Boarded `:914`), `EVADoor`, `CharacterAvatar`, `CrewDisposition` and
+  `IVASeat` are byte-identical; `DestroyVehicle` (`Universe.cs:2040-2074`) is unchanged. 5671 is a sign flip in
+  `KittenRenderable.UpdateMmuBodyAnimationAsset` (`:721`); `_characterAvatar` (`:12`) and
+  `ModelToBodyMatrix` (`:106-109`) are unchanged. No mod drives warp, so the 5669/5694/5700
+  warp stops and step limits need no change.
+- **DOH (fixed, rev 5669).** EVA kittens bind to the same-named roster entry (`KittenRoster.Find`,
+  case-insensitive `KeyHash`) for dose, sickness, death (KIA) and retirement. A custom name matching
+  a rostered kitten would have shared that state. `doh.lib/Spawning/KittenSpawner.Naming.cs:30`
+  `IsOccupied` now also rejects rostered names (single exact names are refused, batch/automatic
+  numbering skips them; message `KittenSpawner.cs:122`). Unrostered DOH kittens get no dose. No save
+  change; `doh.tests` roster-naming checks.
+- **Verified unchanged:** `ConstraintSim`, Bepu `Bodies`/`BodyReference`, `JobSystems`, `SimStep`, `Orbit`,
+  `FlightPlan`, `Camera`, `IViewport`, `IParentBody`, `ColliderModule`, `KeyframeAnimationModule`,
+  `ModuleStateful`, `Program.RefreshVehiclesInFrame` (`:656`), every typed `Vehicle` getter used here,
+  `Vehicle.Teleport` (`:2302`), `UpdateAfterPartTreeModification` (`:1956`), Celestial terrain/CCF APIs
+  (Dent Wizard), `GameSettings.OnKeyAll` (`:3695`).
+- **Native checks pending:** registered kitten reaching 4 Sv (expected death); weld/Dent Wizard source
+  kitten killed by radiation mid-weld/shot; welds and shots during dose step limits or sickness warp
+  stops; strut vessels under Godzilla mixed mode and Garry's suppression; DOH roster-name refusal;
+  plus all earlier native acceptance items.
+
 ## KSA 5638 startup handoff compatibility follow-up
 
 Windows startup reported the same outer `TargetInvocationException` for saves, Dent Wizard and
@@ -886,8 +970,11 @@ registry (`TickProtection`, exact reference identity, concurrent) and two guarde
 | `Vehicle.IsDisposed`, inherited `Vehicle.Id`, `Vehicle.Parts` | liveness, labels, part count | `Vehicle.cs:676,663`; `Astronomical.cs:102` | Disposed targets lose protection immediately; prune each frame via `VehicleProvider.GetAllVehicles(includeDebris: true)`. |
 
 Not covered by design: anything that is not force-based destruction (explicit delete/recover,
-`Universe.DestroyVehicle` callers other than the structural event handler, kitten boarding).
-Every force-based kitten death @5638 goes through the detector above and is covered for registered
+`Universe.DestroyVehicle` callers other than the structural event handler, kitten boarding, and
+since 5707 radiation death: `Vehicle.KillLethallyDosedCrew` at ≥ 4 Sv acute destroys a registered
+EVA kitten with `DestroyVehicle(this, Kill)` and kills/unseats IVA crew of a registered vessel
+that itself survives; see [5707](#ksa-5707-verification-5638--5707-2026-10-29)).
+Every force-based kitten death @5638 and @5707 goes through the detector above and is covered for registered
 kittens; unregistered kittens keep native limits. Debris shed by other vehicles is a new `Vehicle`
 and is never protected.
 

@@ -200,9 +200,22 @@ the vehicle editor is open.
 
 ## KSA compatibility
 
-The current checkout compiles against KSA **2026.10.19.5638**; the full integration audit was run
-against it (diffed from 2026.9.22.5482; [upgrade report](../plans/KSA_5638_UPGRADE.md)). The build and
-all 18 managed suites pass; native acceptance is pending. User-visible changes in 5638:
+The current checkout compiles against KSA **2026.10.25.5707**; the full integration audit was run
+against it (diffed from 2026.10.19.5638; [upgrade report](../plans/KSA_5707_UPGRADE.md)). The build and
+all 18 managed suites pass; native acceptance is pending. User-visible changes in 5707:
+
+- **Iron Man** kittens with custom nodes load correctly again (on 5707 they lost their nodes, kept a
+  garbled name, or failed to load when a node was connected), and editor *Copy Tree* keeps the nodes.
+- **Sphinx** statics are skipped, like KSA's own statics, on GPUs that cannot build KSA's static-object
+  pipeline, instead of risking a crash.
+- **Pebbles** clutter feeds KSA's new ambient-occlusion pre-pass correctly and keeps the stock trees'
+  new foliage-lighting flag; older saved recipes inherit it.
+- **DOH** refuses a spawn name that belongs to a kitten in the roster, because KSA now gives an EVA
+  kitten that roster entry's radiation dose and can mark it killed.
+- KSA's new radiation can kill kittens that The Tick or Kitchen Sink protect: they guard against
+  impacts and G-loads only. Hot Pursuit feeds now show clouds and use noticeably more video memory.
+
+Earlier (5638) user-visible changes:
 
 - **Parts Now was removed.** Saves that contain its record still load; the record is kept and
   reported as an unsupported feature.

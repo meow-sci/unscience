@@ -1,5 +1,52 @@
 # Decals (graffiti) — Game Integration Scope
 
+## KSA 5707 verification (5638 → 5707, 2026-10-29)
+
+Verified against `2026.10.25.5707` (revs 5639–5703), diffed from `2026.10.19.5638`. This pass is
+static/managed only: the solution builds with 0 warnings. Line numbers are @5707. Native acceptance is
+pending.
+
+- 🔴 **Compile fix (rev 5652).** `SimpleVkTexture.Image/ImageView` were renamed to `VkImage/VkImageView`
+  (`RenderCore/SimpleVkTexture.cs:75,77`). `DecalTextures.cs:157` now calls
+  `bindless.AddTexture(image.VkImageView)`. `RenderImage` keeps `ImageView` (`KSA.Rendering/RenderImage.cs:50`),
+  so the depth and colour views in `DecalRenderer.cs:382,477` are unchanged. `IImageView`,
+  `IImageSubresourceRange` and `IDescriptorSet(Layout)Wrapper` moved to `Brutal.VulkanApi.Abstractions`.
+  `KSA.Rendering.Utils.BindDescriptorSet(…, IDescriptorSetWrapper)` was removed; graffiti never used it.
+- ✅ **HDR (rev 5645) leaves the decal target alone.** `Program.ColorFormat` is still
+  `R16G16B16A16SFloat` (`Program.cs:227`), and `_offscreenTarget` is built with it (`:1622`). HDR only
+  redirects the main composite to `HdrPresentPass`, which owns a separate `"HDR Scene"` target
+  (`HdrPresentPass.cs:282`), and swaps the UI/swapchain images (`Renderer.SwapchainFormat`, `HdrUiImage`).
+  With HDR on, decals are scene-linear like the hull, so they go through the GT7 HDR tonemap
+  (`PostProcess/composite.frag`). This is visual only.
+- ✅ **Seam and ordering are byte-identical.** The early-resolve → final-resolve → `GridPass` →
+  `RadiationBeltPass` region matches 5638 exactly (5638 `:5090-5135` = 5707 `:5206-5251`). Call sites:
+  non-main `:4871`, early colour-only `:5211`, final `:5239` → `GridPass.Run :5242` →
+  `RadiationBeltPass.Run :5246`, editor `:5371`. `RenderTarget.cs`, `GridPass.cs`, `GlobalShaderBindings.cs`
+  and the `RadiationBeltPass` barriers are unchanged.
+- ⚠ **Terrain depth now comes from the pre-pass (rev 5657/5678; needs a live check).**
+  - The terrain draw is now in `PrePassRenderer` (`:269-288` → `PlanetRenderer.RenderPrePass :2073`).
+    The colour pass redraws it with the depth-equal `_solidEqual`/`_solidTessEqual` pipelines (`:2125`).
+  - Ground clutter moved into the depth-normal pre-pass. The old main-path clutter depth pass on
+    `_offscreenTarget` (5638 `Program.cs:4974-4979`) is gone.
+  - `CopyDepthImageToSrc` (`:5095`) still puts that depth into the offscreen target before the final
+    resolve, so decals still project onto terrain and clutter.
+  - `Celestial.GetTerrainHeightFromDirCcf` (`:789-891`) was reworked in lockstep with the GPU erosion
+    (rev 5681): GradientScale-weighted gradient, `ErosionInverseRelief`, `SampleNormalMap` strength
+    dropped. The `if (accurate)` gate on `Evaluate` is preserved.
+  - Compute tessellation with material displacement is new (revs 5654-5656).
+  - These are new inputs for the standing #10 risk: CPU placement height against the rendered surface.
+- ✅ **Unchanged:** `BindlessTextureLibrary.AddTexture`/`FreeTexture` (`:182,208`; internal rename only);
+  `Common/{Camera,Global,TextureSet,Extensions}.glsl`; `Grid.frag`; `Cursor`; `Ray`; `Part.RayCastEgo`
+  (body identical); `Parachute` and the cloth system/topology; `TextureLoader`; `TextureAsset`.
+  `Part.MatrixAsmb2Ego` was refactored through `MatrixAsmb2ParentAsmb` with the same maths, and the
+  `GridFrag` id moved to `DefaultAssets.xml:397`. `DecalModifierReference` is the game's own terrain decal
+  and changed only a log line.
+- **Native acceptance pending:**
+  - terrain decals on flat and eroded ground, with compute and with hardware tessellation;
+  - a decal on grass;
+  - HDR on and off;
+  - every earlier item below.
+
 ## KSA 5638 (5482 → 5638) verification
 
 Verified 2026-10-22 against `2026.10.19.5638` (ksa-game-assemblies `edda844`; 5541 = `47703f3`). Static
@@ -57,7 +104,7 @@ enumerated with its decompiled-source path.
 
 **Verified game versions**
 
-- Current: `2026.10.19.5638` (top section; `~/repos/meow-sci/ksa-game-assemblies`, git `edda844`).
+- Current: `2026.10.25.5707` (top section). Previous: `2026.10.19.5638` (git `edda844`).
   Catalog baseline below:
 - NEW decomp `2026.9.22.5482` root: `~/repos/meow-sci/ksa-game-assemblies/current/decomp`
   (Content: `~/repos/meow-sci/ksa-game-assemblies/current/Content`)
@@ -163,7 +210,7 @@ or polling loop. These are mod-authored files, not game assets.
 | 5 | Direct API | `DecalRenderer.cs:161,409`; `DecalTextures.cs:156,164` | `BindlessTextureLibrary.{DescriptorSetLayout, DescriptorSet, AddTexture(VkImageView), FreeTexture(int)}` | `RenderCore.Systems/BindlessTextureLibrary.cs` | ✅ (byte-identical 5348→5482); ⚠ @5638 capacity clamp + optional `AddTexture` layout (rev 5546) | 1024 shared slots requested (clamped to device update-after-bind limits since 5546); UpdateAfterBind\|PartiallyBound makes live slot writes legal; FreeTexture rewrites the slot to the empty texture. Sampler slot 0 = linear-clamped full-mip (the shader's `SAMPLE_TEXTURE(texId, 0, uv)`) |
 | 6 | Direct API (runtime GLSL) | `DecalRenderer.cs`; `DecalShaders.cs` | `ShaderModuleUtils.FromString(...)`; `ModLibrary.Get<ShaderReference>("GridFrag").ModPath`; GLSL headers `Common/Camera.glsl`, `Common/TextureSet.glsl` | `RenderCore/ShaderModuleUtils.cs:65` @5638; `Content/Core/Shaders/Common/*`; `GridFrag` `DefaultAssets.xml:392` @5638 | ✅; @5638 `TextureSet.glsl` requires `SET_TEXTURE` (graffiti defines 2) | debugName must be a NUL-terminated real path next to the game's shaders (relative `#include` root). Shader reads `global.camera.{viewProjection, inverseProjection, inverseView}` and `global.lighting.{sunPosition, sunColor, planetColor}` — GLSL struct drift breaks at shaderc compile (loud console line, feature self-disables) |
 | 7 | Direct API (pipeline) | `DecalRenderer.cs` | `Presets.{InputAssembly.TriangleList, Rasterization.Fill.CullFront}`; `RenderingPresets.{ReverseZDepthStencil.NoDepthTest, BlendState.BlendColorAlphaOver}`; `Renderer.{Device, Allocator, Graphics, GraphicsAndCompute, MaxFramesInFlight, DynamicStateInfo, ViewportState}`; `VkUtils.StageAndUploadToBuffer` | `Brutal.VulkanApi.Abstractions/Presets.cs`; `KSA/RenderingPresets.cs`; `Core/Renderer.cs`; `RenderCore/VkUtils.cs` | ✅ | reverse-Z + CullFront semantics are load-bearing (see risk notes) |
-| 8 | Direct API (textures) | `DecalTextures.cs` | `TextureLoader.LoadFromMemory`; `TextureAsset(.LoadOptions)`; `new SimpleVkTexture(Allocator, StagingPool, TextureAsset, CreateOptions)`; `Stb/Ktx/GliTexture.Destroy()`; `CreateStagingPool` ext | `Brutal.TextureApi/TextureLoader.cs:130`; `RenderCore/TextureAsset.cs:35`; `RenderCore/SimpleVkTexture.cs:245`; `Brutal.VulkanApi.Abstractions/StagingPoolExtensions.cs` | ✅ | R8G8B8A8UNorm forces 4 channels; `ITexture` has no IDisposable — `Destroy()` must be called or the decode buffer leaks |
+| 8 | Direct API (textures) | `DecalTextures.cs` | `TextureLoader.LoadFromMemory`; `TextureAsset(.LoadOptions)`; `new SimpleVkTexture(Allocator, StagingPool, TextureAsset, CreateOptions)` (view = `.VkImageView` since 5707, was `.ImageView`); `Stb/Ktx/GliTexture.Destroy()`; `CreateStagingPool` ext | `Brutal.TextureApi/TextureLoader.cs:130`; `RenderCore/TextureAsset.cs:35`; `RenderCore/SimpleVkTexture.cs:245`; `Brutal.VulkanApi.Abstractions/StagingPoolExtensions.cs` | ✅ | R8G8B8A8UNorm forces 4 channels; `ITexture` has no IDisposable — `Destroy()` must be called or the decode buffer leaks |
 | 9 | Direct API (pick) | `DecalPicker.cs:53-56,82-103` | `Cursor.GetEgoRay(IViewport)` (**replaced `Cursor.InputRay` @5402**); `Part.RayCastEgo(ref readonly double4x4, Ray, out …×8, out Part?, out Part?)`; `Vehicle.{BoundingSphereRadiusBody, GetMatrixAsmb2Ego(Camera)}`; `Camera.{GetPositionEgo(IPosition), NearbyCelestial}` | `KSA/Cursor.cs:27` (byte-identical @5482); `KSA/Part.cs:2534` @5482; `KSA/Vehicle.cs:1270` @5482; `KSA/Camera.cs:231,71` | ✅ **fixed @5402** (compile break, `Cursor.InputRay`/`UpdateInputRay`/`ScreenPosition` removed); ⚠ semantic @5482 (compatible) | `GetEgoRay(viewport)` = `viewport.GetCamera().ScreenToEgoRay(Cursor.GetPosition(viewport))` — ego-space, built on demand from the viewport-local cursor position (`DesktopPosition - viewport.Position`) and the **current** camera, so it is same-frame (was one frame stale). Passed `Program.MainViewport` (main-viewport-only feature). RayCastEgo only hits SUB-parts — a top-level part with no sub-parts returns false (the loop never runs); acceptable: stock parts all have sub-parts. **@5482** `RayCastEgo` first rejects rays that miss a whole-part sphere (radius = `\|max corner of BoundingBoxPartAsmb\|` × largest `ScaleTotal` element) before the sub-part loop; signature unchanged, so picking of heavily non-uniformly scaled parts needs a live check. |
 | 9b | Direct API (kitten pick) | `DecalPicker.cs` (`TryPickKitten`) | `KittenEva` (type, `is` check); `new BoundingSphere3D(double3, double)`; `Ray.Raycast(BoundingSphere3D, out double, out bool)`; `Double3Ex.GetAbsoluteLargestElement(double3)`; `Part.{PositionEgo(ref readonly double4x4), ScaleTotal, MatrixAsmb2Ego}`; `PartTree.Root` | `KSA/KittenEva.cs:13`; `KSA/BoundingSphere3D.cs`; `KSA/Ray.cs:38`; `KSA/Double3Ex.cs:165`; `KSA/Part.cs:1155,802,1165`; `KSA/PartTree.cs:97` | ✅ (`Ray.cs`, `BoundingSphere3D.cs`, `Double3Ex.cs` byte-identical) | mirrors the game's own `KittenEva.UpdateHighlight(IGameViewport)` sphere pick (`KittenEva.cs:1102-1125`; @5402 it takes `Cursor.GetEgoRay(inViewport)` and reports via `inViewport.PartPicker.TryOffer`, the sphere math is unchanged) — kittens render through `CharacterAvatar`, not part view meshes, so `RayCastEgo` can never hit them |
 | 9c | Direct API (parachute pick + anchor) | `DecalPicker.Parachute.cs` (`TryPickParachute`); `DecalAnchors.cs` (`TryComposeParachute`); `GraffitiSubmod.cs` (`FindParachute`) | `PartTree.Modules.Get<Parachute>()`; `ModuleBase.InstanceId`; `Parachute.{ClothPositionsFront, AttachLocationPartAsmb, Parent, CanopyIndex}`; `ChuteClothSystem.Topology`; `ChuteClothTopology.{Rings, Spokes, ApexIndex, CanopyNodeCount, NodeIndex}`; `Ray.RaycastWatertight(double3,double3,double3,out double)`; `Part.MatrixAsmb2VehicleAsmb` | `KSA/Parachute.cs:172-210` @5482 (fields), `:1185-1226` @5482 (`DrawCanopy(ViewHandle, …)` / `BuildLocal2Ego`); `KSA/ChuteClothSystem.cs:84-98`; `KSA/ChuteClothTopology.cs`; `KSA/Ray.cs:141`; `KSA/ModuleBase.cs:27`; `KSA/Part.cs` | ✅ added @5402; ✅ @5482 (`DrawCanopy` gained a leading `ViewHandle`; graffiti does not call it, and the `BuildLocal2Ego` math it mirrors is unchanged) | Canopies bypass `Part.RayCastEgo`. The proxy triangles use the same current front cloth buffer and attachment-local→ego transform as canopy rendering. Re-resolution prefers the runtime module id and falls back to stable parent-part id + authored canopy index after reload; barycentric node weights follow inflation/flutter. The visible skinned GLB is bone-driven by these nodes rather than being the literal 240-triangle proxy, so projection depth absorbs small surface differences; requires a live placement check. |

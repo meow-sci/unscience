@@ -28,7 +28,7 @@ internal sealed class IronManConnectorData
     internal static string Capture(Part part)
     {
         var owned = IronManConnectors.GetOwned(part);
-        int stockCount = part.Connectors.Count - owned.Count;
+        int stockCount = part.Connectors.Length - owned.Count;
         // Connector references serialize by index. Preserve the stock prefix and owned suffix exactly.
         if (stockCount != part.Template.Connectors.Count ||
             part.Connectors.Take(stockCount).Any(IronManConnectors.IsOwned) ||

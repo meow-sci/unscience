@@ -50,9 +50,12 @@ that slot later is not pinned to a previous body.
 
 ## KSA secondary-renderer limitation
 
-Since 5541/5638 secondary viewports render terrain and an atmosphere-only pass, without clouds
-or rings. KSA's `Program.RenderViewport` path still does not run the `ParticleSystem`,
-`VolumetricExhaustRenderer`, ocean/cloud, part-glass or overall-bloom passes for secondary
+Since 5541/5638 secondary viewports render terrain and an atmosphere pass without rings.
+Since KSA 5707 they also render clouds, without cloud self-shadowing, ground cloud shadows or
+plume/explosion volumes. Clouds make large feeds expensive: each slot holds about 143 MB of cloud
+targets at the 2048×2048 maximum, so prefer smaller resolutions when running several feeds. KSA's
+`Program.RenderViewport` path still does not run the `ParticleSystem`,
+`VolumetricExhaustRenderer`, ocean, part-glass or overall-bloom passes for secondary
 viewports. Engine plumes and generic particles therefore do not appear in
 Hot Pursuit feeds. These are KSA-owned passes with main-camera/target/resource bindings,
 and Hot Pursuit does not inject them into secondary rendering; camera settings cannot
