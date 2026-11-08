@@ -88,17 +88,6 @@ public sealed partial class GraffitiSubmod : ISubmod
         _renderActive = live > 0 && !_gpuFailed && _renderer is { IsValid: true };
     }
 
-    public void Dispose()
-    {
-        _renderActive = false;
-        _decals.Clear();
-        _published = Array.Empty<DecalEntry>();
-        FreeGpu();
-        WaitIdle();
-        _textures.DisposeAll();
-        if (ReferenceEquals(Instance, this)) Instance = null;
-    }
-
     // ---- render hook (called from the Harmony postfix on the main thread) ----
 
     /// <summary>Records the decal pass for this frame. Self-disables on the first fault.</summary>
@@ -324,38 +313,6 @@ public sealed partial class GraffitiSubmod : ISubmod
             try { _renderer?.Dispose(); } catch { /* best-effort */ }
             _renderer = null;
             Console.WriteLine($"graffiti: decal renderer init failed (feature disabled): {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Frees the pipeline, mesh and descriptor ring. The render gate is cleared first so an
-    /// in-flight postfix bails before any handle goes away (and on the main thread it cannot even
-    /// overlap this), then the device is drained.
-    /// </summary>
-    private void FreeGpu()
-    {
-        if (_renderer is not { } renderer)
-            return;
-        _renderActive = false;
-        WaitIdle();
-        try { renderer.Dispose(); }
-        catch (Exception ex) { Console.WriteLine($"graffiti: renderer dispose failed: {ex.Message}"); }
-        _renderer = null;
-    }
-
-    /// <summary>
-    /// Drains the graphics queue — KSA has no deferred-destroy helper, so this is the only way to
-    /// know no recorded frame still references the pipeline or the images.
-    /// </summary>
-    private static void WaitIdle()
-    {
-        try
-        {
-            Program.GetRenderer()?.GraphicsAndCompute?.WaitIdle();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"graffiti: teardown wait failed: {ex.Message}");
         }
     }
 

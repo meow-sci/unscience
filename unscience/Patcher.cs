@@ -37,6 +37,7 @@ internal static class Patcher
     public static KeyframeSequencePlayer? CameraSequencePlayer { private get; set; }
     public static ClutterController? PebblesController { private get; set; }
     public static Action? MenuBarToggle { get; set; }
+    public static Action? BeforeGameDispose { get; set; }
 
     public static void Patch()
     {
@@ -55,6 +56,8 @@ internal static class Patcher
         // Each feature is applied in isolation: a single feature failing to patch (e.g. a
         // stale reflection/field target after a game update) logs and is skipped instead of
         // aborting every feature registered after it in the chain.
+        report.TryApply("pre-renderer shutdown", () => GameShutdownPatches.Apply(_harmony!,
+            BeforeGameDispose ?? throw new InvalidOperationException("Shutdown callback is missing.")));
         report.TryApply("hotkey-guard", () => HotkeyGuard.Patch(_harmony!));
         // Replays Mod.UpdateSubmods while the HUD is hidden (F2), since StarMap's
         // BeforeGui/AfterGui targets are skipped by the game in that state. Callbacks are
@@ -144,6 +147,7 @@ internal static class Patcher
                 TryRemove("free-fallin", () => FreeFallinPatches.Remove(_harmony!));
                 TryRemove("pebbles", () => PebblesController?.RemovePatches(_harmony!));
                 TryRemove("hot-pursuit", () => HotPursuitPatches.Remove(_harmony!));
+                TryRemove("pre-renderer shutdown", () => GameShutdownPatches.Remove(_harmony!));
             }
             VehiclePaint.Cleanup();
             EngineEmissive.Cleanup();
@@ -151,6 +155,7 @@ internal static class Patcher
             IFeelSeenTracker = null;
             CameraSequencePlayer = null;
             PebblesController = null;
+            BeforeGameDispose = null;
         }
         catch (Exception ex)
         {

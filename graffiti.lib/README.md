@@ -1,5 +1,14 @@
 # graffiti.lib
 
+## 5801 despawn / shutdown follow-up
+
+`GraffitiSubmod.Lifetime.cs` only waits on the graphics queue when the feature owns a pipeline or
+live/retired images. Unused and repeated Dispose never touches the renderer. Texture-only ownership
+still drains/releases correctly. Native-save reset uses the same path; persisted decal state is
+unchanged. Unscience calls cleanup before native Program.Dispose releases the device.
+
+See [evidence and native acceptance](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
+
 ## KSA 5801 compatibility
 
 The decal pipeline already derives its format from Program.ColorFormat, including the new R11G11B10 main target. Temporary VertexInput memory is now explicitly disposed for the Brutal ownership update. Descriptor order and save payloads are unchanged; native GLSL/HDR/terrain appearance remains pending.

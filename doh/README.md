@@ -1,61 +1,47 @@
 # DOH — Dynamically Originating Hominids
 
-> Distribution: only the `unscience` mod is shipped. This project is retained as a development
-> boundary; build artifacts stay in `bin/`. See [distribution](../README.md#distribution).
+DOH creates and manages EVA kittens. Choose a saved **War Paint** preset when spawning; create
+presets and edit any live kitten in the central **War Paint** panel. A selected preset keeps its
+colors until you reselect it; deleted presets appear as **saved colors**.
 
-Programmatic kitten spawning mod for KSA with per-kitten material customization.
-
-## Features
-
-- **Spawn kittens programmatically** near any vehicle with configurable body-frame offset
-- **Per-kitten material tinting** — each kitten can have a unique AlbedoColor tint via runtime GPU material creation
-- **Batch spawning** — spawn 1–20 kittens at once. A tinted batch shares one material set unless **Unique Each** is on
-- **Vehicle naming** — edit the name/prefix (default `Kitten_doh_`); single spawns use it exactly,
-  batches append numbers, and blank input keeps automatic `Kitten_doh_` numbering
-- **Character selection** — choose a specific character model or spawn random ones
-- **Live recoloring** — change a spawned kitten's tint color in real-time via the kitten list
-- **Despawn management** — remove individual kittens or despawn all at once
-- **F8 hotkey** to toggle the ImGui window
+Only the `unscience` mod is distributed. This project is a compile-checked development host.
 
 ## Usage
 
-1. Press **F8** to open the DOH window
-2. Select a reference vehicle from the **Vehicle** dropdown (with filter)
-3. Optionally select a specific **Character** (defaults to random), and edit **Vehicle name** /
-   **Name prefix**. A single spawn uses the text exactly; a batch appends a unique numeric suffix.
-   Leave it blank for automatic `Kitten_doh_` names. An occupied single name is refused, and so is
-   the name of a kitten in the Kitten Roster (case-insensitive); batch and automatic numbering skip
-   such names. Since KSA 5707 an EVA kitten shares radiation dose, sickness and death with the
-   roster kitten of the same name, so reusing that name could kill or ground the roster kitten.
-4. Adjust the **Offset** in the vehicle's body frame (X=right, Y=up, Z=forward)
-5. Set **Count** for batch spawning (1–20)
-6. Enable **Custom Color** and pick a tint with the color picker
-7. For batches, optionally enable **Unique Each** so each kitten gets its own material set
-8. Click **Spawn Kitten(s)**
+1. Open Unscience → **DOH - Clone Kittens** (standalone development host: **F8**).
+2. Select the reference vehicle and optionally a character model; the default character is random.
+3. Enter a vehicle name (one kitten) or name prefix (batch). Blank input uses automatic
+   `Kitten_doh_` numbering. Existing live or rostered kitten names are reserved, case-insensitively.
+4. Set the body-frame offset (right, up, forward), default **(1, 1, -2) m**, and count (1–20).
+5. Choose a saved **War Paint preset**, or **stock appearance**, then click **Spawn Kitten(s)**.
+6. Use individual **Despawn** or **Despawn All** to queue removal at the next physics handoff.
 
-The selection sticks to that vehicle even as other vehicles, debris or kittens come and go. If the
-selected vehicle is removed, the selection clears instead of jumping to another craft.
-The name field applies to both **Spawn Kitten(s)** and **I'm Feeling Lucky**. Unscience scene saves
-restore it with the other spawn controls; older saves and vanilla loads use the default prefix.
-Native KSA saves own the names of kittens already spawned.
+The selected reference vehicle remains stable when vehicles appear or disappear. Removing it
+clears the selection. Each painted kitten has private materials, including in batches. Pool budget
+checks refuse a painted batch that would consume the game's reserved GPU slots.
 
-The status line shows how many of the game's 512 GPU material slots are in use and how many more
-tinted sets fit. Each tinted set uses about 10 slots, and doh always leaves 64 free for the game.
-When the pool is too full, a tinted spawn is refused with a message. Despawn tinted kittens, turn
-off **Unique Each** or spawn fewer to make room. Despawned kittens return their slots.
+DOH contains no tint picker, random-color spawn button, material table or live recoloring controls.
+War Paint owns all kitten paint, including kittens created by native KSA and other mods.
 
-Spawned kittens appear in the list below with:
-- Inline color editor for live recoloring (when custom materials were applied)
-- Individual despawn button per kitten
-- **Despawn All** button to remove everything
+## Saves and compatibility
+
+Native KSA saves own the actual kittens and names. The unchanged **`doh` v1** sidecar record restores
+registry ownership and spawn controls without spawning duplicates. The preset selector includes a
+detached recipe so scenes remain spawnable if the global preset changes or disappears.
+
+Older v1 records retain `UseCustomColor`, `TintColor` and `UniquePerKitten` compatibility fields.
+An enabled old spawn tint becomes a deterministically named saved War Paint preset; its detached
+recipe survives even if saving the global preset fails. Old kitten `Tint` and named material colors
+migrate through War Paint's normal ownership API. Legacy shared `MaterialGroup` recipes become
+independent, identically painted kittens: editing one no longer recolors its former batch peers.
+New scene saves store active kitten paint in War Paint's own record.
+
+Explicit saved offsets survive. Fresh, vanilla and missing-offset records use **(1, 1, -2) m**.
+Queued despawns retain the exact registration, so a pending request cannot delete a same-name kitten
+reconstructed by a scene load. Native physics/GPU acceptance remains required; see
+[despawn evidence](../plans/DOH_DESPAWN_5801_FOLLOWUP.md) and [managed checks](../doh.tests/README.md).
 
 ## Architecture
 
-All spawning and material logic lives in `doh.lib` (headless library). This mod project only handles ImGui UI and StarMap lifecycle. The library API is reusable by other mods.
-
-## Dependencies
-
-- `doh.lib` — core spawning/material logic
-- `ksa-abstractions.lib` — VehicleProvider, HotkeyGuard, SubmodUI
-- StarMap.API, Lib.Harmony
-- KSA game DLLs (KSA, Brutal.Core.Numerics, Brutal.ImGui, etc.)
+`doh.lib` owns creation, native-safe despawn and spawned-kitten tracking; `war-paint.lib` owns paint,
+presets and GPU clones. This host supplies StarMap lifecycle and hotkey integration.

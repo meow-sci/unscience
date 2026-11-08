@@ -8,10 +8,24 @@ It breaks physics, moves things around, resizes things, makes noises, changes co
 
 I describe it as a *supermod* that includes a suite of *submods*, each one has a fun unique name tangentially related to what it does, usually from some kind of pop culture reference.
 
+The [5801 native-playtest follow-up](plans/DOH_DESPAWN_5801_FOLLOWUP.md) fixes DOH UI despawn timing
+and Unscience cleanup before native renderer disposal. Graffiti's unused/repeated cleanup touches
+no Vulkan state. DOH's default offset is now **(1, 1, -2) m**; explicit saved offsets are preserved.
+Native retesting of the reported crash remains pending.
+
+**War Paint** is the central kitten coloring submod. Select any live EVA kitten, apply a whole tint
+or saved preset, edit individual materials live, and Unset active paint to restore its original
+bindings. Named presets persist across scenes/restarts; DOH selects one when spawning. The old
+DOH/Humble color controls are removed and their legacy saved colors migrate.
+[Controls and ownership](war-paint.lib/README.md).
+
+Humble Arteest's immediate white vessels on part-paint Enable remain unresolved; this is separate
+from the working kitten coloring path. [Investigation](plans/HUMBLE_ARTEEST_5801_PAINT_INVESTIGATION.md).
+
 # game compatibility
 
 The current checkout targets **KSA 2026.11.10.5801**, upgraded from 2026.10.25.5707.
-The whole solution and all 18 managed suites pass; native game acceptance remains pending.
+The whole solution and all 19 managed suites pass; native game acceptance remains pending.
 This upgrade migrates the data-reference/key schema, preserves Iron Man anchors with legacy-save
 migration, fixes DOH material resolution and Vehicle Paint/native-highlight collisions, preserves
 Pebbles curvature/terrain blending, and updates Pyro for runtime SI atmospheres. Native pipeline

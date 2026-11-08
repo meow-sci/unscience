@@ -41,7 +41,6 @@ internal static partial class Program
         RetiredFeatureTests.Run();
         PartReferenceTests.Run();
         KittenPhaseTests.Run();
-        MaterialOwnershipTests.Run();
     }
 
     private static void Run(string name, Action test)

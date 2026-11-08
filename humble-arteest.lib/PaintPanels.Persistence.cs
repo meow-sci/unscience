@@ -10,20 +10,6 @@ public sealed partial class VehiclePaintSubmod
     }
 }
 
-public sealed partial class KittenColorSubmod
-{
-    internal void SynchronizeSavedState(bool active)
-    {
-        _active = active;
-        _materialEntries.Clear();
-        if (!active || !KittenColor.IsInitialized) return;
-        RebuildEntries();
-        var colors = KittenColor.CaptureColors();
-        foreach (var entry in _materialEntries)
-            if (colors.TryGetValue(entry.Name, out var color)) { entry.Color = color; entry.Enabled = true; }
-    }
-}
-
 public sealed partial class EngineEmissiveSubmod
 {
     internal void SynchronizeSavedState(bool active)

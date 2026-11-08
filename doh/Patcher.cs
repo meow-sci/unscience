@@ -14,7 +14,11 @@ internal static class Patcher
         try
         {
             _harmony?.PatchAll(typeof(Patcher).Assembly);
-            if (_harmony != null) HotkeyGuard.Patch(_harmony);
+            if (_harmony != null)
+            {
+                HotkeyGuard.Patch(_harmony);
+                PhysicsFrameHook.Apply(_harmony);
+            }
         }
         catch (Exception ex)
         {
@@ -26,7 +30,11 @@ internal static class Patcher
     {
         try
         {
-            if (_harmony != null) HotkeyGuard.Unpatch(_harmony);
+            if (_harmony != null)
+            {
+                HotkeyGuard.Unpatch(_harmony);
+                PhysicsFrameHook.Remove(_harmony);
+            }
             _harmony?.UnpatchAll("doh");
             _harmony = null;
         }

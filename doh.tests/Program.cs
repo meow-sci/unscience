@@ -6,7 +6,8 @@ using System.Text.Json.Nodes;
 using Brutal.Numerics;
 using KSA;
 using MeowSci.DohLib;
-using MeowSci.DohLib.Materials;
+using MeowSci.WarPaintLib;
+using MeowSci.WarPaintLib.Materials;
 using MeowSci.DohLib.Spawning;
 using MeowSci.KsaAbstractions.Persistence;
 
@@ -22,90 +23,18 @@ internal static partial class Checks
     {
         NamingChecks();
         SpawnNameSaveChecks();
+        PaintMigrationChecks();
+        PresetSnapshotChecks();
         var submod = new DohSubmod();
-        var coordinator = new SceneSaveCoordinator(submod.SaveParticipants);
-
-        // World A: kittens 1+2 share one batch set, 3 has its own set, 4 is untinted.
-        var world = Kittens(Ids);
-        SetWorld(world.Append(new Vehicle("Rocket")).ToArray());
-        var shared = submod.Factory.CreateSet(Red);
-        var unique = submod.Factory.CreateSet(Blue);
-        submod.Track(world[0], "Calico", shared);
-        submod.Track(world[1], "Calico", shared);
-        submod.Track(world[2], "Tabby", unique);
-        submod.Track(world[3], "Calico", null);
-        unique.Materials[0].Color = Green;
-        unique.Materials[0].ApplyColor();
-
-        var saved = RoundTrip(coordinator.Capture());
-        var kittens = SavedKittens(saved);
-        Require(kittens.Count == 4, "capture includes every live spawned kitten");
-        Require(kittens[0].MaterialGroup != null && kittens[0].MaterialGroup == kittens[1].MaterialGroup,
-            "a shared batch saves one material group");
-        Require(kittens[2].MaterialGroup != kittens[0].MaterialGroup, "a unique kitten saves its own group");
-        Require(kittens[3].MaterialGroup == null && kittens[3].Tint == null, "an untinted kitten saves no group");
-
-        // Same save again: reconstructed kittens rebind onto the detached sets, no new GPU slots.
-        submod.SelectedVehicle = world[0];
-        Load(coordinator, saved, Kittens(Ids));
-        Require(submod.SelectedVehicle == null, "reset clears the spawn target selection");
-        Require(submod.Spawner.Clones == 0 && MaterialSystemAccessor.Destroyed.Count == 0,
-            "same-save reload reuses every detached set and releases nothing");
-        Require(ReferenceEquals(Set(submod, 0), shared) && ReferenceEquals(Set(submod, 1), shared),
-            "the restored batch still shares one set");
-        Require(ReferenceEquals(Set(submod, 2), unique), "the unique kitten keeps its distinct set");
-        Require(Set(submod, 2)!.Materials[0].Color == Green, "per-material colors are restored");
-        Require(Set(submod, 3) == null && submod.Registry.Count == 4, "the untinted kitten is rebound without materials");
-
-        // Legacy payload without MaterialGroup: kittens must never be merged onto one set.
-        var legacy = StripGroups(saved);
-        Load(coordinator, legacy, Kittens(Ids));
-        var split = Set(submod, 1)!;
-        Require(ReferenceEquals(Set(submod, 0), shared) && !ReferenceEquals(split, shared),
-            "legacy kittens restore with their own sets, even if they shared one before");
-        Require(submod.Spawner.Clones == 1, "only the second formerly-shared kitten allocates a new set");
-
-        // A save with a missing kitten: its detached set and any set nothing rebinds are released.
-        Load(coordinator, saved, Kittens(Ids[0], Ids[1], Ids[3]));
-        Require(coordinator.Messages.Any(message => message.Contains("DOH kitten missing: Kitten_doh_3")),
-            "a missing kitten is reported");
-        Require(ReferenceEquals(Set(submod, 0), shared) && ReferenceEquals(Set(submod, 1), shared),
-            "the saved group re-merges the batch onto one set");
-        Require(unique.IsReleased && split.IsReleased && !shared.IsReleased,
-            "detached sets no kitten rebinds are released after restore");
-        Require(OwnedBy(unique).All(MaterialSystemAccessor.Destroyed.Contains)
-            && OwnedBy(split).All(MaterialSystemAccessor.Destroyed.Contains), "released sets free their GPU slots");
-        Require(submod.Factory.CreatedSets.Count == 1, "only the rebound set stays allocated");
-
-        // Vanilla load: the native load destroyed the kittens; their sets are freed on the next frame.
-        Load(coordinator, null, new Vehicle("Rocket"));
-        Require(submod.Registry.Count == 0 && !shared.IsReleased, "reset without restore keeps detached sets until the next frame");
-        submod.NextFrame();
-        Require(shared.IsReleased && submod.Factory.CreatedSets.Count == 0, "stale detached sets are released on the next frame");
-
-        // Released sets are never reused, even when the same save is loaded again.
-        int clonesBefore = submod.Spawner.Clones;
-        Load(coordinator, saved, Kittens(Ids));
-        Require(submod.Spawner.Clones == clonesBefore + 2, "a fresh world allocates one set per saved group");
-        Require(ReferenceEquals(Set(submod, 0), Set(submod, 1)) && !Set(submod, 0)!.IsReleased,
-            "a fresh world still shares the batch set");
-        Require(Set(submod, 2)!.Materials[0].Color == Green, "colors restore onto newly allocated sets");
-
-        // Release is idempotent.
-        var once = submod.Factory.CreateSet(Red);
-        submod.Factory.Release(once);
-        int destroyed = MaterialSystemAccessor.Destroyed.Count;
-        submod.Factory.Release(once);
-        Require(MaterialSystemAccessor.Destroyed.Count == destroyed, "releasing twice frees nothing twice");
-
-        // A blank group is malformed: rejected before reset and retained for a compatible build.
-        var bad = WithGroup(saved, " ");
-        Load(coordinator, bad, Kittens(Ids));
-        Require(coordinator.RetainedCount == 1 && submod.Registry.Count == 0, "a blank material group is rejected and retained");
-
         TeardownChecks(submod);
+        QueuedTeardownChecks(submod);
+        DefaultOffsetChecks();
 
-        Console.WriteLine($"PASS: {_checks} DOH naming, save/restore, teardown and material release checks.");
+        WarPaintService.Shared.Reset();
+        WarPaintService.Shared.Update();
+        if (System.IO.Directory.Exists(MeowSci.KsaAbstractions.KsaPaths.ModDataDir))
+            System.IO.Directory.Delete(MeowSci.KsaAbstractions.KsaPaths.ModDataDir, recursive: true);
+        Console.WriteLine($"PASS: {_checks} DOH naming, save/restore, migration and deferred teardown checks.");
     }
 
     /// <summary>The real KittenSpawner teardown routes every removal through Universe.DestroyVehicle.</summary>
@@ -115,29 +44,36 @@ internal static partial class Checks
         var boarded = new KittenEva("Kitten_doh_9");
         var rocket = new Vehicle("Kitten_doh_6"); // a non-kitten that merely shares a registered name
         SetWorld(batch.Cast<Vehicle>().Append(boarded).Append(rocket).ToArray());
-        var batchSet = submod.Factory.CreateSet(Red);
-        var boardedSet = submod.Factory.CreateSet(Blue);
+        var batchSet = submod.Paint(batch[0], Red);
+        var secondSet = submod.Paint(batch[1], Red);
+        var boardedSet = submod.Paint(boarded, Blue);
         submod.Track(batch[0], "Calico", batchSet);
-        submod.Track(batch[1], "Calico", batchSet);
+        submod.Track(batch[1], "Calico", secondSet);
         submod.Track(boarded, "Tabby", boardedSet);
         submod.Registry.Register(rocket.Id, "Calico", null);
         Program.ControlledVehicle = batch[0];
         Trace.Events.Clear();
 
+        NativeKittenPaintBackend.FailRestore = true;
+        Require(!submod.Spawner.Despawn(batch[0].Id) && !batch[0].IsDisposed && !batchSet.IsReleased
+            && submod.Registry.Get(batch[0].Id) != null && WarPaintService.Shared.TryGetPaint(batch[0], out _),
+            "failed original-binding restoration preserves paint ownership and prevents native destruction");
+        NativeKittenPaintBackend.FailRestore = false;
         Require(submod.Spawner.Despawn(batch[0].Id), "despawn succeeds");
-        Require(Trace.Events.SequenceEqual(new[] { "wait vehicle solver", "wait nearest orbit", "destroy Kitten_doh_7 Boarded",
+        Require(Trace.Events.SequenceEqual(new[] { "restore paint " + batchSet.Id, "release paint " + batchSet.Id, "wait vehicle solver", "wait nearest orbit", "destroy Kitten_doh_7 Boarded",
             "deregister Kitten_doh_7" }), "despawn joins the world readers, then uses DestroyVehicle without touching crew records: "
             + string.Join(", ", Trace.Events));
         Require(batch[0].IsDisposed && Program.ControlledVehicle == null && submod.Registry.Get(batch[0].Id) == null,
             "the game teardown releases control and doh drops the entry");
-        Require(!batchSet.IsReleased, "a set the rest of the batch still renders with is kept");
-        Require(submod.Spawner.Despawn(batch[1].Id) && batchSet.IsReleased, "the last kitten of a batch releases the shared set");
+        Require(batchSet.IsReleased && !secondSet.IsReleased, "despawn releases only that kitten's centrally owned paint");
+        Require(submod.Spawner.Despawn(batch[1].Id) && secondSet.IsReleased, "a second kitten releases its own independent set");
 
         Trace.Events.Clear();
         boarded.IsDisposed = true; // destroyed by the game, e.g. it boarded a vessel
-        Require(submod.Spawner.Despawn(boarded.Id) && Trace.Events.Count == 0 && boardedSet.IsReleased
+        Require(submod.Spawner.Despawn(boarded.Id) && Trace.Events.SequenceEqual(new[] { "release paint " + boardedSet.Id }) && boardedSet.IsReleased
             && submod.Registry.Get(boarded.Id) == null, "a kitten the game destroyed is not torn down twice, but its slots are freed");
 
+        Trace.Events.Clear();
         Require(submod.Spawner.Despawn(rocket.Id) && !rocket.IsDisposed && Trace.Events.Count == 0,
             "a non-kitten vehicle with a registered name is never destroyed");
 
@@ -155,7 +91,10 @@ internal static partial class Checks
 
     private static KittenEva[] Kittens(params string[] ids) => ids.Select(id => new KittenEva(id)).ToArray();
 
-    private static KittenMaterialSet? Set(DohSubmod submod, int index) => submod.Registry.Get(Ids[index])?.MaterialSet;
+    private static KittenMaterialSet? Set(DohSubmod submod, int index) =>
+        VehicleProviderKitten(Ids[index]) is { } kitten && WarPaintService.Shared.TryGetPaint(kitten, out var paint) ? paint.MaterialSet : null;
+
+    private static KittenEva? VehicleProviderKitten(string id) => MeowSci.KsaAbstractions.VehicleProvider.FindVehicle(id) as KittenEva;
 
     private static IEnumerable<string> OwnedBy(KittenMaterialSet set) => set.AssetNames;
 

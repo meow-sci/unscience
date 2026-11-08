@@ -1,4 +1,5 @@
 using Brutal.Numerics;
+using MeowSci.WarPaintLib;
 
 namespace MeowSci.DohLib.Spawning;
 
@@ -34,12 +35,14 @@ public sealed class SpawnRequest
     /// </summary>
     public string? ReferenceVehicleId { get; init; }
 
+    public static double3 DefaultOffsetBodyFrame => new(1, 1, -2);
+
     /// <summary>
     /// Offset in the reference vehicle's body frame (meters).
     /// X = right, Y = up, Z = forward.
-    /// Default: (0, 0, 10) = 10 meters ahead.
+    /// Default: (1, 1, -2) meters.
     /// </summary>
-    public double3 OffsetBodyFrame { get; init; } = new double3(0, 0, 10);
+    public double3 OffsetBodyFrame { get; init; } = DefaultOffsetBodyFrame;
 
     // ---- Positioning Mode 2: Absolute orbital state ----
 
@@ -67,7 +70,22 @@ public sealed class SpawnRequest
     /// </summary>
     public string? CharacterId { get; init; }
 
+    /// <summary>Saved War Paint preset name. Unknown names are rejected before spawning.</summary>
+    public string? PaintPresetName { get; init; }
+
+    private PaintSettings? _paintSettings;
     /// <summary>
+    /// Detached preset snapshot, preferred over resolving the name at execution time. Both assignment
+    /// and retrieval clone the recipe so deferred callers cannot mutate an already prepared request.
+    /// </summary>
+    public PaintSettings? PaintSettings
+    {
+        get => _paintSettings?.Clone();
+        init => _paintSettings = value?.Clone();
+    }
+
+    /// <summary>
+    /// Legacy API: forwarded to War Paint, with private materials for every kitten.
     /// Custom material tint color as RGBA float4.
     /// float4(1,1,1,1) = no tint.
     /// If null, no custom materials are created.
@@ -75,15 +93,24 @@ public sealed class SpawnRequest
     public float4? TintColor { get; init; }
 
     /// <summary>
-    /// When spawning multiple kittens (Count > 1), whether each gets unique materials.
-    /// If false (and no PerKittenColors), they share one custom material set, which uses one
-    /// set of GPU material slots instead of one per kitten.
+    /// Legacy compatibility flag. War Paint always gives every kitten private materials; this flag
+    /// remains accepted so older callers do not break, but no longer enables shared mutable sets.
     /// </summary>
     public bool UniqueMaterialsPerKitten { get; init; }
 
     /// <summary>
-    /// Per-kitten colors when UniqueMaterialsPerKitten is true.
+    /// Legacy per-kitten colors. Ignored when a War Paint preset or snapshot is supplied.
     /// If shorter than Count, remaining kittens use TintColor.
     /// </summary>
     public float4[]? PerKittenColors { get; init; }
+
+    /// <summary>New preset recipes take precedence over the legacy tint fields.</summary>
+    internal PaintSettings? GetPaintForKitten(PaintSettings? preset, int index)
+    {
+        if (preset != null) return preset.Clone();
+        if (PerKittenColors != null && index >= 0 && index < PerKittenColors.Length)
+            return new PaintSettings { Tint = PerKittenColors[index] };
+        return TintColor.HasValue || PerKittenColors != null
+            ? new PaintSettings { Tint = TintColor ?? float4.One } : null;
+    }
 }

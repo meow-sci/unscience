@@ -4,29 +4,26 @@ using MeowSci.KsaAbstractions;
 namespace MeowSci.HumbleArteestLib;
 
 /// <summary>
-/// Composite ISubmod that groups Vehicle Paint, Kitten Color, and Engine Emissive
+/// Composite ISubmod that groups Vehicle Paint, visor visibility, and Engine Emissive
 /// under a single "Humble Arteest" collapsing section in the Unscience Toolbox.
 /// </summary>
 public sealed partial class HumbleArteestSubmod : ISubmod, MeowSci.KsaAbstractions.Persistence.ISaveParticipantSource
 {
     public string Name => "Humble Arteest - Paint Stuff";
-    public string Tooltip => "Vehicle paint, Kitten color, and engine emissive paint brushes";
+    public string Tooltip => "Vehicle paint, kitten visor visibility, and engine emissive paint brushes";
 
     private readonly VehiclePaintSubmod _vehiclePaint = new();
-    private readonly KittenColorSubmod _kittenColor = new();
     private readonly EngineEmissiveSubmod _engineEmissive = new();
 
     public void Initialize()
     {
         _vehiclePaint.Initialize();
-        _kittenColor.Initialize();
         _engineEmissive.Initialize();
     }
 
     public void Update(double dt)
     {
         _vehiclePaint.Update(dt);
-        _kittenColor.Update(dt);
         _engineEmissive.Update(dt);
     }
 
@@ -44,11 +41,8 @@ public sealed partial class HumbleArteestSubmod : ISubmod, MeowSci.KsaAbstractio
 
         ImGui.Spacing();
         ImGui.Spacing();
-        ImGui.SeparatorText("Kitten Color");
-        ImGui.SetItemTooltip(KittenColorSubmod.HeaderTooltip);
-        ImGui.Spacing();
-        ImGui.Spacing();
-        _kittenColor.RenderBody();
+        ImGui.SeparatorText("Kitten Visors"u8);
+        RenderVisorControl();
 
         ImGui.Spacing();
         ImGui.Spacing();
@@ -71,7 +65,21 @@ public sealed partial class HumbleArteestSubmod : ISubmod, MeowSci.KsaAbstractio
     public void Dispose()
     {
         _vehiclePaint.Dispose();
-        _kittenColor.Dispose();
+        KittenVisorPatches.Hidden = false;
         _engineEmissive.Dispose();
+    }
+
+    private static void RenderVisorControl()
+    {
+        ImGui.BeginDisabled(!KittenVisorPatches.IsApplied);
+        if (ImGui.Button(KittenVisorPatches.Hidden ? "Show visor glass##ha_visor" : "Hide visor glass##ha_visor"))
+            KittenVisorPatches.Hidden = !KittenVisorPatches.Hidden;
+        ImGui.EndDisabled();
+        ImGui.SetItemTooltip("Controls visor glass on all kittens, including newly spawned kittens. Saved with the scene.");
+        ImGui.SameLine();
+        ImGui.TextDisabled(KittenVisorPatches.Hidden ? "Visors hidden" : "Visors shown");
+        if (!KittenVisorPatches.IsApplied)
+            ImGui.TextWrapped(KittenVisorPatches.LastError ?? "Visor toggle patch is not installed.");
+        ImGui.TextDisabled("Kitten colors and presets are in War Paint."u8);
     }
 }

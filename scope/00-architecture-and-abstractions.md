@@ -1,5 +1,28 @@
 # 00 — Unscience supermod shell + `ksa-abstractions.lib` game-integration scope
 
+## War Paint ownership boundary (5801)
+
+Unscience explicitly references `war-paint.lib` and registers `WarPaintSubmod`; the new development
+host/library are in the solution, with HotkeyGuard on the host. DOH and Humble Arteest reference this
+library for all kitten coloring/migration, without a dependency from War Paint back to those mods.
+The former DOH material helpers move to War Paint, retaining native clone/upload behavior.
+No new Harmony game seam is needed for painting. Existing pre-native-disposal cleanup reaches DOH
+spawns first, then War Paint's remaining native targets. New scene participant `war-paint` v1/order85
+replays after legacy DOH/Humble records; presets are separate global files.
+[Ownership and acceptance](../plans/WAR_PAINT_CONSOLIDATION.md).
+
+## 5801 native playtest: despawn and shutdown
+
+`unscience/GameShutdownPatches.cs` prefixes **instance `KSA.Program.Dispose():void`** with
+Priority.First. It consumes its callback once, joins `JobSystems.WaitAll()`, waits on the still-live
+`Program.GetRenderer().Device`, then calls existing `Mod.Unload` before native workers/ImGui/renderer
+ownership goes away. Patcher installs/removes the exact method patch and owns the callback. Unload
+sets its disposed guard before cleanup; late StarMap calls are inert. Native Program.Dispose still
+runs even when the prefix reports a managed error. Planet.Render.Core is a compile-only host reference.
+This is runtime lifecycle state, not saved scene state.
+
+[Evidence and native acceptance](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
+
 ## KSA 5707 → 5801 verification (2026-11-08)
 
 `ksa-abstractions.lib/GameDataReference.cs` constructs runtime `DataReference<T>` links with both

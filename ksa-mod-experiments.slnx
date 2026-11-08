@@ -39,6 +39,9 @@
     <Project Path="its-so-shiny.lib/its-so-shiny.lib.csproj" />
     <Project Path="eternal-flame/eternal-flame.csproj" />
     <Project Path="eternal-flame.lib/eternal-flame.lib.csproj" />
+    <Project Path="war-paint/war-paint.csproj" />
+    <Project Path="war-paint.lib/war-paint.lib.csproj" />
+    <Project Path="war-paint.tests/war-paint.tests.csproj" />
     <Project Path="humble-arteest/humble-arteest.csproj" />
     <Project Path="humble-arteest.lib/humble-arteest.lib.csproj" />
     <Project Path="doh/doh.csproj" />

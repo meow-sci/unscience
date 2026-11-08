@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using KSA;
-using MeowSci.DohLib.Materials;
+using MeowSci.WarPaintLib;
 using MeowSci.KsaAbstractions;
 
 namespace MeowSci.DohLib.Spawning;
@@ -9,7 +9,37 @@ namespace MeowSci.DohLib.Spawning;
 /// <summary>Despawn, prune and native destruction of doh-spawned kittens.</summary>
 public sealed partial class KittenSpawner
 {
-    /// <summary>Despawns a kitten by ID and releases its materials when no other kitten shares them.</summary>
+    /// <summary>Queues UI removal after pending physics results commit, before the next snapshot.</summary>
+    public bool RequestDespawn(string kittenId)
+    {
+        var entry = _registry.Get(kittenId);
+        if (entry == null) return false;
+        if (!PhysicsFrameHook.IsApplied)
+        {
+            Console.WriteLine("doh: Cannot queue despawn: physics handoff is unavailable.");
+            return false;
+        }
+        PhysicsFrameHook.Enqueue(() =>
+        {
+            // A load/reset or another request can replace this ID before the handoff. Never
+            // remove a newly restored kitten just because it has the same name.
+            if (ReferenceEquals(_registry.Get(kittenId), entry)) Despawn(kittenId);
+        });
+        return true;
+    }
+
+    public int RequestDespawnAll()
+    {
+        int queued = 0;
+        foreach (var id in _registry.KittenIds.ToArray())
+            if (RequestDespawn(id)) queued++;
+        return queued;
+    }
+
+    /// <summary>
+    /// Immediate teardown for the physics handoff or pre-renderer shutdown. UI callers must use
+    /// RequestDespawn: merely joining the worker does not commit its pending results.
+    /// </summary>
     public bool Despawn(string kittenId)
     {
         try
@@ -21,12 +51,15 @@ public sealed partial class KittenSpawner
             // never fall back to a non-kitten vehicle that merely shares the name.
             var kitten = entry.Vehicle as KittenEva ?? VehicleProvider.FindVehicle(kittenId) as KittenEva;
             if (kitten != null && !kitten.IsDisposed)
+            {
+                WarPaintService.Shared.Unset(kitten);
                 DestroyKitten(kitten);
+            }
 
             // Also reached when the game already destroyed the kitten, so the entry and its
             // GPU material slots are never stranded.
             _registry.Unregister(kittenId);
-            ReleaseIfUnused(entry.MaterialSet);
+            if (entry.Vehicle is KittenEva removed) WarPaintService.Shared.Unset(removed);
             Console.WriteLine($"doh: Despawned '{kittenId}'");
             return true;
         }
@@ -57,16 +90,10 @@ public sealed partial class KittenSpawner
         foreach (var entry in disposed)
         {
             _registry.Unregister(entry.KittenId);
-            ReleaseIfUnused(entry.MaterialSet);
+            if (entry.Vehicle is KittenEva removed) WarPaintService.Shared.Unset(removed);
         }
         Console.WriteLine($"doh: Pruned {disposed.Count} kitten(s) the game already removed");
         return disposed.Count;
-    }
-
-    private void ReleaseIfUnused(KittenMaterialSet? set)
-    {
-        if (set != null && !_registry.IsMaterialSetInUse(set))
-            _materialFactory.Release(set);
     }
 
     /// <summary>

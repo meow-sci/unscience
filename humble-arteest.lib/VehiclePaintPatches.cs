@@ -61,6 +61,16 @@ public static class VehiclePaintPatches
         Console.WriteLine($"humble-arteest: VehiclePaint patches applied ({_recordCount}/{RequiredPatchCount})");
     }
 
+    public static void LogDiagnostics()
+    {
+        for (int i = 0; i < _recordCount; i++)
+        {
+            var info = Harmony.GetPatchInfo(Records[i].Original);
+            Console.WriteLine($"humble-arteest: paint hook {Records[i].Label}, owners="
+                + (info == null ? "none" : string.Join(",", info.Owners)));
+        }
+    }
+
     public static void Remove(Harmony harmony)
     {
         for (int i = 0; i < _recordCount; i++)

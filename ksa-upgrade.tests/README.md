@@ -1,5 +1,23 @@
 # KSA 5438/5482/5638/5707/5801 managed upgrade checks
 
+## Immediate white part-paint investigation
+
+`PaintCompilationChecks` exercises the production Harmony compiler prefix with non-null source:
+exact bytes/options/path, stage/result, successful count, disabled native path and original-file
+fallback after a compile exception. `Ksa5801Checks` requires untouched stock diagnostic source.
+These fixtures run no native shader compiler. Separately, the investigation compiled 64 real
+stock/painted GLSL binaries and compared their SPIR-V interfaces; native white glow is unresolved.
+See [evidence and diagnostic A/B](../plans/HUMBLE_ARTEEST_5801_PAINT_INVESTIGATION.md).
+
+## 5801 despawn / shutdown follow-up
+
+`ShutdownChecks` links production GameShutdownPatches and GraffitiSubmod.Lifetime. Actual Harmony
+patches a native-independent Program.Dispose mirror, checked against CURRENT KSA.dll metadata. It
+checks worker/device waits, feature release before native disposal, self-removal, callback failures,
+late cleanup, unused Graffiti and image ownership without a pipeline. Vulkan itself is not executed.
+
+See [evidence and native acceptance](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
+
 ## KSA 5801 compatibility
 
 Ksa5707Checks now verifies the CURRENT 11-argument constructor chain. Ksa5801Checks checks the real DLL reflection watchlist, native yellow/purple flags, material field layout and production paint transforms against both CURRENT shaders (all blend modes, LF/CRLF). DataReferenceChecks links the actual graph/resolver helper; paint checks preserve every native low flag. These checks do not run native KSA, shaderc or Vulkan.
@@ -75,7 +93,8 @@ covers:
 
 `VehiclePaintChecks` links production `VehiclePaint` and `VehiclePaintPatches`. `VehiclePaintFixture.cs`
 provides compile-only shader stubs: `ShaderModuleUtils`, `CompileOptions`, `Device` and a
-`VehiclePaintShaders` stand-in whose `TryGetPatchedSource` returns null. No shader is compiled. The
+`VehiclePaintShaders` stand-in. State checks return no source; compilation-prefix checks provide
+byte arrays and inspect forwarding/fallback. No native shader is compiled. The
 checks cover:
 
 - all four seams attach, including the private nested-batch writers bound as `object`;

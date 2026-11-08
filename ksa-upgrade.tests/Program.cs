@@ -1,12 +1,14 @@
 using System;
 
 PatchApplicationChecks.Run();
+ShutdownChecks.Run();
 PropellantFeedChecks.Run();
 FreeFallinChecks.Run();
 FreeFallinShaderChecks.Run();
 CapsuleGlassChecks.Run();
 RenderFilterChecks.Run();
 VehiclePaintChecks.Run();
+PaintCompilationChecks.Run();
 Ksa5707Checks.Run();
 Ksa5801Checks.Run();
 DataReferenceChecks.Run();

@@ -70,6 +70,8 @@ internal static class Ksa5801Checks
         foreach (string name in new[] { "MeshIndirect.frag", "MeshIndirectRaytraced.frag" })
         {
             string source = File.ReadAllText(Path.Combine(content, "Core", "Shaders", "Mesh", name));
+            Require(VehiclePaintShaderSource.Prepare(source, true, out var stockError) == source && stockError == null,
+                "stock diagnostic keeps shader text byte-for-byte unchanged");
             foreach (PaintBlendMode mode in Enum.GetValues<PaintBlendMode>())
             {
                 VehiclePaint.BlendMode = mode;

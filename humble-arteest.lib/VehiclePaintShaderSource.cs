@@ -6,6 +6,14 @@ namespace MeowSci.HumbleArteestLib;
 /// <summary>Pure GLSL transform, shared by runtime compilation and managed live-source checks.</summary>
 internal static class VehiclePaintShaderSource
 {
+    // Diagnostic-only: exercise the same intercepted compiler path without changing shader text.
+    internal static string? Prepare(string source, bool stockSource, out string? error)
+    {
+        if (!stockSource) return Inject(source, out error);
+        error = null;
+        return source;
+    }
+
     internal static string? Inject(string source, out string? error)
     {
         error = null;

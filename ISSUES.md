@@ -1,5 +1,17 @@
 ## Current triage — KSA 2026.11.10.5801
 
+**Humble Arteest part painting:** Whole vessels glow bright white immediately on Enable, before
+applying a color. Still unresolved. Three source audits plus 64 actual shader compilations found
+no exterior cause; native stock-source A/B and loaded-assembly/patch diagnostics are available.
+Kitten coloring is reported working and moves separately to War Paint.
+[Investigation and native steps](plans/HUMBLE_ARTEEST_5801_PAINT_INVESTIGATION.md).
+
+**Native playtest follow-up:** Eight below-ground tinted kittens despawned, then late Graffiti cleanup
+crashed in Vulkan Queue.WaitIdle after the pipeline-cache/shutdown log. Fixed unsafe UI despawn timing,
+pre-native-dispose Unscience cleanup and unused/repeated Graffiti waits. The original reason shutdown
+began is absent from the supplied log. DOH defaults changed to (1, 1, -2) m as requested.
+Managed checks pass; native reproduction/exit checks remain open. [Evidence](plans/DOH_DESPAWN_5801_FOLLOWUP.md).
+
 Code upgrade and managed validation: [5801 review](plans/KSA_5801_UPGRADE.md). All earlier native
 acceptance items remain open; no native game run was possible on this host.
 

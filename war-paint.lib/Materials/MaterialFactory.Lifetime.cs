@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 
-namespace MeowSci.DohLib.Materials;
+namespace MeowSci.WarPaintLib.Materials;
 
 /// <summary>
 /// Naming and release of doh-owned GPU materials. The game's material pool is fixed-size
@@ -24,13 +24,14 @@ public sealed partial class MaterialFactory
         int freed = 0;
         foreach (string name in set.AssetNames)
         {
-            if (MaterialSystemAccessor.DestroyMaterial(name))
+            if (set.AssetIdentities.TryGetValue(name, out var identity)
+                && MaterialSystemAccessor.DestroyMaterial(name, identity))
                 freed++;
         }
 
         set.IsReleased = true;
         _createdSets.Remove(set);
-        Console.WriteLine($"doh: Released material set '{set.Id}' ({freed}/{set.AssetNames.Count} GPU slots freed)");
+        Console.WriteLine($"war-paint: Released material set '{set.Id}' ({freed}/{set.AssetNames.Count} GPU slots freed)");
     }
 
     /// <summary>Releases every material set this factory created. Call on unload.</summary>
@@ -50,7 +51,7 @@ public sealed partial class MaterialFactory
         string prefix;
         do
         {
-            prefix = $"doh_{_nextMaterialId++:D4}";
+            prefix = $"war_paint_{_nextMaterialId++:D4}";
         } while (MaterialSystemAccessor.GetExistingMaterialHandle($"{prefix}_m0") >= 0
             || MaterialSystemAccessor.GetExistingMaterialHandle(FurAssetName(prefix)) >= 0);
         return prefix;

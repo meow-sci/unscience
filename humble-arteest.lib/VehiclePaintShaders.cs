@@ -48,6 +48,8 @@ public static class VehiclePaintShaders
     /// <summary>Diagnostic: number of times a patched source was handed to the compiler.</summary>
     public static int CompileCount { get; private set; }
 
+    private static bool _stockSourceDiagnostic;
+
     // ---- Lifecycle ----
 
     /// <summary>
@@ -60,6 +62,13 @@ public static class VehiclePaintShaders
 
         LastError = null;
         SourceCache.Clear();
+        _stockSourceDiagnostic = string.Equals(Environment.GetEnvironmentVariable("UNSCIENCE_PAINT_SHADER_MODE"),
+            "stock", StringComparison.OrdinalIgnoreCase);
+        Console.WriteLine($"humble-arteest: paint activation mvid={typeof(VehiclePaint).Module.ModuleVersionId} "
+            + $"assembly='{typeof(VehiclePaint).Assembly.Location}' source={(_stockSourceDiagnostic ? "STOCK DIAGNOSTIC" : "paint")} "
+            + $"blend={VehiclePaint.BlendMode} shift={VehiclePaint.PaintBitShift} channels={VehiclePaint.ChannelBits} "
+                + $"global={VehiclePaint.GlobalEnabled} parts={VehiclePaint.PaintedPartCount} templates={VehiclePaint.PaintedTemplates.Count}");
+        VehiclePaintPatches.LogDiagnostics();
 
         // The raster shader is required; the raytraced one is optional (it only matters in IVA with
         // raytracing on), so a failure there is logged but does not block painting.
@@ -135,6 +144,8 @@ public static class VehiclePaintShaders
         if (patched == null) return null;
 
         SourceCache[filePath] = patched;
+        Console.WriteLine($"humble-arteest: paint compile source '{filePath}', {patched.Length} bytes, "
+            + (_stockSourceDiagnostic ? "untouched stock through FromString" : $"injected {VehiclePaint.BlendMode}"));
         return patched;
     }
 
@@ -157,7 +168,7 @@ public static class VehiclePaintShaders
         try
         {
             var source = File.ReadAllText(filePath);
-            var patched = VehiclePaintShaderSource.Inject(source, out var error);
+            var patched = VehiclePaintShaderSource.Prepare(source, _stockSourceDiagnostic, out var error);
             if (patched == null)
             {
                 LastError = $"{Path.GetFileName(filePath)}: {error}";

@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Brutal.Numerics;
 using KSA;
-using MeowSci.DohLib.Materials;
+using MeowSci.WarPaintLib;
+using MeowSci.WarPaintLib.Materials;
 using MeowSci.KsaAbstractions;
 
 namespace MeowSci.DohLib.Spawning;
@@ -27,14 +28,12 @@ public sealed partial class KittenSpawner
     /// </summary>
     private const int MinFreeSlotsForKitten = 2;
 
-    private readonly MaterialFactory _materialFactory;
     private readonly SpawnedKittenRegistry _registry;
 
-    public KittenSpawner(MaterialFactory materialFactory, SpawnedKittenRegistry registry)
-    {
-        _materialFactory = materialFactory;
-        _registry = registry;
-    }
+    public KittenSpawner(SpawnedKittenRegistry registry) => _registry = registry;
+
+    /// <summary>Compatibility constructor. Material ownership now belongs to War Paint.</summary>
+    public KittenSpawner(MaterialFactory materialFactory, SpawnedKittenRegistry registry) : this(registry) { }
 
     /// <summary>Spawns kitten(s) according to the request parameters.</summary>
     public SpawnResult Spawn(SpawnRequest request)
@@ -54,8 +53,7 @@ public sealed partial class KittenSpawner
     public bool RecolorKitten(string kittenId, float4 newColor)
     {
         var entry = _registry.Get(kittenId);
-        if (entry?.MaterialSet == null) return false;
-        return entry.MaterialSet.UpdateTint(newColor);
+        return entry?.Vehicle is KittenEva kitten && WarPaintService.Shared.UpdateTint(kitten, newColor);
     }
 
     /// <summary>Lists all available character IDs from ModLibrary.</summary>
@@ -99,15 +97,20 @@ public sealed partial class KittenSpawner
         if (string.IsNullOrEmpty(characterId))
             return SpawnResult.Failure("No character available.");
 
-        bool tinted = request.TintColor.HasValue || request.PerKittenColors != null;
-        bool uniqueSets = request.UniqueMaterialsPerKitten || request.PerKittenColors != null;
-        string? budgetError = CheckMaterialBudget(tinted ? (uniqueSets ? request.Count : 1) : 0);
+        PaintSettings? paint = request.PaintSettings;
+        if (paint == null && request.PaintPresetName != null)
+        {
+            if (!WarPaintService.Shared.Presets.TryGet(request.PaintPresetName, out paint))
+                return SpawnResult.Failure($"War Paint preset unavailable: {request.PaintPresetName}.");
+        }
+        paint?.Validate();
+        bool tinted = paint != null || request.TintColor.HasValue || request.PerKittenColors != null;
+        string? budgetError = CheckMaterialBudget(tinted ? request.Count : 0);
         if (budgetError != null)
             return SpawnResult.Failure(budgetError);
 
         // Spawn loop
         var results = new List<SpawnedKittenInfo>();
-        KittenMaterialSet? sharedSet = null;
         int untinted = 0;
 
         for (int i = 0; i < request.Count; i++)
@@ -165,19 +168,13 @@ public sealed partial class KittenSpawner
             pos.Parent!.Children.Add(kittenEva);
             kittenEva.UpdatePerFrameData();
 
-            // Apply custom materials — clone every material this kitten uses, or share the
-            // batch's set when unique materials were not requested.
+            // All coloring goes through War Paint's ownership API. Even a batch uses an
+            // independent private material set for each kitten.
             KittenMaterialSet? matSet = null;
             if (tinted)
             {
-                float4 color = float4.One;
-                if (request.PerKittenColors != null && i < request.PerKittenColors.Length)
-                    color = request.PerKittenColors[i];
-                else if (request.TintColor.HasValue)
-                    color = request.TintColor.Value;
-
-                matSet = ApplyClonedMaterials(kittenEva, color, characterId, uniqueSets ? null : sharedSet);
-                if (!uniqueSets) sharedSet ??= matSet;
+                var kittenPaint = request.GetPaintForKitten(paint, i)!;
+                matSet = WarPaintService.Shared.Apply(kittenEva, kittenPaint)?.MaterialSet;
                 if (matSet == null) untinted++;
             }
 
@@ -189,7 +186,7 @@ public sealed partial class KittenSpawner
                 KittenId = kittenName,
                 CharacterId = characterId,
                 MaterialSetId = matSet?.Id,
-                TintColor = request.TintColor,
+                TintColor = matSet?.TintColor,
                 PositionCci = kittenPosCci,
                 VelocityCci = kittenVelCci,
                 ParentBodyName = pos.Parent!.Id
@@ -202,7 +199,7 @@ public sealed partial class KittenSpawner
             Success = true,
             SpawnedKittens = results.ToArray(),
             Warning = untinted > 0
-                ? $"{untinted} kitten(s) could not be tinted: {MaterialSystemAccessor.LastError ?? "material cloning failed"}"
+                ? $"{untinted} kitten(s) could not be tinted: {WarPaintService.Shared.LastError ?? "material cloning failed"}"
                 : null
         };
     }
@@ -221,8 +218,7 @@ public sealed partial class KittenSpawner
         if (available < 0 || available >= needed) return null;
 
         return $"Not enough GPU material slots: ~{needed} needed for {setsNeeded} tinted set(s), {available} available " +
-            $"({MaterialSystemAccessor.ReservedSlots} kept for the game). Despawn tinted kittens, turn off " +
-            "'Unique Each', or spawn fewer.";
+            $"({MaterialSystemAccessor.ReservedSlots} kept for the game). Despawn painted kittens or spawn fewer.";
     }
 
     private static SpawnResult Stopped(List<SpawnedKittenInfo> spawned, int requested, string reason)

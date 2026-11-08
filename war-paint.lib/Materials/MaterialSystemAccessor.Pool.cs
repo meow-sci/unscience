@@ -6,7 +6,7 @@ using Core;
 using KSA;
 using MeowSci.KsaAbstractions.Persistence;
 
-namespace MeowSci.DohLib.Materials;
+namespace MeowSci.WarPaintLib.Materials;
 
 /// <summary>
 /// GPU material pool accounting and release.
@@ -84,7 +84,18 @@ public static partial class MaterialSystemAccessor
     /// Removes a doh-created material from the AssetMap and returns its slot to the pool.
     /// Only call for materials doh created and that no live renderable still references.
     /// </summary>
-    public static bool DestroyMaterial(string assetName)
+    public static object? GetMaterialIdentity(string assetName)
+    {
+        if (_assetMap == null) return null;
+        var key = (AssetName)assetName;
+        return _assetMap.Contains(key) && _assetMap[key] is GpuObjectAssetRef { IsValid: true } asset ? asset : null;
+    }
+
+    /// <summary>Checks the asset object, not just its reusable integer slot or name.</summary>
+    public static bool OwnsMaterial(string assetName, object expectedIdentity) =>
+        ReferenceEquals(GetMaterialIdentity(assetName), expectedIdentity);
+
+    public static bool DestroyMaterial(string assetName, object expectedIdentity)
     {
         if (_assetMap == null) return false;
 
@@ -92,6 +103,7 @@ public static partial class MaterialSystemAccessor
         {
             var key = (AssetName)assetName;
             if (!_assetMap.Contains(key)) return false;
+            if (!ReferenceEquals(_assetMap[key], expectedIdentity)) return false;
 
             var asset = _assetMap[key] as GpuObjectAssetRef;
             // Unmap first so nothing can resolve the name to a slot that is about to be reused.
@@ -105,7 +117,7 @@ public static partial class MaterialSystemAccessor
         catch (Exception ex)
         {
             _lastError = $"DestroyMaterial error for '{assetName}': {ex.Message}";
-            Console.WriteLine($"doh: {_lastError}");
+            Console.WriteLine($"war-paint: {_lastError}");
             return false;
         }
     }

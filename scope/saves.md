@@ -1,5 +1,37 @@
 # Save/load lifecycle integration
 
+## War Paint scene ownership and legacy migration
+
+New `war-paint` v1/order85 captures active per-kitten tint/material recipes by exact vehicle ID plus
+character identity. Reset restores original bindings synchronously and detaches only owned material
+sets; replay reuses exact surviving native assets or allocates new private sets. Unused detached sets
+retire after reconstruction. Native kittens/vehicles remain KSA-owned. Missing/ambiguous/incompatible
+identities warn and retain the incoming record through the existing coordinator.
+
+DOH v1/order60 and Humble Arteest v1/order80 remain compatible. DOH keeps native registrations and
+spawn selector/recipe; old Tint/Materials/MaterialGroup recipes migrate to independent War Paint
+ownership with equivalent colors. Enabled legacy spawn tint becomes a named reusable preset.
+Humble MaterialColors remains readable and maps source assets to explicit live kittens, producing
+isolated paints; unmatched assets warn. The explicit War Paint record replays last and wins on a
+shared target. New captures keep active recipes solely in War Paint.
+
+Named presets are global `.unscience/war-paint-presets.json` data, atomically replaced and detached
+from active targets; corrupt/future files are preserved. Changing/deleting presets does not retarget or
+alter scene paints. UI filters, target selection and unapplied brush state are transient. DOH saves
+its selected name plus detached spawn recipe so changes to the global library do not alter restored
+spawn setup. [Checks and native acceptance](../plans/WAR_PAINT_CONSOLIDATION.md).
+
+## 5801 native playtest: despawn and shutdown
+
+DOH queued despawns are transient requests. Their exact-registry-entry checks make old closures
+inert after native/sidecar reset/rebind, even for the same vehicle ID; hook removal clears the shared
+queue. A pre-dispatch save still contains the kitten, a post-dispatch save omits it. Spawn API/UI and
+reset/missing-Offset defaults are now (1, 1, -2) m; explicit saved offsets restore unchanged. No record
+IDs/versions change. Graffiti native-save reset uses the ownership-aware GPU cleanup also used by
+shutdown, with unchanged decal capture/replay. Shutdown hook/device guards are runtime-only.
+
+[Evidence and native acceptance](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
+
 ## KSA 5707 → 5801 verification (2026-11-08)
 
 Iron Man's v1 native anchor payload moves from removed `PartInstance.Id` to

@@ -2,13 +2,15 @@ using System.Collections.Generic;
 using System.Linq;
 using Brutal.Numerics;
 
-namespace MeowSci.DohLib.Materials;
+namespace MeowSci.WarPaintLib.Materials;
 
 /// <summary>Per-material tracking for individual color editing.</summary>
 public sealed class MaterialEntry
 {
     public string Name { get; init; } = "";
     public string Source { get; set; } = "";
+    /// <summary>Stable slot within the source renderable, independent of character asset names.</summary>
+    public int Slot { get; set; } = -1;
     public int Handle { get; init; }
     public float4 Color { get; set; }
 
@@ -65,6 +67,8 @@ public sealed class KittenMaterialSet
     /// MaterialFactory.Release frees exactly these.
     /// </summary>
     public List<string> AssetNames { get; } = new();
+    /// <summary>Exact process-local assets created for this set; protects recycled pool slots.</summary>
+    public Dictionary<string, object> AssetIdentities { get; } = new();
 
     /// <summary>True once the GPU slots were returned to the pool; a released set must never be reused.</summary>
     public bool IsReleased { get; internal set; }
@@ -81,16 +85,19 @@ public sealed class KittenMaterialSet
     /// </summary>
     public bool UpdateTint(float4 newColor)
     {
-        TintColor = newColor;
+        if (IsReleased) return false;
         bool ok = true;
 
         if (Materials.Count > 0)
         {
             foreach (var entry in Materials)
             {
-                entry.Color = newColor;
                 if (entry.Handle >= 0)
-                    ok &= MaterialSystemAccessor.WriteAlbedoColor(entry.Handle, newColor);
+                {
+                    bool written = MaterialSystemAccessor.WriteAlbedoColor(entry.Handle, newColor);
+                    if (written) entry.Color = newColor;
+                    ok &= written;
+                }
             }
         }
         else
@@ -102,6 +109,7 @@ public sealed class KittenMaterialSet
             }
         }
 
+        if (ok) TintColor = newColor;
         return ok;
     }
 }

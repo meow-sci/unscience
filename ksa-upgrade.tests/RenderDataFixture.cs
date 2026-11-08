@@ -50,7 +50,15 @@ public interface IViewport
 }
 
 public enum CameraMode { Orbit, IVA }
-public static class Program { public static object? Editor; }
+public class Program : IDisposable
+{
+    public static object? Editor;
+    public static LifecycleRenderer Renderer = new();
+    public static int RendererReads;
+    public static LifecycleRenderer GetRenderer() { RendererReads++; return Renderer; }
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public void Dispose() { LifecycleTrace.Events.Add("native dispose"); Renderer.Disposed = true; }
+}
 
 public static class ViewportEx
 {

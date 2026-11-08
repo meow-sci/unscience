@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using Brutal.ImGuiApi;
 using Brutal.Numerics;
 using KSA;
-using MeowSci.DohLib.Materials;
+using MeowSci.WarPaintLib;
+using MeowSci.WarPaintLib.Materials;
 using MeowSci.DohLib.Spawning;
 using MeowSci.KsaAbstractions.Persistence;
 
@@ -55,7 +56,12 @@ namespace KSA
         public bool IsDebris { get; set; }
     }
 
-    public sealed class KittenEva(string id) : Vehicle(id);
+    public sealed class KittenEva(string id) : Vehicle(id)
+    {
+        public CharacterReference Character { get; set; } = new("Calico");
+        public int[] MaterialIndices { get; } = new[] { 1, 2 };
+    }
+    public sealed record CharacterReference(string Id);
 
     public enum CrewDisposition { EndMission, Kill, Boarded }
 
@@ -123,7 +129,7 @@ namespace KSA
     }
 }
 
-namespace MeowSci.DohLib.Materials
+namespace MeowSci.WarPaintLib.Materials
 {
     /// <summary>Records GPU writes and slot releases instead of touching Vulkan.</summary>
     public static class MaterialSystemAccessor
@@ -136,13 +142,14 @@ namespace MeowSci.DohLib.Materials
             return true;
         }
 
-        public static bool DestroyMaterial(string assetName)
+        public static bool DestroyMaterial(string assetName, object identity)
         {
             Destroyed.Add(assetName);
             return true;
         }
 
         public static int GetExistingMaterialHandle(string materialName) => -1;
+        public static void Cleanup() { }
     }
 
     public sealed partial class MaterialFactory
@@ -162,7 +169,9 @@ namespace MeowSci.DohLib.Materials
                 int handle = _nextHandle++;
                 set.AllMaterialHandles.Add(handle);
                 set.AssetNames.Add(set.Id + suffix);
-                set.Materials.Add(new MaterialEntry { Name = name, Source = source, Handle = handle, Color = tint });
+                set.AssetIdentities.Add(set.Id + suffix, new object());
+                set.Materials.Add(new MaterialEntry { Name = name, Source = source, Slot = 0, Handle = handle, Color = tint });
+                set.HandleMap.Add(source == "Fur" ? 2 : 1, handle);
             }
             _createdSets.Add(set);
             return set;
@@ -170,28 +179,59 @@ namespace MeowSci.DohLib.Materials
     }
 }
 
+namespace MeowSci.WarPaintLib
+{
+    /// <summary>Only native material access is substituted. Production ownership/replay is linked.</summary>
+    public sealed class NativeKittenPaintBackend : IKittenPaintBackend
+    {
+        public static MaterialFactory Factory { get; } = new();
+        public static int Clones { get; private set; }
+        public static bool FailRestore { get; set; }
+        public bool Initialize() => true;
+        public IReadOnlyList<KittenMaterialBinding>? CaptureBindings(KittenEva kitten) =>
+            new[] { new KittenMaterialBinding("Fixture", kitten.MaterialIndices) };
+        public KittenMaterialSet? CreateMaterials(IReadOnlyList<KittenMaterialBinding> bindings,
+            string characterId, float4 tint, KittenMaterialSet? reusable)
+        {
+            if (reusable is { IsReleased: false }) return reusable;
+            Clones++;
+            return Factory.CreateSet(tint);
+        }
+        public void Bind(IReadOnlyList<KittenMaterialBinding> bindings, KittenMaterialSet materials)
+        {
+            foreach (var binding in bindings)
+                for (int i = 0; i < binding.Indices.Length; i++)
+                    binding.Indices[i] = materials.HandleMap[binding.OriginalIndices[i]];
+        }
+        public void Restore(IReadOnlyList<KittenMaterialBinding> bindings, KittenMaterialSet materials)
+        {
+            if (FailRestore) throw new InvalidOperationException("fixture restore failed");
+            Trace.Events.Add("restore paint " + materials.Id);
+            foreach (var binding in bindings) binding.OriginalIndices.CopyTo(binding.Indices, 0);
+        }
+        public bool SetTint(KittenMaterialSet materials, float4 tint) => materials.UpdateTint(tint);
+        public bool SetColor(MaterialEntry material, float4 color)
+        { material.Color = color; return material.ApplyColor(); }
+        public bool CanReuse(KittenMaterialSet materials) => !materials.IsReleased;
+        public void Release(KittenMaterialSet materials)
+        { Trace.Events.Add("release paint " + materials.Id); Factory.Release(materials); }
+    }
+}
+
+namespace MeowSci.KsaAbstractions
+{
+    public static class KsaPaths
+    {
+        public static string ModDataDir { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "doh-checks-" + Guid.NewGuid().ToString("N"));
+    }
+}
+
 namespace MeowSci.DohLib.Spawning
 {
-    /// <summary>The real teardown partial (KittenSpawner.Teardown.cs) is linked; spawning is substituted.</summary>
-    public sealed partial class KittenSpawner(MaterialFactory factory, SpawnedKittenRegistry registry)
+    /// <summary>The real naming/teardown partials are linked; native spawning is substituted.</summary>
+    public sealed partial class KittenSpawner(SpawnedKittenRegistry registry)
     {
-        private readonly MaterialFactory _materialFactory = factory;
         private readonly SpawnedKittenRegistry _registry = registry;
-
-        public int Clones { get; private set; }
-
-        /// <summary>Mirrors the production reuse contract: a released set is never reused.</summary>
-        internal KittenMaterialSet? ApplyClonedMaterials(KittenEva kitten, float4 tint, string characterId,
-            KittenMaterialSet? reusable = null)
-        {
-            if (reusable != null && !reusable.IsReleased)
-            {
-                reusable.UpdateTint(tint);
-                return reusable;
-            }
-            Clones++;
-            return _materialFactory.CreateSet(tint);
-        }
     }
 }
 
@@ -200,31 +240,38 @@ namespace MeowSci.DohLib
     /// <summary>Only the native UI half is substituted; the real save adapter partial is linked.</summary>
     public sealed partial class DohSubmod : ISaveParticipantSource
     {
-        private readonly MaterialFactory? _materialFactory = new();
         private readonly SpawnedKittenRegistry? _registry = new();
         private readonly KittenSpawner? _spawner;
-        private float3 _offset = new(0, 0, 10);
+        private float3 _offset = DefaultSpawnOffset;
         private int _spawnCount = 1;
         private readonly ImInputString _spawnName = new(SpawnNameCapacity, SpawnRequest.DefaultNamePrefix);
         private bool _useCustomColor;
         private float4 _tintColor = float4.One;
         private bool _uniquePerKitten;
+        private string? _paintPresetName;
+        private PaintSettings? _spawnPaint;
         private readonly string[] _availableCharacters = { "Calico", "Tabby" };
         private int _selectedCharacterIndex = -1;
         private Vehicle? _selectedVehicle;
 
-        public DohSubmod() => _spawner = new KittenSpawner(_materialFactory!, _registry!);
+        public DohSubmod() => _spawner = new KittenSpawner(_registry!);
 
-        public MaterialFactory Factory => _materialFactory!;
+        public MaterialFactory Factory => NativeKittenPaintBackend.Factory;
         public SpawnedKittenRegistry Registry => _registry!;
         public KittenSpawner Spawner => _spawner!;
         public Vehicle? SelectedVehicle { get => _selectedVehicle; set => _selectedVehicle = value; }
+        public float3 SpawnOffset { get => _offset; set => _offset = value; }
+        public string? PresetName => _paintPresetName;
+        public PaintSettings? SpawnPaint => _spawnPaint?.Clone();
         public string SpawnName { get => _spawnName.ToString(); set => _spawnName.SetValue(value.AsSpan()); }
 
         public void Track(KittenEva kitten, string characterId, KittenMaterialSet? set) =>
             _registry!.Register(kitten.Id, characterId, set);
 
-        /// <summary>Production Update() runs this every frame (after pruning disposed kittens).</summary>
-        public void NextFrame() => ReleaseStaleSavedMaterials();
+        public KittenMaterialSet Paint(KittenEva kitten, float4 tint) =>
+            WarPaintService.Shared.Apply(kitten, tint)!.MaterialSet;
+
+        /// <summary>Central War Paint performs its update after load and during frame updates.</summary>
+        public void NextFrame() => WarPaintService.Shared.Update();
     }
 }

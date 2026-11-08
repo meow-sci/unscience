@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using KSA;
 using MeowSci.DohLib;
+using MeowSci.WarPaintLib;
 using MeowSci.DohLib.Spawning;
 using MeowSci.KsaAbstractions.Persistence;
 
@@ -67,7 +68,7 @@ internal static partial class Checks
     private static void SpawnNameSaveChecks()
     {
         var submod = new DohSubmod();
-        var coordinator = new SceneSaveCoordinator(submod.SaveParticipants);
+        var coordinator = new SceneSaveCoordinator(submod.SaveParticipants.Append(WarPaintService.Shared.SaveParticipant));
         SetWorld(new Vehicle("Rocket"));
         Require(submod.SpawnName == SpawnRequest.DefaultNamePrefix, "the name field starts with the existing prefix");
         submod.SpawnName = "Crew 🐱_";

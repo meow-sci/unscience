@@ -1,5 +1,14 @@
 # Unscience — Full Game-Integration Scope
 
+**War Paint** now centralizes per-kitten colors, live editing, active-target Unset and global presets;
+DOH selects presets and Humble retains part paint/emissive/visor controls. Earlier kitten colors
+migrate through unchanged legacy save IDs; new scene ownership uses `war-paint` v1/order85.
+[Integration](character-and-materials.md#war-paint-consolidation-5801) · [acceptance](../plans/WAR_PAINT_CONSOLIDATION.md).
+
+Humble Arteest's reported immediate white vessels on Enable remain **unresolved**. Three
+independent audits and 64 offline shader compilations found no exterior cause; native compiler-path
+A/B diagnostics are available. [Evidence](../plans/HUMBLE_ARTEEST_5801_PAINT_INVESTIGATION.md).
+
 Runtime startup includes the [shared networking bootstrap](00-architecture-and-abstractions.md#runtime-networking-bootstrap) and 19 isolated load-context scenarios. The helper is compiled into the Unscience entry module; no game member or sidecar contract changes. Native Windows combined-mod startup acceptance remains pending.
 
 This folder maps the suite's game types, Harmony targets, reflection, shaders, assets and lifecycle
@@ -13,7 +22,7 @@ contracts. Update the owning area and master index in the same change as an inte
 - **Build references:** explicit CURRENT `dll/`; output redirected to a temporary distribution.
   No native game installation is available on this macOS ARM64 host.
 - **Changelog coverage:** all 93 revisions **5708–5800** logged; **5801 unlogged**.
-- **Verification:** whole solution builds with 0 warnings/errors; all 18 managed suites, real-DLL
+- **Verification:** whole solution builds with 0 warnings/errors; all 19 managed suites, real-DLL
   reflection/constructor/layout checks, live-source paint/canopy transforms, 19 isolated bootstrap
   cases and distribution validation. **Static/managed only; native acceptance pending.**
 - **Evidence:** [5801 impact and remediation](../plans/KSA_5801_UPGRADE.md). Dated area tables retain
@@ -69,6 +78,11 @@ rocky-mcrock-face, save-yourself, skittles, sphinx, the-tick, thug-life, zippo. 
 ---
 
 ## Current status against 5801
+
+Native-playtest follow-up fixes unsafe DOH UI-time deletion and late loader cleanup: despawn queues
+after result application; Unscience unloads before native Program.Dispose destroys Vulkan; unused/
+repeated Graffiti cleanup touches no renderer. Default DOH offset is (1, 1, -2) m, explicit saves
+preserved. [Evidence, tests and pending native reproduction](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
 
 Migrated resolved data/key references in rings, clutter, Pyro, Disco and capsule filtering. Fixed
 DOH's silent Get-reflection miss, native yellow/purple highlight collisions in Vehicle Paint, and

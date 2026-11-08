@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ksa-abstractions.lib\ksa-abstractions.lib.csproj" />
+    <ProjectReference Include="..\war-paint.lib\war-paint.lib.csproj" />
   </ItemGroup>
 
   <ItemGroup>

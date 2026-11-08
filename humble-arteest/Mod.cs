@@ -27,9 +27,7 @@ public class Mod
     {
         try
         {
-            _submods.Add(new VehiclePaintSubmod());
-            _submods.Add(new KittenColorSubmod());
-            _submods.Add(new EngineEmissiveSubmod());
+            _submods.Add(new HumbleArteestSubmod());
 
             foreach (var submod in _submods)
                 submod.Initialize();

@@ -53,6 +53,6 @@ A round trip through the real `SceneSaveCoordinator` shows that the skipped vehi
 the preflight and by its participant, and that only the reconstructed vehicle is rebound. The
 unresolved record is retained across repeated loads and into the next save. A concurrent-worker join
 failure also aborts before cleanup/native destruction and unwinds the file transaction exactly once.
-`MaterialOwnershipTests` links production Humble Arteest color persistence against a managed asset
-map with non-string struct keys. It verifies stable-name capture, exact-asset original restoration,
-recycled/moved slot rejection, and ownership of generated DOH/Free Fallin names.
+The retired Humble global material ownership fixture moved with the feature to
+[War Paint checks](../war-paint.tests/README.md). War Paint owns per-kitten recipes, private material
+bindings and migration; this suite retains the shared native lifecycle/storage contracts.

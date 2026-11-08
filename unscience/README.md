@@ -1,5 +1,18 @@
 # Unscience — Unified Supermod
 
+War Paint centralizes per-kitten colors, saved presets, live material editing and Unset. DOH selects
+a saved preset for spawning; Humble retains part paint, emissive and visor controls. Existing saved
+kitten colors migrate. [Controls](../war-paint.lib/README.md) · [validation](../plans/WAR_PAINT_CONSOLIDATION.md).
+
+## 5801 despawn / shutdown follow-up
+
+`GameShutdownPatches` calls the existing Unload at the start of native Program.Dispose, after joining
+workers and draining the live device. All feature resources and UI settings are handled while KSA's
+renderer/ImGui still exist. Unload is idempotent, so StarMap's subsequent callback cannot use freed
+Vulkan handles. DOH UI removals use the physics handoff; its default offset is (1, 1, -2) m.
+
+See [evidence and native acceptance](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
+
 The Unscience entry module uses the [shared runtime bootstrap](../Shared/README.md) for early default-context networking preload and one assembly/path/context report before submod construction. Networking incompatibility is reported without disabling unrelated submods. No scene-save IDs, payloads, ownership APIs or hooks change.
 
 Run `python3 tools/check_runtime_bootstrap.py --entry-assembly unscience/bin/Release/net10.0/MeowSci.Unscience.dll` after the solution build. The helper has no separate runtime DLL or cross-mod dependency.
@@ -28,7 +41,7 @@ A unified supermod that consolidates 30 KSA feature libraries into a single ImGu
 | Graffiti — PNG Decals | Click-to-place projected PNG decals on vehicle hulls, deployed parachute cloth, and terrain |
 | Free Fallin — Parachute Customizer | Applies a global stock tint, panel-tiled or cohesive full-canopy PNG, centered decal, and canopy PBR controls |
 | Hot Pursuit | Mounts live secondary cameras on vehicle parts |
-| Humble Arteest | Kitten colors and Hide/Show visor glass, engine emissive controls, and experimental vehicle paint |
+| Humble Arteest | Hide/Show visor glass, engine emissive controls, and experimental vehicle part paint |
 | I Feel Seen | Forces vehicle render data updates at any distance |
 | Iron Man | EVA/Iron Man flight-mode buttons, upright editing, configurable nodes, rocket controls and upright surface teleports in Iron Man mode |
 | Its So Shiny | Builds and controls Blinky-style pixel grids from built-in light parts |
@@ -43,6 +56,7 @@ A unified supermod that consolidates 30 KSA feature libraries into a single ImGu
 | Sphinx | Places imported textured GLB statics with terrain alignment, XYZ transforms and shared PNG overrides |
 | The Tick | Makes chosen vessels indestructible by forces: unbreakable parts plus suppressed G-load / aero-pressure destruction |
 | Thug Life | Renders a custom textured quad through KSA's main render pass |
+| War Paint | Per-kitten colors, live material editing, saved presets and active paints with Unset |
 | Zippo — Light Control | Controls light appearance and queued transitions, plus repeating Disco color, actuation, and spotlight-spread cycles |
 
 ## Usage

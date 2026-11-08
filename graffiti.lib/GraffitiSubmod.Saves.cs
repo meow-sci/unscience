@@ -47,9 +47,8 @@ public sealed partial class GraffitiSubmod : ISaveParticipantSource
     {
         Disarm("Placement cancelled by save load.");
         _renderActive = false; _published = Array.Empty<DecalEntry>();
-        Program.GetRenderer()?.GraphicsAndCompute?.WaitIdle();
-        _renderer?.Dispose(); _renderer = null;
-        _textures.DisposeAll(); _decals.Clear();
+        FreeGpu(releaseTextures: true);
+        _decals.Clear();
         _dirty = false; _gpuFailed = false; _drawFaultLogged = false;
     }
     private static void ValidateDecals(DecalSave[] entries)

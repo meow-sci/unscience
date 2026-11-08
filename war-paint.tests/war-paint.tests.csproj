@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../war-paint.lib/PaintSettings.cs" Link="PaintSettings.cs" />
+    <Compile Include="../war-paint.lib/PaintPresetLibrary.cs" Link="PaintPresetLibrary.cs" />
+    <Compile Include="../war-paint.lib/IKittenPaintBackend.cs" Link="IKittenPaintBackend.cs" />
+    <Compile Include="../war-paint.lib/KittenMaterialReuse.cs" Link="KittenMaterialReuse.cs" />
+    <Compile Include="../war-paint.lib/WarPaintService*.cs" Link="%(Filename)%(Extension)" />
+    <Compile Include="../war-paint.lib/Materials/KittenMaterialSet.cs" Link="KittenMaterialSet.cs" />
+    <Compile Include="../war-paint.lib/Materials/MaterialFactory.Lifetime.cs" Link="MaterialFactory.Lifetime.cs" />
+    <Compile Include="../war-paint.lib/Materials/MaterialSystemAccessor.Pool.cs" Link="MaterialSystemAccessor.Pool.cs" />
+    <Compile Include="../ksa-abstractions.lib/VehicleProvider.cs" Link="VehicleProvider.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/ISaveParticipant.cs" Link="ISaveParticipant.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/MaterialColorState.cs" Link="MaterialColorState.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveJson.cs" Link="SaveJson.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/FiniteNumberConverters.cs" Link="FiniteNumberConverters.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveDocument.cs" Link="SaveDocument.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveStorage.cs" Link="SaveStorage.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SceneSaveCoordinator.cs" Link="SceneSaveCoordinator.cs" />
+  </ItemGroup>
+</Project>

@@ -4,7 +4,7 @@ namespace MeowSci.DohLib;
 
 /// <summary>
 /// Library marker for DOH (Dynamically Originating Hominids).
-/// All spawning and material logic lives in the Spawning/ and Materials/ subdirectories.
+/// Spawning lives in Spawning/. Shared kitten paint and GPU material ownership live in war-paint.lib.
 /// </summary>
 public static class DohLib
 {

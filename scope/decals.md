@@ -1,5 +1,16 @@
 # Decals (graffiti) — Game Integration Scope
 
+## 5801 native playtest: despawn and shutdown
+
+`GraffitiSubmod.Lifetime.cs` owns Dispose/FreeGpu/WaitIdle. The resource test includes pipeline,
+bound images and retired images: unused/repeated Dispose never obtains the renderer, while textures
+uploaded without a pipeline still drain/release. `ResetDecals` uses the same path before saved replay.
+Unscience cleanup runs before native Program.Dispose releases Vulkan, preventing the late queue call
+seen in the supplied fatal stack. Save payloads/IDs/versions are unchanged. Managed tests execute this
+production lifetime partial with a dead-device fixture; native image/pipeline/exit checks remain open.
+
+[Evidence and native acceptance](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
+
 ## KSA 5707 verification (5638 → 5707, 2026-10-29)
 
 Verified against `2026.10.25.5707` (revs 5639–5703), diffed from `2026.10.19.5638`. This pass is

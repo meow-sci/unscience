@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using MeowSci.DohLib.Materials;
+using MeowSci.WarPaintLib.Materials;
 
 namespace MeowSci.DohLib.Spawning;
 
@@ -82,5 +82,6 @@ public sealed class SpawnedKittenEntry
     public KSA.Vehicle? Vehicle { get; init; }
     public string KittenId { get; init; } = "";
     public string CharacterId { get; init; } = "";
+    /// <summary>Compatibility view only. War Paint owns paint and material lifetimes.</summary>
     public KittenMaterialSet? MaterialSet { get; init; }
 }

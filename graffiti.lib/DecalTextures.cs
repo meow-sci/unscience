@@ -45,6 +45,8 @@ internal sealed class DecalTextureCache
     /// <summary>The last decode/upload/bind fault text; empty while healthy.</summary>
     internal string LastError { get; private set; } = "";
 
+    internal bool HasResources => _bound.Count != 0 || _retiring.Count != 0;
+
     /// <summary>
     /// The bindless slot for <paramref name="name"/>'s current on-disk bytes, or null when the
     /// file is missing or failed to decode. Uploads lazily on first reference.

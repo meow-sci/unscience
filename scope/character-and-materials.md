@@ -1,5 +1,52 @@
 # Character / Material / GPU-Customization Mods — Game Integration Scope
 
+## War Paint consolidation (5801)
+
+War Paint is the sole owner of kitten color state. `WarPaintSubmod` is registered by Unscience;
+its optional development host applies HotkeyGuard. DOH exposes only a spawn preset selector and
+forwards legacy color API inputs to `WarPaintService`. Humble removes its global KittenColor
+buffer writer/editor; visor hiding remains a separate Humble draw gate. The tables below retain
+historical version comparisons; current material ownership and paths are listed here.
+
+| Kind | Current mod source | Game surface | Ownership / risk |
+|---|---|---|---|
+| Reflection / binding | `war-paint.lib/NativeKittenPaintBackend.cs` | `KittenEva._renderable` → `KittenRenderable._characterAvatar`; CharacterModel/Fur/Helmet/Visor/MMU `MaterialIndices` | Extracted working DOH field path; captures original arrays before cloning, restores still-owned slots before release |
+| GPU material bridge | `war-paint.lib/Materials/MaterialSystemAccessor*.cs` | Program material/texture systems; AssetMap, BigBuffer, DeviceCtx, CreateObject/GetOrLoad, fixed FreeListIndexPool | Same DOH cloning/upload ABI; exact asset reference identity protects recycled names/slots |
+| Native data/assets | `war-paint.lib/Materials/MaterialFactory*.cs` | CharacterReference/CharacterTextures/PbrMaterialReference and native fur resource textures/sampler | Resolved graph links and fur ExtraData preserved; AlbedoColor at native offset16, MaterialData stride80 |
+| Typed target identity | `war-paint.lib/WarPaintService*.cs` | KittenEva.Character.Id, Vehicle.Id/IsDisposed, shared VehicleProvider | Unique current object required, no controlled/name-ambiguous fallback; private set per target |
+| Scene lifecycle | `war-paint.lib/WarPaintService.Persistence.cs` | shared ISaveParticipantSource and pre-native-reset/post-native-replay handoff | New `war-paint` v1/order85; DOH60 and Humble80 migrations run first; only detached recipes persist |
+| ImGui / global files | `war-paint.lib/WarPaintSubmod*.cs`, `PaintPresetLibrary.cs` | Existing SubmodUI/pickers and KsaPaths.ModDataDir | Global presets separate from active scene paints; source+slot maps compatible character materials without serializing handles |
+
+Unset, native boarding/deletion, vanilla/repeated load, slot recovery and native rendering need
+in-game acceptance. [Implementation and checks](../plans/WAR_PAINT_CONSOLIDATION.md).
+
+## Humble Arteest immediate white vessels (5801)
+
+Player report: enabling part paint immediately turns whole vessels bright white. No confirmed
+source cause after three independent shader/pipeline/rebuild audits. All 64 actual stock/painted
+GLSL binaries compile; SPIR-V interfaces match across 16 variant groups. A separate pre-existing
+raytraced IVA fragment-cache limitation remains. Runtime logs now identify loaded DLL/MVID, paint
+counts, seam owners and intercepted sources; `UNSCIENCE_PAINT_SHADER_MODE=stock` forwards untouched
+GLSL via the same compiler route for native A/B. No shader/render behavior fix is claimed.
+[Evidence and native acceptance](../plans/HUMBLE_ARTEEST_5801_PAINT_INVESTIGATION.md).
+
+## 5801 native playtest: despawn and shutdown
+
+DOH's Despawn buttons now call `RequestDespawn`/`RequestDespawnAll`, queued at the shared
+PrepareFrame mutation handoff **after result application and before new snapshots**. Joining the
+worker from UI was not sufficient: PhysicsBubble's completed snapshots/render events still referenced
+the destroyed kitten. KSA 5801 avatar disposal also unregisters meshes/frees native animation lists.
+Each queued closure verifies the exact registry entry, so load/reset or duplicate requests cannot
+remove a newly restored same-ID kitten. Missing handoff refuses deletion; synchronous Despawn remains
+for handoff and pre-renderer shutdown. The legacy host installs/removes PhysicsFrameHook too.
+
+Requested default spawn offset is **(1, 1, -2) m**. API/UI/vanilla reset/missing saved Offset share it;
+explicit saved offsets remain. No terrain clamp or axis change is added. DOH save IDs/versions stay
+unchanged. 69 managed checks include eight unique sets, native-dead-before-dispatch, stale requests
+and default/saved offset round trips; native crash retesting remains open.
+
+[Evidence and native acceptance](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
+
 ## KSA 5707 → 5801 verification (2026-11-08)
 
 Vehicle Paint now reserves native bits 0–12: KSA added yellow/purple habitat highlights in bits
@@ -270,35 +317,19 @@ Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
 
 ---
 
-## doh
+## DOH and War Paint
 
-**Purpose** — "Dynamically Originating Hominids": programmatically spawns `KittenEva` entities
-near a vehicle (replicating `EVADoor.CreateKittenEva`), with optional per-kitten GPU material
-cloning + `AlbedoColor` tint. Live recolor, batch spawn, "I'm Feeling Lucky" rainbow, despawn.
+**DOH** owns spawning, native registrations and queued despawn. Its controls select name/prefix,
+character, offset/count and a saved War Paint preset. The default offset is (1,1,-2)m. The spawn
+engine and existing native naming/roster collision checks remain under `doh.lib/Spawning/`.
+DOH's v1 adapter migrates legacy material recipes and stores its selector/detached recipe; it no
+longer captures active paint or owns GPU materials. Despawn unsets War Paint before native teardown.
 
-**Unscience integration** — `DohSubmod : ISubmod` (`doh.lib/DohSubmod.cs`). Spawning engine
-`KittenSpawner` (`doh.lib/Spawning/`), material cloning `MaterialFactory` +
-`MaterialSystemAccessor` + `KittenMaterialSet` (`doh.lib/Materials/`). Reaches the game via a
-deep **reflection** bridge to `Program.Instance` render systems (no typed dependency on the
-GPU material internals) plus a **typed** spawn path (`KittenEva`, `Orbit`, `Universe`, `Part`).
-
-**UI / hotkeys** — Standalone **F8** window (`doh/Mod.cs:49`); embedded as `ISubmod` in unscience.
-Vehicle/character filterable combos, editable vehicle name / batch prefix (default `Kitten_doh_`),
-offset/count, color picker + XKCD combo, per-kitten list. Both spawn buttons pass `SpawnRequest.VehicleName`
-to `KittenSpawner.Naming`: exact nonblank single names, numbered batch prefixes, blank automatic
-default-prefix numbering. The existing native `All.TryGet` lookup, and since 5707 the
-`Universe.KittenRoster` lookup, rejects occupied exact names and skips occupied numbered names before
-constructing `KittenEva`. Native keys ignore case.
-
-**Persistence** — `DohSubmod.Persistence.cs` (`doh` sidecar record, v1). Rebinds native-restored
-kittens and their cloned materials; additive `SpawnName` preserves the name field (absent legacy
-field or vanilla load uses the default), while optional `MaterialGroup` keeps shared batch sets shared (see
-[`saves.md`](saves.md) / `plans/saves-acceptance.md`). `Dispose` runs `DespawnAll()`, then
-`MaterialFactory.Cleanup()` (releases every doh GPU material slot), then `MaterialSystemAccessor.Cleanup()`.
-
-**GPU material pool** — KSA's `GpuMaterialSystem` is a fixed 512-slot pool (#33). doh owns every
-slot it clones (`KittenMaterialSet.AssetNames`), shares one set per non-unique batch, keeps 64 slots
-free for the game, and releases sets on despawn, prune, unload and after restore (#35).
+**War Paint** owns per-kitten materials and live editing. The material API/integration rows below
+now belong to `war-paint.lib/Materials/` and `NativeKittenPaintBackend`; spawn/physics rows stay with
+DOH. The 512-slot pool reserve/preflight remains, with an independent material set per painted kitten.
+Unset restores original bindings, then frees exact owned native assets; scene reset/replay maintains
+safe detached reuse. See the current ownership map at the top of this document.
 
 ### Integration points
 
@@ -332,8 +363,8 @@ free for the game, and releases sets on despawn, prune, unload and after restore
 | 26 | Typed | KittenSpawner.Positioning.cs:31-45 | `Vehicle.GetAsmb2Cci()`; `.Body2Cce`; `.BodyRates`; `.Parent`; `.Orbit.StateVectors`(`.PositionCci/.VelocityCci/.StateTime`); `Vehicle.IsDisposed`; `double3.Transform(doubleQuat)` | KSA/Vehicle.cs:3110,475,510,372,618; StateVectors.cs:8-12 | ✅ | none (line moves) | spawn positioning. The anchor is the selected `Vehicle` object (unambiguous `VehicleProvider.FindVehicle` for ID-only callers). The orbit epoch is the same state's `StateTime`, as `EVADoor.CreateKittenEva` does (`EVADoor.cs:212,224`), never a separately read clock. |
 | 27 | Typed | KittenSpawner.cs:221,224,225 | `KittenEva.Teleport(Orbit?,doubleQuat?,double3?)`; `IParentBody.Children.Add` (`IParentBody.cs:27`); `Vehicle.UpdatePerFrameData()` (override) | KSA/Vehicle.cs:2209,2613 | ✅ | none (line moves) | |
 | 28 | Typed | KittenSpawner.Teardown.cs:80-112 @5638; KittenSpawner.Naming.cs (`GenerateKittenName`) | `CelestialSystem.All.TryGet(string,out Astronomical)` (`All :64`); **@5638 `Universe.DestroyVehicle(Vehicle, CrewDisposition.Boarded)`** (`Universe.cs:2016`, `CrewDisposition.cs:3`) replaces direct `Deregister` + `Vehicle.Dispose()`; `CelestialSystem.Deregister(Astronomical)` (`:101`) remains only as the orphan fallback | KSA/CelestialSystem.cs:64,101; Universe.cs:2016-2095; Vehicle.cs:768,3800 | ✅ | **CHANGED @5638 (fixed)**: the game's teardown now also releases the portrait camera (rev 5486) and hands off emitters; boarding uses it since rev 5607 | Despawn uses the registered `KittenEva` object, falling back to an unambiguous ID lookup restricted to `KittenEva`. `Boarded` leaves crew records untouched (doh kittens are not crew). Also used for unique names and orphan cleanup (#37). |
-| 29 | Reflection | KittenSpawner.Materials.cs:169,176 | `KittenEva._renderable : KittenRenderable` (`KittenEva.cs:15`) → `._characterAvatar : CharacterAvatar` (both private) | KSA/KittenEva.cs:15; KSA/KittenRenderable.cs:12 | ✅ | none | avatar root |
-| 30 | Reflection (field path) | KittenSpawner.Materials.cs:39-59,186-199 | `CharacterAvatar.Core.CharacterModel.MaterialIndices`; `.Fur.CatFurRenderable.MaterialIndices`; `.Attachments.Helmet.HelmetMesh/.VisorMesh.MaterialIndices`; `.Attachments.Mmu.MmuMesh.MaterialIndices` | KSA/CharacterAvatar.cs:211,32,219/61,213/107,109,128; AnimatedRenderable.cs:34; CatFurRenderable.cs:22; StaticMeshRenderable.cs:31 | ✅ | 5402 additive only: `CharacterCore.HeadMeshIndices : List<int>` (`CharacterAvatar.cs:46`, from `CharacterCoreReference.HeadMeshIndices` `:21-22` / `CharacterAssets.xml:244-251`); `AnimatedRenderable.{PrePassIgnoreMeshIndices,MaskedMeshIndices,HideMaskedMeshes}` (`:62-66`) | `MaterialIndices` is `protected readonly int[]` on each renderable; in-place handle swap. ℹ️ `KittenRenderable.HideHead` (`:98`, set by `IVASeat.cs:103` when the camera is in that seat) masks the head meshes and skips the fur draw (`:355-360`) — cosmetic, the handle swap is untouched |
+| 29 | Reflection | war-paint.lib/NativeKittenPaintBackend.cs (extracted from KittenSpawner.Materials):169,176 | `KittenEva._renderable : KittenRenderable` (`KittenEva.cs:15`) → `._characterAvatar : CharacterAvatar` (both private) | KSA/KittenEva.cs:15; KSA/KittenRenderable.cs:12 | ✅ | none | avatar root |
+| 30 | Reflection (field path) | war-paint.lib/NativeKittenPaintBackend.cs (extracted from KittenSpawner.Materials):39-59,186-199 | `CharacterAvatar.Core.CharacterModel.MaterialIndices`; `.Fur.CatFurRenderable.MaterialIndices`; `.Attachments.Helmet.HelmetMesh/.VisorMesh.MaterialIndices`; `.Attachments.Mmu.MmuMesh.MaterialIndices` | KSA/CharacterAvatar.cs:211,32,219/61,213/107,109,128; AnimatedRenderable.cs:34; CatFurRenderable.cs:22; StaticMeshRenderable.cs:31 | ✅ | 5402 additive only: `CharacterCore.HeadMeshIndices : List<int>` (`CharacterAvatar.cs:46`, from `CharacterCoreReference.HeadMeshIndices` `:21-22` / `CharacterAssets.xml:244-251`); `AnimatedRenderable.{PrePassIgnoreMeshIndices,MaskedMeshIndices,HideMaskedMeshes}` (`:62-66`) | `MaterialIndices` is `protected readonly int[]` on each renderable; in-place handle swap. ℹ️ `KittenRenderable.HideHead` (`:98`, set by `IVASeat.cs:103` when the camera is in that seat) masks the head meshes and skips the fur draw (`:355-360`) — cosmetic, the handle swap is untouched |
 | 31 | Typed (context) | — (not referenced) | `KittenEva.IsControllable => true` / `Vehicle.IsControllable` (virtual) | KSA/KittenEva.cs:63; Vehicle.cs:588 | ✅ | **ADDED (rev 4699)** | informational: spawned kittens now controllable; not a break |
 | 32 | Typed | KittenSpawner.cs:136; KittenSpawner.Teardown.cs:85-86,121-124 @5638 | `JobSystems.VehicleSolver : JobScheduler` (public static, `Brutal.Concurrency.Jobs`); `JobScheduler.Wait()` (spins until all runners idle) | KSA/JobSystems.cs:16; Brutal.Concurrency.Jobs/JobScheduler.cs:51 | ✅ | **ADDED (5402 fix)**; unchanged @5482 (only `ConcurrentWorkers` was renamed; rev 5452 island jobs run on `VehicleWorkerPool` inside the VehicleSolver job, so `Wait()` still covers them; `PrepareFrame` waits/applies at `Program.cs:2149-2168`, queues at `:2211`) | Guards `new KittenEva` and `Vehicle.Dispose()` against `ConstraintSim.UnlockShapes()` (`ConstraintSim.cs:116`) throwing while `VehicleUpdateTask.Run` (`:176`, `BeginVehicleUpdate`/`EndVehicleUpdate`) is stepping on the solver thread. Depends on frame ordering in `Program.PrepareFrame` (`Program.cs:2102-2145`): `VehicleSolver.Wait()` → `ApplyVehicleSolvers` → `ExecuteNextVehicleSolvers` queues the next step; nothing re-queues mid-frame. `doh.lib.csproj` now references `Brutal.Concurrency.dll`. Game's own equivalent is staging via `InputEvents.EvaSpawnBuffer` (`InputEvents.cs:992`, applied `:1072`) @5638 teardown also joins `JobSystems.NearestOrbitAndPerformanceWorker` (`JobSystems.cs:12`): its hover job walks `CurrentSystem.All` (`CelestialSystem.cs:499-509`), and KSA destroys vehicles in `ApplyInputEvents` (`Program.cs:2315`) before queuing it (`:2330-2335`). |
 | 33 | Reflection (protected field) | MaterialSystemAccessor.cs:85; MaterialSystemAccessor.Pool.cs:34-47 | `GpuObjectSystem<T>.BigBufferAllocator : FreeListIndexPool` (protected readonly) → public `FreeListIndexPool.Capacity` | KSA/GpuObjectSystem.cs:14,24; Brutal.Collections/FreeListIndexPool.cs:17; KSA/Program.cs:999 (`capacity 512`) | ✅ | **ADDED** (pool-exhaustion fix) | Pool size for doh's material budget; falls back to 512 if the field disappears. The pool never grows (`allowResize: false`) and `SendToBuffer` (`GpuObjectSystem.cs:57-64`) throws `InvalidOperationException("Failed to allocate handle for GPU object.")` when full. That throw hit the native `CharacterRenderResources.CreateFurMaterial` inside every `new KittenEva` once doh clones had filled the pool, which crashed the game. doh keeps `ReservedSlots` (64) free for the game (`CreateMaterial` refuses below it) and preflights each tinted spawn against `EstimatedSlotsPerSet` (10). |

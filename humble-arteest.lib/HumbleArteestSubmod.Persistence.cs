@@ -5,6 +5,7 @@ using Brutal.Numerics;
 using KSA;
 using MeowSci.KsaAbstractions;
 using MeowSci.KsaAbstractions.Persistence;
+using MeowSci.WarPaintLib;
 
 namespace MeowSci.HumbleArteestLib;
 
@@ -36,7 +37,7 @@ public sealed partial class HumbleArteestSubmod
         var saved = new SavedPaint
         {
             Enabled = VehiclePaint.Active, Blend = VehiclePaint.BlendMode, GlobalEnabled = VehiclePaint.GlobalEnabled,
-            GlobalColor = VehiclePaint.GlobalColor, MaterialColors = KittenColor.CaptureColors(),
+            GlobalColor = VehiclePaint.GlobalColor,
             HideVisor = KittenVisorPatches.Hidden, GlobalEmissive = EngineEmissive.GlobalEnabled,
             Temperature = EngineEmissive.GlobalTemperature, Tfi = EngineEmissive.GlobalTfi
         };
@@ -71,9 +72,7 @@ public sealed partial class HumbleArteestSubmod
         _vehiclePaint.ClearSavedTargets();
         EngineEmissive.ClearAll();
         KittenVisorPatches.Hidden = false;
-        _kittenColor.SynchronizeSavedState(false);
         _engineEmissive.SynchronizeSavedState(false);
-        KittenColor.ResetOwnedColors();
     }
 
     private void RestorePaint(SavedPaint saved, SaveRestoreContext context)
@@ -102,9 +101,9 @@ public sealed partial class HumbleArteestSubmod
             { context.Warn($"Engine glow module missing: {item.Part.VehicleId}."); continue; }
             EngineEmissive.SetEngine(modules[item.ModuleIndex].PartModelDynamic, item.Temperature, item.Tfi);
         }
-        KittenColor.RestoreColors(saved.MaterialColors, context);
+        // Keep the v1 MaterialColors field readable; ownership moves into isolated War Paint sets.
+        WarPaintService.Shared.ImportLegacyColors(saved.MaterialColors, context);
         KittenVisorPatches.Hidden = saved.HideVisor;
-        _kittenColor.SynchronizeSavedState(saved.HideVisor || saved.MaterialColors.Count > 0);
         _engineEmissive.SynchronizeSavedState(saved.GlobalEmissive || saved.Emissive.Count > 0);
     }
 

@@ -1,5 +1,30 @@
 # Scene save implementation coverage and native acceptance
 
+## War Paint consolidation
+
+`war-paint` v1/order85 owns all active per-kitten paint recipes. It restores exact native identities,
+private materials and original-binding ownership; detached slots can be reused after native reset.
+Global presets live in `.unscience/war-paint-presets.json`, outside scenes. Existing DOH/Humble
+records retain IDs/versions and migrate old effective colors; explicit new paints replay last.
+New DOH saves include a preset name and detached spawn recipe. UI brush/filter/target state is transient.
+
+Production service/preset/adapter checks cover independent edits, Unset ordering, detached snapshots,
+restart persistence, portable material roles, legacy imports, repeated/vanilla loads and invalid or
+unresolved record retention. Native acceptance: paint native and spawned kittens differently; save
+presets and restart; spawn with the selected preset; live-edit without changing that preset; Unset;
+board/delete; repeatedly save/load and confirm resource recovery and late-shutdown safety.
+[Full implementation and checks](WAR_PAINT_CONSOLIDATION.md).
+
+## 5801 despawn/shutdown follow-up
+
+No save IDs/versions change. DOH transient removals queue at the physics handoff; reset/rebind
+invalidates captured registrations, protecting same-name kittens after a load. Explicit saved Offset
+values stay unchanged; fresh/vanilla/missing-offset defaults are (1, 1, -2) m. Graffiti scene reset
+shares ownership-aware cleanup with Dispose, retaining existing decal capture/replay. Shutdown callback
+and device guards are transient lifecycle state. Production-adapter default/legacy/explicit-offset
+checks and queued stale-world cases pass. Native scene-load/exit/resource acceptance remains open:
+[follow-up evidence](DOH_DESPAWN_5801_FOLLOWUP.md).
+
 ## KSA 5801 upgrade acceptance
 
 The existing sidecar IDs/versions remain. Iron Man moves its unchanged v1 anchor payload from
@@ -72,7 +97,7 @@ the native `universe.xml`, bound to that file's SHA-256. The native save owns ve
 full-part geometry, native module records, camera pose and game time. The sidecar supplies
 Unscience recipes, target ownership, original baselines and the continuation state listed below.
 The integration is wired by [UnscienceSaves](../unscience/UnscienceSaves.cs) for the
-[31 registered submods](../unscience/Mod.cs). There are **34 feature records**: Pyro separates
+[registered submods](../unscience/Mod.cs). Feature records include: Pyro separates
 shared template edits from plume instances, Kitchen Sink keeps G-load registrations in a
 separate backward-compatible record alongside its original IVA boolean, unlocked-camera record and capsule-glass boolean,
 and The Tick adds `the-tick`. Save Yourself registers no record: its
@@ -104,7 +129,7 @@ Full `dotnet build -m:1 -p:UseSharedCompilation=false
 -p:UNSCIENCE_DIST_DIR=/private/tmp/unscience-doh-name-dist` passes against local KSA 5638 with zero
 warnings/errors. Native UI/save-load acceptance is pending.
 
-## Implemented coverage, all 29 submods
+## Implemented feature coverage
 
 Each source link is the adapter defining the current capture/reset/restore policy. “Restores”
 below describes implemented behavior, not an assertion that native acceptance has passed.
@@ -116,7 +141,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [BYO Music](../byo-music.lib/ByoMusicSubmod.Saves.cs) | Unfinished sounds' vehicle targets, filenames, repeat, gap, volume and range. | Every restored sound is paused. Resume starts at the beginning; sample position, current gap progress and former paused/playing distinction are not restored. Finished sounds are omitted. Sound files remain required. |
 | [Camera Controller Override](../camera-controller-override.lib/CameraControllerOverrideSubmod.Saves.cs) | Ordered typed keyframe recipes, parallel groups, pending group recipes, return-to-start duration/easing/powers. | Restores stopped. Current running segment, elapsed time and its captured start pose are not resumed. Native camera pose loads independently. Pressing Play starts the reconstructed sequence through its normal behavior. |
 | [Dent Wizard](../dent-wizard.lib/DentWizardSubmod.cs) | KSA saves the launched vessel's resulting orbit/physical state; v1 `dent-wizard` is an empty lifecycle record. Reset cancels automatic mode, armed and pending shots. Mass labels are read live from native vessel state and are not sidecar data. | Source selection and speed are input for the next one-shot action, not an applied registration or ongoing force; they reset to unselected/5 m/s. Launches never replay on load. Kitchen Sink independently saves any source/target G-load protection. |
-| [DOH](../doh.lib/DohSubmod.Persistence.cs) | Registry of native-restored spawned kittens, character IDs, cloned tint and named material colors, plus an optional per-kitten `MaterialGroup` so a shared batch keeps one material set, and spawn name/prefix/offset/count/character/color options. | Rebinds kittens instead of spawning duplicates; registry ownership supports later Despawn, which uses `Universe.DestroyVehicle(…, Boarded)` since 5638. Missing kittens or changed material identities warn. Legacy records without groups restore one set per kitten. Detached sets nothing rebinds, or left by a vanilla load, are released to KSA's fixed 512-slot GPU material pool. The spawn-target vehicle selection is UI input and resets. Character assets must be installed. Pending spawn actions are not replayed. |
+| [DOH](../doh.lib/DohSubmod.Persistence.cs) | Native-restored spawned kitten registry; name/prefix/offset/count/character; selected War Paint preset and detached spawn recipe. | Existing v1 tint/material/group records migrate into independent War Paint targets. Native kittens are rebound without respawning. Missing targets warn. Pending spawn/despawn actions are transient. |
 | [Don't Stifle Me](../dont-stifle-me.lib/DontStifleMeSubmod.Saves.cs) | Editor scale enable/snap flags and extended-value policy. | Existing part geometry/configuration remains native-owned. Does not serialize an editor undo stack or uncommitted operation. |
 | [Eternal Flame](../eternal-flame.lib/EternalFlameSubmod.Saves.cs) | Monitored vehicles, fuel/electricity switches and refill interval. | Monitoring resumes; interval timing restarts, without offline catch-up. Native save owns the current resource quantities. |
 | [Free Fallin'](../free-fallin.lib/FreeFallinSubmod.Saves.cs) | Applied global canopy material settings and effective albedo. | Recreates appearance, not a cloth simulation checkpoint. Applied state only; external textures remain dependencies. |
@@ -125,7 +150,8 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [Godzilla](../godzilla.lib/GodzillaSubmod.Persistence.cs) | Vessel Smart/Basic factors, physics/collider channels, global channels, original full/subpart scale, original full-part positions/pivot/avatar size and effective child scales. | Reconstructs scale ownership from original snapshots so repeated loads do not intentionally compound scale. Restore returns to those originals. Missing/changed topology and another scale owner are reported instead of guessing. |
 | [Graffiti](../graffiti.lib/GraffitiSubmod.Saves.cs) | Terrain, part and canopy decal anchors, image names, projection geometry, cloth triangle/barycentric address, visibility, brightness/alpha. | Placement mode stops. Missing PNGs or unavailable canopy can leave a dormant entry with warnings; missing part/body cannot be rebound. Cloth deformation itself is not captured. Images and compatible canopy topology remain required. |
 | [Hot Pursuit](../hot-pursuit.lib/HotPursuitSubmod.Saves.cs) | Mounted part, surface basis, transform, FOV, dimensions, visibility and whether its viewport was open. | Placement mode stops. Attempts to reopen saved viewports; slot exhaustion keeps the camera setup and reports that its viewport needs reopening. No native viewport/texture handles persist. |
-| [Humble Arteest](../humble-arteest.lib/HumbleArteestSubmod.Persistence.cs) | Paint activation/blend, global/template/per-part colors, named kitten material colors, visor hiding, global/per-module engine emissive settings. | Restores effective owned appearance and recreates relevant shader/material state. Requires compatible material names and module layouts; missing targets/uploads warn. Unapplied editor input is not generally captured. |
+| [Humble Arteest](../humble-arteest.lib/HumbleArteestSubmod.Persistence.cs) | Part paint activation/blend and global/template/part colors; visor hiding; engine emissive overrides. | Legacy v1 MaterialColors migrate to private War Paint ownership; unmatched assets warn. Part targets and module layouts use existing stable resolvers. |
+| [War Paint](../war-paint.lib/WarPaintService.Persistence.cs) | Active kitten identity, character, tint and per-material recipes. Global presets remain outside scenes. | New v1/order85; restore exact reconstructed targets after DOH/Humble migration; reset original bindings and safely reuse/retire exact owned slots. Missing/incompatible targets warn and retain records. |
 | [I Feel Seen](../i-feel-seen.lib/IFeelSeenSubmod.Saves.cs) | Tracked vehicle identities and each force-visibility flag. | Rebuilds tracking on native-restored vehicles. Deleted/missing vehicles warn. |
 | [Iron Man](../iron-man.lib/IronManSubmod.Saves.cs) | Configured kittens, enabled mode, original EVA/control settings needed to disable the mode, current flight-computer preferences. | Mode restores with engines **disarmed**. Existing connectors are configured/reused through the normal code path. Runtime thrust/burn continuation is not promised; the player deliberately arms engines again. Custom anchors use a native Components envelope since 5801 (legacy Id markers migrate); the unchanged v1 payload is decoded at the private 11-argument Part constructor before index reconstruction. |
 | [It's So Shiny](../its-so-shiny.lib/ItsSoShinySubmod.Persistence.cs) | Existing host/light cell addresses, grid ownership/appearance, sparse mask, render flag, scroll recipe/offset and pending deletion. | Rebinds native cells without spawning or forcing ignition/switch state; scrolling resumes. Pending deletion restarts its delay. Shared light-template appearance retains the feature's existing shared-template semantics, with Zippo's template ledger restoring originals. |

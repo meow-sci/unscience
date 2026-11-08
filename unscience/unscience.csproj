@@ -41,6 +41,7 @@
     <ProjectReference Include="..\skittles.lib\skittles.lib.csproj" />
     <ProjectReference Include="..\zippo.lib\zippo.lib.csproj" />
     <ProjectReference Include="..\humble-arteest.lib\humble-arteest.lib.csproj" />
+    <ProjectReference Include="..\war-paint.lib\war-paint.lib.csproj" />
     <ProjectReference Include="..\kitchen-sink.lib\kitchen-sink.lib.csproj" />
     <ProjectReference Include="..\the-tick.lib\the-tick.lib.csproj" />
     <ProjectReference Include="..\thug-life.lib\thug-life.lib.csproj" />
@@ -75,6 +76,14 @@
     </Reference>
     <Reference Include="Brutal.Strings" Condition="Exists('$(KSAFolder)Brutal.Strings.dll')">
       <HintPath>$(KSAFolder)Brutal.Strings.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Planet.Render.Core" Condition="Exists('$(KSAFolder)Planet.Render.Core.dll')">
+      <HintPath>$(KSAFolder)Planet.Render.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Vulkan.Abstractions" Condition="Exists('$(KSAFolder)Brutal.Vulkan.Abstractions.dll')">
+      <HintPath>$(KSAFolder)Brutal.Vulkan.Abstractions.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="KSA" Condition="Exists('$(KSAFolder)KSA.dll')">

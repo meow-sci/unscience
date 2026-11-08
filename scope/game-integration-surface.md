@@ -1,5 +1,31 @@
 ## Kitchen Sink capsule glass experiment (5541)
 
+## War Paint current integration ownership (5801)
+
+War Paint is the central kitten color owner. DOH material sources move to
+`war-paint.lib/Materials/`; avatar binding extraction moves to `NativeKittenPaintBackend.cs`.
+Humble's KittenColor global buffer writer/editor is removed; its old MaterialColors payload migrates
+through War Paint. Humble visor draw gating remains. DOH selects saved presets and forwards coloring.
+
+| Surface | Current owner / source | Status |
+|---|---|---|
+| KittenEva._renderable → _characterAvatar; five renderable MaterialIndices paths | war-paint / NativeKittenPaintBackend | Extracted DOH path, original binding capture and guarded restore |
+| Program material/texture roots, AssetMap, native handles, BigBuffer/DeviceCtx, MaterialData stride80/AlbedoColor offset16 | war-paint / Materials | Existing cloning/upload path; exact native asset identity before reuse/release |
+| KittenEva.Character.Id, Vehicle identity/disposal, VehicleProvider | war-paint / WarPaintService | Exact current target; no ambiguous fallback |
+| ISubmod / ISaveParticipantSource | war-paint / WarPaintSubmod | Added Unscience entry, `war-paint` v1/order85, no new Harmony target |
+| Persistent global recipes | war-paint / PaintPresetLibrary | `.unscience/war-paint-presets.json`, detached copies, atomic replacement |
+
+Legacy group/color migration, missing target retention and static/native verification boundaries:
+[implementation](../plans/WAR_PAINT_CONSOLIDATION.md), [save contracts](saves.md).
+
+## Humble Arteest native paint report (5801)
+
+Immediate white vessels on Enable remain unresolved. Three agents found no confirmed exterior
+cause; 64 stock/painted GLSL binaries compiled with unchanged SPIR-V interfaces. Runtime-only
+activation/owner/source diagnostics and an opt-in untouched-stock compiler comparison add no game
+hook or save field. Pre-existing raytraced IVA fragment caching is a separate limitation.
+[Investigation](../plans/HUMBLE_ARTEEST_5801_PAINT_INVESTIGATION.md).
+
 ## Runtime framework startup
 
 The entry-module bootstrap and first `Mod.OnFullyLoaded` diagnostic depend on .NET/StarMap load contexts, not a new KSA member or Harmony target. See [architecture](00-architecture-and-abstractions.md#runtime-networking-bootstrap). Existing game integration points and scene-save payloads are unchanged.
@@ -195,6 +221,19 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 
 ---
 
+## 5801 native playtest follow-up: despawn / shutdown
+
+| Target / integration | Owner | Current contract |
+|---|---|---|
+| `Program.Dispose():void` instance prefix | `unscience/GameShutdownPatches.cs` | Priority.First; join workers, drain live device, consume callback once, call idempotent Mod.Unload before native resource destruction; targeted remove |
+| `PhysicsFrameHook.Enqueue` after native result application | `KittenSpawner.RequestDespawn/RequestDespawnAll`; DOH UI and legacy host | Exact registry-entry check; native-dead/stale requests safe; unavailable hook refuses action. Immediate DestroyVehicle remains for safe boundary/shutdown callers |
+| `Program.GetRenderer().GraphicsAndCompute.WaitIdle` ownership guard | `GraffitiSubmod.Lifetime.cs`; ResetDecals | Only when pipeline/live/retired images exist; unused/repeated cleanup never touches Vulkan; native-save replay unchanged |
+| Default offset / existing DOH save Offset | `SpawnRequest.DefaultOffsetBodyFrame`; DohSubmod persistence | (1, 1, -2) m default; explicit saved values unchanged; pending removals transient, no record version change |
+
+The supplied fatal stack is a late-unload Vulkan queue access, after successful despawn logs and
+pipeline-cache shutdown. No earlier exception is supplied; original exit trigger remains unproven.
+[Follow-up evidence/tests/native checks](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
+
 ## 5801 verification summary
 
 | Current surface | Consumers / owner | Status (5707 → 5801) |
@@ -339,7 +378,7 @@ are recorded separately from native visual acceptance.
 ### KSA.AssetManager<T>
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `AssetMap : protected ConcurrentDictionary<AssetName,T>` | reflection-field (hierarchy) | `KSA/AssetManager.cs:11` | doh, humble-arteest | `doh.lib/Materials/MaterialSystemAccessor.cs:68`; `humble-arteest.lib/KittenColor.cs:55-73` | OK | walks base types; doh also removes its own `doh_*` entries on release (`MaterialSystemAccessor.Pool.cs:98`) and counts distinct live handles for the free-slot estimate |
+| `AssetMap : protected ConcurrentDictionary<AssetName,T>` | reflection-field (hierarchy) | `KSA/AssetManager.cs:11` | war-paint | `war-paint.lib/Materials/MaterialSystemAccessor.cs:68`; `war-paint.lib/Materials/MaterialSystemAccessor.cs` | OK | walks base types; doh also removes its own `doh_*` entries on release (`MaterialSystemAccessor.Pool.cs:98`) and counts distinct live handles for the free-slot estimate |
 | `GetOrLoad(AssetName) : T` | reflection-method | `KSA/AssetManager.cs:49` | doh | `MaterialSystemAccessor.cs:82,168` | OK | returns `GpuObjectAssetRef` |
 
 ### KSA.Asteroid / KSA.Comet
@@ -446,7 +485,7 @@ are recorded separately from native visual acceptance.
 ### KSA.CharacterReference / KSA.CharacterTexturesReference
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `CharacterReference.CharacterTextures : DataReference<CharacterTexturesReference>` | direct API | `KSA/CharacterReference.cs:32` | doh | `doh.lib/Materials/MaterialFactory.cs:384,392` | Migrated @5801 | Follow Value via GameDataReference.Resolve; no reflective Get remains |
+| `CharacterReference.CharacterTextures : DataReference<CharacterTexturesReference>` | direct API | `KSA/CharacterReference.cs:32` | doh | `war-paint.lib/Materials/MaterialFactory.cs:384,392` | Migrated @5801 | Follow Value via GameDataReference.Resolve; no reflective Get remains |
 | `CharacterTexturesReference.{CharacterBodyMaterial, CharacterHeadMaterial, CharacterEyeMaterial} : DataReference<PbrMaterialReference>` | reflection-field | `KSA/CharacterTexturesReference.cs:9,12,15` | doh | `MaterialFactory.cs:408-410` | Migrated @5801 | Follow Value via GameDataReference.Resolve; no reflective Get remains |
 
 ### KSA.CharacterRenderSystem / KSA.CharacterRenderResources
@@ -553,8 +592,8 @@ are recorded separately from native visual acceptance.
 |---|---|---|---|---|---|---|
 | `BigBufferAllocator : FreeListIndexPool` (protected readonly) → `FreeListIndexPool.Capacity` | reflection-field (hierarchy) + reflected property | `KSA/GpuObjectSystem.cs:14,24`; `Brutal.Collections/FreeListIndexPool.cs:17` | doh | `MaterialSystemAccessor.cs:85`; `MaterialSystemAccessor.Pool.cs:34-47` | ADDED @5482 | Material pool size (512, `Program.cs:999`, `allowResize: false`); falls back to 512 if missing. A full pool makes `SendToBuffer` (`:57-64`) throw, including the native fur material in every `KittenEva` ctor. doh keeps 64 slots free and preflights tinted spawns. |
 | `Free(int)` (via `GpuObjectAssetRef.Destroy`) | direct API (indirect) | `KSA/GpuObjectSystem.cs:77-81` | doh | `MaterialSystemAccessor.Pool.cs:102` | ADDED @5482 | reached by disposing doh's own `GpuObjectAssetRef`; frees clone slots on despawn/prune/unload/stale restore |
-| `BigBuffer : BufferEx` (public get/protected set) | reflection-field | `KSA/GpuObjectSystem.cs:18` | doh, humble-arteest | `MaterialSystemAccessor.cs:72`; `KittenColor.cs:191-215` | OK | GPU material buffer |
-| `DeviceCtx : IVulkanContext` (protected) | reflection-field (hierarchy) | `KSA/GpuObjectSystem.cs:16` | doh, humble-arteest | `MaterialSystemAccessor.cs:76`; `KittenColor.cs:55-73` | OK | |
+| `BigBuffer : BufferEx` (public get/protected set) | reflection-field | `KSA/GpuObjectSystem.cs:18` | war-paint | `MaterialSystemAccessor.cs:72`; `war-paint.lib/Materials/MaterialSystemAccessor.cs` | OK | GPU material buffer |
+| `DeviceCtx : IVulkanContext` (protected) | reflection-field (hierarchy) | `KSA/GpuObjectSystem.cs:16` | war-paint | `MaterialSystemAccessor.cs:76`; `war-paint.lib/Materials/MaterialSystemAccessor.cs` | OK | |
 | `CreateObject(AssetName, T) : bool` | reflection-method (doh) / direct API (free-fallin) | `KSA/GpuObjectSystem.cs:45` | doh, free-fallin | `MaterialSystemAccessor.cs:79,138`; `free-fallin.lib/CanopyMaterialController.cs` | OK @5402 | allocates immutable runtime materials; free-fallin creates one per Apply |
 
 ### KSA.GpuTextureSystem
@@ -667,7 +706,7 @@ are recorded separately from native visual acceptance.
 ### KSA.MaterialData
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `MaterialData` (`[StructLayout(Sequential,Pack=1)]`; `AlbedoColor` @offset **16**) | direct API + GPU write | `KSA/MaterialData.cs:6-23` | doh, humble-arteest (KittenColor), free-fallin | `MaterialFactory.cs:249-259`; `KittenColor.cs:191-215`; `free-fallin.lib/CanopyMaterialController.cs` | OK @5402 | **byte-identical**; free-fallin supplies albedo/normal/PBR/emissive handles, tint and `RoughnessMetalScale`; Full Canopy additionally owns `ExtraData=(projection scale, cos rotation, sin rotation, 31415 marker)`; shader channel ABI is R=AO, G=roughness, B=metallic |
+| `MaterialData` (`[StructLayout(Sequential,Pack=1)]`; `AlbedoColor` @offset **16**) | direct API + GPU write | `KSA/MaterialData.cs:6-23` | war-paint (DOH/Humble migrate), free-fallin | `MaterialFactory.cs:249-259`; `war-paint.lib/Materials/MaterialSystemAccessor.cs`; `free-fallin.lib/CanopyMaterialController.cs` | OK @5402 | **byte-identical**; free-fallin supplies albedo/normal/PBR/emissive handles, tint and `RoughnessMetalScale`; Full Canopy additionally owns `ExtraData=(projection scale, cos rotation, sin rotation, 31415 marker)`; shader channel ABI is R=AO, G=roughness, B=metallic |
 
 ### KSA.MeshReference
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -863,8 +902,8 @@ are recorded separately from native visual acceptance.
 | `OffscreenTarget : RenderTarget` (→ `.SetupGraphicsPipeline(ref VkGraphicsPipelineCreateInfo)`) | direct (render-pass) | `KSA/Program.cs:457` | thug-life | `ThugLifeQuadRenderer.cs:152` | OK | replaced `OffScreenPass`/`RenderPassState` @5261 (dynamic rendering). ⚠ **null until `BuildRenderTargets()` (`Program.cs:970` @5402), which runs after `ModLibrary.LoadAll()` (`:942`) — i.e. after `[StarMapAllModsLoaded]`; the mod's pipeline build is lazy for exactly this reason** |
 | `SetViewport(CommandBuffer)` | direct (render) | `KSA/Program.cs:4293` | thug-life | `ThugLifeQuadRenderer.cs:264` | OK | sizes to `RenderedViewport` |
 | `PrepareFrame(double currentPlayerTime, double dtPlayer)` (private instance method) | **Harmony transpiler** | `KSA/Program.cs:2275` @5638 | scene saves, garrys-torch, dent-wizard, godzilla, iron-man | `PhysicsFrameHook.cs:50` (installation), `:132` (validation) | Ordering corrected in October 25 follow-up; native retest pending | Wraps one GetJobSimStep call after ApplyOrbit/Vehicle/ClothSolvers and before ExecuteNextCloth/Vehicle/OrbitSolvers; unique ordered calls required. Validates before preexisting foreign call wrappers; failed installation removes only our transpiler. Preserves labels/exception blocks and returned step. |
-| `Instance : static (singleton)` | reflection (private) | `KSA/Program.cs:371` | doh, humble-arteest (KittenColor) | `MaterialSystemAccessor.cs:54,57`; `KittenColor.cs:55-73` | OK | render-systems root |
-| `MaterialSystem : GpuMaterialSystem` (field) | reflection-field | `KSA/Program.cs:94` | doh, humble-arteest | `MaterialSystemAccessor.cs:64`; `KittenColor.cs:55-73` | OK | |
+| `Instance : static (singleton)` | reflection (private) | `KSA/Program.cs:371` | war-paint (DOH/Humble migrate) | `MaterialSystemAccessor.cs:54,57`; `war-paint.lib/Materials/MaterialSystemAccessor.cs` | OK | render-systems root |
+| `MaterialSystem : GpuMaterialSystem` (field) | reflection-field | `KSA/Program.cs:94` | war-paint | `MaterialSystemAccessor.cs:64`; `war-paint.lib/Materials/MaterialSystemAccessor.cs` | OK | |
 | `SuperMeshRenderSystem` (field) → `.TextureSystem : GpuTextureSystem` | reflection-field | `KSA/Program.cs:96`; `KSA/SuperMeshRenderSystem.cs:39` | doh | `MaterialSystemAccessor.cs:88,91,94` | OK | |
 | `CharacterRenderSystem` (field) | reflection-field | `KSA/Program.cs` (`KSA/CharacterRenderSystem.cs:7`) | doh | `MaterialFactory.cs:495-528` | OK | |
 
@@ -1086,7 +1125,7 @@ are recorded separately from native visual acceptance.
 | `ImGui.GetIO().WantTextInput` | direct API | `Brutal.ImGuiApi/*` | HotkeyGuard (→ all mods) | `HotkeyGuard.cs:38` | OK | detects ImGui text-input focus; watch on Brutal bumps |
 | `ImGuiStyle.Colors : float4_60` / `ImGuiStylePtr` (60-color array + 72 style members) | direct API | `Brutal.ImGuiApi/ImGuiStyle.cs:188`; `ImGuiStylePtr.cs` | skittles | `skittles.lib/ThemeDefinition.cs:89-90` | OK | hard-codes 60 colors + fixed style-var list; a Brutal slot/member add is silently dropped — watch every Brutal bump |
 | `ImGuiCol` (enum, 60 slots `Text`…`ModalWindowDimBg` + `COUNT`) | enum | `Brutal.ImGuiApi/ImGuiCol.cs:5-65` | skittles | `skittles.lib/ThemeSerializer.cs:12-31` | OK | hard-coded `60` count must match |
-| `VkUtils.StageAndUploadToBuffer` / `BufferEx.VkBuffer` / `IVulkanContext.Device.CreateStagingPool` / `ByteSize.Of<T>()` | GPU write (Brutal.VulkanApi) | `Brutal.VulkanApi(.Abstractions)` | doh, humble-arteest (KittenColor) | `MaterialSystemAccessor.cs:282-295`; `KittenColor.cs:191-215` | OK | GPU material-buffer write; rev-4729 Brutal bump is the churn surface (build passes). The `Span<float4>`→bytes conversion now uses the BCL `MemoryMarshal.AsBytes`; the `CommunityToolkit.HighPerformance` game-DLL reference it used to need is **retired** — that DLL is not in `ksa-game-assemblies/current/dll/` (`copy-ksa.ts` does not copy it), so the reference broke any build pointed at that tree |
+| `VkUtils.StageAndUploadToBuffer` / `BufferEx.VkBuffer` / `IVulkanContext.Device.CreateStagingPool` / `ByteSize.Of<T>()` | GPU write (Brutal.VulkanApi) | `Brutal.VulkanApi(.Abstractions)` | war-paint (DOH/Humble migrate) | `MaterialSystemAccessor.cs:282-295`; `war-paint.lib/Materials/MaterialSystemAccessor.cs` | OK | GPU material-buffer write; rev-4729 Brutal bump is the churn surface (build passes). The `Span<float4>`→bytes conversion now uses the BCL `MemoryMarshal.AsBytes`; the `CommunityToolkit.HighPerformance` game-DLL reference it used to need is **retired** — that DLL is not in `ksa-game-assemblies/current/dll/` (`copy-ksa.ts` does not copy it), so the reference broke any build pointed at that tree |
 | `SimpleVkTexture` / `VkUtils.UploadBufferToImage` + pipeline/descriptor primitives (`DescriptorSetLayoutEx`, `DescriptorPoolEx`, `VertexInput`, `ShaderStages`, `CommandBuffer`) | GPU (Brutal.VulkanApi/RenderCore) | `Brutal.VulkanApi`, `RenderCore`, `Core` | thug-life | `ThugLifeTextureFactory.cs:33,64`; `ThugLifeQuadRenderer.cs` | OK | custom Vulkan pipeline; highest churn surface (rev 4729); 4750 build passes |
 
 ### KSA planetary rings data + renderer (rocky-mcrock-face)
@@ -1174,7 +1213,7 @@ on every game update FIRST.
 | `AnimatedRenderable.UpdateAnimation` | kitten-animations | `AccessTools.Method` by name (Harmony prefix) | OK — loud `MissingMethodException` at `Apply` if renamed |
 | `LightModule.TemplateData` (`"KSA.LightModule+TemplateData"`) + `PartTemplate.Components` + `TemplateData.Intensity`/`FloatReference.Value` + `ColorRgbReference.{R,G,B,OnDataLoad}` | zippo, its-so-shiny (via ZippoLib) | hard-coded type/field/method names | OK |
 | ~~`LightModule.TemplateData."Color"`~~ | ~~zippo~~ | ~~`GetField("Color")` — wrong name~~ | **RETIRED @5348** — the bug is gone: the code reads `"ColorRgb"` (`zippo.lib/LightController.cs:59,80`), which is the real field. Fixed by commit `07787ea`; earlier scope text calling this BROKEN was **stale**. There is no `GetField("Color")` anywhere in the repo. |
-| `Program.Instance`/`MaterialSystem`/`SuperMeshRenderSystem`/`CharacterRenderSystem` + `GpuObjectSystem.{BigBuffer,DeviceCtx,CreateObject}` + `AssetManager.{AssetMap,GetOrLoad}` + `GpuObjectAssetRef.Handle` + `GpuTextureSystem.*` + `Pbr/Character*Reference.*` | doh, humble-arteest (KittenColor) | deep render-system reflection bridge | OK |
+| `Program.Instance`/`MaterialSystem`/`SuperMeshRenderSystem`/`CharacterRenderSystem` + `GpuObjectSystem.{BigBuffer,DeviceCtx,CreateObject}` + `AssetManager.{AssetMap,GetOrLoad}` + `GpuObjectAssetRef.Handle` + `GpuTextureSystem.*` + `Pbr/Character*Reference.*` | war-paint (DOH/Humble migrate) | deep render-system reflection bridge | OK |
 | `GpuObjectSystem.BigBufferAllocator` (protected field, by name) → `FreeListIndexPool.Capacity` (property, by name) | doh | pool size for the material budget; a miss falls back to the stock 512 instead of disabling the guard, so a renamed field is silent. Re-check the `new GpuMaterialSystem(..., 512, ...)` capacity in `Program.cs` each update | ADDED @5482 |
 | `ModLibrary.AllParts`/`AllCharacters` + `SerializedCollection.{GetList,Find}` | doh | internal static fields/methods by name | OK |
 | `ModLibrary.AllMeshes` | rocky-mcrock-face, pebbles | `GetField("AllMeshes")` — `rocky-mcrock-face.lib/RingAssetCatalog.cs` (`Collection<T>`); `pebbles.lib/Assets/ClutterAssets.cs:51` | OK |
@@ -1204,7 +1243,7 @@ on every game update FIRST.
 | `GridFrag` (path anchor only) + `Common/Camera.glsl` / `Common/TextureSet.glsl` (headers, `#include`d) | shader include root + headers | `ModLibrary.Get<ShaderReference>("GridFrag").ModPath` → its **directory** is the `#include` root for graffiti's two runtime-compiled decal shaders | `Content/Core/DefaultAssets.xml:373` → `Core/Shaders/Grid.frag`; `Core/Shaders/Common/*.glsl` | graffiti | OK @5348 — a `global.camera`/`global.lighting` struct or `SAMPLE_TEXTURE`/`SET_TEXTURE` macro change fails at shaderc compile (loud console line; decals self-disable) |
 | `MeshIndirect.frag` + `MeshIndirectRaytraced.frag` (paint injection) | shader text-edit (in memory, via the `FromFile` prefix) | matched by **file name**; anchor = first `vec3 sampledColor …;` line; requires `inStateFlags` varying and `gammaToLinear` (`Common/Shared.glsl:203`) | `Content/Core/Shaders/Mesh/MeshIndirect.frag:114`; `MeshIndirectRaytraced.frag:156` | humble-arteest (VehiclePaint) | OK (rebuilt for 5018) — if the anchor moves, `Enable` fails with a UI message and rendering stays stock |
 | `MeshIndirect.frag` (Temperature LUT, `#ifdef ENABLE_TEMPERATURE`) | shader (read-only, no edit) | — | `Content/Core/Shaders/Mesh/MeshIndirect.frag:214-219` | humble-arteest (EngineEmissive) | OK (MOVED from `DynamicMeshIndirect.frag` rev 4693; feature still works) |
-| `Model.vert` + `Model_Skinned.vert` + `ModelPbr.frag` → `TextureSet.glsl` / `MaterialSet.glsl` | shader text-edit (in memory, via the `FromFile` prefix) | exact declaration/assignment/call anchors; added location-3 `vec2`; Full Canopy marker in `Material.extraData.w` | `Content/Core/Shaders/Mesh/Model{,_Skinned}.vert`; `Mesh/ModelPbr.frag`; `Common/{TextureSet,MaterialSet}.glsl` | free-fallin; existing read-only albedo effect also used by doh and humble-arteest (KittenColor) | OK @5402 — transformed shaders compile to valid SPIR-V; static vertex supplies pass-through varying, skinned vertex derives bind-pose X/Z projection, fragment substitutes only marked albedo sampling |
+| `Model.vert` + `Model_Skinned.vert` + `ModelPbr.frag` → `TextureSet.glsl` / `MaterialSet.glsl` | shader text-edit (in memory, via the `FromFile` prefix) | exact declaration/assignment/call anchors; added location-3 `vec2`; Full Canopy marker in `Material.extraData.w` | `Content/Core/Shaders/Mesh/Model{,_Skinned}.vert`; `Mesh/ModelPbr.frag`; `Common/{TextureSet,MaterialSet}.glsl` | free-fallin; existing read-only albedo effect also used by war-paint | OK @5402 — transformed shaders compile to valid SPIR-V; static vertex supplies pass-through varying, skinned vertex derives bind-pose X/Z projection, fragment substitutes only marked albedo sampling |
 | `ParachuteCanopyGlb` + `ParachuteCanopy_Material_CheckerLongOrange` | skinned GLTF + baseline PBR assets | verified native orange-checker source | `Core/ParachuteAssets.xml`; `Core/CoreUtilityAGameData.xml` | free-fallin | Migrated @5438: old ParachuteCanopy_Material removed; restore each canopy's own selected native handle. |
 | `ModelTranslucent.frag` + `CharacterRenderResources.GlassRenderer` | shader/pipeline research (no edits) | `ModelTranslucentFrag` + `ModelVert` in stock glass pipeline | `Content/Core/Shaders/Mesh/ModelTranslucent.frag:81,182`; `KSA/CharacterRenderResources.cs:77,189` | humble-arteest (visor visibility) | @5402 — fixed opacity 0.75 plus Fresnel ignores material alpha; transparent pass with depth writes. The visor draw gate avoids both this color pass and its prepass. |
 | `DynamicMeshIndirect.vert/.frag`, `ModelEye.frag`, `ModelGlass.frag` | shader (removed) | (design assumption only) | — | humble-arteest (narrative), blinky/its-so-shiny GlassModule (C# only) | n/a (removed 4693/4745; `ModelTranslucent.frag` new 4747 — not referenced by id) |

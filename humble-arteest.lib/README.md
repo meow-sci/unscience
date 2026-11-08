@@ -6,10 +6,15 @@ Vehicle Paint now encodes 6:6:6 sRGB in StateBitFlag bits 13–30, preserving na
 
 See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
 
-Humble Arteest provides three visual customization features for KSA:
+The reported white-vessel glow on Enable remains under native investigation. Activation diagnostics
+and a process-local **stock shader A/B** are available; follow the exact environment-variable and
+restart steps in [the 5801 paint investigation](../plans/HUMBLE_ARTEEST_5801_PAINT_INVESTIGATION.md).
+The comparison forwards unmodified stock GLSL and intentionally applies no vehicle colors.
+
+Humble Arteest provides vehicle visual customization and kitten visor visibility:
 
 1. **Vehicle Paint** — Recolors vehicle parts, per part instance, via a runtime-patched part fragment shader
-2. **Kitten Color** — Tints kitten character materials and independently hides/shows visor glass
+2. **Kitten Visors** — Independently hides/shows visor glass; kitten coloring is in [War Paint](../war-paint.lib/README.md)
 3. **Engine Emissive** — Controls per-engine glow/heat effects via Temperature field overrides
 
 All features are accessible as `ISubmod` implementations for use in the unscience supermod or standalone.
@@ -18,7 +23,7 @@ All features are accessible as `ISubmod` implementations for use in the unscienc
 
 ## Architecture Overview
 
-### Why Three Separate Approaches?
+### Rendering approaches
 
 KSA renders vehicle parts and kitten characters through different pipelines, so each feature uses
 the approach matched to its rendering path:
@@ -27,7 +32,6 @@ the approach matched to its rendering path:
 |---|---|---|---|
 | Vehicle parts (static) | `MeshIndirect.{vert,frag}`, `ENABLE_EMISSIVE`+`ENABLE_THIN_FILM` variant | `PartModel.PerInstanceData` | Free bits of `StateBitFlag` + patched fragment shader |
 | Vehicle parts (dynamic) | `MeshIndirect.{vert,frag}`, `ENABLE_TEMPERATURE`+`ENABLE_THIN_FILM` variant | `PartModelDynamic.PerInstanceData` | Same, plus the game's own `Temperature` for glow |
-| Kitten body/helmet | `ModelPbr.frag` | — (materials live in `GpuMaterialSystem`) | Write `AlbedoColor` into the GPU material buffer |
 | Kitten visor glass | `ModelTranslucent.frag` (transparent pass) | `StaticMeshRenderable` submissions | Gate `VisorMesh.Draw()` to hide glass independently of fixed shader opacity |
 
 > **Shader-merge note (KSA rev 4693+).** The separate `DynamicMeshIndirect` shader no longer exists —
@@ -232,103 +236,21 @@ it, so windows stay clear.
 
 ---
 
-## Feature 2: Kitten Color (GPU Material Buffer Writes)
+## Feature 2: Kitten visor visibility
 
-### How It Works
+Use **Hide visor glass** / **Show visor glass** under Kitten Visors. The toggle affects all kittens,
+including new spawns, and is saved with the scene. Unload and scene reset restore visor drawing.
+Kitten tinting and material editing now belong to [War Paint](../war-paint.lib/README.md), which
+isolates each kitten's materials instead of changing shared global assets.
 
-Kitten body/helmet models use `ModelPbr.frag`, which reads materials from `GpuMaterialSystem`.
-These materials include an `AlbedoColor` field (float4) that is **multiplied** with the albedo texture.
-Fur shells use `Fur.frag`; glass and eyes use separate variants of `ModelTranslucent.frag`.
-Material tinting and alpha behavior therefore depend on the rendering path.
+`KittenVisorPatches` transpiles `KittenRenderable.UpdateRenderData`, replacing exactly one
+`CharacterAvatar.Helmet.VisorMesh.Draw(ViewHandle)` call with a conditional draw helper. Skipping
+that call omits transparent color and depth-prepass submissions. Other glass, helmet shells,
+animation and mesh visibility stay under native control. The button reports a patch error if the
+expected single IL match changes. Both hosts apply/remove this patch.
 
-The default `AlbedoColor` is `(1, 1, 1, 1)` (white = no tint). By writing a different color to the GPU material buffer, we tint all characters using that material.
-
-### Step-by-Step Data Flow
-
-1. **Initialization** (`KittenColor.Initialize()`)
-   - Uses reflection to access `Program.Instance` → `MaterialSystem` (type `GpuMaterialSystem`)
-   - Reads the `AssetMap` (ConcurrentDictionary) which maps material names to handles
-   - Caches `BigBuffer` (the GPU buffer containing all MaterialData) and `DeviceCtx` (Vulkan context)
-
-2. **Color Application** (`KittenColor.WriteAlbedoColor()`)
-   - Calculates the byte offset: `handle * sizeof(MaterialData) + offsetof(AlbedoColor)`
-   - Creates a Vulkan staging pool and command buffer
-   - Uses `VkUtils.StageAndUploadToBuffer()` to write the new float4 color at the correct offset
-   - This is a direct GPU buffer write — the change takes effect immediately
-
-3. **Reset** — writes `(1, 1, 1, 1)` to all materials, restoring the original white multiplier
-
-### Why This Doesn't Work for Vehicle Parts
-
-Vehicle parts use `MeshIndirect.frag` which reads texture indices from `PerDrawData` and samples textures directly — it **never reads** from `GpuMaterialSystem`. The `AlbedoColor` field only exists in the `MaterialSet.glsl` include used by `ModelPbr.frag`.
-
-The material list from `GpuMaterialSystem.AssetMap` is populated by:
-- `CharacterRenderResources` — kitten fur, glass, eye materials
-- `GltfPbrSystem` — GLTF model materials
-
-Vehicle parts never register here — which is exactly why Vehicle Paint needs its own transport.
-
-### Alpha Channel Behavior
-
-The `ModelPbr.frag` shader discards fragments when `albedo.a < 0.1`. This does not apply to visor glass.
-
-### Visor glass visibility
-
-Enable **Active**, then click **Hide visor glass** (the button changes to **Show visor glass**).
-It affects all kittens, including new spawns, without initializing the material editor. Turning
-Active off or disposing the submod restores drawing. Color Reset only resets colors; the visor
-toggle is independent and session-only.
-
-KSA build `2026.9.7.5402` constructs `CharacterAvatar.Helmet.VisorMesh` as a separate
-`StaticMeshRenderable` with `isOpaque: false` and `CastShadows = false`
-(`CharacterAvatar.SetupAttachmentsFromRenderRef`). `CharacterRenderResources.GlassRenderer`
-uses `ModelVert` + `ModelTranslucentFrag` in the transparent pass, with alpha blending and depth
-writes enabled. The shader does **not** discard on alpha: its non-`EYE` branch hard-codes
-`opacity = 0.75`, then computes `finalAlpha = mix(opacity, 1.0, fresnel * 0.5)`. Changing
-`AlbedoColor.W` cannot make that glass invisible. The `EYE` variant hard-codes opacity to 0.3.
-
-`KittenVisorPatches` transpiles `KittenRenderable.UpdateRenderData`, replacing exactly one visor
-draw call with a conditional draw helper. Since KSA 5482 meshes are bucketed per render view, and
-the call is `VisorMesh.Draw(view)`. The transpiler matches `ldfld CharacterAvatar.Helmet.VisorMesh`,
-a local load of the view and `StaticMeshRenderable.Draw(ViewHandle)`, then substitutes
-`DrawVisor(StaticMeshRenderable, ViewHandle)`. Skipping `Draw(view)` omits both transparent color
-and depth-prepass submissions for that view.
-The helmet shell, eyes, other glass, animation, attachment state and mesh visibility flags are
-untouched. No shader recompilation or renderer rebuild is needed. Both hosts apply/remove the
-patch. If the expected single IL match changes, patch installation fails and the UI disables the
-button with an error instead of guessing which mesh to hide.
-
-Validation: solution compilation and managed draw-gating checks; live KSA visual acceptance remains
-required (hide/show multiple kittens, spawn while hidden, switch views, deactivate and unload).
-
-### Critical Game Infrastructure Used
-
-- **`KSA.Program.Instance`** — game singleton (accessed via reflection: `typeof(Part).Assembly.GetType("KSA.Program")`)
-- **`GpuMaterialSystem`** (field on Program) — manages the GPU material buffer
-- **`GpuMaterialSystem.AssetMap`** — `ConcurrentDictionary<string, GpuObjectHandle>` mapping names to handles
-- **`GpuMaterialSystem.BigBuffer`** — `BufferEx` containing all `MaterialData` structs packed sequentially
-- **`MaterialData.AlbedoColor`** — `float4` field at a specific offset within the struct
-- **`VkUtils.StageAndUploadToBuffer()`** — uploads data to a Vulkan buffer via staging
-
-### MaterialData Struct Layout
-
-The `AlbedoColor` offset is determined via `Marshal.OffsetOf<MaterialData>("AlbedoColor")`. If KSA reorganizes `MaterialData`, this offset may change. The struct is defined in `KSA.MaterialData`.
-
-### What Could Break and How to Fix It
-
-| Breakage | Symptom | Fix |
-|----------|---------|-----|
-| `MaterialData.AlbedoColor` field renamed/removed | Offset calculation fails | Find the new field name or offset in the decompiled struct |
-| `GpuMaterialSystem` internals restructured | Initialization fails | Update reflection paths — walk the hierarchy to find AssetMap/BigBuffer |
-| `ModelPbr.frag` stops reading AlbedoColor | Colors have no effect | Check if a new uniform or buffer binding replaced it |
-| `Program.Instance` accessor changed | Can't reach MaterialSystem | Update the reflection path to the game singleton |
-| New material types registered | Unexpected tinting | Filter the AssetMap by material name patterns |
-
-### Files
-
-- `KittenColor.cs` — reflection-based GPU buffer access + color writes
-- `KittenColorSubmod.cs` — ISubmod UI panel
-- `KittenVisorPatches.cs` — targeted visor draw gate, with Apply/Remove lifecycle
+Validation covers compilation and managed draw gating; native hide/show, spawning while hidden,
+view changes, scene save/load and unload acceptance remain pending.
 
 ---
 
@@ -405,14 +327,13 @@ humble-arteest.lib/                — Core library (referenced by unscience sup
 ├── PaintTargets.cs                — Paintable part enumeration (flight + editor)
 ├── VehiclePaintSubmod.cs          — ISubmod UI: shader state, brush, blend mode
 ├── VehiclePaintSubmodTables.cs    — ISubmod UI: per-part and per-part-type tables
-├── KittenColor.cs                 — GPU material buffer AlbedoColor writes
-├── KittenColorSubmod.cs           — ISubmod UI for kitten coloring
+├── KittenVisorPatches.cs           — Per-view visor draw gate
 ├── EngineEmissive.cs              — Per-engine temperature state management
 ├── EngineEmissivePatches.cs       — Harmony prefix on PartModelDynamic.AddInstance
 ├── EngineEmissiveSubmod.cs        — ISubmod UI for engine glow control
-├── HumbleArteestSubmod.cs         — Composite ISubmod grouping all three
+├── HumbleArteestSubmod.cs         — Vehicle paint, visor, and engine glow panel
 ├── Experiments/                   — Retained validation experiments
-│   ├── MaterialColorTest.cs       — AlbedoColor material test (Kitten Color)
+│   ├── MaterialColorTest.cs       — Historical AlbedoColor material experiment
 │   └── TemperatureTest.cs         — Temperature field override test (Engine Emissive)
 └── humble-arteest.lib.csproj
 ```
@@ -421,19 +342,10 @@ humble-arteest.lib/                — Core library (referenced by unscience sup
 
 ## Unscience Supermod Integration
 
-All three submods (`VehiclePaintSubmod`, `KittenColorSubmod`, `EngineEmissiveSubmod`) implement `ISubmod` from `ksa-abstractions.lib`, grouped by `HumbleArteestSubmod`. Unscience registers them alongside other submods and provides Harmony patches via its consolidated patcher.
-
-Unscience's `Patcher.cs` calls:
-- `VehiclePaintPatches.Apply(harmony)` / `.Remove(harmony)`
-- `EngineEmissivePatches.Apply(harmony)` / `.Remove(harmony)`
-
-Unscience's `Patcher.Unload()` also calls:
-- `VehiclePaint.Cleanup()` — removes the patched shaders (requesting a rebuild) and clears paint state
-- `EngineEmissive.Cleanup()` — clears all engine overrides
-
-Kitten Color's tinting uses GPU buffer writes; its independent visor toggle uses
-`KittenVisorPatches.Apply(harmony)` / `.Remove(harmony)` in both hosts. `KittenColorSubmod.Dispose`
-also clears the hide flag.
+`HumbleArteestSubmod` implements `ISubmod` and provides the same vehicle paint, visor, and engine
+glow panel in Unscience and its development host. Unscience's consolidated patcher applies/removes
+`VehiclePaintPatches`, `EngineEmissivePatches` and `KittenVisorPatches`. Dispose restores visor
+visibility and cleans vehicle/engine ownership.
 
 ---
 
@@ -456,9 +368,6 @@ under `ksa-game-assemblies/current/decomp` and `.../current/Content`. Line numbe
 | `Content/Core/Shaders/Mesh/MeshIndirect.frag` | Paint anchor (:114) and the `inStateFlags` bit tests (:308-353) |
 | `Content/Core/Shaders/Mesh/MeshIndirectRaytraced.frag` | Same anchor (:156) for the IVA raytraced path |
 | `Content/Core/Shaders/Common/Shared.glsl` | `gammaToLinear` (:203), `unpackRGB` (:50) |
-| `KSA/MaterialData.cs` | `MaterialData` struct with `AlbedoColor` (Kitten Color) |
-| `KSA/GpuMaterialSystem.cs` | Material GPU buffer, `AssetMap`, `BigBuffer` (Kitten Color) |
-| `Content/Core/Shaders/Mesh/ModelPbr.frag` + `Common/MaterialSet.glsl` | AlbedoColor multiplication (Kitten Color) |
 
 ---
 
@@ -477,19 +386,15 @@ were removed with the mechanism they validated: the padding bytes they probed ar
 
 ## Scene saves
 
-The `humble-arteest` participant persists shader activation/blend mode, global/template/instance
-paint, global and exact module engine-emissive settings, named material tints and visor visibility.
-Part addresses use vehicle IDs and validated full-part/subpart paths. Restore rebuilds shader state
-through the existing deferred renderer flag and synchronizes panel activation/entries, so opening
-the panel cannot immediately erase the loaded result.
+The unchanged version-1 `humble-arteest` participant persists shader activation/blend mode,
+global/template/instance vehicle paint, global and exact-module engine glow, and visor visibility.
+Part addresses use shared stable vehicle IDs and validated full-part/subpart paths. Reset clears
+paint/emissive registries before native vehicle destruction; replay synchronizes the panels.
 
-Successful Kitten Color writes now retain original colors and detached applied colors. Save reset
-restores only owned writes before native vehicle destruction, then clears paint/emissive registries.
-Shared `MaterialColorState` records known Unscience-created colors so DOH material originals and
-later tint edits survive without GPU readback. Native stock PBR materials begin white; colors written
-by unrelated mods without this tracking are outside the original-value guarantee. Private `doh_*`
-GPU names are excluded from this participant: DOH captures their effective colors under stable
-kitten/material identity. Missing material names, parts or module slots appear in Saves status.
-Material cleanup verifies the original asset still owns its GPU slot before restoring its color.
-DOH and Free Fallin private materials persist through their owning features, including Humble
-Arteest edits, so generated asset names and recycled handles cannot leak between scenes.
+The legacy `MaterialColors` dictionary remains readable in this payload. Restore forwards those
+named recipes to War Paint, which finds matching source materials on reconstructed live EVA
+kittens and applies independent owned material sets. It reports unmatched material names and failed
+targets so the save coordinator retains incomplete legacy data. New captures leave the dictionary
+empty; active kitten paint is captured by War Paint's scene participant. Its later replay takes
+precedence over migrated legacy paint. Global reusable presets live in War Paint's separate disk
+library. Humble Arteest no longer writes global kitten-material colors.

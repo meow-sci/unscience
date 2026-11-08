@@ -19,7 +19,7 @@ seams, managed checks and native acceptance: [upgrade review](plans/KSA_5801_UPG
 | ksa-abstractions.lib | GameDataReference resolved graph construction/material unwrapping; no scene state |
 | iron-man.lib / iron-man.tests | 11-argument Part seam; native anchor module envelope, isolated world/blueprint serializers and legacy Id migration; same v1 payload |
 | humble-arteest.lib / ksa-upgrade.tests | Paint bits 13–30, 6:6:6, native highlight isolation; pure production shader source transform and real-DLL probes |
-| doh.lib | Follow resolved character/material/texture links instead of removed reflective Get |
+| war-paint.lib (extracted from DOH) | Follow resolved character/material/texture links instead of removed reflective Get |
 | pebbles.lib / pebbles.tests | Native keys/lists, optional curvature and terrain-fade capture/replay, native stride-buffer and terrain-resource ownership |
 | rocky-mcrock-face.lib / bloomin-onion.lib | Resolved material/mesh/texture/glTF graph links, normal-slot catalog, original-reference restoration |
 | pyro.lib | Moved template registry, direct template instances, runtime SI pressure/density |
@@ -30,7 +30,19 @@ seams, managed checks and native acceptance: [upgrade review](plans/KSA_5801_UPG
 | byo-music legacy host | Strict Ref/array sound XML, same public asset IDs |
 
 Sidecar IDs/versions are unchanged; Iron Man's native XML carrier changes with legacy migration.
-All 18 managed suites and the 19-case startup harness pass; native game acceptance is pending.
+All 19 managed suites and the 19-case startup harness pass; native game acceptance is pending.
+
+## 5801 despawn / shutdown follow-up
+
+- **doh.lib / doh / doh.tests**: UI removals queue at PhysicsFrameHook with exact-registration guards;
+  legacy host installs that hook. Shared API/UI/reset default offset (1, 1, -2) m, saved offsets retained;
+  69 managed naming/persistence/teardown checks.
+- **unscience**: GameShutdownPatches prefixes native Program.Dispose to join workers/drain the device
+  and call idempotent Unload before native resource destruction; compile-only Planet.Render.Core reference.
+- **graffiti.lib / ksa-upgrade.tests**: ownership-aware GPU cleanup shared by Dispose and scene reset;
+  production-Harmony ordering/late-unload and unused/textures-only cases, real native Dispose signature.
+
+[Evidence and pending native acceptance](plans/DOH_DESPAWN_5801_FOLLOWUP.md). Scene-save IDs/versions unchanged.
 
 ## Distribution policy
 
@@ -42,7 +54,7 @@ bundled only through explicit project references. See the root README for instal
 
 Final feature coverage and validation limits: [save acceptance](plans/saves-acceptance.md).
 
-All 29 bundled features participate in scene saving, with explicit native/global/transient policies.
+All bundled features participate in scene saving, with explicit native/global/transient policies.
 The existing Unscience host attaches `unscience.json` to native KSA saves; shared contracts, storage,
 part references and lifecycle hooks live in `ksa-abstractions.lib/Persistence`. Feature-owned
 `*.Saves.cs` / `*.Persistence.cs` files implement capture/reset/replay. Start at
@@ -82,7 +94,7 @@ Shared library with common abstractions used across multiple mods. Provides util
 - `HiddenUiFrameHook` — Harmony prefix on `Program.OnDrawUiConsole` that replays a host's registered `BeforeGui`/`AfterGui` per-frame work while the game HUD is hidden (F2), because StarMap's `[StarMapBeforeGui]`/`[StarMapAfterGui]` targets are skipped by the game in that state; used by unscience
 - `PngLibrary` / `PngFileBrowser` — shared `.unscience/pngs` catalog and reusable ImGui filesystem picker; every filesystem PNG import is copied into this one auto-uniquifying library, used by graffiti and free-fallin
 - `EasingType` enum + `EasingHelper.ApplyEasing()` — shared easing utility (Linear/EaseIn/EaseOut/EaseInOut with power params); used by zippo.lib, garrys-torch.lib, camera-controller-override.lib
-- `XkcdColorHelper` — cached reflection-based lookup of all ~950 `KSAColor.Xkcd` named colors; provides `GetAll()`, `FindByName()`, `GetNames()`; used by zippo.lib and doh.lib
+- `XkcdColorHelper` — cached reflection-based lookup of all ~950 `KSAColor.Xkcd` named colors; provides `GetAll()`, `FindByName()`, `GetNames()`; used by zippo.lib
 
 ---
 
@@ -397,39 +409,58 @@ Global ImGui theme manager. Provides a theme picker and a full style editor that
 ## Kitten Spawning & Customization Mods
 
 ### [doh](doh) / [doh.lib](doh.lib)
-Programmatic kitten spawning with per-kitten GPU material customization. Spawns KittenEva entities at arbitrary positions with unique tint colors via runtime MaterialData creation in GpuMaterialSystem.
-- Vehicle-relative positioning with configurable body-frame offset (XYZ)
-- Batch spawning (1–20 kittens) with chain offsets
-- Editable vehicle name / batch prefix (default `Kitten_doh_`) for both spawn buttons: exact single
-  names, collision-free numbered batches, blank automatic fallback; name/prefix is scene-saved.
-  Names held by a rostered kitten are also refused (KSA 5707 ties radiation dose/KIA to the name)
-- Character selection from ModLibrary or random assignment
-- Per-kitten material tinting via custom AlbedoColor on cloned GPU materials
-- Unique or shared material sets for batch spawns
-- Live recoloring of spawned kittens via GPU buffer writes
-- Individual despawn or despawn-all management
-- Spawned kitten registry with full tracking
-- F8 ImGui window with vehicle/character combos (filterable), color picker, kitten list table. The spawn target is held as the `Vehicle` object, never a list index, because KSA's vehicle list swap-removes
-- GPU material pool budget: KSA's material pool is a fixed 512 slots. doh keeps 64 free for the game, preflights tinted spawns (~10 slots per set), shares one set per non-unique batch, and releases sets on despawn, prune, unload and stale restore. A half-constructed `KittenEva` is cleaned up if its constructor throws
-- **doh.lib**: `MaterialSystemAccessor` (reflection bridge to GpuMaterialSystem/GpuTextureSystem; `.Pool.cs` capacity/free-slot/reserve/release), `MaterialFactory` (runtime per-kitten material creation; `.Lifetime.cs` release), `KittenMaterialSet` (per-kitten GPU handles, owned asset names, live UpdateTint), `KittenSpawner` (spawn/despawn/prune/recolor engine replicating EVADoor.CreateKittenEva; partials `.Positioning`, `.Materials`, `.Naming`, `.Catalog`), `SpawnRequest`/`SpawnResult` (DTOs), `SpawnedKittenRegistry` (state tracking), `DohSubmod` (ISubmod for unscience integration; `.Persistence.cs` scene saves with optional shared `MaterialGroup`). All methods are game-thread-only.
-- **Unscience integration**: DOH is available as a submod in the unscience supermod via `DohSubmod`.
+Programmatic kitten spawning, exact single names or numbered batch prefixes, character selection,
+body-frame offsets (default **1, 1, -2 m**) and deferred despawn management. DOH selects an optional
+saved **War Paint** preset; all coloring is delegated to that central owner. The spawn API accepts
+a detached recipe or preset name; legacy tint API inputs still forward to War Paint.
+
+`doh` v1 saves retain their ID/version and decode earlier tint/material/group payloads into independent
+War Paint targets. New captures store spawn settings/preset snapshot and native kitten registrations;
+active paints are captured once by War Paint. Legacy shared groups preserve effective colors while
+becoming independently editable. The material-budget preflight reserves room for KSA's own avatars.
 
 ### [doh.tests](doh.tests)
-Native-free managed checks that link the real DOH save adapter, naming, kitten registry, material set and material-set release code. Cover exact/prefixed/automatic names and collisions (including rostered-kitten names, 5707), name/prefix round-trips and legacy/reset/invalid-name handling, shared `MaterialGroup` capture/restore, same-save reuse without new allocations, legacy records without groups, missing kittens releasing their sets, vanilla-load cleanup, no reuse after release and malformed groups. Run `dotnet run --project doh.tests`; see its [README](doh.tests/README.md).
+Links the actual DOH adapter, naming/registry/teardown code and central War Paint service against a
+native backend fixture. Covers names, defaults, queued despawn/stale registration, legacy paint
+migration, preset snapshot persistence and ownership. See its [README](doh.tests/README.md).
+
+### [war-paint](war-paint) / [war-paint.lib](war-paint.lib)
+Central per-kitten coloring panel for every live EVA kitten: explicit target picker, whole tint,
+individual material colors, live unsaved editing, durable named presets, and active targets with
+Unset. DOH consumes the same preset library. Presets are detached copies at
+`.unscience/war-paint-presets.json`; changing/deleting a preset never changes already-painted kittens.
+
+`WarPaintService` owns private cloned materials, original bindings and the `war-paint` v1 scene
+participant (order85). `NativeKittenPaintBackend` contains the former DOH avatar binding path;
+`Materials/` contains its existing GPU cloning/upload/pool helpers. Unset restores bindings before
+release; reset detaches/reuses exact surviving assets after native reconstruction. Presets map
+renderable source + material slot across compatible character appearances. Legacy exact names
+remain accepted. Global Humble material recipes migrate into private per-kitten ownership.
+
+### [war-paint.tests](war-paint.tests)
+Native-independent checks link production service, preset library and save adapter. Cover independent
+colors, live edits, original-binding restoration, detached/persistent presets, cross-character roles,
+repeat scene replay, cache reuse/retirement, vanilla/missing/invalid targets and legacy migration.
+Native Vulkan rendering and actual KSA save reconstruction still need playtesting.
 
 ---
 
 ## Visual Customization Mods
 
 ### [humble-arteest](humble-arteest) / [humble-arteest.lib](humble-arteest.lib)
-Part painting and visual customization mod. Three features: vehicle part painting via runtime shader patching, kitten character tinting via GPU material buffer writes, and per-engine emissive glow control.
-- **Vehicle Paint**: Recolors individual part instances at runtime. The color is quantized to 7:7:7 sRGB and packed into the **free high bits (11..31) of `PerInstanceData.StateBitFlag`** — bits KSA does not use — so no game field, struct layout, or vertex shader is touched. A Harmony prefix on `RenderCore.ShaderModuleUtils.FromFile` compiles an in-memory patched copy of `MeshIndirect.frag` / `MeshIndirectRaytraced.frag` (nothing on disk is modified) that unpacks those bits and blends them into the albedo. Installed through the game's own deferred `Program.RendererRebuildNeeded` rebuild. Targeting: per part instance, per part type, or global; blend modes Multiply / Tint / Replace; works in flight and in the vehicle editor.
-- **Kitten Color**: Tints character materials by writing AlbedoColor to `GpuMaterialSystem.BigBuffer` via Vulkan staged uploads. Alpha discard applies to the `ModelPbr.frag` path; visor glass uses `ModelTranslucent.frag` with fixed opacity. `KittenVisorPatches` adds a session-wide Hide/Show visor glass button by gating only `VisorMesh.Draw(view)` (per-view since KSA 5482) inside `KittenRenderable.UpdateRenderData`; deactivation/unload restores drawing.
-- **Engine Emissive**: Per-engine Temperature/TFI override via Harmony prefix on `PartModelDynamic.AddInstance()`. No shader modifications needed — uses the game's existing emissive color LUT.
-- F11 window toggle (standalone mode)
-- Unscience supermod integration via `ISubmod`: `VehiclePaintSubmod`, `KittenColorSubmod`, `EngineEmissiveSubmod` (grouped by `HumbleArteestSubmod`)
-- Harmony patches: `VehiclePaintPatches` (4 seams since KSA 5482 — `ShaderModuleUtils.FromFile`, postfixes on private `PartTreeRenderData.WriteState`/`WriteDynamicState` that OR paint into cached state flags, and an `EnsureBuilt` prefix that invalidates cached states once per paint change; also covers raytraced IVA), `EngineEmissivePatches` (PartModelDynamic.AddInstance)
-- **humble-arteest.lib**: `VehiclePaint` (paint registry + bit encoding), `VehiclePaintShaders` (GLSL injection + install/rebuild), `VehiclePaintPatches`, `PaintTargets` (flight + editor part enumeration), `VehiclePaintSubmod` (+ `VehiclePaintSubmodTables`), `KittenColor` (GPU buffer writes), `KittenColorSubmod`, `EngineEmissive` (temperature state), `EngineEmissivePatches`, `EngineEmissiveSubmod`
+Vehicle part paint, engine emissive overrides, and a separate Hide/Show visor-glass draw gate.
+Kitten coloring lives exclusively in War Paint; the old global material editor has been removed.
+The existing `humble-arteest` v1 `MaterialColors` field remains readable and migrates through War Paint.
+
+Vehicle Paint uses 6:6:6 sRGB in bits13–30 of native instance flags, preserving habitat highlight
+bits11/12, and intercepts part fragment compilation with native variant options. Four Harmony seams
+cover compilation, cached static/dynamic state writers and cache invalidation. Engine emissive uses
+native temperature/TFI rendering. Visor hiding gates the native visor draw, independently of color.
+
+**Open native issue:** whole vessels glow white immediately on Enable. Three audits and 64 offline
+shader compilations found no confirmed exterior cause. Assembly/source/owner diagnostics and an
+untouched-stock compiler-path mode support native A/B. Cached raytraced IVA fragment compilation
+is a separate pre-existing limitation. [Evidence](plans/HUMBLE_ARTEEST_5801_PAINT_INVESTIGATION.md).
 
 ### [graffiti](graffiti) / [graffiti.lib](graffiti.lib)
 
@@ -663,7 +694,7 @@ The previous integration baseline was KSA **2026.9.10.5438**, compared with **20
 
 The current integration baseline is KSA **2026.10.25.5707**, compared with **2026.10.19.5638**.
 [Upgrade evidence and native acceptance](plans/KSA_5707_UPGRADE.md) covers the full suite. Build and
-all 18 managed suites pass (including new real-KSA.dll metadata checks); in-game acceptance is pending.
+all 19 managed suites pass (including new real-KSA.dll metadata checks); in-game acceptance is pending.
 
 - `graffiti.lib`, `pebbles.lib`, `thug-life.lib`: `SimpleVkTexture.VkImageView` rename.
 - `iron-man.lib`: `Part.Connectors` is an array; anchor save/restore now patches the private `Part`

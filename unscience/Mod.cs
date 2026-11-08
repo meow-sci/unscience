@@ -36,6 +36,7 @@ using MeowSci.PebblesLib;
 using MeowSci.RockyMcRockFaceLib;
 using MeowSci.SaveYourselfLib;
 using MeowSci.BloominOnionLib;
+using MeowSci.WarPaintLib;
 
 namespace MeowSci.Unscience;
 
@@ -103,6 +104,7 @@ public class Mod
             _submods.Add(new SphinxSubmod());
             _submods.Add(new TheTickSubmod());
             _submods.Add(new ThugLifeSubmod());
+            _submods.Add(new WarPaintSubmod());
             _submods.Add(new ZippoSubmod());
 
             // Initialize all submods so Tracker is populated before patching
@@ -128,6 +130,7 @@ public class Mod
             Patcher.IFeelSeenTracker = iFeelSeen.Tracker;
             Patcher.CameraSequencePlayer = cameraOverride.SequencePlayer;
             Patcher.MenuBarToggle = () => _windowVisible = !_windowVisible;
+            Patcher.BeforeGameDispose = Unload;
 
             // While the game HUD is hidden (F2) StarMap's [StarMapBeforeGui]/[StarMapAfterGui]
             // never fire (their game targets are skipped), so the non-UI per-frame work is
@@ -208,6 +211,8 @@ public class Mod
     [StarMapUnload]
     public void Unload()
     {
+        if (_isDisposed) return;
+        _isDisposed = true; // Re-entrant and late StarMap callbacks must not touch freed native handles.
         try
         {
             if (_autoSaveEnabled)
