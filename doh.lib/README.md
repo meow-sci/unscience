@@ -1,5 +1,11 @@
 # doh.lib — DOH Library
 
+## KSA 5801 compatibility
+
+MaterialFactory follows resolved character/material/texture Value links through GameDataReference.Resolve. The old reflected Get() call would silently lose textured materials on this build. Direct assets remain direct and unresolved links stay null. MaterialData layout and existing save payloads remain unchanged; native tint/fur/attachment appearance and pool recovery remain pending.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 Headless library providing programmatic kitten spawning and per-kitten GPU material customization for KSA. Designed for use by the `doh` mod UI and other mods.
 
 ## Modules

@@ -22,7 +22,7 @@ internal static class ClutterColliders
             ColliderKind.ConvexHull => new OwnedHull(assets.ResolveMesh(recipe.HullMeshId), recipe.HullScale, stockHull),
             _ => throw new NotSupportedException("Unknown collider kind.")
         };
-        result.Id = recipe.Id;
+        result.Key = recipe.Id;
         result.LocationAsmb = new Vector3Reference(new double3(recipe.Position.X, recipe.Position.Y, recipe.Position.Z));
         var rotation = recipe.RotationDegrees;
         result.Collider2Asmb = new Vector3Reference(new double3(rotation.X, rotation.Y, rotation.Z) * (Math.PI / 180));
@@ -40,7 +40,7 @@ internal static class ClutterColliders
             CapsuleColliderTemplate c => c.Radius.InMeters() + c.LengthY.InMeters() / 2,
             CylinderColliderTemplate c => Math.Sqrt(Math.Pow(c.Radius.InMeters(), 2) + Math.Pow(c.LengthY.InMeters() / 2, 2)),
             OwnedHull h => h.Radius,
-            MeshColliderTemplate h => h.Mesh.Get().HostPrimitives.Max(p =>
+            MeshColliderTemplate h => h.Mesh!.Value!.HostPrimitives.Max(p =>
                 new double3(Math.Max(Math.Abs(p.PositionMinimum.X), Math.Abs(p.PositionMaximum.X)) * Math.Abs(h.ScaleValue.X),
                     Math.Max(Math.Abs(p.PositionMinimum.Y), Math.Abs(p.PositionMaximum.Y)) * Math.Abs(h.ScaleValue.Y),
                     Math.Max(Math.Abs(p.PositionMinimum.Z), Math.Abs(p.PositionMaximum.Z)) * Math.Abs(h.ScaleValue.Z)).Length()),

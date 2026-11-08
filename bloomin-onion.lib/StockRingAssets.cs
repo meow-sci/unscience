@@ -22,7 +22,7 @@ public sealed class StockRingAssets
     public TextureReference? Band { get; private set; }
     public TextureReference? Control { get; private set; }
     public TextureReference? Diffuse { get; private set; }
-    public TexturePowerReference? Normal { get; private set; }
+    public TextureReference? Normal { get; private set; }
     public TextureReference? Pbr { get; private set; }
     public MeshReference?[] LodMeshes { get; } = new MeshReference?[RingDefinition.MaxLods];
 
@@ -48,7 +48,7 @@ public sealed class StockRingAssets
         {
             var rings = celestial.BodyTemplate?.RingsReference;
             if (rings?.RingObjects == null || rings.RingObjects.NumLods == 0) continue;
-            if (rings.Texture is PaintedTextureReference) continue; // one of ours, not stock
+            if (rings.Texture?.Value is PaintedTextureReference) continue; // one of ours, not stock
             TakeFrom(rings);
             if (IsComplete) return;
         }
@@ -68,14 +68,14 @@ public sealed class StockRingAssets
     private void TakeFrom(PlanetaryRingsReference rings)
     {
         var objects = rings.RingObjects;
-        Band ??= rings.Texture?.Get();
-        Control ??= rings.ControlTexture?.Get();
-        Diffuse ??= objects.MaterialReference?.DiffuseReference?.Get();
-        Normal ??= objects.MaterialReference?.NormalReference?.Get() as TexturePowerReference;
-        Pbr ??= objects.MaterialReference?.PBRMap?.Get();
+        Band ??= rings.Texture?.Value;
+        Control ??= rings.ControlTexture?.Value;
+        Diffuse ??= objects.MaterialReference?.Value?.DiffuseReference?.Value;
+        Normal ??= objects.MaterialReference?.Value?.NormalReference?.Value;
+        Pbr ??= objects.MaterialReference?.Value?.PBRMap?.Value;
         for (int i = 0; i < objects.NumLods && i < LodMeshes.Length; i++)
         {
-            var mesh = objects.Lods[i].MeshFileReference?.Get().Mesh;
+            var mesh = objects.Lods[i].MeshFileReference?.Value?.Mesh;
             if (LodMeshes[i] == null && mesh != null && HasDeviceMesh(mesh)) LodMeshes[i] = mesh;
         }
     }

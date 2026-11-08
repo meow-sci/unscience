@@ -66,6 +66,9 @@ public sealed class MaterialRecipe
     /// (recipes saved before it existed, or imports) inherits the stock material like
     /// <see cref="KeepBackfaceNormals"/>.</summary>
     public bool? UsesCustomNormals { get; set; }
+    // Optional on legacy recipes: inherit the matching stock material's current terrain blend.
+    public float? TerrainFadeStart { get; set; }
+    public float? TerrainFadeEnd { get; set; }
 
     public bool ResolveKeepBackfaceNormals(IReadOnlyDictionary<string, bool> stockFlags)
         => KeepBackfaceNormals ?? (stockFlags.TryGetValue(SourceId, out var stock) && stock);
@@ -101,8 +104,18 @@ public sealed class CurvePoint
     public double OutTangent { get; set; }
 }
 
+public sealed class CurvatureRecipe
+{
+    public float MinimumPerKm { get; set; } = -20;
+    public float MaximumPerKm { get; set; } = 20;
+    public int TexelSpacing { get; set; } = 1;
+    // CurvePoint.Altitude is the curve key, in inverse kilometres here.
+    public List<CurvePoint> Curve { get; set; } = new();
+}
+
 public sealed class PlacementRecipe
 {
+    public CurvatureRecipe? Curvature { get; set; }
     public List<string> Biomes { get; set; } = new();
     public bool AllBiomes { get; set; } = true;
     public string DistributionId { get; set; } = "";

@@ -38,7 +38,7 @@ public static class CapsuleGlassExperiment
         _registered = false;
     }
 
-    private static bool ShouldHide(PartModel model) => Enabled && model.Template.Id is
+    private static bool ShouldHide(PartModel model) => Enabled && model.Template.Key is
         "CoreCommandA_Subpart_MediumCapsuleWindowA_Model" or
         "CoreCommandA_Subpart_MediumCapsuleWindowB_Model";
 }

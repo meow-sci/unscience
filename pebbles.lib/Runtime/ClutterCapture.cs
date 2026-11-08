@@ -11,14 +11,14 @@ internal static class ClutterCapture
 {
     public static string Signature(ClutterEcotypeReference ecotype)
     {
-        var text = new StringBuilder(ecotype.Name);
+        var text = new StringBuilder(ecotype.Key);
         foreach (var item in ecotype.ClutterObjects)
         {
             text.Append('|').Append(item.Id);
             foreach (var lod in item.Lods)
             {
                 text.Append(';').AppendJoin(',', lod.Meshes.Select(m => m.Id + "/" + m.PrimitiveCount));
-                text.Append('/').AppendJoin(',', lod.MaterialReferences!.Select(m => m.Get().Id));
+                text.Append('/').AppendJoin(',', lod.MaterialReferences!.Select(m => m.Id));
             }
         }
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())));
@@ -32,17 +32,17 @@ internal static class ClutterCapture
             var p = e.Placement;
             var ecotype = new EcotypeRecipe
             {
-                Name = e.Name, Signature = Signature(e), CollisionMode = (ClutterCollisionMode)e.CollisionType.Type,
+                Name = e.Key, Signature = Signature(e), CollisionMode = (ClutterCollisionMode)e.CollisionType.Type,
                 Placement = new PlacementRecipe
                 {
-                    AllBiomes = p.BiomeMask == uint.MaxValue,
-                    Biomes = body.BodyTemplate.BiomesReference?.Biomes.Where(b => b.Id is >= 0 and < 32 && (p.BiomeMask & (1u << b.Id)) != 0).Select(b => b.Alias).ToList() ?? [],
-                    DistributionId = p.DistributionTextureReference?.Get().Id ?? "", Separation = p.ObjectSeparation.InMeters(), Range = p.GenerationRange.InMeters(),
+                    Curvature = Curvature(p), AllBiomes = p.BiomeMask == uint.MaxValue,
+                    Biomes = body.BodyTemplate.BiomesReference?.Biomes.Where(b => b.Id is >= 0 and < 32 && (p.BiomeMask & (1u << b.Id)) != 0).Select(b => b.Key).ToList() ?? [],
+                    DistributionId = p.DistributionTextureReference?.Value?.Id ?? "", Separation = p.ObjectSeparation.InMeters(), Range = p.GenerationRange.InMeters(),
                     DistributionTiling = p.DistributionTextureTiling.Value, MinScale = Vector(p.MinScale), MaxScale = Vector(p.MaxScale),
                     Orientation = (OrientationMode)p.Orientation.Mode, MinRotation = (float)p.MinRotation.ToDegrees(), MaxRotation = (float)p.MaxRotation.ToDegrees(),
                     SlopeStrength = p.SlopeMaskStrength.Value, SlopeContrast = p.SlopeMaskContrast.Value, SlopeBias = p.SlopeMaskBias.Value,
                     AltitudeCurve = p.AltitudeDensityCurve.SplinePoints.Select(k => new CurvePoint { Altitude = k.Key.Value, Density = k.Value.Value, InTangent = k.InTangent.Value, OutTangent = k.OutTangent.Value }).ToList(),
-                    UseObjectTypeTexture = p.UseObjectTypeTexture.Value, ObjectTypeTextureId = p.ObjectTypeTextureReference?.Get().Id ?? "",
+                    UseObjectTypeTexture = p.UseObjectTypeTexture.Value, ObjectTypeTextureId = p.ObjectTypeTextureReference?.Value?.Id ?? "",
                     ObjectTypeTiling = p.ObjectTypeTextureTiling.Value, ObjectTypeJitter = p.ObjectTypeTextureJitter.Value
                 }
             };
@@ -51,7 +51,7 @@ internal static class ClutterCapture
                 var item = new ObjectRecipe { SourceId = o.Id, Name = o.Id, MassKg = o.MassKg, Lods = [] };
                 foreach (var l in o.Lods)
                     item.Lods.Add(new LodRecipe { MinScreenSize = l.MinScreenSizePixels, CastShadows = l.CastShadows,
-                        MeshIds = l.Meshes.Select(m => m.Id).ToList(), Materials = l.MaterialReferences!.Select(m => Material(m.Get())).ToList() });
+                        MeshIds = l.Meshes.Select(m => m.Id).ToList(), Materials = l.MaterialReferences!.Select(m => Material(m)).ToList() });
                 for (var ci = 0; ci < o.Colliders.Count; ci++)
                 {
                     var collider = Collider(o.Colliders[ci]);
@@ -68,22 +68,30 @@ internal static class ClutterCapture
 
     private static MaterialRecipe Material(GroundClutterMaterialReference m) => new()
     {
-        SourceId = m.Id, DiffuseId = m.DiffuseReference?.Get().Id ?? "", NormalId = m.NormalReference?.Get().Id ?? "", PbrId = m.PBRMap?.Get().Id ?? "",
-        OpacityId = m.OpacityMap?.Get().Id ?? "", ThicknessId = m.ThicknessMap?.Get().Id ?? "", UseTerrainMask = m.UseTerrainMask.Value,
+        SourceId = m.Id, TerrainFadeStart = m.TerrainFadeStart.Value, TerrainFadeEnd = m.TerrainFadeEnd.Value, DiffuseId = m.DiffuseReference?.Value?.Id ?? "", NormalId = m.NormalReference?.Value?.Id ?? "", PbrId = m.PBRMap?.Value?.Id ?? "",
+        OpacityId = m.OpacityMap?.Value?.Id ?? "", ThicknessId = m.ThicknessMap?.Value?.Id ?? "", UseTerrainMask = m.UseTerrainMask.Value,
         DoubleSided = m.DoubleSided.Value, KeepBackfaceNormals = m.KeepBackfaceNormals.Value, UsesCustomNormals = m.UsesCustomNormals.Value, CastShadows = m.CastShadows.Value, ReceiveShadows = m.ReceiveShadows.Value,
         BiasNormalsUp = m.BiasNormalsUp.Value, ApplyExtraSpec = m.ApplyExtraSpec.Value, DistanceFadeDither = m.DistanceFadeDither.Value
     };
 
+    internal static CurvatureRecipe Curvature(GroundClutterPlacementReference p) => new()
+    {
+        MinimumPerKm = p.MinCurvaturePerKm.Value, MaximumPerKm = p.MaxCurvaturePerKm.Value,
+        TexelSpacing = p.CurvatureTexelSpacing.Value,
+        Curve = p.CurvatureDensityCurve.SplinePoints.Select(k => new CurvePoint
+        { Altitude = k.Key.Value, Density = k.Value.Value, InTangent = k.InTangent.Value, OutTangent = k.OutTangent.Value }).ToList()
+    };
+
     internal static ColliderRecipe Collider(ColliderTemplate c)
     {
-        var result = new ColliderRecipe { Id = c.Id, Name = c.Id, Position = Vector(c.LocationAsmb), RotationDegrees = Degrees(c.Collider2Asmb) };
+        var result = new ColliderRecipe { Id = c.Key, Name = c.Key, Position = Vector(c.LocationAsmb), RotationDegrees = Degrees(c.Collider2Asmb) };
         switch (c)
         {
             case BoxColliderTemplate b: result.Kind = ColliderKind.Box; result.Dimensions = new((float)b.LengthX.InMeters(), (float)b.LengthY.InMeters(), (float)b.LengthZ.InMeters()); break;
             case SphereColliderTemplate s: result.Kind = ColliderKind.Sphere; result.Dimensions = new((float)s.Radius.InMeters() * 2, (float)s.Radius.InMeters() * 2, (float)s.Radius.InMeters() * 2); break;
             case CapsuleColliderTemplate a: result.Kind = ColliderKind.Capsule; result.Dimensions = new((float)a.Radius.InMeters() * 2, (float)(a.LengthY.InMeters() + 2 * a.Radius.InMeters()), (float)a.Radius.InMeters() * 2); break;
             case CylinderColliderTemplate y: result.Kind = ColliderKind.Cylinder; result.Dimensions = new((float)y.Radius.InMeters() * 2, (float)y.LengthY.InMeters(), (float)y.Radius.InMeters() * 2); break;
-            case ConvexHullColliderTemplate h: result.Kind = ColliderKind.ConvexHull; result.HullMeshId = h.Mesh.Get().Id; result.HullScale = h.Scale == null ? Vec3.One : Vector(h.Scale); break;
+            case ConvexHullColliderTemplate h: result.Kind = ColliderKind.ConvexHull; result.HullMeshId = h.Mesh!.Value!.Id; result.HullScale = h.Scale == null ? Vec3.One : Vector(h.Scale); break;
             default: throw new NotSupportedException($"Clutter collider {c.GetType().Name} cannot be represented safely.");
         }
         return result;

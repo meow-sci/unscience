@@ -54,7 +54,7 @@ internal sealed class ClutterResources : IDisposable
                     if (Graph.SourceColorMaterials.Contains(material.Hash))
                     {
                         data[i].Flags |= 0x80000000u;
-                        if (material.DiffuseReference!.Get().Texture.Format.ToString().Contains("Srgb", StringComparison.OrdinalIgnoreCase)) data[i].Flags |= 0x40000000u;
+                        if (material.DiffuseReference!.Value!.Texture.Format.ToString().Contains("Srgb", StringComparison.OrdinalIgnoreCase)) data[i].Flags |= 0x40000000u;
                     }
                 }
             }

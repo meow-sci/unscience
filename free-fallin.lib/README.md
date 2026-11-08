@@ -1,5 +1,11 @@
 # free-fallin.lib
 
+## KSA 5801 compatibility
+
+Canopy material and texture slots now follow resolved DataReference.Value links; direct material assets no longer call Get(). CURRENT Full Canopy descriptor/anchor transformations pass managed checks. No appearance settings or save IDs/versions change; native shader compilation/rendering remains pending.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 Reusable core for [`../free-fallin`](../free-fallin) and the unscience umbrella mod.
 
 | File | Responsibility |

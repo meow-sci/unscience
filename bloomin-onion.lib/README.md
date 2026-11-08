@@ -1,5 +1,11 @@
 # Bloomin' Onion library
 
+## KSA 5801 compatibility
+
+Ring graphs now use resolved DataReference links for band/control, PBR textures/materials and mesh files. Stock normal discovery follows material normal slots; the removed native ring-object Name is retained only as the existing ObjectsName preset/sidecar field. Definition IDs and save versions stay unchanged.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 Runtime planetary ring authoring for the Unscience panel and legacy standalone host.
 `RingDefinition` holds detached geometry, painted bands/stripes/noise, volumetric dust,
 rock-field LODs and materials. `RingDefinitionController` owns applied definitions and

@@ -36,6 +36,7 @@ internal sealed class ClutterRetirement
         if (value is SimpleComputePipeline compute)
         { Try(() => compute.FreeDescriptorSet(Program.Instance.RenderGlobals.DescriptorPool)); Try(compute.Dispose); return; }
         if (value is SimpleGraphicsPipeline graphics) { Try(graphics.Dispose); return; }
+        if (value is GroundClutterTerrainData terrain) { Try(terrain.Dispose); return; }
         if (value is SimpleVkTexture texture) { Try(texture.Dispose); return; }
         if (value is IDictionary map) { foreach (var item in map.Values) Clean(item); return; }
         if (value is IEnumerable sequence) { foreach (var item in sequence) Clean(item); return; }
@@ -55,8 +56,13 @@ internal sealed class ClutterRetirement
             else if (item is VkImageView imageView) { if (_handles.Add(imageView)) Try(() => Program.GetRenderer().Device.DestroyImageView(imageView, null)); }
             else Clean(item);
         }
-        if (value is GroundClutterPlacementData placement && placement.AltitudeLutBindlessHandle != 0)
-            Try(() => Program.Instance.BindlessTextures.FreeTexture(placement.AltitudeLutBindlessHandle));
+        if (value is GroundClutterPlacementData placement)
+        {
+            if (placement.AltitudeLutBindlessHandle != 0)
+                Try(() => Program.Instance.BindlessTextures.FreeTexture(placement.AltitudeLutBindlessHandle));
+            if (placement.CurvatureLutBindlessHandle != 0)
+                Try(() => Program.Instance.BindlessTextures.FreeTexture(placement.CurvatureLutBindlessHandle));
+        }
     }
     private static void RemoveShapes(ClutterEcotypePhysicalData data)
     {

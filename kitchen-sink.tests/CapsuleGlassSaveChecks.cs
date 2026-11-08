@@ -98,5 +98,5 @@ namespace KSA
     // Renderer/ownership are exercised against the real helpers in ksa-upgrade.tests.
     // These compile-only model members keep this persistence suite native-free.
     public sealed class PartModel { public PartModelTemplate Template { get; } = new(); }
-    public sealed class PartModelTemplate { public string Id = "fixture"; }
+    public sealed class PartModelTemplate { public string Key = "fixture"; public string Id { get => Key; set => Key = value; } }
 }

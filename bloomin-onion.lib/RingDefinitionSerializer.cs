@@ -131,8 +131,8 @@ public static class RingDefinitionSerializer
             OuterRadiusKm = rings.OuterRadius.InKilometers(),
             DetailScale = rings.DetailScale,
             BandSource = RingBandSource.Texture,
-            BandTextureId = rings.Texture?.Get().Id ?? "",
-            ControlTextureId = rings.ControlTexture?.Get().Id ?? "",
+            BandTextureId = rings.Texture?.Value?.Id ?? "",
+            ControlTextureId = rings.ControlTexture?.Value?.Id ?? "",
         };
         d.ResetStripesToSaturnLike();
 
@@ -152,16 +152,16 @@ public static class RingDefinitionSerializer
         var objects = rings.RingObjects;
         if (objects != null)
         {
-            d.ObjectsName = objects.Name;
+            d.ObjectsName = "BloominOnionRocks";
             d.ObjectSizeM = objects.Size.InMeters();
             d.ObjectThicknessKm = objects.Thickness.InKilometers();
             d.ObjectRenderDistanceKm = objects.RenderDistance.InKilometers();
             d.ObjectDensityPerKm3 = objects.Density;
             foreach (var lod in objects.Lods)
-                d.Lods.Add(new RingLodDefinition(lod.MinScreenSizePixels, lod.MeshFileReference?.Get().Mesh?.Id ?? ""));
-            d.DiffuseId = objects.MaterialReference?.DiffuseReference?.Get().Id ?? "";
-            d.NormalId = objects.MaterialReference?.NormalReference?.Get().Id ?? "";
-            d.PbrId = objects.MaterialReference?.PBRMap?.Get().Id ?? "";
+                d.Lods.Add(new RingLodDefinition(lod.MinScreenSizePixels, lod.MeshFileReference?.Value?.Mesh?.Id ?? ""));
+            d.DiffuseId = objects.MaterialReference?.Value?.DiffuseReference?.Value?.Id ?? "";
+            d.NormalId = objects.MaterialReference?.Value?.NormalReference?.Value?.Id ?? "";
+            d.PbrId = objects.MaterialReference?.Value?.PBRMap?.Value?.Id ?? "";
         }
         if (d.Lods.Count == 0) d.ResetLodsToStock();
         return d;

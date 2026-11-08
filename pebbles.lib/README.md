@@ -1,5 +1,11 @@
 # Pebbles
 
+## KSA 5801 compatibility
+
+Native keys and resolved mesh/material/texture lists replace the old Name/Alias/Id/Get seams. Capture/replay preserves optional curvature/domain/spacing and terrain blend settings; older recipes inherit current stock values. Native stride buffers and preview input are explicitly owned; interrupted-build retirement includes terrain and curvature LUT resources. Recipe IDs/versions stay unchanged. Curvature/GPU/collision parity still needs native acceptance.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 Pebbles is an independent bundled feature library in the Unscience supermod. It authors per-celestial ground clutter replacements and collision recipes. It has no standalone StarMap entry and references no other feature library.
 
 ## Usage and behavior

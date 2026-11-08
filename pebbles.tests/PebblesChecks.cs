@@ -35,6 +35,7 @@ internal static class PebblesChecks
         SimpleAuthoring();
         BackfaceNormals();
         CustomNormals();
+        CurvatureAndBlend();
         Console.WriteLine("PASS: Pebbles detached recipes, transform round trips, collider geometry, collision/placement constraints and resource budgets.");
     }
     /// <summary>KSA 5473 KeepBackfaceNormals: recipes saved before the flag inherit the stock material's value.</summary>
@@ -76,6 +77,32 @@ internal static class PebblesChecks
         Check(saved.Ecotypes[0].Objects[0].Lods[0].Materials[0].UsesCustomNormals == null, "Sidecar serialization preserves an unset flag.");
         Check(saved.Ecotypes[0].Objects[0].Lods[0].Materials[0].KeepBackfaceNormals == null, "The new flag does not disturb the existing optional flag.");
     }
+    private static void CurvatureAndBlend()
+    {
+        var recipe = new PebblesRecipe { Ecotypes = [new() { Name = "Rocks", Objects = [new() { SourceId = "Rock" }] }] };
+        var placement = recipe.Ecotypes[0].Placement;
+        Check(placement.Curvature == null, "Legacy placement inherits stock curvature.");
+        placement.Curvature = new() { MinimumPerKm = -10, MaximumPerKm = 12, TexelSpacing = 4,
+            Curve = [new() { Altitude = -10, Density = 0.2 }, new() { Altitude = 12 }] };
+        recipe.Ecotypes[0].Objects[0].Lods[0].Materials.Add(new MaterialRecipe());
+        var material = recipe.Ecotypes[0].Objects[0].Lods[0].Materials[0];
+        Check(material.TerrainFadeStart == null && material.TerrainFadeEnd == null, "Legacy material inherits stock terrain blend.");
+        material.TerrainFadeStart = 0.1f; material.TerrainFadeEnd = 2.1f;
+        RecipeValidation.Validate(recipe);
+        var saved = MeowSci.KsaAbstractions.Persistence.SaveJson.FromElement<PebblesRecipe>(MeowSci.KsaAbstractions.Persistence.SaveJson.ToElement(recipe));
+        Check(saved.Ecotypes[0].Placement.Curvature!.TexelSpacing == 4 &&
+            saved.Ecotypes[0].Placement.Curvature!.Curve[0].Density == 0.2 &&
+            saved.Ecotypes[0].Objects[0].Lods[0].Materials[0].TerrainFadeEnd == 2.1f,
+            "Curvature and blend survive the actual sidecar JSON contract.");
+        var clone = RecipeCopy.Clone(recipe); clone.Ecotypes[0].Placement.Curvature!.Curve[0].Density = 0.9;
+        Check(placement.Curvature.Curve[0].Density == 0.2, "Captured curves remain detached.");
+        placement.Curvature.TexelSpacing = 3; Reject(() => RecipeValidation.Validate(recipe));
+        placement.Curvature.TexelSpacing = 1; placement.Curvature.Curve[0].Density = double.NaN;
+        Reject(() => RecipeValidation.Validate(recipe)); placement.Curvature.Curve[0].Density = 1;
+        material.TerrainFadeEnd = material.TerrainFadeStart; Reject(() => RecipeValidation.Validate(recipe));
+        material.TerrainFadeEnd = float.NaN; Reject(() => RecipeValidation.Validate(recipe));
+    }
+
     private static void SimpleAuthoring()
     {
         var source = new ObjectRecipe { Collision = CollisionPolicy.None };

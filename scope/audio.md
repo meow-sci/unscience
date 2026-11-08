@@ -1,5 +1,14 @@
 # Audio — BYO Music integration
 
+## KSA 5707 → 5801 verification (2026-11-08)
+
+The bundled FMOD player compiles unchanged. The legacy BYO Music host's `Assets.xml` now follows the
+strict native content schema: top-level sound/music file assets, Ref links, SoundFiles/Sounds arrays,
+and Channel/Location elements. Existing SabotageMulti/SabotageMusic IDs remain. This legacy host is not
+part of the shipped Unscience distribution; native asset loading remains to be exercised.
+
+See [KSA 5801 upgrade review](../plans/KSA_5801_UPGRADE.md) for evidence, validation boundaries and native acceptance.
+
 ## KSA 5707 verification (5638 → 5707, 2026-10-29)
 
 No code change is required. Verified against `2026.10.25.5707` (revs 5639–5703) vs `2026.10.19.5638`.

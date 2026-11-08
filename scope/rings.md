@@ -1,5 +1,21 @@
 # Planetary rings — rocky-mcrock-face
 
+## KSA 5707 → 5801 verification (2026-11-08)
+
+Rocky/Bloomin now follow `DataReference<T>.Value` for ring material, band/control, mesh-file and glTF
+source links, constructing resolved wrappers through `GameDataReference.To` for private runtime graphs.
+`TexturePowerReference` is gone: `RingAssetCatalog` identifies normals via `ModLibrary.AllMaterials`
+normal-slot values. Rocky snapshots keep the original reference objects and restore them. Bloomin
+builds a resolved private PBR material and reads the wrapped stock values; shader/backing-field and
+renderer rebuild seams remain present in metadata.
+
+Native RingObjectsReference.Name was removed; ObjectsName remains in existing mod preset/sidecar
+DTOs for format compatibility and no longer changes native identity. No record IDs/versions change.
+Detached ring DTO checks pass; native application/restoration, custom normals, painted textures and
+save replay remain open.
+
+See [KSA 5801 upgrade review](../plans/KSA_5801_UPGRADE.md) for evidence, validation boundaries and native acceptance.
+
 ## KSA 5707 verification (5638 → 5707, 2026-10-29)
 
 Verified against `2026.10.25.5707` vs `2026.10.19.5638`. Static/managed only: the solution builds with

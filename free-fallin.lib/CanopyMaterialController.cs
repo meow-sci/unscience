@@ -47,7 +47,7 @@ internal static class CanopyMaterialController
     {
         SuperMeshRenderSystem renderSystem = Program.Instance?.SuperMeshRenderSystem
             ?? throw new InvalidOperationException("The KSA render system is not ready yet.");
-        PbrMaterialReference stock = ModLibrary.Get<PbrMaterialReference>(StockMaterialId).Get();
+        PbrMaterialReference stock = ModLibrary.Get<PbrMaterialReference>(StockMaterialId);
         GpuTextureSystem textures = renderSystem.TextureSystem;
 
         float4 projectionData = ProjectionData(settings, renderSystem);
@@ -56,7 +56,7 @@ internal static class CanopyMaterialController
         float4 pbrScale;
         if (settings.UseStockPbrMap)
         {
-            pbrHandle = stock.PBRMap?.Get().BindlessHandle ?? renderSystem.GltfSystemSkinned.BlankMaterialTexture.BindlessHandle;
+            pbrHandle = stock.PBRMap?.Value?.BindlessHandle ?? renderSystem.GltfSystemSkinned.BlankMaterialTexture.BindlessHandle;
             pbrScale = new float4(settings.AmbientOcclusion, settings.Roughness, settings.Metallic, 1f);
         }
         else
@@ -72,12 +72,12 @@ internal static class CanopyMaterialController
             AlbedoTexture = albedo.Handle,
             Sampler = albedo.Sampler,
             AlbedoColor = tint,
-            NormalTexture = stock.NormalReference?.Get().BindlessHandle
+            NormalTexture = stock.NormalReference?.Value?.BindlessHandle
                             ?? renderSystem.GltfSystemSkinned.BlankNormalTexture.BindlessHandle,
             RoughMetallicAOTexture = pbrHandle,
             RoughnessMetalScale = pbrScale,
             ExtraData = projectionData,
-            EmissiveTexture = stock.EmissiveMap?.Get().BindlessHandle ?? textures.DefaultBlackTexture.BindlessHandle
+            EmissiveTexture = stock.EmissiveMap?.Value?.BindlessHandle ?? textures.DefaultBlackTexture.BindlessHandle
         };
 
         AssetName materialName = $"free-fallin/material/{++_revision}";
@@ -125,7 +125,7 @@ internal static class CanopyMaterialController
     {
         if (settings.TextureMode == CanopyTextureMode.Stock)
         {
-            TextureReference stockAlbedo = stock.DiffuseReference?.Get()
+            TextureReference stockAlbedo = stock.DiffuseReference?.Value
                 ?? throw new InvalidOperationException("The stock canopy material has no diffuse texture.");
             return new TextureBinding(stockAlbedo.BindlessHandle, textures.SamplerRepeatHandle);
         }
@@ -194,7 +194,7 @@ internal static class CanopyMaterialController
 
     private static GenericTexture ComposeCenteredDecal(PbrMaterialReference stock, string path, float scale)
     {
-        TextureReference stockDiffuse = stock.DiffuseReference?.Get()
+        TextureReference stockDiffuse = stock.DiffuseReference?.Value
             ?? throw new InvalidOperationException("The stock canopy diffuse texture is unavailable.");
         Brutal.TextureApi.ITexture source = stockDiffuse.TextureAsset.Texture;
         Brutal.TextureApi.ITexture? decodedStock = null;

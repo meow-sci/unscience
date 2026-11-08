@@ -22,7 +22,7 @@ public enum PaintBlendMode
 /// Per-part-instance paint for KSA vehicle parts.
 ///
 /// The color travels to the GPU inside the <b>unused high bits of the per-instance
-/// <c>StateBitFlag</c></b> (see <see cref="PaintBitShift"/>). The game only uses bits 0..10 of that
+/// <c>StateBitFlag</c></b> (see <see cref="PaintBitShift"/>). The game only uses bits 0..12 of that
 /// field, and the field exists at the same offset in every <c>PerInstanceData</c> variant
 /// (static / dynamic / glass), so nothing else in the render pipeline has to change: no struct
 /// stride change, no new descriptor binding, no clobbering of EmissiveColor / Temperature /
@@ -37,11 +37,11 @@ public enum PaintBlendMode
 /// </summary>
 public static class VehiclePaint
 {
-    /// <summary>First state-flag bit used to carry paint. The game uses bits 0..10.</summary>
-    public const int PaintBitShift = 11;
+    /// <summary>First state-flag bit used to carry paint. The game uses bits 0..12.</summary>
+    public const int PaintBitShift = 13;
 
-    /// <summary>Bits per color channel (7:7:7 across the 21 free state-flag bits).</summary>
-    public const int ChannelBits = 7;
+    /// <summary>Bits per color channel (6:6:6 across 18 of the 19 free state-flag bits).</summary>
+    public const int ChannelBits = 6;
 
     /// <summary>Largest quantized channel value.</summary>
     public const int ChannelMax = (1 << ChannelBits) - 1;
@@ -252,7 +252,7 @@ public static class VehiclePaint
     // ---- Encoding ----
 
     /// <summary>
-    /// Packs an sRGB color into the free state-flag bits as 7:7:7. Quantizing in sRGB (the shader
+    /// Packs an sRGB color into the free state-flag bits as 6:6:6. Quantizing in sRGB (the shader
     /// converts to linear) keeps the steps perceptually even. Never encodes to zero, because zero
     /// is what the shader reads as "unpainted".
     /// </summary>

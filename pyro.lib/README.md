@@ -1,5 +1,11 @@
 # Pyro library
 
+## KSA 5801 compatibility
+
+Template discovery uses ModLibrary.AllExhaustTemplates; public ModLibrary.TryGet handles lookup/fallback and instances take the template directly. Pressure/density come from the new runtime atmosphere in SI units: AmbientPressurePa no longer multiplies by 101325. Saved IDs/cycles are unchanged; native altitude/vacuum appearance remains pending.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 `PyroSubmod` implements ISubmod and owns part-anchored visual exhaust entries, presets and UI.
 `PyroPatches` submits them through KSA's volumetric exhaust renderer; `PlumeEmitter` preserves the
 stock startup/shutdown transients and ambient response. See [the mod README](../pyro/README.md)

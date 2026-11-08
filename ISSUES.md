@@ -1,4 +1,20 @@
-## Current triage — KSA 2026.10.25.5707
+## Current triage — KSA 2026.11.10.5801
+
+Code upgrade and managed validation: [5801 review](plans/KSA_5801_UPGRADE.md). All earlier native
+acceptance items remain open; no native game run was possible on this host.
+
+Fixed new regressions: resolved material/asset links (including DOH's silent Get miss), Iron Man's
+constructor/native save carrier (legacy anchors migrate), paint collisions with yellow/purple habitat
+highlights, Pyro registry/SI atmosphere, Pebbles curvature/blend/resource ownership, keyed Disco and
+capsule models, temporary native pipeline allocations and legacy BYO Music XML.
+
+Native acceptance still required: connected legacy/new anchors and undo/redo, paint/highlights,
+DOH textures/pool recovery, Pebbles curvature/colliders/GPU retirement, rings, plumes at altitude,
+custom Vulkan passes under R11G11B10/HDR, and new life-support/radiation save interactions. Changed
+native part IDs may invalidate old craft/recipe targets; retain existing missing-target diagnostics.
+No sidecar IDs/versions changed. Full checklist is in the linked review.
+
+## Previous triage — KSA 2026.10.25.5707
 
 See [upgrade review](plans/KSA_5707_UPGRADE.md). Upgrade from 5638 (revs 5639–5703, all logged). Fixed in
 code and verified by the full build plus all 18 managed suites (including real-KSA.dll metadata checks)

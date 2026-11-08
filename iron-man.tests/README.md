@@ -1,11 +1,17 @@
 # Iron Man managed checks
 
+## KSA 5801 compatibility
+
+Fixtures now model the 11-argument Part constructor, keyed connector templates and native Components. Production serializers/modules are linked: tests exercise legacy Id migration, both patched world/blueprint serializer getters, repeat reconstruction and empty/duplicate/invalid records in addition to connected indices, copy and unload checks.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 Run `dotnet run --project iron-man.tests` from the repository root.
 
 The runner links the production connector component, metadata codec and Harmony patches unchanged.
 It exercises actual Harmony constructor-prefix/postfix and serializer-postfix execution against small
 managed fixtures, with the real Brutal numerics assembly. The fixtures match the researched KSA seams
-as of 5707: a fixed `Connector[]`, a shared empty connection list, and constructor chaining in which
+as of 5801: a fixed `Connector[]`, a shared empty connection list, and constructor chaining in which
 save load `Part(PartInstance, Part)`, the public 4-argument constructor and the copy constructor
 `Part(Part, Part)` all reach the private constructor that Iron Man patches.
 

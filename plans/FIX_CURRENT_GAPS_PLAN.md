@@ -1,4 +1,4 @@
-> **Historical plan:** current compatibility is tracked in [KSA_5438_UPGRADE.md](KSA_5438_UPGRADE.md).
+> **Historical plan:** current compatibility is tracked in [KSA_5801_UPGRADE.md](KSA_5801_UPGRADE.md).
 > The 4750 findings below are not a current broken-feature list; later migrations retired several
 > targets and rebuilt Vehicle Paint. Native acceptance remains separate from managed checks.
 

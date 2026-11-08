@@ -114,9 +114,9 @@ public sealed unsafe class ThugLifeQuadRenderer : IDisposable
             ModLibrary.Get<ShaderReference>("UnlitMeshVert"),
             ModLibrary.Get<ShaderReference>("UnlitMeshFrag"),
         };
-        var stages = RenderTechnique.CreateShaderStages(device, shaderRefs.AsSpan());
+        using var stages = RenderTechnique.CreateShaderStages(device, shaderRefs.AsSpan());
 
-        var vertexInput = new VertexInput(1, 2)
+        using var vertexInput = new VertexInput(1, 2)
             .AddBinding(0, ByteSize.Of<QuadVertex>(), VkVertexInputRate.Vertex)
             .AddAttribute(0, 0, VkFormat.R32G32B32SFloat, ByteSize.Zero)
             .AddAttribute(1, 0, VkFormat.R32G32SFloat, ByteSize.Of<float3>())

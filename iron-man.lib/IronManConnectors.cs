@@ -38,7 +38,7 @@ public static class IronManConnectors
         Validate(position, direction, radius);
         var template = new Part.Connector.TemplateBase
         {
-            Id = name,
+            Key = name,
             // Bulk fuel plus the stock defaults (service fluid and electricity).
             Capabilities = ConnectorCapabilityFlags.BulkFluid,
         };

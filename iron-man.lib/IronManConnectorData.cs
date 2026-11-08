@@ -8,7 +8,7 @@ using KSA;
 
 namespace MeowSci.IronManLib;
 
-/// <summary>Uses the existing serialized instance Id, which stock template lookups do not use.</summary>
+/// <summary>Bounded v1 anchor payload; native module-save envelopes and legacy Id attributes share this format.</summary>
 internal sealed class IronManConnectorData
 {
     internal const string Marker = "iron-man:v1:";

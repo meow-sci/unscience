@@ -1,5 +1,15 @@
 # UI / Customization Mods — Game Integration Scope
 
+## KSA 5707 → 5801 verification (2026-11-08)
+
+CapsuleGlassExperiment matches the same two exact window model strings through
+`PartModelModule.Template.Key`, replacing removed `Id`. The strings are component keys under stock
+subparts in CURRENT Content. Toggle, independent IVA ownership and save record are unchanged; the
+managed render/save fixtures now model Key and pass. Native capsule lighting/window alignment remains
+open. New life-support menus and HDR controls do not remove the shell/UI patch entry names.
+
+See [KSA 5801 upgrade review](../plans/KSA_5801_UPGRADE.md) for evidence, validation boundaries and native acceptance.
+
 ## KSA 5707 verification (5638 → 5707, 2026-10-29)
 
 Verified against `2026.10.25.5707` (revs 5639–5703), diffed from `2026.10.19.5638`. Static/managed only:

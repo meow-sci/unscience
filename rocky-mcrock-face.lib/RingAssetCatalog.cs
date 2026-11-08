@@ -34,7 +34,7 @@ public sealed class RingAssetCatalog
     private readonly Dictionary<string, MeshReference> _meshById = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, GltfMeshEntry> _gltfMeshById = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, TextureReference> _textureById = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, TexturePowerReference> _normalById = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, TextureReference> _normalById = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Ids of all offerable meshes: regular meshes with retained CPU-side geometry
@@ -46,7 +46,7 @@ public sealed class RingAssetCatalog
     /// <summary>Ids of all bound textures (valid bindless handle).</summary>
     public string[] TextureIds { get; private set; } = Array.Empty<string>();
 
-    /// <summary>Ids of bound normal-map textures (TexturePowerReference entries only).</summary>
+    /// <summary>Ids of bound textures referenced by material normal slots.</summary>
     public string[] NormalTextureIds { get; private set; } = Array.Empty<string>();
 
     public void Refresh()
@@ -73,7 +73,7 @@ public sealed class RingAssetCatalog
         return 0;
     }
     public bool TryGetTexture(string id, out TextureReference texture) => _textureById.TryGetValue(id, out texture!);
-    public bool TryGetNormalTexture(string id, out TexturePowerReference texture) => _normalById.TryGetValue(id, out texture!);
+    public bool TryGetNormalTexture(string id, out TextureReference texture) => _normalById.TryGetValue(id, out texture!);
 
     private void RefreshMeshes()
     {
@@ -110,10 +110,10 @@ public sealed class RingAssetCatalog
 
         foreach (var gltf in gltfs.ToArray())
         {
-            if (string.IsNullOrEmpty(gltf.Id) || gltf.Source == null) continue;
+            if (string.IsNullOrEmpty(gltf.Id) || gltf.Source?.Value == null) continue;
             try
             {
-                string filePath = gltf.Source.ModPath;
+                string filePath = gltf.Source.Value.ModPath;
                 if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) continue;
                 var json = GltfUtility.LoadModel(filePath);
                 if (json?.Meshes == null) continue; // animation-only files carry no meshes
@@ -152,9 +152,13 @@ public sealed class RingAssetCatalog
             // Unbound textures (handle 0) have no GPU image view and would sample as empty.
             if (texture.BindlessHandle == 0) continue;
             _textureById[texture.Id] = texture;
-            if (texture is TexturePowerReference normal)
-                _normalById[normal.Id] = normal;
+
         }
+        // Normals are no longer a TextureReference subtype. Discover them through material slots.
+        foreach (var material in Collection<PbrMaterialReference>("AllMaterials")?.GetList().ToArray()
+                     ?? Array.Empty<PbrMaterialReference>())
+            if (material.NormalReference?.Value is { } normal && _textureById.ContainsKey(normal.Id))
+                _normalById[normal.Id] = normal;
         TextureIds = _textureById.Keys.OrderBy(id => id, StringComparer.OrdinalIgnoreCase).ToArray();
         NormalTextureIds = _normalById.Keys.OrderBy(id => id, StringComparer.OrdinalIgnoreCase).ToArray();
     }

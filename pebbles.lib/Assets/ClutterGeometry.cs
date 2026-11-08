@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Reflection;
 using Brutal;
-using Brutal.Collections;
+using NativeStrideList = Brutal.Collections.NativeStrideList;
 using Brutal.Numerics;
 using KSA;
 using RenderCore;
@@ -16,6 +16,13 @@ internal sealed class ClutterGeometry : IDisposable
     private static readonly PropertyInfo Hosts = typeof(MeshReference).GetProperty(nameof(MeshReference.HostPrimitives))!;
     private static readonly PropertyInfo Materials = typeof(MeshReference).GetProperty(nameof(MeshReference.PrimitiveMaterialIds))!;
     public long VertexCount { get; private set; }
+
+    internal static NativeStrideList CopyNative<T>(ReadOnlySpan<T> values) where T : unmanaged
+    {
+        var list = new NativeStrideList(ByteSize.Of<T>(), values.Length);
+        try { list.AddRange<T>(values); return list; }
+        catch { list.Dispose(); throw; }
+    }
 
     public MeshReference Copy(MeshReference source, TransformRecipe transform, IReadOnlyDictionary<int, int> materialMap)
     {
@@ -55,11 +62,11 @@ internal sealed class ClutterGeometry : IDisposable
             foreach (var index in indices) if (index >= p.Length) throw new InvalidOperationException($"Mesh {source.Id} has an out-of-range index.");
             var output = new MeshAsset { VertexCount = p.Length, PositionMinimum = new double3(min.X, min.Y, min.Z), PositionMaximum = new double3(max.X, max.Y, max.Z) };
             _owned.Add(output);
-            output.SetVertexList(MeshAttribute.Position, NativeStrideList.FromSpan<float3>(p));
-            output.SetVertexList(MeshAttribute.Normal, NativeStrideList.FromSpan<float3>(n));
-            output.SetVertexList(MeshAttribute.Uv0, NativeStrideList.FromSpan<float2>(uv));
+            output.SetVertexList(MeshAttribute.Position, CopyNative<float3>(p));
+            output.SetVertexList(MeshAttribute.Normal, CopyNative<float3>(n));
+            output.SetVertexList(MeshAttribute.Uv0, CopyNative<float2>(uv));
             // Always uint source storage: avoids native ushort->uint staging underallocation in mixed atlases.
-            output.SetIndexBuffer(NativeStrideList.FromSpan<uint>(indices));
+            output.SetIndexBuffer(CopyNative<uint>(indices));
             primitives[i] = output; VertexCount += p.Length;
             var oldMaterial = source.PrimitiveMaterialIds[i];
             materialIds[i] = materialMap[oldMaterial];

@@ -8,4 +8,6 @@ CapsuleGlassChecks.Run();
 RenderFilterChecks.Run();
 VehiclePaintChecks.Run();
 Ksa5707Checks.Run();
-Console.WriteLine("PASS: KSA 5438/5482/5638/5707 managed upgrade regressions");
+Ksa5801Checks.Run();
+DataReferenceChecks.Run();
+Console.WriteLine("PASS: KSA 5438/5482/5638/5707/5801 managed upgrade regressions");

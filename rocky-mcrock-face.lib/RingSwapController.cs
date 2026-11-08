@@ -35,10 +35,10 @@ public sealed class RingSwapController : IDisposable
     private sealed class Snapshot
     {
         public MeshReference?[] LodMeshes = Array.Empty<MeshReference?>();
-        public TextureReference? Diffuse;
-        public TexturePowerReference? Normal;
-        public TextureReference? Pbr;
-        public TextureReference? BandTexture;
+        public DataReference<TextureReference>? Diffuse;
+        public DataReference<TextureReference>? Normal;
+        public DataReference<TextureReference>? Pbr;
+        public DataReference<TextureReference>? BandTexture;
         public DistanceReference Size = null!;
         public DoubleReference Density = null!;
         public DistanceReference RenderDistance = null!;
@@ -115,11 +115,11 @@ public sealed class RingSwapController : IDisposable
             }
         }
 
-        if (!ResolveTexture(selection.DiffuseId, defaults.Diffuse, out var diffuse, out message)) return false;
-        if (!ResolveTexture(selection.PbrId, defaults.Pbr, out var pbr, out message)) return false;
-        if (!ResolveTexture(selection.BandTextureId, defaults.BandTexture, out var band, out message)) return false;
+        if (!ResolveTexture(selection.DiffuseId, defaults.Diffuse?.Value, out var diffuse, out message)) return false;
+        if (!ResolveTexture(selection.PbrId, defaults.Pbr?.Value, out var pbr, out message)) return false;
+        if (!ResolveTexture(selection.BandTextureId, defaults.BandTexture?.Value, out var band, out message)) return false;
 
-        TexturePowerReference? normal = defaults.Normal;
+        TextureReference? normal = defaults.Normal?.Value;
         if (selection.NormalId.Length > 0 && !Catalog.TryGetNormalTexture(selection.NormalId, out normal!))
         {
             message = $"unknown normal map '{selection.NormalId}'";
@@ -128,13 +128,13 @@ public sealed class RingSwapController : IDisposable
 
         for (int i = 0; i < lodCount; i++)
         {
-            var fileReference = objects.Lods[i].MeshFileReference?.Get();
+            var fileReference = objects.Lods[i].MeshFileReference?.Value;
             if (fileReference != null) fileReference.Mesh = meshes[i];
         }
-        objects.MaterialReference.DiffuseReference = diffuse;
-        objects.MaterialReference.NormalReference = normal;
-        objects.MaterialReference.PBRMap = pbr;
-        if (band != null) rings.Texture = band;
+        objects.MaterialReference!.Value!.DiffuseReference = GameDataReference.To(diffuse);
+        objects.MaterialReference!.Value!.NormalReference = GameDataReference.To(normal);
+        objects.MaterialReference!.Value!.PBRMap = GameDataReference.To(pbr);
+        if (band != null) rings.Texture = GameDataReference.To(band);
 
         if (selection.OverrideFieldSettings)
         {
@@ -165,12 +165,12 @@ public sealed class RingSwapController : IDisposable
         int lodCount = Math.Min(body.LodCount, defaults.LodMeshes.Length);
         for (int i = 0; i < lodCount; i++)
         {
-            var fileReference = objects.Lods[i].MeshFileReference?.Get();
+            var fileReference = objects.Lods[i].MeshFileReference?.Value;
             if (fileReference != null) fileReference.Mesh = defaults.LodMeshes[i];
         }
-        objects.MaterialReference.DiffuseReference = defaults.Diffuse;
-        objects.MaterialReference.NormalReference = defaults.Normal;
-        objects.MaterialReference.PBRMap = defaults.Pbr;
+        objects.MaterialReference!.Value!.DiffuseReference = defaults.Diffuse;
+        objects.MaterialReference!.Value!.NormalReference = defaults.Normal;
+        objects.MaterialReference!.Value!.PBRMap = defaults.Pbr;
         if (defaults.BandTexture != null) body.Rings.Texture = defaults.BandTexture;
         objects.Size = defaults.Size;
         objects.Density = defaults.Density;
@@ -289,14 +289,14 @@ public sealed class RingSwapController : IDisposable
         var objects = rings.RingObjects;
         var lodMeshes = new MeshReference?[objects.NumLods];
         for (int i = 0; i < objects.NumLods; i++)
-            lodMeshes[i] = objects.Lods[i].MeshFileReference?.Get().Mesh;
+            lodMeshes[i] = objects.Lods[i].MeshFileReference?.Value?.Mesh;
 
         return new Snapshot
         {
             LodMeshes = lodMeshes,
-            Diffuse = objects.MaterialReference.DiffuseReference,
-            Normal = objects.MaterialReference.NormalReference,
-            Pbr = objects.MaterialReference.PBRMap,
+            Diffuse = objects.MaterialReference!.Value!.DiffuseReference,
+            Normal = objects.MaterialReference!.Value!.NormalReference,
+            Pbr = objects.MaterialReference!.Value!.PBRMap,
             BandTexture = rings.Texture,
             Size = objects.Size,
             Density = objects.Density,

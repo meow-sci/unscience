@@ -40,6 +40,21 @@ public static class RecipeValidation
             Require(point != null, "Missing altitude point."); Finite(point!.Altitude); Finite(point.Density); Finite(point.InTangent); Finite(point.OutTangent);
             Require(point.Altitude > previous && point.Density >= 0, "Altitude points must increase and density must be nonnegative."); previous = point.Altitude;
         }
+        if (p.Curvature is { } curvature)
+        {
+            Finite(curvature.MinimumPerKm); Finite(curvature.MaximumPerKm);
+            Require(curvature.MaximumPerKm > curvature.MinimumPerKm, "Curvature maximum must exceed minimum.");
+            Require(curvature.TexelSpacing is 1 or 2 or 4 or 8, "Curvature texel spacing must be 1, 2, 4 or 8.");
+            Require(curvature.Curve != null && curvature.Curve.Count is >= 2 and <= 256, "Invalid curvature curve.");
+            double key = double.NegativeInfinity;
+            foreach (var point in curvature.Curve!)
+            {
+                Require(point != null, "Missing curvature point.");
+                Finite(point!.Altitude); Finite(point.Density); Finite(point.InTangent); Finite(point.OutTangent);
+                Require(point.Altitude > key && point.Density >= 0, "Curvature keys must increase and density must be nonnegative.");
+                key = point.Altitude;
+            }
+        }
         foreach (var biome in p.Biomes!) Require(!string.IsNullOrWhiteSpace(biome), "Missing biome identity.");
     }
 
@@ -66,7 +81,14 @@ public static class RecipeValidation
             Require(c.Kind != ColliderKind.ConvexHull || !string.IsNullOrWhiteSpace(c.HullMeshId), "Convex hull requires a mesh.");
         }
     }
-    public static void Material(MaterialRecipe m) => Require(m != null && m.SourceId != null && m.DiffuseId != null && m.NormalId != null && m.PbrId != null && m.OpacityId != null && m.ThicknessId != null, "Invalid material identity.");
+    public static void Material(MaterialRecipe m)
+    {
+        Require(m != null && m.SourceId != null && m.DiffuseId != null && m.NormalId != null && m.PbrId != null && m.OpacityId != null && m.ThicknessId != null, "Invalid material identity.");
+        if (m!.TerrainFadeStart is { } start) Finite(start);
+        if (m.TerrainFadeEnd is { } end) Finite(end);
+        if (m.TerrainFadeStart.HasValue && m.TerrainFadeEnd.HasValue)
+            Require(m.TerrainFadeEnd > m.TerrainFadeStart, "Terrain fade end must exceed start.");
+    }
     public static void Vector(Vec3 v, bool positive = false) { Finite(v.X); Finite(v.Y); Finite(v.Z); Require(!positive || v.X > 0 && v.Y > 0 && v.Z > 0, "Dimensions and scales must be positive."); }
     private static void Positive(double v, string name) { Finite(v); Require(v > 0, name + " must be positive."); }
     private static void Finite(double v) => Require(double.IsFinite(v), "Values must be finite.");

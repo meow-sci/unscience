@@ -9,6 +9,29 @@ This document serves as a comprehensive index of all mods and libraries in this 
 
 > **Game integration scope:** for how each feature plugs into KSA (Harmony patches, reflection, game types, shaders, assets) and how to check what a game update breaks, start at [`scope/FULL_SCOPE.md`](scope/FULL_SCOPE.md) and its master index [`scope/game-integration-surface.md`](scope/game-integration-surface.md). Keeping `scope/` current is mandatory — see [`AGENTS.md`](AGENTS.md).
 
+## KSA 5801 compatibility and discovery
+
+Current baseline: **2026.11.10.5801**, previous **2026.10.25.5707**. Full evidence, old/new game
+seams, managed checks and native acceptance: [upgrade review](plans/KSA_5801_UPGRADE.md).
+
+| Projects | Upgrade responsibility |
+|---|---|
+| ksa-abstractions.lib | GameDataReference resolved graph construction/material unwrapping; no scene state |
+| iron-man.lib / iron-man.tests | 11-argument Part seam; native anchor module envelope, isolated world/blueprint serializers and legacy Id migration; same v1 payload |
+| humble-arteest.lib / ksa-upgrade.tests | Paint bits 13–30, 6:6:6, native highlight isolation; pure production shader source transform and real-DLL probes |
+| doh.lib | Follow resolved character/material/texture links instead of removed reflective Get |
+| pebbles.lib / pebbles.tests | Native keys/lists, optional curvature and terrain-fade capture/replay, native stride-buffer and terrain-resource ownership |
+| rocky-mcrock-face.lib / bloomin-onion.lib | Resolved material/mesh/texture/glTF graph links, normal-slot catalog, original-reference restoration |
+| pyro.lib | Moved template registry, direct template instances, runtime SI pressure/density |
+| free-fallin.lib | Resolved canopy material/texture links, unchanged saved appearance |
+| kitchen-sink.lib / kitchen-sink.tests | Capsule window model keys, unchanged render/save ownership |
+| zippo.lib | Private Disco templates copy native Key |
+| thug-life.lib / graffiti.lib / pebbles preview | Explicit native pipeline input/stage disposal; live target color formats retained |
+| byo-music legacy host | Strict Ref/array sound XML, same public asset IDs |
+
+Sidecar IDs/versions are unchanged; Iron Man's native XML carrier changes with legacy migration.
+All 18 managed suites and the 19-case startup harness pass; native game acceptance is pending.
+
 ## Distribution policy
 
 `unscience` is the only shipped/publishable mod. Individual `.csproj` files remain code boundaries;

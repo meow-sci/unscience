@@ -19,6 +19,16 @@ internal static class VehiclePaintChecks
             Require(VehiclePaintPatches.AppliedPatchCount == VehiclePaintPatches.RequiredPatchCount,
                 "all paint seams attach, including the private nested-batch writers");
 
+            // Native 5801 habitat highlights own bits 11/12. No paint value may set either.
+            foreach (float r in new[] { 0f, 0.5f, 1f })
+            foreach (float g in new[] { 0f, 0.5f, 1f })
+            foreach (float b in new[] { 0f, 0.5f, 1f })
+            {
+                int bits = VehiclePaint.EncodeBits(new float3(r, g, b));
+                Require(bits != 0 && (bits & 0x1fff) == 0, "paint preserves every native flag including yellow/purple");
+                Require(((bits | 0x1801) & 0x1fff) == 0x1801, "native habitat highlights coexist with paint");
+            }
+            Require(VehiclePaint.ChannelBits == 6, "six bits per channel fit above the native flags");
             var owner = new PartTree();
             var tree = new PartTreeRenderData();
             var hull = new Part("hull", 1);

@@ -122,7 +122,8 @@ public static class PartModelModule
     public enum RaytracingMode { Disabled, Enabled, ShadowProxy }
     public sealed class Template
     {
-        public string Id = "fixture";
+        public string Key = "fixture";
+        public string Id { get => Key; set => Key = value; }
         public bool Internal;
         public RaytracingMode RayTracing;
     }

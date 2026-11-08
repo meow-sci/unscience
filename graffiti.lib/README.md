@@ -1,5 +1,11 @@
 # graffiti.lib
 
+## KSA 5801 compatibility
+
+The decal pipeline already derives its format from Program.ColorFormat, including the new R11G11B10 main target. Temporary VertexInput memory is now explicitly disposed for the Brutal ownership update. Descriptor order and save payloads are unchanged; native GLSL/HDR/terrain appearance remains pending.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 KSA 5541 compatibility: `DecalRenderer` binds
 `GlobalShaderBindings.DescriptorSet(Program.MainViewport.ShaderSlot)` with an empty dynamic-offset
 span, matching the native per-view/per-frame uniform descriptors. It replaces the removed

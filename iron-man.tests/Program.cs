@@ -26,6 +26,7 @@ static Part.Connector TankEndpoint(string name)
 var harmony = new Harmony("MeowSci.IronMan.Tests");
 IronManConnectorPatches.Apply(harmony);
 var shared = new PartTemplate();
+PartTemplate.Library[shared.Id] = shared;
 var kitten = new Part("Hunter", shared);
 var untouched = new Part("Banjo", shared);
 IronManConnectors.EnsureDefaults(kitten);
@@ -49,14 +50,38 @@ Reject(() => IronManConnectors.Add(kitten, "bad", double3.Zero, double3.Zero, .1
 
 uint next = 1;
 PartInstance saved = kitten.GetReferenceWithChildren(ref next);
-Check(saved.Id.StartsWith(IronManConnectorData.Marker, StringComparison.Ordinal), "The real serialization postfix must emit metadata.");
+Check(saved.Components.OfType<IronManAnchorModule.SaveData>().Single().Payload.StartsWith(IronManConnectorData.Marker, StringComparison.Ordinal), "The real serialization postfix must emit metadata.");
 Check(saved.ConnectedIndices.SequenceEqual(new[] { 0 }), "Connected indexes must remain stock-shaped.");
-var serializer = new XmlSerializer(typeof(PartInstance));
+var serializer = IronManAnchorSerializers.Create(typeof(PartInstance));
 using var writer = new StringWriter();
 serializer.Serialize(writer, saved);
 using var reader = new StringReader(writer.ToString());
 var loaded = (PartInstance)serializer.Deserialize(reader)!;
-var copied = new Part(loaded.Id, shared, loaded);
+// Legacy 5707 Id markers migrate through the real serializer event, not a test-only adapter.
+string payload = saved.Components.OfType<IronManAnchorModule.SaveData>().Single().Payload;
+string legacyXml = $"<PartInstance Id=\"{payload}\" InstanceOf=\"{shared.Id}\" />";
+using var legacyReader = new StringReader(legacyXml);
+var legacy = (PartInstance)serializer.Deserialize(legacyReader)!;
+var legacyPart = new Part(legacy, null);
+Check(legacyPart.Id == "Hunter" && IronManConnectors.GetOwned(legacyPart).Count == 2,
+    "5707 Id attributes must migrate to native anchor records before connection reconstruction.");
+Check(new Part(legacy, null).Connectors.Length == 2,
+    "Repeated reconstruction of the same loaded record restores anchors exactly once each time.");
+foreach (var nativeSerializer in new[] { GameSaves.UniverseSerializer, VehicleSaves.VehicleSerializer })
+{
+    object root = nativeSerializer == GameSaves.UniverseSerializer
+        ? new UniverseData { Root = saved } : new VehicleSaveData { Root = saved };
+    using var nativeWriter = new StringWriter(); nativeSerializer.Serialize(nativeWriter, root);
+    using var nativeReader = new StringReader(nativeWriter.ToString());
+    object restored = nativeSerializer.Deserialize(nativeReader)!;
+    var nativePart = restored is UniverseData world ? world.Root! : ((VehicleSaveData)restored).Root!;
+    Check(new Part(nativePart, null).Connectors.Length == 2, "Both patched native serializer getters round-trip anchors.");
+}
+var duplicate = new PartInstance { Components = { new IronManAnchorModule.SaveData { Payload = payload }, new IronManAnchorModule.SaveData { Payload = payload } } };
+Reject(() => new Part("", shared, duplicate), "Duplicate anchor records must fail closed.");
+Reject(() => new Part("", shared, new PartInstance { Components = { new IronManAnchorModule.SaveData() } }),
+    "Empty anchor envelopes must fail closed.");
+var copied = new Part("", shared, loaded);
 Check(copied.Id == "Hunter", "Constructor prefix must prevent metadata leaking into runtime ids.");
 Check(copied.Connectors.Length == 2 && IronManConnectors.GetOwned(copied).Count == 2,
     "Constructor postfix must restore anchors before stock connection indexing.");
@@ -88,15 +113,15 @@ Check(new Part(untouched, null).Connectors.Length == 0 && new Part(TankEndpoint(
 reloaded.Connectors[0].Connection!.Disconnect();
 clone.Connectors[0].Connection!.Disconnect();
 Check(IronManConnectors.RemoveAll(reloaded) && IronManConnectors.RemoveAll(clone), "Loaded and cloned anchors remain removable.");
-Reject(() => new Part("bad", shared, new PartInstance { Id = "iron-man:v2:unknown" }), "Unknown version must fail before stock reconstruction.");
-Reject(() => new Part("bad", shared, new PartInstance { Id = "iron-man:v1:garbage" }), "Malformed marker must fail closed.");
+Reject(() => new Part("bad", shared, new PartInstance { Components = { new IronManAnchorModule.SaveData { Payload = "iron-man:v2:unknown" } } }), "Unknown version must fail before stock reconstruction.");
+Reject(() => new Part("bad", shared, new PartInstance { Components = { new IronManAnchorModule.SaveData { Payload = "iron-man:v1:garbage" } } }), "Malformed marker must fail closed.");
 var changedTemplate = new PartTemplate();
 changedTemplate.Connectors.Add(new Part.Connector.TemplateBase());
 Reject(() => new Part("bad", changedTemplate, loaded), "Changed stock connector indexes must fail closed.");
-var data = IronManConnectorData.Decode(saved.Id, shared)!;
+var data = IronManAnchorSerializers.Decode(saved, shared)!;
 data.Anchors[0].Position = new[] { double.PositiveInfinity, 0d, 0d };
 Reject(() => data.Restore(new Part("bad", shared)), "Nonfinite restored coordinates must be rejected.");
-Check(!untouched.GetReferenceWithChildren(ref next).Id.StartsWith(IronManConnectorData.Marker, StringComparison.Ordinal),
+Check(!untouched.GetReferenceWithChildren(ref next).Components.OfType<IronManAnchorModule.SaveData>().Any(),
     "Unmodified kittens must never receive a persistence marker.");
 up.Connection!.Disconnect();
 Check(IronManConnectors.RemoveAll(kitten) && kitten.Connectors.Length == 0, "Disconnected removal must restore original connector list.");

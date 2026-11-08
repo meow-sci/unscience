@@ -66,11 +66,10 @@ public static class PlumePhysics
         return RocketNozzle.ComputeMinGasVisibilityDensity(template, exitRadius);
     }
 
-    /// <summary>Ambient pressure at the camera in pascals (KSA's helper returns atmospheres).</summary>
+    /// <summary>Ambient pressure at the camera in pascals (KSA 5801's runtime atmosphere uses SI units).</summary>
     public static float AmbientPressurePa(Camera camera)
     {
-        const double paPerAtm = 101325.0;
-        try { return (float)(PhysicalAtmosphereReference.GetAtmosphericPressure(camera) * paPerAtm); }
+        try { return (float)camera.ComputeAtmosphericPressure(); }
         catch { return 0f; }
     }
 

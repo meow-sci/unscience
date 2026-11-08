@@ -1,3 +1,8 @@
+# Thug Life library
+
+## KSA 5801 compatibility
+
+Temporary ShaderStages and VertexInput allocations are now explicitly disposed. Stages borrow stock shader modules, which remain owned by KSA. The pipeline already derives R11G11B10/sample compatibility from OffscreenTarget; UnlitMesh shaders and saved quad recipes are unchanged. Native quad/HDR rendering remains pending. See [upgrade evidence](../plans/KSA_5801_UPGRADE.md).
 
 ## Scene saves
 

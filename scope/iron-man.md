@@ -1,5 +1,22 @@
 # Iron Man — EVA editor, connectors and vessel physics
 
+## KSA 5707 → 5801 verification (2026-11-08)
+
+| Integration | 5707 → 5801 and current owner |
+|---|---|
+| Private `Part` constructor | Placement adds argument 4: now 11 arguments, still decoded once via `IronManConnectorPatches` before connector-index regeneration. Real-DLL tests prove all constructor chains reach it |
+| `Part.Connector.TemplateBase.Key` | Replaces authored Id; runtime connector Id and v1 payload names remain unchanged |
+| `PartInstance.Components` / `IronManAnchorModule.SaveData` | Removed native PartInstance.Id is replaced by `UnscienceIronManAnchors` carrying the existing v1 JSON/base64 payload. Passive module claims already-restored data during native replay |
+| `GameSaves.UniverseSerializer` / `VehicleSaves.VehicleSerializer` getters | `IronManAnchorSerializers` postfixes substitute cached serializers built with isolated `XmlHelper.BuildAttributeOverrides()` mappings; original shared XML overrides are not mutated |
+| Legacy XML `Id` attribute | UnknownAttribute event migrates old markers to the same envelope before reconstruction; duplicate/empty/invalid/future payloads fail closed |
+
+Sidecar mode IDs/versions are unchanged. Existing copy/unload ownership remains. Production-Harmony
+fixtures cover world/blueprint getter round-trips, legacy migration, repeat reconstruction, copied
+anchors and invalid records. Native connected-anchor load, editor undo/redo and cross-mod serializer
+coexistence remain acceptance work.
+
+See [KSA 5801 upgrade review](../plans/KSA_5801_UPGRADE.md) for evidence, validation boundaries and native acceptance.
+
 ## KSA 5707 verification (5638 → 5707, 2026-10-29)
 
 Verified against `2026.10.25.5707` (revs 5639–5703), diffed from `2026.10.19.5638`. Static/managed
@@ -259,7 +276,7 @@ signature/overload changes; private string names must be re-grepped on every gam
 | private `VehicleEditor.DuplicateHighlightedPart`, `RequestNewVehicle`, `FinalizeNewVehicle` | editor prefixes | Block body duplication/replacement/new-vessel actions during a configured kitten edit in either flight mode. @5707 duplication copies through `PartCloner.CloneSubtreeAsTree` (`VehicleEditor.cs:6088`) instead of serialize/deserialize; the copy-constructor row covers anchors on any permitted copy. |
 | `VehicleSaveData.Create(string,PartTree)` | metadata postfix | Preserve Character for a live KittenEva with this exact authored root, including after disabling; no character guessed for unrelated trees. |
 | internal `Part.GetReferenceWithChildren(ref uint,PartInstance,bool)` | connector serialization postfix | Set marked instance Id only for owned nodes, preserving original Id, stock prefix count and ordered owned suffix. |
-| private `Part(string?,PartTemplate,PartInstance?,Part?,TransformReference?,int,int,int,Part?,bool)` (**@5707**, `Part.cs:1566`; was the public 4-arg ctor) | constructor prefix/postfix | Every construction path reaches this one constructor: load `Part(PartInstance,Part)`, the 4-arg ctor, template sub-parts and copies. Patch it, and only it: `__0` inName (rewritten to the original Id), `__1` template, `__2` instance (decoded); `__8` boundsSource, `__9` isTemplateSubPart unused. Decode valid marked data, restore runtime Id, append nodes BEFORE `RegenerateConnectionsFromPartInstance` indexes them. Also patching the 4-arg ctor would add the anchors twice. A root is registered while its `Tree` is still null (since 5482; unload filters those out). |
+| private `Part(string?,PartTemplate,PartInstance?,TransformDataReference<SubPartTemplate>?,Part?,TransformReference?,int,int,int,Part?,bool)` (**@5801**, `Part.cs:1601`) | constructor prefix/postfix | Every construction chains here. `__0` name, `__1` template and `__2` instance retain their positions; decode the native anchor module/legacy migrated payload and restore nodes once before index reconstruction. `IronManConnectorPatches.cs:14-19,76-87`; world/blueprint serializers and passive module are documented in the 5801 section above. |
 | `Part(Part source, Part? parent)` (**new @5707**, `Part.cs:1556`) | copy-constructor postfix | Used by `PartCloner` (duplicate, Copy Tree, symmetry/radial, clusters). Connectors are rebuilt from the template, then reconnected by source index (`PartCloner.cs:162-185,258-280`), so `CopyOwned` must re-add the source's anchors in order before `Connect`. Unmodified kittens and stock parts gain nothing. |
 
 One private field (`Vehicle._navBallMarkerData`, type-checked before patching) is reached through Harmony's

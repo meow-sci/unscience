@@ -38,7 +38,7 @@ public sealed partial class ClutterController : IDisposable
         _system ??= system;
     }
     public string[] BiomeIds(string bodyId) => _bodies.TryGetValue(bodyId, out var body)
-        ? body.BodyTemplate.BiomesReference?.Biomes.Where(b => b.Id is >= 0 and < 32).Select(b => b.Alias).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray() ?? [] : [];
+        ? body.BodyTemplate.BiomesReference?.Biomes.Where(b => b.Id is >= 0 and < 32).Select(b => b.Key).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray() ?? [] : [];
 
     public PebblesRecipe CaptureOriginal(string bodyId)
     {

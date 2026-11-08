@@ -1,5 +1,9 @@
 # BYO Music — vessel sounds
 
+## KSA 5801 compatibility
+
+The legacy host asset uses top-level sound/music files, resolved Ref links and SoundFiles/Sounds arrays with Channel/Location elements. SabotageMusic/SabotageMulti IDs remain unchanged. The bundled direct-FMOD player is unchanged; legacy native asset loading remains pending. See [upgrade review](../plans/KSA_5801_UPGRADE.md).
+
 Open **F11 → BYO Music** in Unscience. Import an **Ogg Vorbis (.ogg), WAV, or MP3**, choose a
 sound and a vessel using the filterable pickers, then **Play on vessel**. The browser copies files
 into `My Games/Kitten Space Agency/.unscience/sounds`. Files already there appear automatically

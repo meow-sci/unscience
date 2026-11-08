@@ -1,5 +1,11 @@
 # kitchen-sink.lib
 
+## KSA 5801 compatibility
+
+Capsule glass filters the same exact window models through Template.Key, replacing removed Template.Id. Toggle, separate IVA ownership and save state are unchanged. Managed filter/save tests pass; native glass appearance remains pending.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 Feature implementation shared by Unscience and the standalone development host.
 See [Kitchen Sink controls](../kitchen-sink/README.md).
 

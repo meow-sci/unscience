@@ -1,5 +1,15 @@
 # Scope: Celestial Welding & Lights (kiwis-marbles, zippo)
 
+## KSA 5707 → 5801 verification (2026-11-08)
+
+DiscoLight copies `LightModule.TemplateData.Key` into its per-instance template, replacing Id.
+ColorRgb/Intensity/OnDataLoad and the nested template type remain present; the old Color lookup bug
+is retired. Native lights now propagate switch changes across symmetry; manually owned Disco switches
+need an in-game symmetry check. Kiwi's orbit/re-parent/solver entry seams remain present. Save IDs,
+light ordinals and disco phase payloads are unchanged.
+
+See [KSA 5801 upgrade review](../plans/KSA_5801_UPGRADE.md) for evidence, validation boundaries and native acceptance.
+
 ## KSA 5707 verification (5638 → 5707, 2026-10-29)
 
 Verified against `2026.10.25.5707` (revs 5639–5703) vs `2026.10.19.5638`. Static/managed only: the

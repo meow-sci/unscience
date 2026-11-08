@@ -1,5 +1,11 @@
 # Zippo Library
 
+## KSA 5801 compatibility
+
+Disco clones preserve LightModule.TemplateData.Key instead of removed Id. ColorRgb and intensity reflection still resolve. Recipes, originals, phases and save record versions are unchanged; native symmetry switch behavior needs an in-game check.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 Shared implementation for the standalone **Zippo** mod and the Zippo feature inside **Unscience**. It provides ordinary light appearance controls, queued color/intensity transitions, the Disco party-light engine, and a reusable public API.
 
 ## Disco capability

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using Brutal.Collections;
 using KSA;
 using RenderCore;
 using MeowSci.KsaAbstractions;
@@ -90,10 +89,10 @@ internal sealed class GlbImportLibrary : IDisposable
                 var minimum = p.Positions.Aggregate(Vector3.Min); var maximum = p.Positions.Aggregate(Vector3.Max);
                 var host = new MeshAsset { VertexCount = p.Positions.Length, PositionMinimum = new(minimum.X, minimum.Y, minimum.Z), PositionMaximum = new(maximum.X, maximum.Y, maximum.Z) };
                 hosts.Add(host);
-                host.SetVertexList(MeshAttribute.Position, NativeStrideList.FromSpan<Vector3>(p.Positions));
-                host.SetVertexList(MeshAttribute.Normal, NativeStrideList.FromSpan<Vector3>(p.Normals));
-                host.SetVertexList(MeshAttribute.Uv0, NativeStrideList.FromSpan<Vector2>(p.Uvs));
-                host.SetIndexBuffer(NativeStrideList.FromSpan<uint>(p.Indices));
+                host.SetVertexList(MeshAttribute.Position, ClutterGeometry.CopyNative<Vector3>(p.Positions));
+                host.SetVertexList(MeshAttribute.Normal, ClutterGeometry.CopyNative<Vector3>(p.Normals));
+                host.SetVertexList(MeshAttribute.Uv0, ClutterGeometry.CopyNative<Vector2>(p.Uvs));
+                host.SetIndexBuffer(ClutterGeometry.CopyNative<uint>(p.Indices));
             }
             mesh = new MeshReference { Id = id, PrimitiveCount = hosts.Count };
             typeof(MeshReference).GetProperty(nameof(MeshReference.HostPrimitives))!.SetValue(mesh, hosts.ToArray());

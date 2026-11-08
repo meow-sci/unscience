@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Brutal.Numerics;
 using KSA;
+using MeowSci.KsaAbstractions;
 
 namespace MeowSci.DohLib.Materials;
 
@@ -222,8 +223,8 @@ public sealed partial class MaterialFactory
 
         if (pbrRef != null)
         {
-            // Resolve via .Get() to follow references
-            var resolved = InvokeGet(pbrRef) as PbrMaterialReference ?? pbrRef;
+            // Follow the resolved data link to follow references
+            var resolved = GameDataReference.Resolve(pbrRef) as PbrMaterialReference ?? pbrRef;
             return CreateMaterialFromPbrRef(newName, resolved, tintColor,
                 samplerHandle, defaultWhiteHandle, defaultBlackHandle);
         }
@@ -265,14 +266,14 @@ public sealed partial class MaterialFactory
 
     /// <summary>
     /// Gets the bindless handle from a TextureReference field on PbrMaterialReference,
-    /// calling .Get() to resolve references.
+    /// following the resolved DataReference.Value link.
     /// </summary>
     private int GetTextureBindlessHandle(object? textureRef, int fallback)
     {
         if (textureRef == null) return fallback;
         try
         {
-            var resolved = InvokeGet(textureRef);
+            var resolved = GameDataReference.Resolve(textureRef);
             if (resolved == null) return fallback;
             int handle = GetIntFieldOrProp(resolved, "BindlessHandle");
             return handle >= 0 ? handle : fallback;
@@ -396,8 +397,8 @@ public sealed partial class MaterialFactory
                 return null;
             }
 
-            // Resolve via .Get()
-            var charTextures = InvokeGet(charTexturesSub);
+            // Follow the resolved data link
+            var charTextures = GameDataReference.Resolve(charTexturesSub);
             if (charTextures == null)
             {
                 Console.WriteLine($"doh: Failed to resolve CharacterTextures for '{characterId}'.");
@@ -436,7 +437,7 @@ public sealed partial class MaterialFactory
 
     /// <summary>
     /// Resolves a single texture bindless handle from a PbrMaterialReference field.
-    /// Path: pbrMat → .Get() → field (TextureReference) → .Get() → .BindlessHandle
+    /// Path: Pbr material data link → Value → texture data link → Value → BindlessHandle
     /// </summary>
     private int ResolvePbrTextureHandle(object? pbrMat, string textureFieldName)
     {
@@ -444,16 +445,16 @@ public sealed partial class MaterialFactory
 
         try
         {
-            // Call .Get() to resolve the reference
-            var resolved = InvokeGet(pbrMat);
+            // Follow the resolved data link
+            var resolved = GameDataReference.Resolve(pbrMat);
             if (resolved == null) return -1;
 
             // Get the texture reference field (DiffuseReference, NormalReference, PBRMap)
             var textureRef = GetFieldOrPropValue(resolved, textureFieldName);
             if (textureRef == null) return -1;
 
-            // Call .Get() on the texture reference
-            var resolvedTexture = InvokeGet(textureRef);
+            // Follow the resolved texture link
+            var resolvedTexture = GameDataReference.Resolve(textureRef);
             if (resolvedTexture == null) return -1;
 
             // Get BindlessHandle
@@ -475,7 +476,7 @@ public sealed partial class MaterialFactory
 
         try
         {
-            var resolved = InvokeGet(pbrMat);
+            var resolved = GameDataReference.Resolve(pbrMat);
             if (resolved == null) return -1;
 
             string? id = GetFieldOrPropValue(resolved, "Id")?.ToString();
@@ -598,14 +599,6 @@ public sealed partial class MaterialFactory
     }
 
     // ---- Reflection helpers ----
-
-    private static object? InvokeGet(object instance)
-    {
-        // KSA reference types have both T Get<T>() and Foo Get() — must filter for non-generic
-        var methods = instance.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance);
-        var getMethod = Array.Find(methods, m => m.Name == "Get" && !m.IsGenericMethod && m.GetParameters().Length == 0);
-        return getMethod?.Invoke(instance, null);
-    }
 
     private static object? GetFieldOrPropValue(object instance, string name)
     {

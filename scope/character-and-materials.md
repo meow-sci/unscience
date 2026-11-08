@@ -1,5 +1,20 @@
 # Character / Material / GPU-Customization Mods — Game Integration Scope
 
+## KSA 5707 → 5801 verification (2026-11-08)
+
+Vehicle Paint now reserves native bits 0–12: KSA added yellow/purple habitat highlights in bits
+11/12. `VehiclePaint.cs` encodes 6:6:6 sRGB in bits 13–30; `VehiclePaintShaderSource.cs` supplies the
+same decoder to both shader variants. Persistent float colors are unchanged. Actual production
+transforms are exercised against CURRENT shaders in `ksa-upgrade.tests` (LF/CRLF, all blend modes).
+
+DOH `MaterialFactory.cs` follows `GameDataReference.Resolve` through CharacterTextures/material/texture
+links instead of invoking the removed `Get()`. Direct assets remain direct, unresolved links stay null.
+Avatar/material field names and the 80-byte MaterialData layout remain present; the metadata suite
+covers them. New native condition poses can blend with manually chosen kitten expressions. Native
+appearance, shader compilation, pool recovery and save/load acceptance remain open.
+
+See [KSA 5801 upgrade review](../plans/KSA_5801_UPGRADE.md) for evidence, validation boundaries and native acceptance.
+
 Permanent reference for detecting when KSA game updates break the kitten/character and
 GPU-material customization mods (`doh`, `humble-arteest`, `kitten-animations`). Every
 game-facing member, Harmony target, reflection string, GPU/Vulkan API, per-instance struct
@@ -437,8 +452,8 @@ The regular PBR alpha-discard path remains valid for body/helmet; it cannot hide
 **Persistence** — None. In-memory dictionaries keyed by `Part` (per-instance) and part template id;
 global toggle + color; all cleared on unload.
 
-**Vehicle Paint mechanism (rewritten for 5018)** — The paint color is quantized to 7:7:7 sRGB and
-ORed into `StateBitFlag` **bits 11..31**, which the game leaves unused (it writes only bits 0..10).
+**Vehicle Paint mechanism (updated for 5801)** — The paint color is quantized to 6:6:6 sRGB and
+ORed into `StateBitFlag` **bits 13..30**. Native bits 0..12 include the new yellow/purple highlights.
 That field exists at the same offset in *every* `PerInstanceData` variant and is already forwarded
 to every part fragment shader as the `inStateFlags`@loc4 varying, so **no vertex shader, struct
 layout, stride, descriptor binding, or game-used field is touched** — in particular `EmissiveColor`,
@@ -461,7 +476,7 @@ rebuild, which is what recompiles the part pipelines.
 | A7 | Typed | VehiclePaintShaders.cs:108 `RequestRendererRebuild` | `Program.RendererRebuildNeeded : bool` (public static) | KSA/Program.cs:430 (consumed at :2141-2145 `PrepareFrame`) @5482 | ✅ | none (line moves) | The game's own deferred-rebuild flag — the same path a Frost/Water graphics-setting change takes, so pipelines are destroyed at a frame boundary, not mid-record |
 | A8 | Typed | VehiclePaintShaders.cs:256-257 `TryResolveShaderPath` | `ModLibrary.Get<ShaderReference>("MeshIndirectFrag")` → `FileReference.ModPath : string` | KSA/PartModelRenderer.cs:110,195; KSA/FileReference.cs:23 | ✅ | none | Pre-flight check only, so a shader change fails visibly at "Enable" instead of silently |
 | A9 | **Shader text edit** (in memory) | VehiclePaintShaders.cs `Inject`/`BuildSnippet` | `MeshIndirect.frag` **and** `MeshIndirectRaytraced.frag` — anchor = first line starting `vec3 sampledColor` and ending `;`; also requires the `inStateFlags` varying | Content/Core/Shaders/Mesh/MeshIndirect.frag:114; MeshIndirectRaytraced.frag:156 | ✅ | n/a (new anchors) | Anchored on the albedo *declaration*, not an exact line, so incidental upstream edits do not break it. Snippet appends after the sample so paint flows through thin film / frost / PBR. Uses `gammaToLinear` (Common/Shared.glsl:203) |
-| A10 | **Per-instance bit budget** | VehiclePaint.cs:41,259-266 `EncodeBits` (`PaintBitShift`=11, 7:7:7) | `PerInstanceData.StateBitFlag` **bits 11..31** — game writes only bits 0..10 | writers @5482: private `PartTreeRenderData.WriteState` (:1210-1256), `WriteDynamicState` (:1088-1136), `WriteGlassState` (:877-897), per-full-part dynamic state 0x40/0x80 (:624-635), shared 0x10/0x20 OR-ed in `ToPerInstanceData`/`Compose*` (:1324-1333); constants `PartTreeRenderData.StateBit` (:196-219); readers: MeshIndirect.frag:312-353, MeshIndirectRaytraced.frag:291-333 | ✅ | none @5482 — bits still 0..10 only; thumbnails write `StateBitFlag = 0` (`ThumbnailPart.cs:229,234`, `ThumbnailRenderResources.cs:152,183`) | 🔶 **The one thing to re-check on every game update:** if KSA starts using bit 11 or above, paint and that feature will corrupt each other. `RayTraceInstance.StateFlags` is `int` (`KSA.Rendering.Raytracing/RaytracingRenderer.cs:32`, copied at :1107), so the bits survive the RT path too |
+| A10 | **Per-instance bit budget** | `VehiclePaint.cs` EncodeBits (`PaintBitShift=13`, `ChannelBits=6`); `VehiclePaintShaderSource.cs` decoder | `PerInstanceData.StateBitFlag` bits **13..30** | CURRENT `PartTreeRenderData.cs:223,225` adds native bits 11/12; same cached-state writer seams | ✅ fixed @5801 | Changed vs OLD: previous 7:7:7 encoding overlapped native habitat highlights | Real-DLL flag metadata, CPU isolation and both production shader transformations pass; native raster/IVA appearance pending |
 | A11 | Typed | PaintTargets.cs:63,73-74,132-135,144,155 | `Program.Editor : VehicleEditor?`; `VehicleEditor.EditingSpace : VehicleEditingSpace` → `.Parts : PartTree?`; `.UnattachedPartTrees : List<PartTree>`; `PartTree.Parts : ReadOnlySpan<Part>`; `Part.SubParts/Id/DisplayName/Modules` | KSA/Program.cs:226; VehicleEditor.cs:545,689; VehicleEditingSpace.cs:16; PartTree.cs:95; Part.cs:1079,698,700,680 | ✅ | none (line moves) | Enumerates paint targets in both flight (via `VehicleProvider`) and the editor — mirrors the two sources `Program` itself walks |
 | B1 | Reflection | KittenColor.cs:58-73 | `Program.Instance`→`MaterialSystem`→`AssetMap`/`BigBuffer`/`DeviceCtx` (same chain as doh #1-5) | KSA/Program.cs:453,118; GpuObjectSystem.cs:16,18; AssetManager.cs:11 | ✅ | none | |
 | B2 | GPU write (Vulkan) | KittenColor.cs:204-214 | `BigBuffer.VkBuffer` + `VkUtils.StageAndUploadToBuffer` at `handle*ByteSize.Of<MaterialData>() + OffsetOf(AlbedoColor=16)` | KSA/MaterialData.cs:17 | ✅ | none (file byte-identical) | tints fur/body/eyes; span→bytes via BCL `MemoryMarshal.AsBytes` (no `CommunityToolkit.HighPerformance` reference) |
@@ -499,7 +514,7 @@ rebuild, which is what recompiles the part pipelines.
     of one `Part` share its paint.
   - **Precision:** 7 bits per channel (128 steps, quantized in sRGB). Not a limitation of the design
     — it is the whole free-bit budget in `StateBitFlag`.
-- 🔶 **The one paint invariant to re-check every game update:** `StateBitFlag` bits **11..31** must
+- 🔶 **The one paint invariant to re-check every game update:** `StateBitFlag` bits **13..30** must
   stay unused by KSA. Writers to audit: `PartModelModule.UpdateRenderData` and
   `PartModelDynamicModule.UpdateRenderData` (since 5482: private `PartTreeRenderData.WriteState` /
   `WriteDynamicState` / `WriteGlassState` and the per-full-part dynamic state — see A10). Readers to audit: the `inStateFlags` bit tests in

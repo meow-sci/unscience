@@ -55,6 +55,29 @@ internal sealed partial class KsaAssemblyProbe
     public List<List<string>> CallsOf(string typeFullName, string methodName) =>
         Methods(typeFullName, methodName).Select(m => Body(m).SelectMany(ScanCalls).ToList()).ToList();
 
+    internal sealed record Field(string Name, string Type, int? Constant);
+
+    public List<Field> Fields(string typeName)
+    {
+        var result = new List<Field>();
+        foreach (var handle in _md.TypeDefinitions)
+        {
+            if (TypeName(handle) != typeName) continue;
+            foreach (var fieldHandle in _md.GetTypeDefinition(handle).GetFields())
+            {
+                var field = _md.GetFieldDefinition(fieldHandle);
+                int? value = null;
+                if (!field.GetDefaultValue().IsNil)
+                {
+                    var constant = _md.GetConstant(field.GetDefaultValue());
+                    if (constant.TypeCode == ConstantTypeCode.Int32) value = _md.GetBlobReader(constant.Value).ReadInt32();
+                }
+                result.Add(new Field(_md.GetString(field.Name), field.DecodeSignature(this, null), value));
+            }
+        }
+        return result;
+    }
+
     private IEnumerable<MethodDefinition> Methods(string typeFullName, string? name)
     {
         foreach (var typeHandle in _md.TypeDefinitions)

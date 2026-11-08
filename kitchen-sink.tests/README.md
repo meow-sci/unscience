@@ -1,5 +1,11 @@
 # Kitchen Sink managed checks
 
+## KSA 5801 compatibility
+
+Capsule model fixtures now expose Key while retaining Id as a test setup convenience. Existing actual-Harmony render ownership, sidecar replay and real detector metadata checks remain active.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 Run `dotnet run --project kitchen-sink.tests` from the repository root.
 
 Latest managed validation (KSA 5707): the suite passes, including the 108 G-load checks with the

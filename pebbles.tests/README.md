@@ -1,5 +1,11 @@
 # Pebbles managed checks
 
+## KSA 5801 compatibility
+
+Adds optional curvature and terrain-fade persistence/legacy absence, detached curve copies, domain/spacing and nonfinite-data validation. These are production recipe/sidecar JSON checks; native capture, graph construction and GPU resource retirement remain outside this managed executable.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 Run `dotnet run --project pebbles.tests/pebbles.tests.csproj` from the repository root.
 This executable links Pebbles' game-independent models, hull math and Workshop math/state, plus the
 shared managed save serializer, directly; it requires neither game assemblies nor the newux

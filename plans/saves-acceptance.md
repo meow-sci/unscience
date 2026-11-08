@@ -1,5 +1,20 @@
 # Scene save implementation coverage and native acceptance
 
+## KSA 5801 upgrade acceptance
+
+The existing sidecar IDs/versions remain. Iron Man moves its unchanged v1 anchor payload from
+removed native PartInstance.Id into a Components envelope, with legacy-attribute migration through
+world/blueprint serializer hooks and restore at the private 11-argument constructor. Production
+managed tests cover both getter serializers, repeated reconstruction and invalid/duplicate payloads.
+Pebbles adds optional curvature/terrain fade state; legacy absence inherits stock. Paint saves RGB
+unchanged and re-encodes GPU bits after load. Native rules/conditions/supplies/cargo stay KSA-owned.
+
+All 18 managed suites pass against CURRENT; these do not prove native save reconstruction, GPU
+retirement or in-game rendering. Native acceptance: legacy/new connected-anchor world + blueprint,
+editor undo/redo, painted habitat highlights, repeated Pebbles replay/resource recovery, and scene
+loads around crew deaths/boarding. See [5801 evidence](KSA_5801_UPGRADE.md).
+
+
 ## Runtime bootstrap follow-up
 
 The default-networking bootstrap and diagnostic caches are process startup state, intentionally absent from scene saves. No persisted state or save lifecycle changes. Managed load-context regressions cover standalone/pair/triple ordering and late/pre-existing binding failures; native acceptance still requires a Windows combined-mod startup followed by ordinary save/load with the existing sidecars.
@@ -112,7 +127,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [Hot Pursuit](../hot-pursuit.lib/HotPursuitSubmod.Saves.cs) | Mounted part, surface basis, transform, FOV, dimensions, visibility and whether its viewport was open. | Placement mode stops. Attempts to reopen saved viewports; slot exhaustion keeps the camera setup and reports that its viewport needs reopening. No native viewport/texture handles persist. |
 | [Humble Arteest](../humble-arteest.lib/HumbleArteestSubmod.Persistence.cs) | Paint activation/blend, global/template/per-part colors, named kitten material colors, visor hiding, global/per-module engine emissive settings. | Restores effective owned appearance and recreates relevant shader/material state. Requires compatible material names and module layouts; missing targets/uploads warn. Unapplied editor input is not generally captured. |
 | [I Feel Seen](../i-feel-seen.lib/IFeelSeenSubmod.Saves.cs) | Tracked vehicle identities and each force-visibility flag. | Rebuilds tracking on native-restored vehicles. Deleted/missing vehicles warn. |
-| [Iron Man](../iron-man.lib/IronManSubmod.Saves.cs) | Configured kittens, enabled mode, original EVA/control settings needed to disable the mode, current flight-computer preferences. | Mode restores with engines **disarmed**. Existing connectors are configured/reused through the normal code path. Runtime thrust/burn continuation is not promised; the player deliberately arms engines again. Custom anchors travel in the native part-id marker; since KSA 5707 it is decoded at the private `Part` constructor that every load/copy path reaches (format unchanged). |
+| [Iron Man](../iron-man.lib/IronManSubmod.Saves.cs) | Configured kittens, enabled mode, original EVA/control settings needed to disable the mode, current flight-computer preferences. | Mode restores with engines **disarmed**. Existing connectors are configured/reused through the normal code path. Runtime thrust/burn continuation is not promised; the player deliberately arms engines again. Custom anchors use a native Components envelope since 5801 (legacy Id markers migrate); the unchanged v1 payload is decoded at the private 11-argument Part constructor before index reconstruction. |
 | [It's So Shiny](../its-so-shiny.lib/ItsSoShinySubmod.Persistence.cs) | Existing host/light cell addresses, grid ownership/appearance, sparse mask, render flag, scroll recipe/offset and pending deletion. | Rebinds native cells without spawning or forcing ignition/switch state; scrolling resumes. Pending deletion restarts its delay. Shared light-template appearance retains the feature's existing shared-template semantics, with Zippo's template ledger restoring originals. |
 | [Kitchen Sink](../kitchen-sink.lib/KitchenSinkSubmod.Saves.cs) | Independent IVA visibility, capsule-glass experiment toggle, G-load target IDs, unlocked IVA camera/speed/exact seat/body pose in four separate v1 records. | Releases original-world controller/input before reconstruction; exact vehicle/part/seat replay requires matching native camera mode/follow. Missing/ambiguous/invalid targets and unavailable patches report and retain state. Absent legacy camera record resets to locked/default speed. Capsule glass reset releases its global interior requirement, with exact static-model filtering re-enabled on replay; absent records leave it off. Picker, held input, render/template caches and smoothing are transient. |
 | [Kitten Animations](../kitten-animations.lib/KittenAnimationsSubmod.Persistence.cs) | Selected kitten; forced clip by source/label, active/paused state and native clip phase; driver controls/global tuning; expression settings and latched expression clip identity. | Forced looping clips and frozen poses resume, and latched expressions return at their held weight. Unlatched one-shot expressions stay stopped; intermediate expression easing is not checkpointed. Missing/ambiguous clip identity or unavailable native phase fields warn/fail the block. |

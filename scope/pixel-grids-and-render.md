@@ -1,5 +1,17 @@
 # Pixel-Grid & Custom-Render Mods — Game Integration Scope
 
+## KSA 5707 → 5801 verification (2026-11-08)
+
+Main scene color changes from RGBA16 float to R11G11B10 (`Program.ColorFormat`). Thug Life already
+calls `OffscreenTarget.SetupGraphicsPipeline`, so no format constant migration is needed. Its temporary
+`ShaderStages` and `VertexInput` now use explicit disposal, as required after the Brutal collection
+finalizer removal. The stages borrow stock shader modules (`ownsModules:false`); disposing staging data
+does not destroy the shared modules. UnlitMesh shaders and part-instance layouts remain unchanged.
+Blinky/Shiny still use the shared compose filter; native main/secondary/IVA visibility, quads and fuel/
+light operation require an in-game pass.
+
+See [KSA 5801 upgrade review](../plans/KSA_5801_UPGRADE.md) for evidence, validation boundaries and native acceptance.
+
 ## KSA 5707 verification (5638 → 5707, 2026-10-29)
 
 Verified against `2026.10.25.5707` (revs 5639–5703), diffed from 5638. Static/managed only: the

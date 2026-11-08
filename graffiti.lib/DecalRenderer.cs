@@ -221,7 +221,7 @@ internal sealed unsafe class DecalRenderer : IDisposable
                 Stage = VkShaderStageFlags.FragmentBit,
             };
 
-            var vertexInput = new VertexInput(1, 1)
+            using var vertexInput = new VertexInput(1, 1)
                 .AddBinding(0, ByteSize.Of<float3>(), VkVertexInputRate.Vertex)
                 .AddAttribute(0, 0, VkFormat.R32G32B32SFloat, ByteSize.Zero)
                 .Check();

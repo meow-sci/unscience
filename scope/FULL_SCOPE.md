@@ -7,22 +7,19 @@ contracts. Update the owning area and master index in the same change as an inte
 
 ## Version baseline
 
-- **Cataloged against:** KSA **2026.10.25.5707**, metadata date **2026-10-29**.
-- **Diffed from:** **2026.10.19.5638**, which is both the on-disk PREVIOUS tree and the prior recorded
-  baseline (`ksa-game-assemblies` `edda844..4b3e9e2`). The in-repo `decomp/ksa` is historical.
-- **Build references:** explicitly set `KSAFolder` to CURRENT's `dll/` (macOS; no separate native
-  install). Distribution was redirected during all checks.
-- **Changelog coverage:** revisions 5639–5703 are all logged (no gap). Source/Content comparison: 191 C#
-  files changed, 64 added, 4 moved (`RenderCore` descriptor/image interfaces → `Brutal.VulkanApi.Abstractions`);
-  53 Content files changed, 6 shaders added, no asset id removed. Brutal packages bumped (rev 5652)
-  with assembly versions unchanged; StarMap needs no rebuild.
-- **Verification:** whole-solution compilation (0 warnings) and 18 managed suites, including new
-  real-KSA.dll metadata checks for the 5707 seams, plus eight area audits of reflection, Harmony
-  signatures/bodies/IL anchors, render/GPU, shader/descriptor/asset and byte layouts. Evidence and the
-  native acceptance matrix are in [KSA_5707_UPGRADE](../plans/KSA_5707_UPGRADE.md). This is a
-  **static/managed baseline; live game validation remains pending**.
-- Dated area tables retain historical build/line citations; their dated sections and the upgrade reports
-  record the deltas. Earlier reports: [5638](../plans/KSA_5638_UPGRADE.md), [5482](../plans/KSA_5482_UPGRADE.md), [5438](../plans/KSA_5438_UPGRADE.md).
+- **Cataloged against:** KSA **2026.11.10.5801**, metadata date **2026-11-07**.
+- **Diffed from:** **2026.10.25.5707**, matching PREVIOUS and the prior recorded baseline.
+  Supplied source/Content trees are authoritative; in-repo `decomp/ksa` remains historical.
+- **Build references:** explicit CURRENT `dll/`; output redirected to a temporary distribution.
+  No native game installation is available on this macOS ARM64 host.
+- **Changelog coverage:** all 93 revisions **5708–5800** logged; **5801 unlogged**.
+- **Verification:** whole solution builds with 0 warnings/errors; all 18 managed suites, real-DLL
+  reflection/constructor/layout checks, live-source paint/canopy transforms, 19 isolated bootstrap
+  cases and distribution validation. **Static/managed only; native acceptance pending.**
+- **Evidence:** [5801 impact and remediation](../plans/KSA_5801_UPGRADE.md). Dated area tables retain
+  historical citations; current dated sections supersede their compatibility status. Previous reports:
+  [5707](../plans/KSA_5707_UPGRADE.md), [5638](../plans/KSA_5638_UPGRADE.md),
+  [5482](../plans/KSA_5482_UPGRADE.md), [5438](../plans/KSA_5438_UPGRADE.md).
 
 ## How to use on a game update
 
@@ -71,7 +68,17 @@ rocky-mcrock-face, save-yourself, skittles, sphinx, the-tick, thug-life, zippo. 
 
 ---
 
-## Current status against 5707
+## Current status against 5801
+
+Migrated resolved data/key references in rings, clutter, Pyro, Disco and capsule filtering. Fixed
+DOH's silent Get-reflection miss, native yellow/purple highlight collisions in Vehicle Paint, and
+Iron Man's changed constructor/save carrier with legacy anchor migration. Pebbles preserves new
+curvature/terrain blending and retires terrain resources; custom pipelines explicitly dispose native
+staging data. Legacy BYO Music XML follows the new content schema. Sidecar IDs/versions are unchanged.
+Native rendering, legacy saved craft, editor undo/variants and life-support behavior need acceptance.
+See [5801 review](../plans/KSA_5801_UPGRADE.md).
+
+## Earlier status (5707)
 
 Two compile breaks: `SimpleVkTexture.ImageView` → `VkImageView` (graffiti, pebbles, thug-life) and
 `Part.Connectors` → `Connector[]` (Iron Man). Silent breaks fixed: **Iron Man** anchors were lost (and

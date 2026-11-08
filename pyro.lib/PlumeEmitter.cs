@@ -101,10 +101,10 @@ public static class PlumeEmitter
         var parent = vehicle.Parent;
         airVelocity = float3.Pack(vehicle.GetSurfaceVelocityCci().Transform(parent.GetCci2Cce()));
         airDensity = 0f;
-        AtmosphereReference? atmosphere = parent.GetAtmosphereReference();
+        PhysicalAtmosphere? atmosphere = parent.GetPhysicalAtmosphere();
         if (atmosphere == null) return;
 
         double altitudeMeters = (vehicle.GetPositionEcl() - parent.GetPositionEcl()).Length() - parent.MeanRadius;
-        airDensity = (float)atmosphere.Physical.GetAtmosphericDensityAtAltitude(altitudeMeters);
+        airDensity = (float)atmosphere.ComputeDensityAtAltitude(altitudeMeters);
     }
 }

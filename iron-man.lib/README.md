@@ -1,5 +1,11 @@
 # IronManLib
 
+## KSA 5801 compatibility
+
+The private Part constructor now has 11 arguments, including template-subpart placement. PartInstance.Id was removed: IronManAnchorModule.SaveData carries the same v1 payload in native Components; IronManAnchorSerializers extends world/blueprint getter serializers with isolated XML mappings and migrates legacy Id attributes. Restore still precedes connection-index reconstruction. Existing mode sidecars are unchanged; native connected-anchor and undo/redo acceptance remains pending.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 `IronManSubmod : ISubmod` supplies the opt-in EVA editor/rocket feature to Unscience and the thin
 Iron Man development host. See [player controls](../iron-man/README.md) and the source-backed
 [design research](../plans/iron-man/RESEARCH.md).
@@ -15,13 +21,12 @@ Iron Man development host. See [player controls](../iron-man/README.md) and the 
   transforms when stock scaling refreshes connectors; attached nodes cannot be edited/deleted.
   Since KSA 5707 `Part.Connectors` is a fixed array, so adding or removing a node replaces the array.
   The shared empty array is never mutated.
-- `IronManConnectorData` stores bounded versioned JSON/base64 in serialized `PartInstance.Id`.
-  `IronManConnectorPatches` restores the runtime Id and connectors in KSA 5707's private Part
-  constructor, which every load and construction path reaches, before native index regeneration.
-  Only that constructor is patched, because also patching the public 4-argument one would add the
-  nodes twice. A postfix on the copy constructor `Part(Part, Part)` (`PartCloner` copies) calls
-  `CopyOwned`, which re-adds the source's nodes in order. Ordinary parts have no metadata or changed
-  construction.
+- `IronManConnectorData` retains the bounded v1 JSON/base64 format. Since KSA 5801 removed
+  `PartInstance.Id`, `IronManAnchorModule.SaveData` stores it in native `Components`.
+  `IronManAnchorSerializers` extends world/blueprint serializer getters with isolated mappings and
+  migrates legacy Id attributes. `IronManConnectorPatches` restores Id/connectors in the private
+  11-argument constructor before native index regeneration; a passive module claims that record
+  during native replay. The copy-constructor postfix still re-creates independent owned anchors.
 - `IronManConnectorUnload` finds weakly retained authored roots, including inactive loaded roots
   and editor copies, and converts attachment endpoints before removing hooks. Failed conversion
   retains passive hooks instead of creating invalid saved indices or dropping fuel capabilities.

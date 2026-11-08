@@ -55,17 +55,17 @@ public sealed class ClutterAssets : IDisposable
                 _textures.TryAdd(texture.Id, texture);
         foreach (var gltf in Collection<Gltf2Reference>("AllGltfs"))
         {
-            if (gltf.Source == null || !File.Exists(gltf.Source.ModPath)) continue;
+            if (gltf.Source?.Value == null || !File.Exists(gltf.Source.Value.ModPath)) continue;
             try
             {
-                var json = GltfUtility.LoadModel(gltf.Source.ModPath);
+                var json = GltfUtility.LoadModel(gltf.Source.Value.ModPath);
                 if (json.Meshes == null) continue;
                 for (var i = 0; i < json.Meshes.Length; i++)
                 {
                     var name = json.Meshes[i].Name;
                     var id = $"{gltf.Id}:{(string.IsNullOrEmpty(name) ? $"mesh_{i}" : name)}";
                     if (_gltfs.ContainsKey(id)) id += $"#{i}";
-                    _gltfs[id] = (gltf.Source.ModPath, i);
+                    _gltfs[id] = (gltf.Source.Value.ModPath, i);
                 }
             }
             catch (Exception ex) { Console.WriteLine($"pebbles: cannot inspect {gltf.Id}: {ex.Message}"); }
@@ -98,7 +98,7 @@ public sealed class ClutterAssets : IDisposable
     public TextureReference ResolveTexture(string id)
     {
         if (id.StartsWith(GlbIdentity.Prefix, StringComparison.Ordinal)) return _external.ResolveTexture(id);
-        if (_textures.TryGetValue(id, out var value) && value.BindlessHandle != 0) return value.Get();
+        if (_textures.TryGetValue(id, out var value) && value.BindlessHandle != 0) return value;
         foreach (var fallback in new[] { TextureReference.EmptyWhite, TextureReference.EmptyBlack, TextureReference.EmptyNormal })
             if (fallback != null && fallback.Id == id) return fallback;
         throw new InvalidOperationException($"Texture '{id}' is unavailable or not bound.");

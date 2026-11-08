@@ -11,7 +11,7 @@ namespace MeowSci.PebblesLib;
 /// </summary>
 internal static class ClutterGridNative
 {
-    public static string Key(ClutterEcotypeReference ecotype) => ClutterGridMemory.Key(ecotype.Name, ecotype.Placement.ObjectSeparation.InMeters());
+    public static string Key(ClutterEcotypeReference ecotype) => ClutterGridMemory.Key(ecotype.Key, ecotype.Placement.ObjectSeparation.InMeters());
     /// <summary>A disabled (zero biome mask) ecotype places nothing, so it must neither draw nor own displaced records.</summary>
     public static bool HostsObjects(ClutterEcotypeReference ecotype) => ecotype.Placement.BiomeMask != 0;
 
@@ -19,7 +19,7 @@ internal static class ClutterGridNative
     {
         var native = new ClutterEcotypeSaveData();
         placement.SerializeSave(native);
-        var state = new ClutterGridState { Ecotype = ecotype.Name, Separation = ecotype.Placement.ObjectSeparation.InMeters() };
+        var state = new ClutterGridState { Ecotype = ecotype.Key, Separation = ecotype.Placement.ObjectSeparation.InMeters() };
         foreach (var cell in native.Excluded)
         {
             var words = new uint[ClutterCellMask.WordCount];
@@ -57,7 +57,7 @@ internal static class ClutterGridNative
         {
             if (d.ObjectId >= ecotype.ClutterObjects.Count || d.ScaleId >= GroundClutterRenderer.MAX_UNIQUE_SCALES)
             {
-                Console.WriteLine($"pebbles: skipped displaced {ecotype.Name} object {d.ObjectId}/{d.ScaleId}; its slot no longer exists.");
+                Console.WriteLine($"pebbles: skipped displaced {ecotype.Key} object {d.ObjectId}/{d.ScaleId}; its slot no longer exists.");
                 continue;
             }
             var record = new GroundClutterPlacementData.DisplacedObject

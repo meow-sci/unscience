@@ -1,4 +1,10 @@
-# KSA 5438/5482/5638/5707 managed upgrade checks
+# KSA 5438/5482/5638/5707/5801 managed upgrade checks
+
+## KSA 5801 compatibility
+
+Ksa5707Checks now verifies the CURRENT 11-argument constructor chain. Ksa5801Checks checks the real DLL reflection watchlist, native yellow/purple flags, material field layout and production paint transforms against both CURRENT shaders (all blend modes, LF/CRLF). DataReferenceChecks links the actual graph/resolver helper; paint checks preserve every native low flag. These checks do not run native KSA, shaderc or Vulkan.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
 
 Run from the repository root:
 
@@ -121,7 +127,7 @@ acceptance checks documented in `scope/`.
 `KsaAssemblyProbe.Members.cs` constructor/overload queries) and the dependency-free
 `pebbles.lib/Runtime/ClutterMaterialBindings.cs`. Against the real `KSA.dll` (never loaded or run) it proves:
 
-- `Part` has the private 10-argument constructor Iron Man patches, the save-load, public 4-argument and
+- `Part` has the private 11-argument constructor Iron Man patches, the save-load, public 4-argument and
   `PartCloner` copy constructors exist, and **every** other constructor chains to the private one — the
   invariant that lets one patch restore anchors on every path (rev 5643);
 - the `ClutterEcotypeRenderData` methods calling `GroundClutterRenderer.get_MaterialBuffer` or
@@ -129,4 +135,4 @@ acceptance checks documented in `scope/`.
   each with one overload and one binding (rev 5677 added the depth-normal pre-pass);
 - `StaticObjectRenderer.WriteCommandsColor` still skips a null pipeline, which Sphinx's postfix mirrors (rev 5640).
 
-The checks pass on 5707 and fail on the 5638 DLL. Without a resolvable `KSA.dll` they print a WARN and skip.
+The current constructor-chain checks pass on 5801 and reject the prior 5707/5638 seams. Without a resolvable `KSA.dll` they print a WARN and skip.

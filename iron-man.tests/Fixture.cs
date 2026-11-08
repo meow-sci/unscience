@@ -51,7 +51,7 @@ public sealed class PartTemplate
 
 public sealed class PartInstance
 {
-    [XmlAttribute] public string Id { get; set; } = "";
+    public List<ModuleBase.SaveDataBase> Components = new();
     [XmlAttribute] public string InstanceOf { get; set; } = "";
     public List<int> ConnectedIndices = new();
     public PartTemplate GetTemplate() => PartTemplate.Library[InstanceOf];
@@ -61,6 +61,7 @@ public sealed class Part : Part.Connection.IConnector
 {
     public string Id;
     public PartTemplate Template;
+    public ModuleList Modules = new();
     public bool IsSubPart;
     public double3 Scale = double3.One;
     private static readonly List<Connection> SharedEmptyConnections = new();
@@ -78,18 +79,18 @@ public sealed class Part : Part.Connection.IConnector
     // copies all reach the private constructor; only it may decode the Iron Man marker.
     [MethodImpl(MethodImplOptions.NoInlining)]
     public Part(PartInstance inInstance, Part? parent)
-        : this(inInstance.Id, inInstance.GetTemplate(), inInstance, parent, null, 0, 0, 0) { }
+        : this("", inInstance.GetTemplate(), inInstance, null, parent, null, 0, 0, 0) { }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public Part(string inName, PartTemplate inTemplate, PartInstance? inInstance = null, Part? parent = null)
-        : this(inName, inTemplate, inInstance, parent, null, 0, 0, 0) { }
+        : this(inName, inTemplate, inInstance, null, parent, null, 0, 0, 0) { }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public Part(Part source, Part? parent)
-        : this(null, source.Template, null, parent, new TransformReference { ScaleValue = source.Scale }, 0, 0, 0, source) { }
+        : this(null, source.Template, null, null, parent, new TransformReference { ScaleValue = source.Scale }, 0, 0, 0, source) { }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private Part(string? inName, PartTemplate inTemplate, PartInstance? inInstance, Part? parent, TransformReference? transformReference,
+    private Part(string? inName, PartTemplate inTemplate, PartInstance? inInstance, TransformDataReference<SubPartTemplate>? placement, Part? parent, TransformReference? transformReference,
         int stage, int sequenceGroup, int sequenceOrder, Part? boundsSource = null, bool isTemplateSubPart = false)
     {
         Id = string.IsNullOrEmpty(inName) ? inTemplate.Id : inName;
@@ -145,7 +146,7 @@ public sealed class Part : Part.Connection.IConnector
     {
         public sealed class TemplateBase
         {
-            public string Id = "";
+            public string Key = "";
             public TransformReference Transform = new();
             public ConnectorCapabilityFlags Capabilities;
         }
@@ -164,7 +165,7 @@ public sealed class Part : Part.Connection.IConnector
 
         public Connector(TemplateBase template, Part part)
         {
-            Id = template.Id;
+            Id = template.Key;
             Parent = part;
             Authored = template;
             Capabilities = template.Capabilities;

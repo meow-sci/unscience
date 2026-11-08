@@ -1,5 +1,11 @@
 # Rocky McRock Face library
 
+## KSA 5801 compatibility
+
+Ring/glTF asset links now follow DataReference.Value. The normal-map catalog reads material normal slots, and Apply constructs resolved wrappers while Restore keeps the original reference objects. Existing selections, reset order and save versions stay unchanged.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 Swaps native planetary-ring LOD meshes, diffuse/normal/PBR maps, band textures and optional
 rock size/density/draw-distance/thickness. `RingAssetCatalog` discovers usable game assets;
 `RingMeshFactory` creates ring-compatible mesh copies; `RingSwapController` snapshots

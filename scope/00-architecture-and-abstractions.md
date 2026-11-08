@@ -1,5 +1,15 @@
 # 00 — Unscience supermod shell + `ksa-abstractions.lib` game-integration scope
 
+## KSA 5707 → 5801 verification (2026-11-08)
+
+`ksa-abstractions.lib/GameDataReference.cs` constructs runtime `DataReference<T>` links with both
+`Ref` and `Value` and unwraps public `Value` fields for reflection-based consumers. It preserves null
+for unresolved links. Used by Rocky/Bloomin/Pebbles graph construction and DOH materials. This is
+transient integration infrastructure; no new sidecar state. Program/StarMap names, HotkeyGuard and
+shared handoff signatures remain present; real-DLL frame checks and the networking harness pass.
+
+See [KSA 5801 upgrade review](../plans/KSA_5801_UPGRADE.md) for evidence, validation boundaries and native acceptance.
+
 ## Runtime networking bootstrap
 
 The Unscience entry project source-links `Shared/RuntimeBootstrap.cs`. Its module initializer loads System.Net.Primitives/System.Net.Sockets through the default context before mod method execution; `Mod.OnFullyLoaded` reports networking bindings before constructing submods. The helper reflects framework TypeRefs and TCP signatures only; no KSA member, Harmony target, lifecycle signature or save adapter changes. Reports retain loader/runtime incompatibility evidence but do not disable unrelated submods. See [policy and early-loading limits](../Shared/README.md).

@@ -1,5 +1,22 @@
 # Save/load lifecycle integration
 
+## KSA 5707 → 5801 verification (2026-11-08)
+
+Iron Man's v1 native anchor payload moves from removed `PartInstance.Id` to
+`PartInstance.Components` (`IronManAnchorModule.SaveData`, XML tag `UnscienceIronManAnchors`). Cached
+world/blueprint serializers add isolated mappings; UnknownAttribute migrates legacy Id markers.
+The 11-argument private Part constructor restores anchors before native connector indexing, and the
+passive module claims the already-restored record during module replay. Managed tests cover both
+native getter hooks, old/new XML, repeat construction, duplicate/invalid records, copies and unload.
+
+Pebbles recipes add optional curvature and terrain fade fields; absent legacy fields inherit stock.
+Paint still stores floating RGB, then encodes it into the new transient GPU format. All existing
+sidecar IDs and versions remain. KSA owns life-support/radiation rules, conditions, supplies and cargo;
+Unscience does not duplicate them. Existing reset/rebind order and stable identity diagnostics remain.
+Native legacy-world/blueprint migration, recipe replay and old-world GPU retirement are pending.
+
+See [KSA 5801 upgrade review](../plans/KSA_5801_UPGRADE.md) for evidence, validation boundaries and native acceptance.
+
 ## Runtime bootstrap state
 
 Networking preload/diagnostic results are process startup state only. The source-linked helper holds no scene objects or durable user choices and adds no participant, record, sidecar field or game hook. Existing capture/reset/replay and ownership policies are unchanged; no save migration is needed.

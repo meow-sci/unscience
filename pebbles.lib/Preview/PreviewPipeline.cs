@@ -91,7 +91,7 @@ internal sealed unsafe class PreviewPipeline : IDisposable
             Span<VkPipelineShaderStageCreateInfo> stages = stackalloc VkPipelineShaderStageCreateInfo[2];
             stages[0] = new() { Name = "main"u8.AsPointer(), Module = vertex, Stage = VkShaderStageFlags.VertexBit };
             stages[1] = new() { Name = "main"u8.AsPointer(), Module = fragment, Stage = VkShaderStageFlags.FragmentBit };
-            var input = new VertexInput(1, 3).AddBinding(0, ByteSize.Of<PreviewVertex>(), VkVertexInputRate.Vertex)
+            using var input = new VertexInput(1, 3).AddBinding(0, ByteSize.Of<PreviewVertex>(), VkVertexInputRate.Vertex)
                 .AddAttribute(0, 0, VkFormat.R32G32B32SFloat, ByteSize.Zero)
                 .AddAttribute(1, 0, VkFormat.R32G32B32SFloat, new ByteSize(12u))
                 .AddAttribute(2, 0, VkFormat.R32G32SFloat, new ByteSize(24u)).Check();

@@ -1,5 +1,22 @@
 # Ground clutter: Pebbles
 
+## KSA 5707 → 5801 verification (2026-11-08)
+
+`ClutterEcotypeReference.Key`, biome/collider keys and resolved material/mesh/texture lists replace
+old Name/Alias/Id/Get seams. `ClutterGraph.cs` fills `MeshRefs`/`MaterialRefs` plus the resolved readonly
+lists and invokes `GroundClutterLodReference.BuildMaterialIndirection(string objectId)` (formerly no
+arguments). The five material-buffer redirect methods still match the real DLL.
+
+Capture/replay now preserves optional `PlacementRecipe.Curvature` (domain, texel spacing, curve) and
+`MaterialRecipe.TerrainFadeStart/End`. Absent legacy fields inherit current stock settings. UsesCurvature
+is derived from the restored curve. Recipe IDs/versions and native clutter-grid key values remain stable.
+`ClutterRetirement` includes `GroundClutterTerrainData` and curvature LUT bindless slots after interrupted
+builds. `ClutterGeometry.CopyNative` explicitly allocates/copies native stride lists; successful lists
+transfer to MeshAsset ownership. Workshop VertexInput is disposed. Managed recipe validation/round-trip
+checks pass; runtime graph construction, GPU retirement and curvature/collision parity need native use.
+
+See [KSA 5801 upgrade review](../plans/KSA_5801_UPGRADE.md) for evidence, validation boundaries and native acceptance.
+
 ## KSA 5707 verification (5638 → 5707, 2026-10-29)
 
 Verified statically against `2026.10.25.5707` (revs 5639–5703) from `2026.10.19.5638`. This is

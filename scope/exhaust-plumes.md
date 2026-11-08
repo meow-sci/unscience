@@ -1,5 +1,20 @@
 # Exhaust Plumes (pyro) — Game Integration Scope
 
+## KSA 5707 → 5801 verification (2026-11-08)
+
+`PlumeTemplates.cs` enumerates `ModLibrary.AllExhaustTemplates` (formerly private
+`VolumetricExhaustTemplate.References`), uses public `ModLibrary.TryGet<VolumetricExhaustTemplate>`
+for lookup/fallback, and calls `new VolumetricExhaustInstance(template)`; VolumetricExhaustReference
+was removed. Metadata checks include the new registry field.
+
+`PlumeEmitter.ComputeAirState` reads `IParentBody.GetPhysicalAtmosphere().ComputeDensityAtAltitude`.
+`PlumePhysics.AmbientPressurePa` reads `Camera.ComputeAtmosphericPressure()` directly in pascals;
+the old helper's atmospheres-to-pascals conversion is removed. Saves retain the same template IDs,
+cycle state and payload versions. Managed cycles pass; sea-level/altitude/vacuum plume rendering on
+the new atmospheric profiles remains native acceptance.
+
+See [KSA 5801 upgrade review](../plans/KSA_5801_UPGRADE.md) for evidence, validation boundaries and native acceptance.
+
 Permanent reference for detecting when KSA game updates break **pyro** (standalone volumetric engine
 plumes). Every game-facing member the mod touches is enumerated with its decompiled-source path.
 

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Brutal.Numerics;
 using KSA;
+using MeowSci.KsaAbstractions;
 
 namespace MeowSci.PebblesLib;
 
@@ -21,10 +22,12 @@ internal sealed class ClutterGraph : IDisposable
     public void Build(Celestial body, GroundClutterReference baseline, PebblesRecipe recipe, ClutterAssets assets)
     {
         var recipes = recipe.Ecotypes.ToDictionary(e => e.Name, StringComparer.Ordinal);
-        if (recipes.Keys.Any(name => baseline.Ecotypes.All(e => e.Name != name))) throw new InvalidOperationException("An ecotype target is unresolved.");
+        if (recipes.Keys.Any(name => baseline.Ecotypes.All(e => e.Key != name))) throw new InvalidOperationException("An ecotype target is unresolved.");
         var stock = ClutterCapture.Capture(body, baseline);
         var stockFlags = new StockMaterialFlags(StockFlags(baseline, m => m.KeepBackfaceNormals.Value),
-            StockFlags(baseline, m => m.UsesCustomNormals.Value));
+            StockFlags(baseline, m => m.UsesCustomNormals.Value),
+            baseline.Ecotypes.SelectMany(e => e.ClutterObjects).SelectMany(o => o.Lods)
+                .SelectMany(l => l.MaterialReferences).GroupBy(m => m.Id).ToDictionary(g => g.Key, g => g.First()));
         PhysicalRadii = new double[baseline.Ecotypes.Count];
         PhysicalObjectRadii = new float[baseline.Ecotypes.Count][];
         long candidates = 0;
@@ -32,10 +35,10 @@ internal sealed class ClutterGraph : IDisposable
         {
             var original = baseline.Ecotypes[ei];
             PhysicalObjectRadii[ei] = new float[original.ClutterObjects.Count];
-            var r = recipes.GetValueOrDefault(original.Name) ?? stock.Ecotypes[ei];
+            var r = recipes.GetValueOrDefault(original.Key) ?? stock.Ecotypes[ei];
             if (r.Signature != ClutterCapture.Signature(original)) throw new InvalidOperationException($"Ecotype {r.Name} changed since capture; recapture its stock recipe.");
             if (r.Objects.Count != original.ClutterObjects.Count) throw new InvalidOperationException("Changing variant count requires a new identity migration; retain the original slots.");
-            var e = new ClutterEcotypeReference { Name = original.Name, Placement = Placement(body, r, assets), CollisionType = new((ClutterEcotypePhysicalData.CollisionType)r.CollisionMode) };
+            var e = new ClutterEcotypeReference { Key = original.Key, Placement = Placement(body, r, assets, original.Placement), CollisionType = new((ClutterEcotypePhysicalData.CollisionType)r.CollisionMode) };
             if (!r.Enabled) { e.Placement.BiomeMask = 0; e.CollisionType.Type = ClutterEcotypePhysicalData.CollisionType.None; }
             var cellWidth = CubeCellGrid.GetCellWidth(body.MeanRadius, r.Placement.Separation);
             var k = Math.Ceiling((r.Placement.Range + cellWidth / Math.Sqrt(2)) / (16 * r.Placement.Separation));
@@ -50,7 +53,7 @@ internal sealed class ClutterGraph : IDisposable
                 foreach (var l in item.Lods)
                 {
                     if (l.MeshIds.Count == 0) throw new InvalidOperationException($"{r.Name}/{item.Name}: every LOD requires at least one mesh.");
-                    var lod = new GroundClutterLodReference { MinScreenSizePixels = l.MinScreenSize, CastShadows = l.CastShadows, MeshIds = [], MaterialReferences = [] };
+                    var lod = new GroundClutterLodReference { MinScreenSizePixels = l.MinScreenSize, CastShadows = l.CastShadows };
                     var meshes = l.MeshIds.Select(assets.ResolveMesh).ToArray();
                     var slots = new GlbMaterialSlots(meshes.Select(m => (m.Id, m.PrimitiveMaterialIds)));
                     if (l.Materials.Count != 1 && l.Materials.Count != slots.Count)
@@ -58,17 +61,17 @@ internal sealed class ClutterGraph : IDisposable
                     foreach (var mesh in meshes)
                     {
                         lod.Meshes.Add(Geometry.Copy(mesh, item.Transform, slots.Mapping(mesh.Id, mesh.PrimitiveMaterialIds)));
-                        lod.MeshIds.Add(new SerializedReference { Id = mesh.Id });
+                        lod.MeshRefs.Add(GameDataReference.To(lod.Meshes[^1])!);
                     }
                     if (Geometry.VertexCount > recipe.MeshVertexBudget) throw new InvalidOperationException($"Atlas needs {Geometry.VertexCount:N0} repeated vertices; budget is {recipe.MeshVertexBudget:N0}.");
                     for (var mi = 0; mi < slots.Count; mi++)
                     {
                         var mr = l.Materials[l.Materials.Count == 1 ? 0 : mi];
                         var material = Material(mr, assets, stockFlags);
-                        lod.MaterialReferences.Add(material); e.MaterialReferences.Add(material); Materials.Add(material);
+                        lod.MaterialReferences.Add(material); lod.MaterialRefs.Add(GameDataReference.To(material)!); e.MaterialReferences.Add(material); Materials.Add(material);
                         if (mr.SourceColors) SourceColorMaterials.Add(material.Hash);
                     }
-                    BuildIndirection.Invoke(lod, null);
+                    BuildIndirection.Invoke(lod, new object[] { o.Id });
                     o.Lods.Add(lod);
                 }
                 if (item.Collision == CollisionPolicy.KeepOriginal) foreach (var c in source.Colliders) o.Colliders.Add(ClutterColliders.Build(ClutterCapture.Collider(c), assets, stockHull: true));
@@ -86,38 +89,44 @@ internal sealed class ClutterGraph : IDisposable
         }
     }
 
-    private static GroundClutterPlacementReference Placement(Celestial body, EcotypeRecipe e, ClutterAssets assets)
+    private static GroundClutterPlacementReference Placement(Celestial body, EcotypeRecipe e, ClutterAssets assets, GroundClutterPlacementReference original)
     {
         var p = e.Placement;
         uint mask = p.AllBiomes ? uint.MaxValue : 0;
         if (!p.AllBiomes)
             foreach (var alias in p.Biomes)
             {
-                var id = body.BodyTemplate.BiomesReference?.GetBiomeId(alias) ?? -1;
+                var id = body.BodyTemplate.BiomesReference?.Biomes.Find(b => b.Key == alias)?.Id ?? -1;
                 if (id is < 0 or >= 32) throw new InvalidOperationException($"Biome '{alias}' cannot be resolved to a 32-bit mask.");
                 mask |= 1u << id;
             }
+        var curvature = p.Curvature ?? ClutterCapture.Curvature(original);
         return new GroundClutterPlacementReference
         {
-            BiomeMask = mask, RawBiomes = string.Join(",", p.Biomes), DistributionTextureReference = assets.ResolveTexture(p.DistributionId),
+            MinCurvaturePerKm = new(curvature.MinimumPerKm), MaxCurvaturePerKm = new(curvature.MaximumPerKm),
+            CurvatureTexelSpacing = new(curvature.TexelSpacing),
+            CurvatureDensityCurve = new CubicHermiteSpline { SplinePoints = curvature.Curve.Select(k => new SplinePoint
+                { Key = new(k.Altitude), Value = new(k.Density), InTangent = new(k.InTangent), OutTangent = new(k.OutTangent) }).ToList() },
+            UsesCurvature = curvature.Curve.Any(k => k.Density < 1 || k.InTangent != 0 || k.OutTangent != 0),
+            BiomeMask = mask, DistributionTextureReference = GameDataReference.To(assets.ResolveTexture(p.DistributionId)),
             ObjectSeparation = new(p.Separation), GenerationRange = new(p.Range), DistributionTextureTiling = new(p.DistributionTiling),
             MinScale = new(new float3(p.MinScale.X, p.MinScale.Y, p.MinScale.Z)), MaxScale = new(new float3(p.MaxScale.X, p.MaxScale.Y, p.MaxScale.Z)),
             Orientation = new((ClutterOrientationReference.OrientationMode)p.Orientation), MinRotation = new(p.MinRotation * Math.PI / 180), MaxRotation = new(p.MaxRotation * Math.PI / 180),
             SlopeMaskStrength = new(p.SlopeStrength), SlopeMaskContrast = new(p.SlopeContrast), SlopeMaskBias = new(p.SlopeBias),
             AltitudeDensityCurve = new CubicHermiteSpline { SplinePoints = p.AltitudeCurve.Select(k => new SplinePoint { Key = new(k.Altitude), Value = new(k.Density), InTangent = new(k.InTangent), OutTangent = new(k.OutTangent) }).ToList() },
-            UseObjectTypeTexture = new(p.UseObjectTypeTexture), ObjectTypeTextureReference = string.IsNullOrEmpty(p.ObjectTypeTextureId) ? null : assets.ResolveTexture(p.ObjectTypeTextureId),
+            UseObjectTypeTexture = new(p.UseObjectTypeTexture), ObjectTypeTextureReference = string.IsNullOrEmpty(p.ObjectTypeTextureId) ? null : GameDataReference.To(assets.ResolveTexture(p.ObjectTypeTextureId)),
             ObjectTypeTextureTiling = new(p.ObjectTypeTiling), ObjectTypeTextureJitter = new(p.ObjectTypeJitter)
         };
     }
 
     /// <summary>Stock per-material lighting flags by material ID, inherited by recipes that predate each flag.</summary>
-    private sealed record StockMaterialFlags(IReadOnlyDictionary<string, bool> BackfaceNormals, IReadOnlyDictionary<string, bool> CustomNormals);
+    private sealed record StockMaterialFlags(IReadOnlyDictionary<string, bool> BackfaceNormals, IReadOnlyDictionary<string, bool> CustomNormals, IReadOnlyDictionary<string, GroundClutterMaterialReference> Materials);
 
     private static Dictionary<string, bool> StockFlags(GroundClutterReference baseline, Func<GroundClutterMaterialReference, bool> flag)
     {
         var result = new Dictionary<string, bool>(StringComparer.Ordinal);
         foreach (var lod in baseline.Ecotypes.SelectMany(e => e.ClutterObjects).SelectMany(o => o.Lods))
-            foreach (var material in lod.MaterialReferences!.Select(m => m.Get()))
+            foreach (var material in lod.MaterialReferences)
                 result.TryAdd(material.Id, flag(material));
         return result;
     }
@@ -126,18 +135,20 @@ internal sealed class ClutterGraph : IDisposable
     {
         TextureReference? Texture(string id) => string.IsNullOrEmpty(id) ? null : assets.ResolveTexture(id);
         var normal = Texture(r.NormalId) ?? TextureReference.EmptyNormal;
+        stockFlags.Materials.TryGetValue(r.SourceId, out var stockMaterial);
         var m = new GroundClutterMaterialReference
         {
-            Id = "Pebbles/" + Guid.NewGuid().ToString("N"), DiffuseReference = Texture(r.DiffuseId) ?? TextureReference.EmptyWhite,
-            NormalReference = new BorrowedNormal(normal), PBRMap = Texture(r.PbrId) ?? TextureReference.EmptyWhite,
-            OpacityMap = Texture(r.OpacityId), ThicknessMap = Texture(r.ThicknessId), UseTerrainMask = new(r.UseTerrainMask && !r.SourceColors),
+            Id = "Pebbles/" + Guid.NewGuid().ToString("N"), DiffuseReference = GameDataReference.To(Texture(r.DiffuseId) ?? TextureReference.EmptyWhite),
+            NormalReference = GameDataReference.To(normal), PBRMap = GameDataReference.To(Texture(r.PbrId) ?? TextureReference.EmptyWhite),
+            OpacityMap = GameDataReference.To(Texture(r.OpacityId)), ThicknessMap = GameDataReference.To(Texture(r.ThicknessId)), UseTerrainMask = new(r.UseTerrainMask && !r.SourceColors),
+            TerrainFadeStart = new(r.TerrainFadeStart ?? stockMaterial?.TerrainFadeStart.Value ?? 0.025f),
+            TerrainFadeEnd = new(r.TerrainFadeEnd ?? stockMaterial?.TerrainFadeEnd.Value ?? 1.725f),
             DoubleSided = new(r.DoubleSided), KeepBackfaceNormals = new(r.ResolveKeepBackfaceNormals(stockFlags.BackfaceNormals)),
             UsesCustomNormals = new(r.ResolveUsesCustomNormals(stockFlags.CustomNormals)), CastShadows = new(r.CastShadows), ReceiveShadows = new(r.ReceiveShadows),
             BiasNormalsUp = new(r.BiasNormalsUp), ApplyExtraSpec = new(r.ApplyExtraSpec), DistanceFadeDither = new(r.DistanceFadeDither)
         };
         m.SetHash(); m.ColorPipelineFlags = m.CreatePipelineFlags(); return m;
     }
-    private sealed class BorrowedNormal(TextureReference source) : TexturePowerReference
-    { public override TextureReference Get() => source; }
+
     public void Dispose() => Geometry.Dispose();
 }

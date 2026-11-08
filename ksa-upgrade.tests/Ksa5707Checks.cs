@@ -4,7 +4,7 @@ using System.Linq;
 using MeowSci.PebblesLib;
 
 /// <summary>
-/// KSA 5707 seams only the shipped KSA.dll can prove (metadata only; nothing is loaded or run):
+/// KSA 5707/5801 seams only the shipped KSA.dll can prove (metadata only; nothing is loaded or run):
 /// the Part constructor chain Iron Man's anchor restore depends on (rev 5643), the clutter pipelines
 /// binding the stock material buffer that Pebbles redirects (rev 5677), and the static-object color
 /// pass null-pipeline skip that Sphinx mirrors (rev 5640).
@@ -14,29 +14,29 @@ internal static class Ksa5707Checks
     // Must match IronManConnectorPatches.ConstructorParameters (the private constructor it patches).
     private static readonly string[] PrivatePartConstructor =
     {
-        "System.String", "KSA.PartTemplate", "KSA.PartInstance", "KSA.Part", "KSA.TransformReference",
+        "System.String", "KSA.PartTemplate", "KSA.PartInstance", "KSA.TransformDataReference`1[KSA.SubPartTemplate]", "KSA.Part", "KSA.TransformReference",
         "System.Int32", "System.Int32", "System.Int32", "KSA.Part", "System.Boolean",
     };
 
     internal static void Run()
     {
-        using var probe = KsaAssemblyProbe.TryOpen("KSA 5707 Part/clutter/static-object metadata checks");
+        using var probe = KsaAssemblyProbe.TryOpen("KSA 5801 Part/clutter/static-object metadata checks");
         if (probe == null) return;
         PartConstructors(probe);
         ClutterBindings(probe);
         StaticObjectColorPass(probe);
-        Console.WriteLine("PASS: KSA 5707 Part constructor chain, clutter material bindings and static color pass (real KSA.dll)");
+        Console.WriteLine("PASS: KSA 5801 Part constructor chain, clutter material bindings and static color pass (real KSA.dll)");
     }
 
     private static void PartConstructors(KsaAssemblyProbe probe)
     {
         var constructors = probe.Constructors("KSA.Part");
         var seam = constructors.SingleOrDefault(c => c.Parameters.SequenceEqual(PrivatePartConstructor));
-        Require(seam != null && !seam.IsPublic, "Part has the private 10-argument constructor Iron Man patches");
+        Require(seam != null && !seam.IsPublic, "Part has the private 11-argument constructor Iron Man patches");
         foreach (var signature in new[]
         {
             new[] { "KSA.PartInstance", "KSA.Part" },                                   // save load
-            new[] { "System.String", "KSA.PartTemplate", "KSA.PartInstance", "KSA.Part" }, // runtime creation
+            new[] { "System.String", "KSA.PartTemplate", "KSA.TransformDataReference`1[KSA.SubPartTemplate]", "KSA.Part" }, // runtime creation
             new[] { "KSA.Part", "KSA.Part" },                                           // PartCloner copies
         })
         {

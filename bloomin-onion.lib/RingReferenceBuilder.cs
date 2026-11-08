@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Brutal.TextureApi.Abstractions;
 using KSA;
+using MeowSci.KsaAbstractions;
 using MeowSci.RockyMcRockFaceLib;
 
 namespace MeowSci.BloominOnionLib;
@@ -71,8 +72,8 @@ public sealed class RingReferenceBuilder
             LongitudeOfAscendingNode = new RadianReference(MathEx.ToCompassAngle(Degrees(definition.LongitudeOfAscendingNodeDeg))),
             InnerRadius = Km(definition.InnerRadiusKm),
             OuterRadius = Km(definition.OuterRadiusKm),
-            Texture = band,
-            ControlTexture = control,
+            Texture = GameDataReference.To(band),
+            ControlTexture = GameDataReference.To(control),
             DetailScale = DoubleReference.FromValue(definition.DetailScale),
             Volume = new PlanetaryRingsVolumeReference
             {
@@ -90,18 +91,17 @@ public sealed class RingReferenceBuilder
             },
             RingObjects = new RingObjectsReference
             {
-                Name = string.IsNullOrWhiteSpace(definition.ObjectsName) ? "BloominOnionRocks" : definition.ObjectsName,
                 Thickness = Km(definition.ObjectThicknessKm),
                 Size = new DistanceReference(definition.ObjectSizeM),
                 RenderDistance = Km(definition.ObjectRenderDistanceKm),
                 Density = DoubleReference.FromValue(definition.ObjectDensityPerKm3),
                 Lods = lods,
-                MaterialReference = new PbrMaterialReference
+                MaterialReference = GameDataReference.To(new PbrMaterialReference
                 {
-                    DiffuseReference = diffuse,
-                    NormalReference = normal,
-                    PBRMap = pbr,
-                },
+                    DiffuseReference = GameDataReference.To(diffuse),
+                    NormalReference = GameDataReference.To(normal),
+                    PBRMap = GameDataReference.To(pbr),
+                }),
             },
         };
 
@@ -158,7 +158,7 @@ public sealed class RingReferenceBuilder
         return false;
     }
 
-    private bool ResolveNormal(string id, out TexturePowerReference? result, out string error)
+    private bool ResolveNormal(string id, out TextureReference? result, out string error)
     {
         error = "";
         if (id.Length == 0)
@@ -210,7 +210,7 @@ public sealed class RingReferenceBuilder
             lods.Add(new RingLodReference
             {
                 MinScreenSizePixels = lod.MinScreenSizePixels,
-                MeshFileReference = new MeshFileReference { Mesh = mesh },
+                MeshFileReference = GameDataReference.To(new MeshFileReference { Mesh = mesh }),
             });
         }
         return true;

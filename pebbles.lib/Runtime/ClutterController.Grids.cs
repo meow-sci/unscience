@@ -73,7 +73,7 @@ public sealed partial class ClutterController
             var rewrite = Enumerable.Range(0, stock.Count)
                 .Where(i => ClutterGridNative.Key(stock[i]) != ClutterGridNative.Key(live[i]) || !ClutterGridNative.HostsObjects(live[i])).ToArray();
             if (rewrite.Length == 0) continue;
-            var entries = rewrite.ToDictionary(i => i, i => data.Where(e => e.CelestialId == record.BodyId && e.EcotypeId == stock[i].Name).ToArray());
+            var entries = rewrite.ToDictionary(i => i, i => data.Where(e => e.CelestialId == record.BodyId && e.EcotypeId == stock[i].Key).ToArray());
             try
             {
                 RememberGrids(record, record.Resources.Graph.Reference, record.Resources.Placement, authoritative: true);

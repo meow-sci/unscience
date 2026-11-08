@@ -99,10 +99,10 @@ Single consolidated lookup of every game-side touchpoint (KSA.* types + risk-bea
 Brutal.*/RenderCore.* members) across all unscience mods, aggregated from the per-area `scope/`
 files. Use it on every KSA update to find which mods a changed game member puts at risk.
 
-**Verification baseline:** KSA **2026.10.25.5707**, compared with the recorded baseline **2026.10.19.5638**
-(`ksa-game-assemblies` git history `edda844..4b3e9e2`; the on-disk PREVIOUS tree is 5638). Revisions
-5639–5703 are all logged. Full evidence and exact build/test results: [KSA_5707_UPGRADE](../plans/KSA_5707_UPGRADE.md)
-(previous span 5482 → 5638: [KSA_5638_UPGRADE](../plans/KSA_5638_UPGRADE.md)).
+**Verification baseline:** KSA **2026.11.10.5801**, compared with **2026.10.25.5707**
+(the supplied PREVIOUS tree and prior recorded baseline). Revisions 5708–5800 are logged; 5801 is not.
+Current evidence and acceptance: [KSA_5801_UPGRADE](../plans/KSA_5801_UPGRADE.md).
+Prior span: [KSA_5707_UPGRADE](../plans/KSA_5707_UPGRADE.md).
 Native game acceptance remains pending. Dated historical rows retain their original line citations;
 the current summary and owning area updates below supersede their compatibility status.
 The [October 25 startup follow-up](../plans/KSA_5638_UPGRADE.md#startup-follow-up-2026-10-25)
@@ -130,7 +130,7 @@ Native updated-build coexistence with purr2d2 remains unverified.
   now fails loudly instead of silently if its anchor moves).
 - **Re-verify the 🔶 standing invariants.** These are facts about the game that no symbol lookup and
   no compile can check, and each one fails silently:
-  - `PerInstanceData.StateBitFlag` bits **11..31** are still unused by KSA (humble-arteest Vehicle
+  - `PerInstanceData.StateBitFlag` bits **13..30** must remain unused by KSA (humble-arteest Vehicle
     Paint) — see `KSA.PartModel` below and [`character-and-materials.md`](character-and-materials.md).
   - ~~**`[StarMapAllModsLoaded]` still fires before `ModLibrary.Bind()`**~~ — retired @5638 with
     parts-now, which reserved shared mesh-buffer headroom between the two (U1–U7). See the parts-now
@@ -194,6 +194,23 @@ vertex/push/descriptor layouts must agree. Registry meshes/textures are selected
 external GLBs use absolute paths plus SHA-256 content identities and are not globally registered.
 
 ---
+
+## 5801 verification summary
+
+| Current surface | Consumers / owner | Status (5707 → 5801) |
+|---|---|---|
+| `DataReference<T>.{Ref,Value}` | shared `GameDataReference`, DOH, Pebbles, Rocky/Bloomin | Migrated typed graphs and silent reflective Get dereferences; unresolved links remain null |
+| Keyed module/template identity | Iron Man connectors, capsule window filter, Disco, clutter/biomes/colliders | Id/Name/Alias → Key while recipe field names stay compatible |
+| Private 11-argument `Part` ctor; `PartInstance.Components`; `GameSaves.UniverseSerializer`/`VehicleSaves.VehicleSerializer` getters | IronManConnectorPatches, IronManAnchorModule, IronManAnchorSerializers | New native XML envelope for existing v1 anchors; legacy Id migration; restore before native index reconnection |
+| `PartTreeRenderData.StateBit` native flags 0–12; live paint shader transform | Humble Arteest | Paint relocated from bits 11–31 to 13–30 (6:6:6); persistent float colors unchanged |
+| `GroundClutterLodReference.BuildMaterialIndirection(string)`; terrain curvature/fade and `GroundClutterTerrainData` ownership | Pebbles | New argument, resolved lists, additive optional recipe fields, interrupted-build terrain/LUT retirement |
+| `ModLibrary.AllExhaustTemplates`, `VolumetricExhaustInstance(template)`, runtime `PhysicalAtmosphere`/`Camera.ComputeAtmosphericPressure` | Pyro | Moved registry, removed wrapper/Get, SI pressure/density migration |
+| Main `Program.ColorFormat` R11G11B10; `VertexInput`/`ShaderStages.Dispose` | Thug Life, Graffiti, Pebbles preview | Format already derived from native targets; temporary native pipeline data explicitly disposed |
+| Strict sound asset Ref/array XML | legacy BYO Music host | Migrated; same public sound/playlist IDs |
+
+Real-DLL metadata and production managed checks pass. Render correctness, native save/blueprint
+migration and native patch installation remain open. Dated historical tables below retain their
+original citations; this summary and the current area sections supersede their old status.
 
 ## 5707 verification summary
 
@@ -429,8 +446,8 @@ are recorded separately from native visual acceptance.
 ### KSA.CharacterReference / KSA.CharacterTexturesReference
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `CharacterReference.CharacterTextures : CharacterTexturesReference` | direct API | `KSA/CharacterReference.cs:32` | doh | `doh.lib/Materials/MaterialFactory.cs:384,392` | OK | file byte-identical |
-| `CharacterTexturesReference.{CharacterBodyMaterial, CharacterHeadMaterial, CharacterEyeMaterial} : PbrMaterialReference` | reflection-field | `KSA/CharacterTexturesReference.cs:9,12,15` | doh | `MaterialFactory.cs:408-410` | OK | file byte-identical |
+| `CharacterReference.CharacterTextures : DataReference<CharacterTexturesReference>` | direct API | `KSA/CharacterReference.cs:32` | doh | `doh.lib/Materials/MaterialFactory.cs:384,392` | Migrated @5801 | Follow Value via GameDataReference.Resolve; no reflective Get remains |
+| `CharacterTexturesReference.{CharacterBodyMaterial, CharacterHeadMaterial, CharacterEyeMaterial} : DataReference<PbrMaterialReference>` | reflection-field | `KSA/CharacterTexturesReference.cs:9,12,15` | doh | `MaterialFactory.cs:408-410` | Migrated @5801 | Follow Value via GameDataReference.Resolve; no reflective Get remains |
 
 ### KSA.CharacterRenderSystem / KSA.CharacterRenderResources
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -746,8 +763,8 @@ are recorded separately from native visual acceptance.
 |---|---|---|---|---|---|---|
 | `AddInstance(PerInstanceData, PerInstanceDent, IViewport, int) : private void` | ~~Harmony pre + post~~ | `KSA/PartModel.cs:470` | — (was humble-arteest VehiclePaint, IvaForceRender) | — | **RETIRED @5482** | Static raster parts no longer reach this sink: `PartTreeRenderData.Compose` bulk-appends (NEW `PartTreeRenderData.cs:1300-1319`); only raytraced IVA and thumbnails call it. Paint moved to `WriteState`, IVA reveal to a `Compose` prefix/finalizer. |
 | `..ctor(PartModelModule.Template) : protected` | Harmony post (ctor, `AccessTools.Constructor`) | `KSA/PartModel.cs:351` | IvaForceRender (kitchen-sink) | `IvaForceRender.cs:42` | OK | explicit param-type array |
-| `PerInstanceData` (struct: `ModelMatrix`@0 · `StateBitFlag`@64 · `EmissiveColor`@68 · `packing1`@72 · `Wetness`@76; 80 B) | direct API | `KSA/PartModel.cs:299-310` | IvaForceRender, humble-arteest (VehiclePaint) | `IvaForceRender.cs:98`; `VehiclePaintPatches.cs` (`AddInstancePrefix`) | OK | humble writes **only `StateBitFlag` bits 11..31** (no struct reinterpret and no game field clobbering) |
-| `PerInstanceData.StateBitFlag` **bits 11..31** | free-bit reuse (per-instance mod payload) | writers NEW `KSA/PartTreeRenderData.cs` `WriteState` :1210 / `WriteDynamicState` :1088 / `WriteGlassState` :877 (+ shared 0x10/0x20 in `Compose*`); stock bits `StateBit` :196-219; readers `MeshIndirect.frag:308-353` | humble-arteest (VehiclePaint) | `VehiclePaint.cs` (`EncodeBits`, `PaintBitShift`) | OK | 🔶 **audit every game update.** Game uses bits 0..10 only; 21 free bits carry a 7:7:7 sRGB paint color. `RayTraceInstance.StateFlags` is `int`, so the bits survive the RT path |
+| `PerInstanceData` (struct: `ModelMatrix`@0 · `StateBitFlag`@64 · `EmissiveColor`@68 · `packing1`@72 · `Wetness`@76; 80 B) | direct API | `KSA/PartModel.cs:299-310` | IvaForceRender, humble-arteest (VehiclePaint) | `IvaForceRender.cs:98`; `VehiclePaintPatches.cs` (`AddInstancePrefix`) | OK | 5801: humble writes **only `StateBitFlag` bits 13..30** (no struct reinterpret and no game field clobbering) |
+| `PerInstanceData.StateBitFlag` **bits 13..30** (5801) | free-bit reuse (per-instance mod payload) | writers NEW `KSA/PartTreeRenderData.cs` `WriteState` :1210 / `WriteDynamicState` :1088 / `WriteGlassState` :877 (+ shared 0x10/0x20 in `Compose*`); stock bits `StateBit` :196-219; readers `MeshIndirect.frag:308-353` | humble-arteest (VehiclePaint) | `VehiclePaint.cs` (`EncodeBits`, `PaintBitShift`) | OK | 🔶 **audit every game update.** Game uses bits 0..10 only; 21 free bits carry a 7:7:7 sRGB paint color. `RayTraceInstance.StateFlags` is `int`, so the bits survive the RT path |
 | `ViewportData.Get(PartModel, IViewport)` → `InstanceList` + `DentInstanceList` | direct API (read/compact) | `KSA/PartModel.cs:356-379` | PartRenderFilter (blinky, its-so-shiny) | `ksa-abstractions.lib/PartRenderFilter.Batches.cs` | **CHANGED @5482** | IvaForceRender no longer appends. The filter compacts only the range a `Compose` call appended, both lists together; lists are now cleared in `PartModelRenderer.ClearFrameData` and re-read by shadow culling — never mutate between `WriteInstancesToGpu` and `ClearFrameData`. |
 | `Instances : static List<PartModel>` | direct API | `KSA/PartModel.cs:325` | IvaForceRender (kitchen-sink) | `IvaForceRender.cs:111` | OK | enumerated by `Enabled` setter |
 | `Template : PartModelModule.Template` (field) | direct API | `KSA/PartModel.cs:329` | IvaForceRender (kitchen-sink) | `IvaForceRender.cs:87,89,113` | OK | |
@@ -793,7 +810,7 @@ are recorded separately from native visual acceptance.
 | `Compose` / `ComposeDynamic` / `ComposeGlass(ref readonly double4x4, bool, IViewport inViewport, int)` | Harmony prefix + postfix (shared) | NEW `KSA/PartTreeRenderData.cs:1258,1152,899` | blinky, its-so-shiny via `PartRenderFilter` | `ksa-abstractions.lib/PartRenderFilter.cs:65-105`; `PartRenderFilter.Batches.cs` | NEW | Replaces the removed per-module render-skip prefixes. Static raster path appends one contiguous slot-ordered range per model without `AddInstance`; dynamic/glass call `AddInstance` per slot. The postfix compacts hidden slots only when exactly `Count` entries were appended (fails open otherwise). One shared patch set for all owners. Raytraced IVA not filtered. |
 | `Compose(...)` | Harmony prefix + finalizer | NEW `KSA/PartTreeRenderData.cs:1258,1300` | IvaForceRender (kitchen-sink, unscience) | `IvaForceRender.cs:53-57,114-148` | NEW | Editor-only reveal of internal meshes: temporarily clears `Template.Internal` for the call (stock gate `(!Internal || IVA)` at `:1300`). |
 | `EnsureBuilt(PartTree, ulong)`; `InvalidateStates()` | Harmony prefix; direct API | NEW `KSA/PartTreeRenderData.cs:444,323` | humble-arteest (VehiclePaint) | `VehiclePaintPatches.cs:57-59,197-210` | NEW | Cached states rewrite only when dirty; paint changes bump `VehiclePaint.RenderStateVersion` and the prefix invalidates each tree once. |
-| private `WriteState(Batch, int, Part)` / `WriteDynamicState(DynamicBatch, int, PartModelDynamicModule)` | **Harmony postfix (string names, private nested param types bound as `object`)** | NEW `KSA/PartTreeRenderData.cs:1210,1088` | humble-arteest (VehiclePaint) | `VehiclePaintPatches.cs:52-56,114-124,179-189` | NEW | Only writers of cached static/dynamic `StateBitFlags`; postfix ORs paint bits 11..31. Covers raster and raytraced IVA. Glass is not painted (as before). |
+| private `WriteState(Batch, int, Part)` / `WriteDynamicState(DynamicBatch, int, PartModelDynamicModule)` | **Harmony postfix (string names, private nested param types bound as `object`)** | NEW `KSA/PartTreeRenderData.cs:1210,1088` | humble-arteest (VehiclePaint) | `VehiclePaintPatches.cs:52-56,114-124,179-189` | NEW | Only writers of cached static/dynamic `StateBitFlags`; 5801 postfix ORs paint bits 13..30. Covers raster and raytraced IVA. Glass is not painted (as before). |
 | private `_batches` / `_dynamicBatches` / `_glassBatches`; nested private `Batch`/`DynamicBatch`/`GlassBatch` `.Model/.Parts/.Count/.StateBitFlags` | **reflection (string, FieldRefAccess)** | NEW `KSA/PartTreeRenderData.cs:23-190,237-243` | PartRenderFilter; VehiclePaint (`StateBitFlags`) | `PartRenderFilter.Batches.cs:35-52`; `VehiclePaintPatches.cs:114-124` | NEW | Resolved once at install and fail loudly; see §4. |
 | Instance-list lifetime: cleared in `PartModelRenderer.ClearFrameData`, re-read by shadow culling after `WriteInstancesToGpu` | behavioral invariant | NEW `KSA/PartModelRenderer.cs:844-857`; `PartModel.cs:533-544` | PartRenderFilter, iron-man | — | 🔶 NEW | Never mutate part instance lists between upload and `ClearFrameData`. |
 
@@ -815,7 +832,7 @@ are recorded separately from native visual acceptance.
 ### KSA.PbrMaterialReference
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `{DiffuseReference, NormalReference, PBRMap, EmissiveMap, Id}` + non-generic `.Get()` | reflection-field/method | `KSA/PbrMaterialReference.cs:9-18` | doh | `MaterialFactory.cs:415-420,244-247` | OK | `.BindlessHandle` off resolved `TextureReference`; file identical |
+| `{DiffuseReference, NormalReference, PBRMap, EmissiveMap} : DataReference<TextureReference>`; `Id` on the direct material | resolved-data/reflection | CURRENT `KSA/PbrMaterialReference.cs:12-21` | doh, free-fallin, rings, pebbles | `GameDataReference.cs`; feature material controllers | Migrated @5801 | Get() removed; follow Value, keeping unresolved links null. TexturePowerReference retired |
 
 ### KSA.PowerConsumer
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -1078,7 +1095,7 @@ are recorded separately from native visual acceptance.
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 5348 | Notes |
 |---|---|---|---|---|---|---|
 | `AstronomicalTemplate.RingsReference : PlanetaryRingsReference?` (public field; via `Celestial.BodyTemplate`) | direct API | `KSA/AstronomicalTemplate.cs:66`; `KSA/Celestial.cs:83` | rocky-mcrock-face | `RingSwapController.cs` (`RefreshBodies`) | OK | how a ringed body is found |
-| `PlanetaryRingsReference.{Texture, ControlTexture, RingObjects}` · `RingObjectsReference.{Lods, MaterialReference, Size, Thickness, RenderDistance, Density, NumLods}` · `RingLodReference.{MinScreenSizePixels, MeshFileReference}` · `PbrMaterialReference.{DiffuseReference, NormalReference, PBRMap}` (all public fields) | direct API | `KSA/PlanetaryRingsReference.cs:23-35`; `KSA/RingObjectsReference.cs`; `KSA/RingLodReference.cs:8,11`; `KSA/PbrMaterialReference.cs:10-17` | rocky-mcrock-face | `RingSwapController.cs` (`Apply`/`Restore`/`TakeSnapshot`) | OK | the whole swap surface; ControlTexture is snapshotted but deliberately never swapped (CPU-sampled as RGBA8 — see `rings.md` #5) |
+| `PlanetaryRingsReference.{Texture, ControlTexture, RingObjects}` · `RingObjectsReference.{Lods, MaterialReference, Size, Thickness, RenderDistance, Density, NumLods}` · `RingLodReference.{MinScreenSizePixels, MeshFileReference}` · `PbrMaterialReference.{DiffuseReference, NormalReference, PBRMap}` (all public fields) | direct API | `KSA/PlanetaryRingsReference.cs:23-35`; `KSA/RingObjectsReference.cs`; `KSA/RingLodReference.cs:8,11`; `KSA/PbrMaterialReference.cs:10-17` | rocky-mcrock-face | `RingSwapController.cs` (`Apply`/`Restore`/`TakeSnapshot`) | Migrated @5801 | Resolved DataReference wrappers and original-reference restore; ControlTexture is snapshotted but deliberately never swapped (CPU-sampled as RGBA8 — see `rings.md` #5) |
 | `MeshFileReference.{Get(), Mesh : MeshReference?}` — **the mesh swap slot** | direct API | `KSA/MeshFileReference.cs:15,28` | rocky-mcrock-face | `RingSwapController.cs` | OK | renderer reads `Lods[i].MeshFileReference.Get().Mesh` at data build |
 | `MeshReference` public surface: `Id/Simple/Interleaved/PrimitiveCount/BoundingSphereRadius` fields, `HostPrimitives/DevicePrimitives` get-only props, `DeviceMesh => DevicePrimitives[0]`, `Bind(Renderer, StagingPool)`, `Dispose()` | direct API | `KSA/MeshReference.cs:17-58,120,145` | rocky-mcrock-face | `RingMeshFactory.cs`, `RingAssetCatalog.cs` | OK | clone-and-convert path for interleaved subpart meshes; multi-primitive shape is new @5348 |
 | `TextureReference.{Id, BindlessHandle}` · `TexturePowerReference` (type filter for normal maps) | direct API | `KSA/TextureReference.cs:70`; `KSA/TexturePowerReference.cs` | rocky-mcrock-face | `RingAssetCatalog.cs` | OK | `BindlessHandle == 0` ⇒ excluded from the pickers |
@@ -1090,7 +1107,7 @@ are recorded separately from native visual acceptance.
 
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 5348 | Notes |
 |---|---|---|---|---|---|---|
-| `PlanetaryRingsReference` / `PlanetaryRingsVolumeReference` / `RingRaymarchingStepReference` / `RingObjectsReference` / `RingLodReference` / `MeshFileReference.Mesh` / `PbrMaterialReference` — **all public fields, constructed from scratch** (`IsValid()` deliberately not used: `DistanceReference.IsValid` demands > 100 km) | direct API | `KSA/PlanetaryRingsReference.cs`; `KSA/PlanetaryRingsVolumeReference.cs`; `KSA/RingRaymarchingStepReference.cs`; `KSA/RingObjectsReference.cs`; `KSA/RingLodReference.cs`; `KSA/MeshFileReference.cs:15`; `KSA/PbrMaterialReference.cs:10-17` | bloomin-onion | `RingReferenceBuilder.cs` (`Build`), `RingDefinitionSerializer.cs` (`FromReference`) | OK | a new required field on any of these classes silently defaults — see `rings.md` B-narrative #1 |
+| `PlanetaryRingsReference` / `PlanetaryRingsVolumeReference` / `RingRaymarchingStepReference` / `RingObjectsReference` / `RingLodReference` / `MeshFileReference.Mesh` / `PbrMaterialReference` — **all public fields, constructed from scratch** (`IsValid()` deliberately not used: `DistanceReference.IsValid` demands > 100 km) | direct API | `KSA/PlanetaryRingsReference.cs`; `KSA/PlanetaryRingsVolumeReference.cs`; `KSA/RingRaymarchingStepReference.cs`; `KSA/RingObjectsReference.cs`; `KSA/RingLodReference.cs`; `KSA/MeshFileReference.cs:15`; `KSA/PbrMaterialReference.cs:10-17` | bloomin-onion | `RingReferenceBuilder.cs` (`Build`), `RingDefinitionSerializer.cs` (`FromReference`) | Migrated @5801 | DataReference.To builds resolved private links; native RingObjects.Name removed, DTO ObjectsName retained. A new required field silently defaults — see `rings.md` B-narrative #1 |
 | `DistanceReference(double, DistanceUnit)` · `RadianReference(double)` + `ToDegrees()` · `DoubleReference.FromValue` · `BoolReference(bool)` · `MathEx.{ToDeviationAngle, ToCompassAngle}(double)` · `OrbitDefinitionFrame` | direct API | `KSA/DistanceReference.cs:105-140`; `KSA/RadianReference.cs:23,66`; `KSA/DoubleReference.cs:44`; `KSA/BoolReference.cs:14`; `KSA/MathEx.cs:178,189` | bloomin-onion | `RingReferenceBuilder.cs` | OK | value wrappers the XML loader would create; angle normalization mirrors `PlanetaryRingsReference.OnDataLoad` |
 | `AstronomicalTemplate.RingsReference` (public field, **written**) · `Celestial.{BodyTemplate, MeanRadius, Parent}` | direct API | `KSA/AstronomicalTemplate.cs:66`; `KSA/Celestial.cs:73,83,91` | bloomin-onion | `RingDefinitionController.cs` | OK | original reference snapshotted per template for Remove |
 | `PlanetTransparenciesRenderer.PopulatePlanets() : bool` (public) | direct API | `KSA/PlanetTransparenciesRenderer.cs:169` | bloomin-onion | `RingRendererRebuilder.cs` | OK | re-derives which bodies have rings; its result must be written to `_anyRings` (watchlist) |
@@ -1119,8 +1136,8 @@ Sink's `Universe.ExecuteNextVehicleSolvers` patch were removed. See [current sur
 
 **Iron Man additions:** recheck every exact target/signature in [its Harmony table](iron-man.md#harmony-and-reflection-watchlist),
 especially private `VehicleEditor.DuplicateHighlightedPart`, `RequestNewVehicle`, `FinalizeNewVehicle`,
-the internal three-argument Part serializer, the **private 10-argument Part constructor** (`Part.cs:1566`
-@5707; every constructor, including save load, chains to it — the former four-argument target missed
+the internal three-argument Part serializer, the **private 11-argument Part constructor** (`Part.cs:1601`
+@5801; every constructor, including save load, chains to it — the former four-argument target missed
 loads) and the `Part(Part, Part)` copy-constructor postfix used by `PartCloner`. The flight-computer
 follow-up also requires exactly two EVA type checks in `GaugeCanvas.IsContextVisible` and one closed
 `IsFlightComputerDisabled<Enum>` call each in gauge-button `IsDisabled`/`PackData`. Preserve constructor
@@ -1145,7 +1162,7 @@ on every game update FIRST.
 | `Camera._fovRadians` | glass | `AccessTools.Field` private field by name | OK (single most-important glass check) |
 | `Camera.ChangeFieldOfView` / `Camera.UpdateProjection` | glass | `AccessTools.Method` by name | OK |
 | `Vehicle.GetWorldMatrix` / `Vehicle.UpdateRenderData` | i-feel-seen | `AccessTools.Method(typeof(Vehicle), "…")` | OK |
-| `VolumetricExhaustTemplate.References` (internal static field) | pyro | `AccessTools.Field(…, "References")` → `SerializedCollection<T>.GetList()` (`PlumeTemplates.cs:46`) | OK @5348 — soft: falls back to the stock 7 ids via public `Get(id)` |
+| `ModLibrary.AllExhaustTemplates` (internal static field; moved @5801) | pyro | `AccessTools.Field(typeof(ModLibrary), "AllExhaustTemplates")` → `GetList()` | Migrated @5801; fallback uses public `ModLibrary.TryGet<VolumetricExhaustTemplate>` |
 | ~~`VolumetricExhaustInstance._shaderData`~~ | pyro | retired private field write | **RETIRED @5438** — field exists but native renderer overwrites appearance; scoped final AddInstance prefix replaces this lookup. |
 | `Vehicle.UpdateCollisionGeometry()` | godzilla | private method; open delegate and prefix/finalizer preserve nominal bounds during independent collider rebuilds | Added @5402; managed checks, native contacts pending |
 | `KittenRenderable.ModelToBodyMatrix` / `KittenRenderable._characterAvatar` → `CharacterAvatar.Core` → `CharacterCore.Scale` | garrys-torch, doh, kitten-animations | private method Harmony target + private avatar field; garrys uses typed `KittenEva.Renderable` and `CharacterAvatar.Core.Scale` | OK @5402 |

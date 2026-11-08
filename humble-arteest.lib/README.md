@@ -1,5 +1,11 @@
 # Humble Arteest — KSA Part Painting & Visual Effects Mod
 
+## KSA 5801 compatibility
+
+Vehicle Paint now encodes 6:6:6 sRGB in StateBitFlag bits 13–30, preserving native habitat highlight bits 11/12. VehiclePaintShaderSource is the pure production transform used by both runtime and managed CURRENT-GLSL checks. Saved floating RGB values and record versions stay unchanged; native appearance remains pending.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 Humble Arteest provides three visual customization features for KSA:
 
 1. **Vehicle Paint** — Recolors vehicle parts, per part instance, via a runtime-patched part fragment shader
@@ -66,11 +72,11 @@ The swap was inert.
 
 ### How it works now
 
-**Transport: the free bits of `StateBitFlag`.** The game writes only bits **0..10** of that field.
+**Transport: the free bits of `StateBitFlag`.** The game writes only bits **0..12** of that field.
 KSA 5482 defines them in `PartTreeRenderData.StateBit`: highlighted, grabbed, fake-translucent,
 selected, no-celestial-shadows, no-planet-shine, no-emissive, add-emissive-color, selected-connected,
-selected-disconnected and highlight-green. Bits **11..31** are free — 21 bits, which
-carries a 7:7:7 sRGB color. `StateBitFlag` lives at offset 64 in *every* `PerInstanceData` variant
+selected-disconnected and highlight-green. KSA 5801 also uses bits 11/12 for yellow/purple habitat highlights. Bits **13..30** carry 18 bits, which
+carries a 6:6:6 sRGB color. `StateBitFlag` lives at offset 64 in *every* `PerInstanceData` variant
 (static, dynamic, glass) and is already forwarded to every part fragment shader as the
 `inStateFlags`@location 4 varying.
 
@@ -114,7 +120,7 @@ PartModelRenderer upload + vkCmdDrawIndexedIndirect   (unmodified)
     ▼
 MeshIndirect.vert                               (unmodified — forwards outStateFlags@4)
     ▼
-MeshIndirect.frag / MeshIndirectRaytraced.frag  ← PATCHED: unpack bits 11..31, blend into sampledColor
+MeshIndirect.frag / MeshIndirectRaytraced.frag  ← PATCHED: unpack bits 13..30, blend into sampledColor
 ```
 
 KSA 5482 removed `PartModelModule.UpdateRenderData` and `PartModelDynamicModule.UpdateRenderData`.
@@ -141,15 +147,15 @@ Anchored on the albedo sample — matched as *the first line beginning `vec3 sam
 ```glsl
     vec3 sampledColor = gammaToLinear(texture(sampler2D(globalTextures[drawData.diffuseTextureIndex], textureSampler), inUv).xyz);
 
-    // --- humble-arteest: per-instance paint, packed into state-flag bits 11..31 ---
+    // --- humble-arteest: per-instance paint, packed into state-flag bits 13..30 ---
     {
-        uint hbPaintPacked = inStateFlags >> 11u;
+        uint hbPaintPacked = inStateFlags >> 13u;
         if (hbPaintPacked != 0u)
         {
             vec3 hbPaintColor = gammaToLinear(vec3(
-                float((hbPaintPacked >> 14u) & 0x7Fu),
-                float((hbPaintPacked >> 7u) & 0x7Fu),
-                float( hbPaintPacked        & 0x7Fu)) * (1.0 / 127.0));
+                float((hbPaintPacked >> 12u) & 0x3Fu),
+                float((hbPaintPacked >> 6u) & 0x3Fu),
+                float( hbPaintPacked        & 0x3Fu)) * (1.0 / 63.0));
             sampledColor *= hbPaintColor;          // ← blend mode goes here
         }
     }
@@ -350,7 +356,7 @@ We simply override the Temperature value before it reaches the GPU, giving expli
 
 ```
 float4x4 ModelMatrix      64 bytes
-int      StateBitFlag      4 bytes  ← Vehicle Paint uses bits 11..31 here; do not write the low bits
+int      StateBitFlag      4 bytes  ← Vehicle Paint uses bits 13..30 here; do not write the low bits
 float    Temperature       4 bytes  ← we override this
 float    TfiThickness      4 bytes  ← we override this
 float    Wetness           4 bytes  ← game-used (ENABLE_WETNESS); do NOT write

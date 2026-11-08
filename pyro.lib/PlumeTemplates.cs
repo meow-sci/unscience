@@ -35,20 +35,21 @@ public static class PlumeTemplates
         }
         var fallback = new List<string>();
         foreach (var id in KnownIds)
-            if (VolumetricExhaustTemplate.Get(id) != null) fallback.Add(id);
+            if (Get(id) != null) fallback.Add(id);
         _cachedIds = fallback.ToArray();
         return _cachedIds;
     }
 
-    /// <summary>Reads the game's internal <c>VolumetricExhaustTemplate.References</c> collection.</summary>
+    /// <summary>Reads the game's internal <c>ModLibrary.AllExhaustTemplates</c> collection.</summary>
     public static List<VolumetricExhaustTemplate>? GetTemplateList()
     {
-        var field = AccessTools.Field(typeof(VolumetricExhaustTemplate), "References");
+        var field = AccessTools.Field(typeof(ModLibrary), "AllExhaustTemplates");
         var collection = field?.GetValue(null) as SerializedCollection<VolumetricExhaustTemplate>;
         return collection?.GetList();
     }
 
-    public static VolumetricExhaustTemplate? Get(string id) => VolumetricExhaustTemplate.Get(id);
+    public static VolumetricExhaustTemplate? Get(string id) =>
+        ModLibrary.TryGet<VolumetricExhaustTemplate>(id, out var template) ? template : null;
 
     /// <summary>Normalizes data saved against KSA builds that still shipped Vernier/Turbine templates.</summary>
     public static string NormalizeId(string? id)
@@ -66,9 +67,7 @@ public static class PlumeTemplates
     public static VolumetricExhaustInstance? CreateInstance(string templateId)
     {
         string resolvedId = NormalizeId(templateId);
-        var reference = new VolumetricExhaustReference { Id = resolvedId };
-        reference.Load();
-        if (reference.Template == null) return null;
-        return new VolumetricExhaustInstance(reference);
+        var template = Get(resolvedId);
+        return template == null ? null : new VolumetricExhaustInstance(template);
     }
 }

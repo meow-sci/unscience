@@ -101,7 +101,7 @@ public static class RingRendererRebuilder
             }
             material.RingInnerRadius = (float)rings.InnerRadius.InMeters();
             material.RingOuterRadius = (float)rings.OuterRadius.InMeters();
-            material.RingTextureId = rings.Texture.Get().BindlessHandle;
+            material.RingTextureId = rings.Texture!.Value!.BindlessHandle;
         }
         catch (Exception ex)
         {

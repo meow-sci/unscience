@@ -1,5 +1,11 @@
 # KSA Abstractions Library
 
+## KSA 5801 compatibility
+
+`GameDataReference.To` creates resolved native links for runtime graphs; `Resolve` unwraps DataReference.Value for reflection-based material consumers while preserving null/unresolved slots. Rings, clutter and DOH use it. No durable state is added.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5801_UPGRADE.md).
+
 A foundational shared library providing common abstractions and utilities used across multiple KSA mods. It contains game-access helpers plus small cross-mod UI and data utilities.
 
 ## Overview

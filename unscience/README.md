@@ -200,9 +200,20 @@ the vehicle editor is open.
 
 ## KSA compatibility
 
-The current checkout compiles against KSA **2026.10.25.5707**; the full integration audit was run
-against it (diffed from 2026.10.19.5638; [upgrade report](../plans/KSA_5707_UPGRADE.md)). The build and
-all 18 managed suites pass; native acceptance is pending. User-visible changes in 5707:
+The current checkout targets **KSA 2026.11.10.5801**, diffed from 5707.
+The build, 18 managed suites, metadata/source checks and bootstrap harness pass; native acceptance
+is pending. See [5801 upgrade report](../plans/KSA_5801_UPGRADE.md).
+
+- Existing Iron Man anchor payloads migrate from legacy native Id attributes; new world/blueprint
+  saves use an anchor module record. Native connected-anchor and undo/redo acceptance remains open.
+- Vehicle Paint keeps native habitat highlights intact, using slightly lower transient GPU color
+  precision; saved RGB colors are unchanged. DOH follows the new resolved material/texture links.
+- Pebbles retains native curvature and terrain blending; legacy recipes inherit stock defaults.
+- Rings, Disco and capsule filtering use native keys/resolved links. Pyro uses the new SI atmosphere.
+- Life support, suit supplies, crew conditions and game rules remain owned by KSA saves. The Tick
+  and Kitchen Sink protect against forces, not life-support/radiation deaths.
+
+Earlier (5707) changes:
 
 - **Iron Man** kittens with custom nodes load correctly again (on 5707 they lost their nodes, kept a
   garbled name, or failed to load when a node was connected), and editor *Copy Tree* keeps the nodes.

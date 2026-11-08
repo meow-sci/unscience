@@ -10,13 +10,14 @@ I describe it as a *supermod* that includes a suite of *submods*, each one has a
 
 # game compatibility
 
-The current checkout compiles against KSA **2026.10.25.5707**, and the full integration audit was
-run against that build (diffed from 2026.10.19.5638). The build and all 18 managed test suites pass;
-in-game acceptance is pending. This upgrade fixes Iron Man anchors on save load and editor copies,
-Sphinx on low-end GPUs, Pebbles' ambient-occlusion pre-pass and foliage flag, and DOH spawn names that
-matched a rostered kitten. See [KSA_5707_UPGRADE](plans/KSA_5707_UPGRADE.md),
-[KSA compatibility](unscience/README.md#ksa-compatibility) for user-visible changes and
-[ISSUES.md](ISSUES.md) for known gaps. The previous (5638) upgrade removed Parts Now.
+The current checkout targets **KSA 2026.11.10.5801**, upgraded from 2026.10.25.5707.
+The whole solution and all 18 managed suites pass; native game acceptance remains pending.
+This upgrade migrates the data-reference/key schema, preserves Iron Man anchors with legacy-save
+migration, fixes DOH material resolution and Vehicle Paint/native-highlight collisions, preserves
+Pebbles curvature/terrain blending, and updates Pyro for runtime SI atmospheres. Native pipeline
+allocations are explicitly disposed. Existing sidecar IDs/versions stay compatible.
+See [KSA_5801_UPGRADE](plans/KSA_5801_UPGRADE.md), [player compatibility](unscience/README.md#ksa-compatibility)
+and [ISSUES.md](ISSUES.md). Prior upgrade evidence: [5707](plans/KSA_5707_UPGRADE.md).
 
 The October 25 startup follow-up fixes Full Canopy parsing of Windows shader line endings,
 orders the shared physics handoff before existing call-wrapping transpilers, and reports complete

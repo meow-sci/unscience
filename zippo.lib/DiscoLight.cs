@@ -38,7 +38,7 @@ internal sealed partial class DiscoLight : IDisposable
             var original = module.Template;
             var owned = new LightModule.TemplateData
             {
-                Id = original.Id,
+                Key = original.Key,
                 Type = original.Type,
                 Transform = original.Transform,
                 Range = original.Range,
