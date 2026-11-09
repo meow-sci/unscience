@@ -11,6 +11,12 @@ See [evidence and diagnostic A/B](../plans/HUMBLE_ARTEEST_5801_PAINT_INVESTIGATI
 
 ## 5801 despawn / shutdown follow-up
 
+`Ksa5801Checks` reads CURRENT KSA.dll metadata to verify native kill input dispatch occurs after
+solver-result application and before render-list refresh; the former DOH physics handoff is later.
+It checks the native destroy-input fields and the shared teardown used by normal EVA crew deaths.
+Managed native input/paint/save regression cases live in `doh.tests`.
+[Native kill follow-up](../plans/DOH_NATIVE_KILL_5801.md).
+
 `ShutdownChecks` links production GameShutdownPatches and GraffitiSubmod.Lifetime. Actual Harmony
 patches a native-independent Program.Dispose mirror, checked against CURRENT KSA.dll metadata. It
 checks worker/device waits, feature release before native disposal, self-removal, callback failures,

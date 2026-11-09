@@ -227,13 +227,16 @@ external GLBs use absolute paths plus SHA-256 content identities and are not glo
 | Target / integration | Owner | Current contract |
 |---|---|---|
 | `Program.Dispose():void` instance prefix | `unscience/GameShutdownPatches.cs` | Priority.First; join workers, drain live device, consume callback once, call idempotent Mod.Unload before native resource destruction; targeted remove |
-| `PhysicsFrameHook.Enqueue` after native result application | `KittenSpawner.RequestDespawn/RequestDespawnAll`; DOH UI and legacy host | Exact registry-entry check; native-dead/stale requests safe; unavailable hook refuses action. Immediate DestroyVehicle remains for safe boundary/shutdown callers |
+| `InputEvents.VehicleDestroyBuffer.Get/Add`; `VehicleDestroyData.Vehicle/Recovered` | `doh.lib/Spawning/KittenSpawner.Lifetime.cs:11`; Smite / Smite All | Native kill input before render-list refresh; exact live kitten object and deduplication; Kill/Abandoned, no reason string. Custom despawn/handoff/unload destruction removed |
 | `Program.GetRenderer().GraphicsAndCompute.WaitIdle` ownership guard | `GraffitiSubmod.Lifetime.cs`; ResetDecals | Only when pipeline/live/retired images exist; unused/repeated cleanup never touches Vulkan; native-save replay unchanged |
 | Default offset / existing DOH save Offset | `SpawnRequest.DefaultOffsetBodyFrame`; DohSubmod persistence | (1, 1, -2) m default; explicit saved values unchanged; pending removals transient, no record version change |
 
-The supplied fatal stack is a late-unload Vulkan queue access, after successful despawn logs and
-pipeline-cache shutdown. No earlier exception is supplied; original exit trigger remains unproven.
-[Follow-up evidence/tests/native checks](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
+The complete two-kitten log identifies an earlier `SkeletalAnimClip.Sample` exception. The former
+DOH handoff ran after `RefreshVehiclesInFrame`, leaving a disposed avatar in the render list; native
+input runs before refresh. Post-death pruning releases private War Paint slots while retaining global
+presets. Constructor rollback remains isolated; no live custom teardown remains.
+[Native kill evidence/checks/acceptance](../plans/DOH_NATIVE_KILL_5801.md).
+[Earlier shutdown fix](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
 
 ## 5801 verification summary
 
@@ -464,9 +467,9 @@ are recorded separately from native visual acceptance.
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
 | `All : LookupCollection<Astronomical>` | direct API | `KSA/CelestialSystem.cs:57` | VehicleProvider/CelestialProvider (→ ~all feature mods) | `VehicleProvider.cs:15`; `CelestialProvider.cs:11-12` | OK | shared enumerator root |
-| `Deregister(Vehicle)` | direct API | `KSA/CelestialSystem.cs` | doh | `KittenSpawner.cs:70,302` | OK | despawn; removal of a half-constructed kitten |
-| `JobSystems.VehicleSolver.Wait()` | direct API | `KSA/JobSystems.cs:16`; `Brutal.Concurrency.Jobs/JobScheduler.cs:51` | doh | `KittenSpawner.cs:69,196,331-334` | OK | waits for the background vehicle physics step before `new KittenEva` / `Vehicle.Dispose()`; avoids `ConstraintSim.UnlockShapes()` stepping-lock throw (5402) |
-| `All.TryGet(string, out Astronomical)` (LookupCollection) | direct API | `KSA/CelestialSystem.cs`; `KSA/LookupCollection.cs` | doh | `KittenSpawner.Naming.cs`; `KittenSpawner.Teardown.cs` | OK | exact single-name collision refusal and unique numbered batch/default prefixes, using native case-insensitive keys; orphan lookup (despawn uses the registered kitten object). Editable name/prefix is additive `SpawnName` in the v1 `doh` sidecar; spawned names are native-owned. |
+| `Deregister(Astronomical)` | direct API | CURRENT `KSA/CelestialSystem.cs` | doh | `KittenSpawner.Construction.cs:28` | OK @5801 | Failed-constructor fallback only; no live-kitten despawn |
+| `JobSystems.VehicleSolver.Wait()` | direct API | `KSA/JobSystems.cs`; `Brutal.Concurrency.Jobs/JobScheduler.cs` | doh | `KittenSpawner.Construction.cs:35` | OK @5801 | Construction/rollback shapes-registry guard only; native input owns live kill timing |
+| `All.TryGet(string, out Astronomical)` (LookupCollection) | direct API | `KSA/CelestialSystem.cs`; `KSA/LookupCollection.cs` | doh | `KittenSpawner.Naming.cs`; `KittenSpawner.Construction.cs:14` | OK @5801 | Native naming collisions and failed-constructor lookup; live kill targets retain the exact registered object |
 | `LookupCollection.Deregister` swap-remove (last element moves into the freed slot) | behavior | `KSA/LookupCollection.cs:148-161` | doh | `DohSubmod.cs:30,234` | OK | Why doh holds its spawn target as a `Vehicle` object: the list-index selection moved onto another vehicle (often a spawned kitten) whenever a vehicle or debris was removed. Any mod that stores indices into `VehicleProvider.GetAllVehicles()` has the same hazard. |
 | `Get(string) : Astronomical?` | direct API | `KSA/CelestialSystem.cs` | graffiti | `graffiti.lib/GraffitiSubmod.cs` (`ResolveAnchor`) | OK @5348 | per-frame decal anchor re-resolution by vehicle/body id; null (dormant decal) on despawn |
 
@@ -963,6 +966,11 @@ are recorded separately from native visual acceptance.
 | `PositionEcl : double3 { get; set; }` (virtual) | direct API (write) | `KSA/Transform3D.cs:15` | camera-controller-override | `KeyframeSequencePlayer.cs:450,473` | OK | mutated to move camera (dead until `___Transform` fixed); `Camera` overrides at `Camera.cs:94` |
 | `LocalRotation : doubleQuat` (field) | direct API (write) | `KSA/Transform3D.cs:13` | camera-controller-override | `KeyframeSequencePlayer.cs:451,476` | OK | mutated to rotate camera (dead until fixed) |
 
+### KSA.InputEvents (DOH native kill, 5801)
+| Member | Kind | Decomp path | Used by | Mod code | Status | Contract |
+|---|---|---|---|---|---|---|
+| `VehicleDestroyBuffer.Get/Add`; `VehicleDestroyData.Vehicle/Recovered` | direct API | CURRENT `KSA/InputEvents.cs:634-700,1078,1197` | doh | `KittenSpawner.Lifetime.cs:11-24` | Verified @5801 | Recovered=false requests native Kill/Abandoned; dispatch after applied results, before RefreshVehiclesInFrame; no mod physics hook, death-cause patch or persisted custom enum |
+
 ### KSA.Universe
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
@@ -1001,7 +1009,7 @@ are recorded separately from native visual acceptance.
 | `FlightComputer` (see KSA.FlightComputer) | direct API | `KSA/Vehicle.cs:415` | blinky (debug) | — | OK | |
 | `GetManualThrottle()` | direct API (debug) | `KSA/Vehicle.cs:822` | blinky | `BlinkySubmod.cs:586-587` | OK | diagnose button only |
 | `SetEnum(Enum?) : void` | direct API | `KSA/Vehicle.cs:4838` | blinky | `BlinkyGridManager.cs:258` | OK | `VehicleEngine` branch → private `SetAction` (`Vehicle.cs:4912`) |
-| `Dispose() : void` | direct API | `KSA/Vehicle.cs` | doh | `KittenSpawner.cs:71,307` | OK | despawn; orphan cleanup |
+| `Dispose(bool endMission)` | indirect native lifecycle | CURRENT `KSA/Vehicle.cs:4459` | doh | `KittenSpawner.Lifetime.cs:20` (native input) | Native-owned @5801 | KSA calls disposal before refreshing the frame list; DOH no longer disposes live kittens or deletes them on unload |
 | `IsControllable : virtual bool` (rev 4699) | direct API | `KSA/Vehicle.cs:526` | (informational — not consumed) | — | ADDITIVE | new; gates control on a Control Module |
 
 ### KSA.VehicleEditingSpace

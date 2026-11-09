@@ -1,5 +1,10 @@
 # DOH despawn / late shutdown follow-up (5801)
 
+The DOH removal implementation below is **superseded** by
+[the native kill-action follow-up](DOH_NATIVE_KILL_5801.md). The complete two-kitten log identifies
+an earlier animation exception; the old handoff deleted after render-list refresh. Shutdown,
+Graffiti and default-offset changes below remain applicable.
+
 ## Evidence and limits
 
 The native playtest spawned eight individually tinted kittens under Earth's surface. Each set

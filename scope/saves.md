@@ -31,9 +31,12 @@ with default role colors. None deselection rolls back unsaved previews and keeps
 
 ## 5801 native playtest: despawn and shutdown
 
-DOH queued despawns are transient requests. Their exact-registry-entry checks make old closures
-inert after native/sidecar reset/rebind, even for the same vehicle ID; hook removal clears the shared
-queue. A pre-dispatch save still contains the kitten, a post-dispatch save omits it. Spawn API/UI and
+DOH Smite actions are transient native `VehicleDestroyBuffer` inputs, holding exact objects rather
+than name lookups. Native scene replacement disposes old vehicles; a pending input cannot retarget a
+same-name reconstructed kitten. There are no DOH deferred closures or custom despawn APIs. Capture
+before dispatch contains the kitten; capture after native death omits it even before registry pruning.
+War Paint releases the dead kitten's private slots without touching reusable preset files.
+[Native kill evidence and acceptance](../plans/DOH_NATIVE_KILL_5801.md). Spawn API/UI and
 reset/missing-Offset defaults are now (1, 1, -2) m; explicit saved offsets restore unchanged. No record
 IDs/versions change. Graffiti native-save reset uses the ownership-aware GPU cleanup also used by
 shutdown, with unchanged decal capture/replay. Shutdown hook/device guards are runtime-only.

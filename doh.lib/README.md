@@ -39,20 +39,28 @@ creates the backpack's tree before configuring fuel, teleports, and registers th
 Partially constructed kittens are removed, with a direct deregistration fallback if native teardown
 throws.
 
-UI callers use `RequestDespawn` / `RequestDespawnAll`: the shared physics handoff applies pending
-results before removal. Missing handoff rejects requests. The exact registration is checked at
-dispatch, so reset/rebind invalidates stale requests. Immediate `Despawn` / `DespawnAll` are for
-that boundary or pre-renderer shutdown. Paint is unset before native
-`Universe.DestroyVehicle(vehicle, CrewDisposition.Boarded)`. This native teardown hands off cameras,
-control, targets and emitters without changing roster crew records. Prune removes already-disposed
-entries through War Paint cleanup. DOH never cleans shared material systems or frees clone sets.
+`RequestSmite` / `RequestSmiteAll` submit `InputEvents.VehicleDestroyData` to KSA's
+`VehicleDestroyBuffer`, with `Recovered = false`. KSA processes the action after physics results
+and **before** `RefreshVehiclesInFrame`; the shared physics handoff runs after that refresh and is
+too late to delete a renderable safely. KSA performs normal death, camera/control/target/emitter
+handoff and disposal. Requests retain exact current kitten objects, reject missing/non-kitten/stale
+targets, and avoid duplicate pending events. No custom despawn API, deferred closure, kill patch,
+or unload-time vehicle destruction remains. Unload clears DOH tracking; KSA owns the vehicles.
+
+The UI calls this **Smite**, but KSA's input action uses the fixed enum cause **Abandoned**. There
+is no custom reason string; DOH does not invent an enum value or patch native death reporting.
+Prune drops native-disposed entries and asks War Paint to release their private material sets
+after death, without restoring disposed avatar bindings. Other kittens' materials and reusable
+global presets remain. War Paint also handles deaths/boarding independently of DOH tracking.
 
 ## Scene saves
 
 The existing **`doh` v1**, order **60**, captures spawn name, offset/count/character, preset name and
 detached preset recipe, and the IDs/characters of native-owned tracked kittens. Native reconstruction
 owns actual vehicles; DOH never respawns on restore. The reference-vehicle picker and pending
-requests are transient. Reset clears ownership and controls; War Paint owns old-world paint cleanup.
+native kill inputs are transient. Native input retains the old object, so a same-name reconstructed
+kitten cannot be retargeted. Reset clears ownership and controls; War Paint owns old-world paint cleanup.
+Capture omits native-disposed kittens even before pruning. The save ID/version and payload stay unchanged.
 
 New capture leaves old per-kitten paint fields empty because War Paint saves active paint once in
 its own record. Legacy `Tint`, `Materials` (`Source` / `Name` / `Color`) and optional `MaterialGroup`
@@ -68,9 +76,10 @@ remain native-owned. Explicit saved offsets survive; fresh/vanilla/missing field
 
 ## Validation and dependencies
 
-[`doh.tests`](../doh.tests/README.md) exercises production save/reset/replay, naming and deferred native
-teardown in a native-free fixture. Native physics, material rendering, missing characters, pool
-recovery and the Windows access-violation reproduction require in-game acceptance. See
-[5801 follow-up](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
+[`doh.tests`](../doh.tests/README.md) exercises production save/reset/replay, naming, native kill
+requests and post-death paint cleanup in a native-free fixture. Real-DLL upgrade checks verify
+input dispatch precedes render-list refresh. Native physics, material rendering, missing characters,
+pool recovery and the Windows animation crash require in-game acceptance. See
+[native kill follow-up](../plans/DOH_NATIVE_KILL_5801.md).
 
 Dependencies: `war-paint.lib`, `ksa-abstractions.lib` and compile-only KSA/BRUTAL/Bepu game assemblies.

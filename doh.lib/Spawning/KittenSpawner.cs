@@ -17,7 +17,8 @@ namespace MeowSci.DohLib.Spawning;
 ///   - Optional per-kitten material customization
 ///
 /// Partial files: Positioning (spawn frame), Materials (per-kitten cloning), Catalog (game lookups),
-/// Naming (exact names and numbered prefixes), Teardown (despawn, prune and native vehicle destruction).
+/// Naming (exact names and numbered prefixes), Lifetime (native kill requests and pruning),
+/// Construction (failed-constructor rollback).
 /// MUST be called on the game thread (not from HTTP handlers directly).
 /// </summary>
 public sealed partial class KittenSpawner
@@ -219,7 +220,7 @@ public sealed partial class KittenSpawner
         if (available < 0 || available >= needed) return null;
 
         return $"Not enough GPU material slots: ~{needed} needed for {setsNeeded} tinted set(s), {available} available " +
-            $"({MaterialSystemAccessor.ReservedSlots} kept for the game). Despawn painted kittens or spawn fewer.";
+            $"({MaterialSystemAccessor.ReservedSlots} kept for the game). Smite painted kittens or spawn fewer.";
     }
 
     private static SpawnResult Stopped(List<SpawnedKittenInfo> spawned, int requested, string reason)

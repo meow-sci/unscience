@@ -60,8 +60,27 @@ internal static class Ksa5801Checks
             "GPU MaterialData retains its 80-byte sequential field shape with albedo at byte 16");
         Require(probe.CallsOf("KSA.GameSaves", "get_UniverseSerializer").Count == 1 &&
                 probe.CallsOf("KSA.VehicleSaves", "get_VehicleSerializer").Count == 1, "native serializer getters exist");
+        NativeKillOrdering(probe);
         LiveShaders();
         Console.WriteLine("PASS: 5801 reflection watchlist, native paint flags, material layout and live paint shader transforms");
+    }
+
+    private static void NativeKillOrdering(KsaAssemblyProbe probe)
+    {
+        var calls = probe.CallsOf("KSA.Program", "PrepareFrame").Single();
+        int apply = calls.IndexOf("KSA.Universe::ApplyVehicleSolvers");
+        int input = calls.IndexOf("KSA.InputEvents::ApplyInputEvents");
+        int refresh = calls.IndexOf("KSA.Program::RefreshVehiclesInFrame");
+        int handoff = calls.IndexOf("KSA.Universe::GetJobSimStep");
+        Require(apply >= 0 && input > apply && refresh > input && handoff > refresh,
+            "native destroy input commits after physics results and before render-list refresh; the old DOH handoff is too late");
+        Require(probe.Fields("KSA.InputEvents+VehicleDestroyData").Select(f => (f.Name, f.Type))
+            .SequenceEqual(new[] { ("Vehicle", "KSA.Vehicle"), ("Recovered", "System.Boolean") }),
+            "native destroy input retains exact vehicle and recovery disposition fields");
+        Require(probe.CallsOf("KSA.InputEvents+VehicleDestroyData", "Apply").Single()
+                .Contains("KSA.Universe::DestroyVehicle")
+            && probe.CallsOf("KSA.Vehicle", "KillDyingCrew").Single().Contains("KSA.Universe::DestroyVehicle"),
+            "the native input action and normal EVA crew deaths share the game's teardown");
     }
 
     private static void LiveShaders()

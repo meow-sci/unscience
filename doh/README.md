@@ -14,7 +14,12 @@ Only the `unscience` mod is distributed. This project is a compile-checked devel
    `Kitten_doh_` numbering. Existing live or rostered kitten names are reserved, case-insensitively.
 4. Set the body-frame offset (right, up, forward), default **(1, 1, -2) m**, and count (1–20).
 5. Choose a saved **War Paint preset**, or **stock appearance**, then click **Spawn Kitten(s)**.
-6. Use individual **Despawn** or **Despawn All** to queue removal at the next physics handoff.
+6. Use **Smite** or **Smite All** to request KSA's built-in kill action on the next input pass.
+
+KSA handles death and vehicle removal. Its native action records **Abandoned** where a roster
+entry exists; custom reason strings such as "smote" are unsupported. DOH kittens normally have no
+roster entry. War Paint releases each dead kitten's private GPU materials after native destruction;
+saved presets and other kittens' paint remain available. Unloading DOH leaves vehicles to KSA.
 
 The selected reference vehicle remains stable when vehicles appear or disappear. Removing it
 clears the selection. Each painted kitten has private materials, including in batches. Pool budget
@@ -37,11 +42,11 @@ independent, identically painted kittens: editing one no longer recolors its for
 New scene saves store active kitten paint in War Paint's own record.
 
 Explicit saved offsets survive. Fresh, vanilla and missing-offset records use **(1, 1, -2) m**.
-Queued despawns retain the exact registration, so a pending request cannot delete a same-name kitten
+Native kill inputs retain the exact object, so a pending request cannot delete a same-name kitten
 reconstructed by a scene load. Native physics/GPU acceptance remains required; see
-[despawn evidence](../plans/DOH_DESPAWN_5801_FOLLOWUP.md) and [managed checks](../doh.tests/README.md).
+[kill-action evidence](../plans/DOH_NATIVE_KILL_5801.md) and [managed checks](../doh.tests/README.md).
 
 ## Architecture
 
-`doh.lib` owns creation, native-safe despawn and spawned-kitten tracking; `war-paint.lib` owns paint,
+`doh.lib` owns creation, native kill requests and spawned-kitten tracking; `war-paint.lib` owns paint,
 presets and GPU clones. This host supplies StarMap lifecycle and hotkey integration.

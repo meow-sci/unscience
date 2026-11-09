@@ -34,9 +34,11 @@ All 19 managed suites and the 19-case startup harness pass; native game acceptan
 
 ## 5801 despawn / shutdown follow-up
 
-- **doh.lib / doh / doh.tests**: UI removals queue at PhysicsFrameHook with exact-registration guards;
-  legacy host installs that hook. Shared API/UI/reset default offset (1, 1, -2) m, saved offsets retained;
-  69 managed naming/persistence/teardown checks.
+- **doh.lib / doh / doh.tests**: **Smite / Smite All** use native `VehicleDestroyBuffer` inputs
+  (Kill/Abandoned), before render-list refresh. Custom despawn/unload destruction and the standalone
+  DOH physics hook are removed. Private War Paint slots release after native death; reusable presets
+  remain. Default offset (1, 1, -2) m and saved payloads are unchanged. 76 managed checks plus real-DLL
+  frame-order checks; [evidence and native acceptance](plans/DOH_NATIVE_KILL_5801.md).
 - **unscience**: GameShutdownPatches prefixes native Program.Dispose to join workers/drain the device
   and call idempotent Unload before native resource destruction; compile-only Planet.Render.Core reference.
 - **graffiti.lib / ksa-upgrade.tests**: ownership-aware GPU cleanup shared by Dispose and scene reset;
@@ -410,7 +412,7 @@ Global ImGui theme manager. Provides a theme picker and a full style editor that
 
 ### [doh](doh) / [doh.lib](doh.lib)
 Programmatic kitten spawning, exact single names or numbered batch prefixes, character selection,
-body-frame offsets (default **1, 1, -2 m**) and deferred despawn management. DOH selects an optional
+body-frame offsets (default **1, 1, -2 m**) and native **Smite / Smite All** kill actions. DOH selects an optional
 saved **War Paint** preset; all coloring is delegated to that central owner. The spawn API accepts
 a detached recipe or preset name; legacy tint API inputs still forward to War Paint.
 
@@ -420,9 +422,9 @@ active paints are captured once by War Paint. Legacy shared groups preserve effe
 becoming independently editable. The material-budget preflight reserves room for KSA's own avatars.
 
 ### [doh.tests](doh.tests)
-Links the actual DOH adapter, naming/registry/teardown code and central War Paint service against a
-native backend fixture. Covers names, defaults, queued despawn/stale registration, legacy paint
-migration, preset snapshot persistence and ownership. See its [README](doh.tests/README.md).
+Links the actual DOH adapter, naming/registry/native kill-input code and central War Paint service
+against a native backend fixture. Covers names, defaults, deduplicated kill input, stale-world object
+identity, post-death private-slot release, reusable presets, legacy paint migration and scene capture. See its [README](doh.tests/README.md).
 
 ### [war-paint](war-paint) / [war-paint.lib](war-paint.lib)
 Preset-based coloring for all live EVA kittens: full-width filterable combo, name/confirmation

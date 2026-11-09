@@ -13,10 +13,10 @@ public sealed partial class DohSubmod
         ImGui.AlignTextToFramePadding();
         ImGui.Text($"{entry.Vehicle?.Id ?? entry.KittenId} ({entry.CharacterId})");
         ImGui.SameLine();
-        if (ImGui.SmallButton("Despawn##doh"u8))
+        if (ImGui.SmallButton("Smite##doh"u8))
         {
-            bool queued = _spawner?.RequestDespawn(entry.KittenId) ?? false;
-            SetStatus(queued ? $"Despawn queued for '{entry.KittenId}'." : "Could not queue despawn; physics handoff unavailable.", !queued);
+            bool queued = _spawner?.RequestSmite(entry.KittenId) ?? false;
+            SetStatus(queued ? $"Smite requested for '{entry.Vehicle?.Id ?? entry.KittenId}'." : "That kitten is no longer available.", !queued);
         }
     }
 

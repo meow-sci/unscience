@@ -9,7 +9,7 @@ using MeowSci.DohLib.Spawning;
 using MeowSci.KsaAbstractions.Persistence;
 
 // Native-free stand-ins. The real DOH save adapter, registry, material set, material release,
-// spawner teardown and VehicleProvider are linked unchanged (see doh.tests.csproj).
+// native kill requests, construction rollback and VehicleProvider are linked unchanged.
 
 namespace Brutal.Numerics
 {
@@ -64,6 +64,36 @@ namespace KSA
     public sealed record CharacterReference(string Id);
 
     public enum CrewDisposition { EndMission, Kill, Boarded }
+    public enum KittenDeathCause { Unknown, Abandoned }
+
+    /// <summary>Native destroy-input contract; production requests use this buffer unchanged.</summary>
+    public static class InputEvents
+    {
+        public struct VehicleDestroyData
+        {
+            public Vehicle Vehicle;
+            public bool Recovered;
+            public void Apply() => Universe.DestroyVehicle(Vehicle,
+                Recovered ? CrewDisposition.EndMission : CrewDisposition.Kill, KittenDeathCause.Abandoned);
+        }
+
+        public sealed class TypedBuffer<T> where T : struct
+        {
+            private T[] _events = new T[100];
+            public int Count { get; private set; }
+            public void Add(T data) => _events[Count++] = data;
+            public ReadOnlySpan<T> Get() => _events.AsSpan(0, Count);
+            public void Reset() => Count = 0;
+        }
+
+        public static TypedBuffer<VehicleDestroyData> VehicleDestroyBuffer = new();
+        public static void ApplyInputEvents()
+        {
+            Trace.Events.Add("apply native input");
+            foreach (var pending in VehicleDestroyBuffer.Get()) pending.Apply();
+            VehicleDestroyBuffer.Reset();
+        }
+    }
 
     internal static class Program
     {
@@ -84,9 +114,11 @@ namespace KSA
         public static bool FailDestroy { get; set; }
 
         /// <summary>KSA 5638: crew handling, camera/control/target hand-off, then Dispose, which deregisters.</summary>
-        public static void DestroyVehicle(Vehicle vehicle, CrewDisposition crew = CrewDisposition.EndMission)
+        public static void DestroyVehicle(Vehicle vehicle, CrewDisposition crew = CrewDisposition.EndMission,
+            KittenDeathCause cause = KittenDeathCause.Unknown)
         {
-            Trace.Events.Add($"destroy {vehicle.Id} {crew}");
+            if (vehicle.IsDisposed) return;
+            Trace.Events.Add($"destroy {vehicle.Id} {crew} {cause}");
             if (FailDestroy) throw new System.InvalidOperationException("teardown failed");
             if (Program.ControlledVehicle == vehicle) Program.ControlledVehicle = null;
             vehicle.IsDisposed = true;

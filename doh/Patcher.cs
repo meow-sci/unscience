@@ -17,7 +17,6 @@ internal static class Patcher
             if (_harmony != null)
             {
                 HotkeyGuard.Patch(_harmony);
-                PhysicsFrameHook.Apply(_harmony);
             }
         }
         catch (Exception ex)
@@ -33,7 +32,6 @@ internal static class Patcher
             if (_harmony != null)
             {
                 HotkeyGuard.Unpatch(_harmony);
-                PhysicsFrameHook.Remove(_harmony);
             }
             _harmony?.UnpatchAll("doh");
             _harmony = null;

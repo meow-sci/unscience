@@ -79,7 +79,11 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
 
     public void Dispose()
     {
-        _spawner?.DespawnAll();
+        // Vehicles belong to KSA. Unloading DOH must not destroy avatars still in its render list.
+        _registry?.Clear();
+        _spawner = null;
+        _registry = null;
+        _selectedVehicle = null;
         Console.WriteLine("doh: DohSubmod disposed");
     }
 
@@ -272,10 +276,10 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
         ImGui.Spacing();
         ImGui.PushStyleColor(ImGuiCol.Button, ImGui.GetColorU32(KSAColor.Xkcd.Scarlet));
         ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetColorU32(KSAColor.Xkcd.PaleGrey));
-        if (ImGui.Button(" Despawn All ##doh"))
+        if (ImGui.Button(" Smite All ##doh"))
         {
-            int count = _spawner?.RequestDespawnAll() ?? 0;
-            SetStatus($"Queued {count} kitten(s) for despawn at the next physics handoff.", count == 0);
+            int count = _spawner?.RequestSmiteAll() ?? 0;
+            SetStatus($"Smite requested for {count} kitten(s) through KSA's native kill action.", count == 0);
         }
         ImGui.PopStyleColor(2);
     }

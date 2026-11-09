@@ -6,7 +6,7 @@ namespace MeowSci.DohLib.Spawning;
 
 /// <summary>
 /// Registry of all kittens spawned by the doh mod.
-/// Maintains references for despawning, recoloring, and enumeration.
+/// Maintains references for native kill requests, recoloring, and enumeration.
 /// </summary>
 public sealed class SpawnedKittenRegistry
 {
@@ -30,7 +30,7 @@ public sealed class SpawnedKittenRegistry
         };
     }
 
-    /// <summary>Unregisters a kitten (after despawn).</summary>
+    /// <summary>Unregisters a kitten after native removal.</summary>
     public void Unregister(string kittenId)
     {
         _kittens.Remove(kittenId);

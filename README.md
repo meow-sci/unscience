@@ -8,10 +8,11 @@ It breaks physics, moves things around, resizes things, makes noises, changes co
 
 I describe it as a *supermod* that includes a suite of *submods*, each one has a fun unique name tangentially related to what it does, usually from some kind of pop culture reference.
 
-The [5801 native-playtest follow-up](plans/DOH_DESPAWN_5801_FOLLOWUP.md) fixes DOH UI despawn timing
-and Unscience cleanup before native renderer disposal. Graffiti's unused/repeated cleanup touches
-no Vulkan state. DOH's default offset is now **(1, 1, -2) m**; explicit saved offsets are preserved.
-Native retesting of the reported crash remains pending.
+DOH's **Smite / Smite All** now use [KSA's native kill input](plans/DOH_NATIVE_KILL_5801.md),
+replacing custom despawning. Native dispatch removes the kitten before the render list is rebuilt;
+War Paint releases its private materials after death and preserves saved presets. The native cause
+is **Abandoned** (custom reason strings are unsupported). Default offset remains **(1, 1, -2) m**.
+The earlier [shutdown cleanup fix](plans/DOH_DESPAWN_5801_FOLLOWUP.md) remains; native retesting is pending.
 
 **War Paint** is the central kitten coloring submod. Create/select a named preset, preview its
 material colors on all assigned kittens, save changes, and apply it to multiple EVA kittens.

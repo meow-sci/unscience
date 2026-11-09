@@ -26,67 +26,15 @@ internal static partial class Checks
         PaintMigrationChecks();
         PresetSnapshotChecks();
         var submod = new DohSubmod();
-        TeardownChecks(submod);
-        QueuedTeardownChecks(submod);
+        NativeKillChecks(submod);
+        ConstructionRollbackChecks();
         DefaultOffsetChecks();
 
         WarPaintService.Shared.Reset();
         WarPaintService.Shared.Update();
         if (System.IO.Directory.Exists(MeowSci.KsaAbstractions.KsaPaths.ModDataDir))
             System.IO.Directory.Delete(MeowSci.KsaAbstractions.KsaPaths.ModDataDir, recursive: true);
-        Console.WriteLine($"PASS: {_checks} DOH naming, save/restore, migration and deferred teardown checks.");
-    }
-
-    /// <summary>The real KittenSpawner teardown routes every removal through Universe.DestroyVehicle.</summary>
-    private static void TeardownChecks(DohSubmod submod)
-    {
-        var batch = Kittens("Kitten_doh_7", "Kitten_doh_8");
-        var boarded = new KittenEva("Kitten_doh_9");
-        var rocket = new Vehicle("Kitten_doh_6"); // a non-kitten that merely shares a registered name
-        SetWorld(batch.Cast<Vehicle>().Append(boarded).Append(rocket).ToArray());
-        var batchSet = submod.Paint(batch[0], Red);
-        var secondSet = submod.Paint(batch[1], Red);
-        var boardedSet = submod.Paint(boarded, Blue);
-        submod.Track(batch[0], "Calico", batchSet);
-        submod.Track(batch[1], "Calico", secondSet);
-        submod.Track(boarded, "Tabby", boardedSet);
-        submod.Registry.Register(rocket.Id, "Calico", null);
-        Program.ControlledVehicle = batch[0];
-        Trace.Events.Clear();
-
-        NativeKittenPaintBackend.FailRestore = true;
-        Require(!submod.Spawner.Despawn(batch[0].Id) && !batch[0].IsDisposed && !batchSet.IsReleased
-            && submod.Registry.Get(batch[0].Id) != null && WarPaintService.Shared.TryGetPaint(batch[0], out _),
-            "failed original-binding restoration preserves paint ownership and prevents native destruction");
-        NativeKittenPaintBackend.FailRestore = false;
-        Require(submod.Spawner.Despawn(batch[0].Id), "despawn succeeds");
-        Require(Trace.Events.SequenceEqual(new[] { "restore paint " + batchSet.Id, "release paint " + batchSet.Id, "wait vehicle solver", "wait nearest orbit", "destroy Kitten_doh_7 Boarded",
-            "deregister Kitten_doh_7" }), "despawn joins the world readers, then uses DestroyVehicle without touching crew records: "
-            + string.Join(", ", Trace.Events));
-        Require(batch[0].IsDisposed && Program.ControlledVehicle == null && submod.Registry.Get(batch[0].Id) == null,
-            "the game teardown releases control and doh drops the entry");
-        Require(batchSet.IsReleased && !secondSet.IsReleased, "despawn releases only that kitten's centrally owned paint");
-        Require(submod.Spawner.Despawn(batch[1].Id) && secondSet.IsReleased, "a second kitten releases its own independent set");
-
-        Trace.Events.Clear();
-        boarded.IsDisposed = true; // destroyed by the game, e.g. it boarded a vessel
-        Require(submod.Spawner.Despawn(boarded.Id) && Trace.Events.SequenceEqual(new[] { "release paint " + boardedSet.Id }) && boardedSet.IsReleased
-            && submod.Registry.Get(boarded.Id) == null, "a kitten the game destroyed is not torn down twice, but its slots are freed");
-
-        Trace.Events.Clear();
-        Require(submod.Spawner.Despawn(rocket.Id) && !rocket.IsDisposed && Trace.Events.Count == 0,
-            "a non-kitten vehicle with a registered name is never destroyed");
-
-        var orphan = new KittenEva("Kitten_doh_10");
-        var stubborn = new KittenEva("Kitten_doh_11");
-        Universe.CurrentSystem!.All.UnsafeAsList().AddRange(new[] { orphan, stubborn });
-        KittenSpawner.RemoveOrphanedKitten(Universe.CurrentSystem, orphan.Id);
-        Require(orphan.IsDisposed && !Universe.CurrentSystem.All.TryGet(orphan.Id, out _)
-            && Trace.Events.Contains("destroy Kitten_doh_10 Boarded"), "a half-built kitten is removed through the game teardown");
-        Universe.FailDestroy = true;
-        KittenSpawner.RemoveOrphanedKitten(Universe.CurrentSystem, stubborn.Id);
-        Universe.FailDestroy = false;
-        Require(!Universe.CurrentSystem.All.TryGet(stubborn.Id, out _), "a half-built kitten is deregistered even when the teardown throws");
+        Console.WriteLine($"PASS: {_checks} DOH naming, save/restore, migration and native kill checks.");
     }
 
     private static KittenEva[] Kittens(params string[] ids) => ids.Select(id => new KittenEva(id)).ToArray();

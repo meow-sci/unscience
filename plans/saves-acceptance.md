@@ -25,12 +25,16 @@ board/delete; repeatedly save/load and confirm resource recovery and late-shutdo
 
 ## 5801 despawn/shutdown follow-up
 
-No save IDs/versions change. DOH transient removals queue at the physics handoff; reset/rebind
-invalidates captured registrations, protecting same-name kittens after a load. Explicit saved Offset
+No save IDs/versions change. DOH transient Smite actions now use KSA's native kill-input queue,
+before render-list refresh, retaining exact old objects rather than resolving same-name restored
+kittens. Capture before dispatch includes the kitten; after native death it is omitted. Private
+War Paint slots release post-death while reusable preset files remain. Native acceptance must repeat
+the two-kitten/survivor case, controlled kitten, Smite All and save/load around dispatch.
+[Native kill follow-up](DOH_NATIVE_KILL_5801.md). Explicit saved Offset
 values stay unchanged; fresh/vanilla/missing-offset defaults are (1, 1, -2) m. Graffiti scene reset
 shares ownership-aware cleanup with Dispose, retaining existing decal capture/replay. Shutdown callback
 and device guards are transient lifecycle state. Production-adapter default/legacy/explicit-offset
-checks and queued stale-world cases pass. Native scene-load/exit/resource acceptance remains open:
+checks and native-input stale-world cases pass. Native scene-load/exit/resource acceptance remains open:
 [follow-up evidence](DOH_DESPAWN_5801_FOLLOWUP.md).
 
 ## KSA 5801 upgrade acceptance
