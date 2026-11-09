@@ -440,7 +440,8 @@ creation rollback and real-adapter replay/retention. See its [README](doh.tests/
 ### [war-paint](war-paint) / [war-paint.lib](war-paint.lib)
 Preset-based coloring for all live EVA kittens: full-width filterable combo, name/confirmation
 modals, multi-kitten checkbox application, dirty-only Save Changes, non-collapsible Preset Colors
-and Live War Paint sections, RGB whole-material action, and compact material swatches. Width-aware
+and Live War Paint sections, RGBA whole-material action, and compact material swatches. Both color
+pickers expose alpha inputs/sliders and half-transparent previews. Width-aware
 action tables wrap in narrow panels. Dialogs enforce 20 px outer padding; the kitten picker is
 660 px wide and at least 400 px tall with a filling table; delete confirmation is 880 px wide.
 The material viewport is at least 40% taller with a blank swatch header and no reset-button tooltip.

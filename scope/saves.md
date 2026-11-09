@@ -19,8 +19,9 @@ legacy repair, failure retention and native-owned end/death transitions. [Native
 ## War Paint scene ownership and legacy migration
 
 `war-paint` v1/order85 captures active per-kitten tint/material recipes by exact vehicle ID plus
-character identity and an additive optional `PresetName`. Effective colors include live previews;
-replay does not overwrite existing global recipes. Earlier nameless records import named presets;
+character identity and an additive optional `PresetName`. Effective colors include live previews.
+Both color pickers edit alpha through the existing `float4.W` preset/scene fields, with no schema
+change. Replay does not overwrite existing global recipes. Earlier nameless records import named presets;
 missing global entries recover from their scene snapshot, so older saves may recover deleted presets. Reset restores original bindings synchronously and detaches only owned material
 sets; replay reuses exact surviving native assets or allocates new private sets. Unused detached sets
 retire after reconstruction. Native kittens/vehicles remain KSA-owned. Missing/ambiguous/incompatible

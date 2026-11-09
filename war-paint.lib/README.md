@@ -10,8 +10,9 @@ crew and DOH spawns, has a named preset assignment and independent private GPU m
    Create enables as you type a valid name, and Enter remains a submission shortcut. Choose **(None)**
    in the combo to clear selection and discard unsaved previews without removing kitten assignments.
 2. **Preset Colors** is a line header. Its controls stay disabled until a preset is selected.
-   Pick an RGB color, then press **Apply to All Materials** to replace the preset's colors.
-   Filter the material table and click a swatch to edit just that material. Materials are discovered
+   Pick an RGBA color, then press **Apply to All Materials** to replace the preset's colors.
+   Filter the material table and click a swatch to edit just that material. Both pickers expose alpha
+   inputs and an alpha slider, with half-transparent swatch previews. Materials are discovered
    from live EVA kittens without painting or allocating GPU slots. Partial results retry every half
    second, including while paused. Discovery retries native bridge initialization and merges late
    body/attachment materials without replacing edits. Tint-only presets remain usable when no
@@ -19,7 +20,7 @@ crew and DOH spawns, has a named preset assignment and independent private GPU m
 3. Edits immediately preview on every kitten assigned to that preset. **Save Changes** enables only
    when the recipe differs from its saved colors and commits the global preset. Selecting another
    preset or creating a new one discards unsaved previews and restores the previous saved colors.
-   Changing the RGB brush alone does not change the preset until **Apply to All Materials** is used.
+   Changing the RGBA brush alone does not change the preset until **Apply to All Materials** is used.
 4. **Apply to Kittens** opens a checkbox/name table. Select one or more live kittens and use **Apply**;
    **Cancel** changes nothing. Apply uses the current draft, including unsaved colors. Failed targets
    stay selected with an error for retry; successful targets are removed from the selection.
@@ -61,8 +62,9 @@ recipes remain accepted.
 
 The unchanged `war-paint` v1/order85 scene participant adds an optional `PresetName` to each existing
 vehicle/character/recipe record. Effective live colors, including unsaved previews, remain scene
-state. Replay preserves those colors without overwriting an existing global preset. Missing global
-entries are recovered from the scene snapshot; earlier nameless v1 and DOH/Humble recipes import
+state. Alpha uses the existing RGBA recipe fields in presets and scenes. Replay preserves those
+colors without overwriting an existing global preset. Missing global entries are recovered from
+the scene snapshot; earlier nameless v1 and DOH/Humble recipes import
 named presets. Consequently an older save can recover a preset deleted after that save was written.
 Malformed/unresolved records warn and retain their original payload. Repeated reconstruction reuses
 only exact surviving owned assets and clears stale bindings. Vanilla/new scenes remove assignments.

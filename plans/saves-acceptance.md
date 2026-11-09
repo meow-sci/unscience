@@ -32,6 +32,8 @@ minimum picker dimensions and live name/filter buffer refresh are presentation-o
 scene/global preset payloads and ownership are unchanged. Incremental discovery only extends the
 draft/baseline with default role colors; it never writes the preset library automatically. None
 deselection discards unsaved preview and clears transient editor state while preserving assignments.
+RGBA picker edits use existing recipe fields. Native acceptance includes alpha-only changes from
+both apply-all and per-material pickers surviving preset Save/restart and scene save/load.
 
 Production service/preset/adapter checks cover independent edits, Unset ordering, detached snapshots,
 restart persistence, portable material roles, legacy imports, repeated/vanilla loads and invalid or

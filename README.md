@@ -23,6 +23,7 @@ are repaired on restore and while live. [Native roster integration](plans/DOH_RO
 
 **War Paint** is the central kitten coloring submod. Create/select a named preset, preview its
 material colors on all assigned kittens, save changes, and apply it to multiple EVA kittens.
+The apply-all and per-material color pickers both support alpha editing and previews.
 Confirmed preset deletion removes matching paint; red X buttons restore individual kittens.
 Presets persist across scenes/restarts; DOH assigns them when spawning. Dialogs have explicit
 padding and live name validation; the multi-kitten picker and material table are larger. Partial

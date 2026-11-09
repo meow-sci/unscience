@@ -4,7 +4,7 @@
 > See [distribution](../README.md#distribution).
 
 The standalone StarMap host for [war-paint.lib](../war-paint.lib/README.md). Press F11 to open the
-preset editor: filter/select or create a preset, preview material colors, save changes, and apply
+preset editor: filter/select or create a preset, preview RGBA material colors, save changes, and apply
 to multiple EVA kittens. Live assignments have red X removal buttons; preset deletion confirms and
 removes all matching assignments. DOH uses the same global library and named assignments.
 

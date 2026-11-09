@@ -52,8 +52,10 @@ pending on the game host; this macOS workspace cannot run KSA/Vulkan.
   discovery completes; its draft color and dirty state must survive, with no duplicate rows.
 - [ ] Confirm the taller material table fits the normal full set without scrolling, has a blank
   swatch header, and that red X removal buttons have no tooltip.
-- [ ] Edit a swatch; Save Changes enables. Restore its saved color; Save disables. Change RGB and
-  click Apply to All Materials; every material matches. Restart after Save to verify persistence.
+- [ ] Edit a swatch, including alpha only; Save Changes enables. Restore its saved color; Save
+  disables. Both pickers show an alpha input/slider and half-transparent swatch preview. Change
+  RGBA and click Apply to All Materials; every material matches. Check all four inline inputs at
+  narrow widths. Restart after Save and save/load a scene to verify alpha persistence.
 - [ ] Apply one preset to several native and DOH EVA kittens. Unselected kittens remain unchanged.
   Verify Apply stays disabled with no checkmarks, Cancel does nothing, errors remain retryable,
   and each kitten appears once in Live War Paint with the correct preset name.

@@ -36,6 +36,8 @@ confirmation is 880 px wide. Partial catalogs now retry every 500 ms (wall time)
 rows/baselines and resolving missing body/attachment names after early CatFur-only detection.
 The native bridge initialization is retried too; known roles skip asset-name lookups. The material table is at least 40% taller with a blank swatch
 header; reset buttons have no tooltip. None deselection discards previews, preserving assignments.
+Apply-all and per-material `ColorEdit4` controls enable `AlphaBar` and `AlphaPreviewHalf`; the
+whole-material row reserves four-channel input width. Existing `float4` recipes and GPU writes retain alpha.
 No new Harmony/shader/ABI coupling. [Editor acceptance](../plans/WAR_PAINT_PRESET_EDITOR.md).
 
 War Paint is the sole owner of kitten color state. `WarPaintSubmod` is registered by Unscience;

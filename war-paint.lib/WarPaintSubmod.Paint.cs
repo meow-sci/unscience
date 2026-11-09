@@ -12,8 +12,8 @@ public sealed partial class WarPaintSubmod
         ImGui.BeginDisabled(_editor.SelectedName == null);
         float width = ImGui.GetContentRegionAvail().X;
         float buttonWidth = ImGui.CalcTextSize(" Apply to All Materials "u8).X + ImGui.GetStyle().FramePadding.X * 2;
-        // Keep RGB inputs usable when the host window is narrow; let the action wrap below.
-        float colorWidth = ImGui.GetFontSize() * 15f;
+        // Keep RGBA inputs usable when the host window is narrow; let the action wrap below.
+        float colorWidth = ImGui.GetFontSize() * 20f;
         bool split = width >= buttonWidth + colorWidth + 24f;
         ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new float2(6f, 6f));
         if (ImGui.BeginTable("##wp_brush"u8, split ? 2 : 1, ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.NoPadOuterX))
@@ -26,7 +26,8 @@ public sealed partial class WarPaintSubmod
             ImGui.TableNextColumn();
             ImGui.SetNextItemWidth(-1f);
             ImGui.ColorEdit4("##wp_brush_color"u8, ref _brushColor,
-                ImGuiColorEditFlags.NoLabel | ImGuiColorEditFlags.NoAlpha | ImGuiColorEditFlags.Uint8 | ImGuiColorEditFlags.DisplayRGB);
+                ImGuiColorEditFlags.NoLabel | ImGuiColorEditFlags.AlphaBar | ImGuiColorEditFlags.AlphaPreviewHalf
+                | ImGuiColorEditFlags.Uint8 | ImGuiColorEditFlags.DisplayRGB);
             ImGui.TableNextColumn();
             if (ImGui.Button(" Apply to All Materials ##wp"u8, new float2(-1, 0)))
             {
@@ -71,7 +72,8 @@ public sealed partial class WarPaintSubmod
                 ImGui.TableNextColumn();
                 var color = material.Color;
                 if (ImGui.ColorEdit4("##wp_color"u8, ref color,
-                    ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.NoLabel | ImGuiColorEditFlags.NoAlpha))
+                    ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.NoLabel
+                    | ImGuiColorEditFlags.AlphaBar | ImGuiColorEditFlags.AlphaPreviewHalf))
                 {
                     material.Color = color;
                     PreviewChanges();
