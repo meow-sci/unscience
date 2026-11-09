@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Collections.Generic;
 using HarmonyLib;
 using KSA;
 
@@ -15,16 +16,16 @@ namespace MeowSci.KittenAnimationsLib;
 /// only one that survives grounded locomotion (idle/walk/run/jump/tumble/ladder/swim) — those modes
 /// call SetAnimation unconditionally, so anything set from a StarMap callback is discarded.
 ///
-/// The prefix runs for every AnimatedRenderable in the scene; the driver filters by reference to the
-/// kitten body model and returns immediately for anything else.
+/// The prefix runs for every AnimatedRenderable in the scene; the registry filters by reference to each
+/// registered kitten body model and returns immediately for anything else.
 /// </remarks>
 public static class KittenAnimationPatches
 {
     private static MethodInfo? _updateAnimation;
     private static MethodInfo? _prefix;
 
-    /// <summary>The driver the prefix feeds. Set by the submod before patching.</summary>
-    public static KittenAnimationDriver? Driver { get; set; }
+    /// <summary>Live body models and their independent drivers. Owned by the submod.</summary>
+    public static IReadOnlyDictionary<AnimatedRenderable, KittenAnimationDriver>? Drivers { get; set; }
 
     public static void Apply(Harmony harmony)
     {
@@ -48,13 +49,14 @@ public static class KittenAnimationPatches
 
         _updateAnimation = null;
         _prefix = null;
-        Driver = null;
+        Drivers = null;
 
         Console.WriteLine("kitten-animations.lib: patches removed");
     }
 
     private static void UpdateAnimationPrefix(AnimatedRenderable __instance, ref double dt)
     {
-        Driver?.ApplyBeforePose(__instance, ref dt);
+        if (Drivers != null && Drivers.TryGetValue(__instance, out var driver))
+            driver.ApplyBeforePose(__instance, ref dt);
     }
 }

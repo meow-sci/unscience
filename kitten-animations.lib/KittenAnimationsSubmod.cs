@@ -16,19 +16,15 @@ public sealed partial class KittenAnimationsSubmod : ISubmod, MeowSci.KsaAbstrac
     public string Name => "Kitten Animations";
     public string Tooltip => "Play any kitten animation, trigger expressions, and tune animation strength.";
 
-    private readonly KittenAnimationDriver _driver = new();
-    private readonly KittenExpressionController _expressions = new();
     private readonly Random _random = new();
     private readonly ImInputString _targetFilter = new(128);
 
     private AnimationUiContext? _context;
-    private KittenEva? _boundKitten;
-    private CharacterAvatar? _boundAvatar;
     private string? _selectedKittenId;
 
     public void Initialize()
     {
-        KittenAnimationPatches.Driver = _driver;
+        KittenAnimationPatches.Drivers = _drivers;
         _originalTuning = SavedAnimationTuning.Capture();
     }
 
@@ -36,25 +32,12 @@ public sealed partial class KittenAnimationsSubmod : ISubmod, MeowSci.KsaAbstrac
     {
         try
         {
-            var kitten = ResolveTargetKitten();
-            var renderable = kitten?.Renderable;
-            var avatar = KittenAvatarAccessor.GetAvatar(renderable);
-
-            if (kitten == null || renderable == null || avatar == null)
-            {
-                Unbind();
-                return;
-            }
-
-            if (!ReferenceEquals(kitten, _boundKitten) || !ReferenceEquals(avatar, _boundAvatar))
-                Bind(kitten, renderable, avatar);
-
-            _expressions.Update(dt);
+            UpdateTargets(dt);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"kitten-animations: Error in Update: {ex.Message}");
-            Unbind();
+            _context = null;
         }
     }
 
@@ -94,49 +77,9 @@ public sealed partial class KittenAnimationsSubmod : ISubmod, MeowSci.KsaAbstrac
 
     public void Dispose()
     {
-        Unbind();
-        _driver.Reset();
-        KittenAnimationPatches.Driver = null;
-    }
-
-    private void Bind(KittenEva kitten, KittenRenderable renderable, CharacterAvatar avatar)
-    {
-        Unbind();
-
-        var catalog = KittenAnimationCatalog.Build(avatar, renderable);
-        var processors = KittenAnimProcessors.Read(renderable);
-
-        _expressions.Attach(avatar);
-
-        _driver.ClearClip();
-        _driver.BindTarget(avatar.Core.CharacterModel, processors);
-
-        _context = new AnimationUiContext
-        {
-            Kitten = kitten,
-            Avatar = avatar,
-            Catalog = catalog,
-            Driver = _driver,
-            Expressions = _expressions,
-            Processors = processors,
-            Random = _random,
-        };
-
-        _boundKitten = kitten;
-        _boundAvatar = avatar;
-
-        if (catalog.UnresolvedFields.Count > 0)
-            Console.WriteLine($"kitten-animations: unresolved game fields: {string.Join(", ", catalog.UnresolvedFields)}");
-    }
-
-    private void Unbind()
-    {
-        _expressions.Detach();
-        _driver.ClearClip();
-        _driver.UnbindTarget();
-        _context = null;
-        _boundKitten = null;
-        _boundAvatar = null;
+        ResetAnimations();
+        if (ReferenceEquals(KittenAnimationPatches.Drivers, _drivers))
+            KittenAnimationPatches.Drivers = null;
     }
 
     private KittenEva? ResolveTargetKitten()
@@ -150,8 +93,9 @@ public sealed partial class KittenAnimationsSubmod : ISubmod, MeowSci.KsaAbstrac
     {
         if (string.Equals(_selectedKittenId, kittenId, StringComparison.Ordinal)) return;
 
-        Unbind();
+        _context = null;
         _selectedKittenId = kittenId;
+        Update(0);
     }
 
     private void RenderNoTargetMessage(

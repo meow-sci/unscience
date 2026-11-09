@@ -15,6 +15,20 @@ public sealed partial class KittenAnimationsSubmod
 
     private static void ValidateAnimations(SavedAnimations saved)
     {
+        ValidateTarget(saved);
+        saved.Tuning?.Validate();
+        if (saved.Kittens == null) return; // Explicit migration of the legacy single-target payload.
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var target in saved.Kittens)
+        {
+            if (target == null || string.IsNullOrWhiteSpace(target.KittenId) || !ids.Add(target.KittenId))
+                throw new InvalidOperationException("Invalid or duplicate saved kitten identity.");
+            ValidateTarget(target);
+        }
+    }
+
+    private static void ValidateTarget(SavedKittenAnimation saved)
+    {
         if (!Enum.IsDefined(saved.LatchedExpression) || saved.ExpressionVariant < -1 || saved.LatchedVariant < -1
             || saved.ClipPhase < 0 || saved.BlendTime < 0 || saved.PlaybackRateScale < 0
             || saved.EaseInDuration < 0 || saved.HoldDuration < 0 || saved.EaseOutDuration < 0
@@ -23,116 +37,75 @@ public sealed partial class KittenAnimationsSubmod
             || saved.EyePitchDeg is < -90 or > 90 || saved.EyeLookAngleDeg is < 0 or > 90
             || (saved.ClipActive && (string.IsNullOrWhiteSpace(saved.ClipSource) || string.IsNullOrWhiteSpace(saved.ClipLabel))))
             throw new InvalidOperationException("Invalid saved kitten animation configuration.");
-        saved.Tuning?.Validate();
     }
 
     private SavedAnimations CaptureAnimations() => new()
     {
-        SelectedKittenId = _selectedKittenId, ExpressionVariant = _context?.ExpressionVariant ?? -1,
-        ClipLabel = _driver.ForcedLabel,
-        ClipActive = _driver.OverrideActive, ClipPaused = _driver.Paused,
-        ClipPhase = KittenPlaybackPhase.Capture(_driver.TargetModel, _driver.ForcedAnimation),
-        LatchedExpression = _expressions.Latch ? _expressions.Current : KittenExpressionController.ExpressionType.None,
-        LatchedVariant = _expressions.CurrentVariantIndex,
-        LatchedClipId = CaptureLatchedClipId(),
-        ClipSource = _context?.Catalog.Groups.SelectMany(g => g.Entries)
-            .FirstOrDefault(e => ReferenceEquals(e.Animation, _driver.ForcedAnimation) && e.Label == _driver.ForcedLabel)?.Source,
+        SelectedKittenId = _selectedKittenId,
         Tuning = SavedAnimationTuning.Capture(),
-        BlendTime = _driver.BlendTime,
-        PlaybackRateScale = _driver.PlaybackRateScale,
-        OverrideEarWeight = _driver.OverrideEarWeight,
-        EarWeight = _driver.EarWeight,
-        OverrideEyeLookAngle = _driver.OverrideEyeLookAngle,
-        EyeLookAngleDeg = _driver.EyeLookAngleDeg,
-        OverrideEyePitch = _driver.OverrideEyePitch,
-        EyePitchDeg = _driver.EyePitchDeg,
-        OverridePersonalityWeight = _driver.OverridePersonalityWeight,
-        PersonalityWeight = _driver.PersonalityWeight,
-        LimitReactiveExpression = _driver.LimitReactiveExpression,
-        ReactiveExpressionMax = _driver.ReactiveExpressionMax,
-        EaseInDuration = _expressions.EaseInDuration,
-        HoldDuration = _expressions.HoldDuration,
-        EaseOutDuration = _expressions.EaseOutDuration,
-        PeakWeight = _expressions.PeakWeight,
-        Latch = _expressions.Latch,
+        Kittens = _targets.OrderBy(p => p.Key, StringComparer.Ordinal)
+            .Select(p => p.Value.Context != null ? CaptureTarget(p.Value.Context)
+                : p.Value.Pending ?? new SavedKittenAnimation { KittenId = p.Key }).ToList(),
     };
 
     private void ResetAnimations()
     {
-        Unbind();
-        _driver.Reset();
+        foreach (var target in _targets.Values) ReleaseTarget(target);
+        _targets.Clear();
+        _drivers.Clear();
+        _context = null;
         _selectedKittenId = null;
         _originalTuning?.Apply();
-        ApplyAnimationSettings(new SavedAnimations());
     }
 
     private void RestoreAnimations(SavedAnimations saved, SaveRestoreContext context)
     {
-        context.Require(!saved.ClipPhase.HasValue || (saved.ClipPhase.Value >= 0 && KittenPlaybackPhase.IsAvailable),
-            "Saved animation phase or native playback fields are unavailable.");
         _selectedKittenId = saved.SelectedKittenId;
         saved.Tuning?.Apply();
-        ApplyAnimationSettings(saved);
+        if (saved.Kittens != null)
+        {
+            foreach (var target in saved.Kittens) RestoreSavedTarget(target.KittenId, target, context);
+        }
+        else
+        {
+            // Old v1 records did not save the actual target in follow-controlled mode.
+            // Resolve that legacy choice once; new records always carry the exact vehicle id.
+            string? id = saved.SelectedKittenId ?? KittenAvatarAccessor.GetControlledKitten()?.Id;
+            if (id != null) RestoreSavedTarget(id, saved, context);
+            else context.Warn("Legacy animation target is unavailable.");
+        }
         Update(0);
-        if (_context != null) _context.ExpressionVariant = saved.ExpressionVariant;
-        if (_context != null && saved.ClipSource != null)
-        {
-            var matches = _context.Catalog.Groups.SelectMany(g => g.Entries)
-                .Where(e => e.Source == saved.ClipSource && e.Label == saved.ClipLabel).ToArray();
-            if (matches.Length == 1) _driver.RestorePlayback(matches[0], saved.ClipActive, saved.ClipPaused, saved.ClipPhase);
-            else context.Warn($"Saved animation clip unavailable or ambiguous: {saved.ClipLabel}.");
-        }
-        if (_context != null && saved.LatchedExpression != KittenExpressionController.ExpressionType.None && saved.Latch)
-        {
-            var variants = KittenExpressionController.GetVariants(_context.Avatar, saved.LatchedExpression);
-            int variantIndex = saved.LatchedClipId == null ? -1
-                : variants?.FindIndex(v => v != null && v.Id.ToString() == saved.LatchedClipId) ?? -1;
-            if (variants == null || variantIndex < 0)
-                context.Warn("Saved latched expression variant is unavailable.");
-            else
-            {
-                _expressions.Trigger(_context.Avatar, saved.LatchedExpression, variantIndex, _random);
-                _expressions.Update(_expressions.EaseInDuration);
-            }
-        }
-        if (_selectedKittenId != null && _context == null)
-            context.Warn($"Animation target '{_selectedKittenId}' is unavailable.");
-        // Unlatched one-shot expressions stay stopped. Forced looping clips/frozen poses
-        // and latched faces are durable scene setup, so they resume on the normal pose pass.
     }
 
-    private string? CaptureLatchedClipId()
+    private void RestoreSavedTarget(string id, SavedKittenAnimation saved, SaveRestoreContext context)
     {
-        if (!_expressions.Latch || _context == null) return null;
-        var variants = KittenExpressionController.GetVariants(_context.Avatar, _expressions.Current);
-        int index = _expressions.CurrentVariantIndex;
-        return variants != null && index >= 0 && index < variants.Count ? variants[index]?.Id.ToString() : null;
+        var kitten = KittenAvatarAccessor.FindKitten(id);
+        var avatar = KittenAvatarAccessor.GetAvatar(kitten?.Renderable);
+        var target = new Target();
+        _targets.Add(id, target);
+        if (kitten == null || avatar == null)
+        {
+            // Retain detached intent for a later exact-id rebind. Never use the active vehicle.
+            saved.KittenId = id;
+            target.Pending = saved;
+            context.Warn($"Animation target '{id}' is unavailable or ambiguous.");
+            return;
+        }
+        BindTarget(target, kitten, avatar);
+        RestoreTarget(saved, target.Context!, context);
     }
 
-    private void ApplyAnimationSettings(SavedAnimations saved)
-    {
-        _driver.BlendTime = saved.BlendTime;
-        _driver.PlaybackRateScale = saved.PlaybackRateScale;
-        _driver.OverrideEarWeight = saved.OverrideEarWeight;
-        _driver.EarWeight = saved.EarWeight;
-        _driver.OverrideEyeLookAngle = saved.OverrideEyeLookAngle;
-        _driver.EyeLookAngleDeg = saved.EyeLookAngleDeg;
-        _driver.OverrideEyePitch = saved.OverrideEyePitch;
-        _driver.EyePitchDeg = saved.EyePitchDeg;
-        _driver.OverridePersonalityWeight = saved.OverridePersonalityWeight;
-        _driver.PersonalityWeight = saved.PersonalityWeight;
-        _driver.LimitReactiveExpression = saved.LimitReactiveExpression;
-        _driver.ReactiveExpressionMax = saved.ReactiveExpressionMax;
-        _expressions.EaseInDuration = saved.EaseInDuration;
-        _expressions.HoldDuration = saved.HoldDuration;
-        _expressions.EaseOutDuration = saved.EaseOutDuration;
-        _expressions.PeakWeight = saved.PeakWeight;
-        _expressions.Latch = saved.Latch;
-    }
-
-    public sealed class SavedAnimations
+    public sealed class SavedAnimations : SavedKittenAnimation
     {
         public string? SelectedKittenId { get; set; }
+        public SavedAnimationTuning? Tuning { get; set; }
+        // Missing/null means a legacy single-target v1 record; an empty list explicitly means none.
+        public List<SavedKittenAnimation>? Kittens { get; set; }
+    }
+
+    public class SavedKittenAnimation
+    {
+        public string KittenId { get; set; } = "";
         public string? ClipLabel { get; set; }
         public string? ClipSource { get; set; }
         public bool ClipActive { get; set; }
@@ -142,7 +115,6 @@ public sealed partial class KittenAnimationsSubmod
         public int LatchedVariant { get; set; } = -1;
         public string? LatchedClipId { get; set; }
         public int ExpressionVariant { get; set; } = -1;
-        public SavedAnimationTuning? Tuning { get; set; }
         public float BlendTime { get; set; } = 0.15f;
         public float PlaybackRateScale { get; set; } = 1f;
         public bool OverrideEarWeight { get; set; }

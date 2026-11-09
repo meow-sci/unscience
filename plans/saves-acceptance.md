@@ -1,5 +1,17 @@
 # Scene save implementation coverage and native acceptance
 
+## Kitten animation hold follow-up (5801 port)
+
+Per-kitten drivers/expressions survive control/camera/selection changes. The existing v1 record saves
+all targets with exact IDs and explicitly migrates legacy single-target records. Production lifecycle,
+pose dispatch and real save-adapter JSON tests in `kitten-animations.tests` cover multi-target holds,
+reset/reconstruction/repeated loads, missing/disposed/ambiguous targets, avatar replacement, phase
+retention before first visible render, legacy payloads, invalid data and vanilla/unload cleanup.
+Ported from `feature/animation-stickyness` commit `7f77908` onto the KSA **2026.11.10.5801** upgrade.
+The current sources still select locomotion/condition state before the `AnimatedRenderable.UpdateAnimation`
+pose hook; native animation culling and per-viewport/frame guards remain game-owned.
+Native rendering/culling and actual KSA save/load acceptance remain pending.
+
 ## DOH native roster integration
 
 Every successful spawn now has a native roster record and active EVA mission. Crew health, dose,
@@ -200,7 +212,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [Iron Man](../iron-man.lib/IronManSubmod.Saves.cs) | Configured kittens, enabled mode, original EVA/control settings needed to disable the mode, current flight-computer preferences. | Mode restores with engines **disarmed**. Existing connectors are configured/reused through the normal code path. Runtime thrust/burn continuation is not promised; the player deliberately arms engines again. Custom anchors use a native Components envelope since 5801 (legacy Id markers migrate); the unchanged v1 payload is decoded at the private 11-argument Part constructor before index reconstruction. |
 | [It's So Shiny](../its-so-shiny.lib/ItsSoShinySubmod.Persistence.cs) | Existing host/light cell addresses, grid ownership/appearance, sparse mask, render flag, scroll recipe/offset and pending deletion. | Rebinds native cells without spawning or forcing ignition/switch state; scrolling resumes. Pending deletion restarts its delay. Shared light-template appearance retains the feature's existing shared-template semantics, with Zippo's template ledger restoring originals. |
 | [Kitchen Sink](../kitchen-sink.lib/KitchenSinkSubmod.Saves.cs) | Independent IVA visibility, capsule-glass experiment toggle, G-load target IDs, unlocked IVA camera/speed/exact seat/body pose in four separate v1 records. | Releases original-world controller/input before reconstruction; exact vehicle/part/seat replay requires matching native camera mode/follow. Missing/ambiguous/invalid targets and unavailable patches report and retain state. Absent legacy camera record resets to locked/default speed. Capsule glass reset releases its global interior requirement, with exact static-model filtering re-enabled on replay; absent records leave it off. Picker, held input, render/template caches and smoothing are transient. |
-| [Kitten Animations](../kitten-animations.lib/KittenAnimationsSubmod.Persistence.cs) | Selected kitten; forced clip by source/label, active/paused state and native clip phase; driver controls/global tuning; expression settings and latched expression clip identity. | Forced looping clips and frozen poses resume, and latched expressions return at their held weight. Unlatched one-shot expressions stay stopped; intermediate expression easing is not checkpointed. Missing/ambiguous clip identity or unavailable native phase fields warn/fail the block. |
+| [Kitten Animations](../kitten-animations.lib/KittenAnimationsSubmod.Persistence.cs) | Every registered kitten by exact vessel ID; per-kitten forced clip/source/label, active/paused state/phase, driver controls and latched expression identity/settings; scene-level panel selection/global tuning. | All targets restore independently of control/camera; legacy single-target v1 fields explicitly migrate when the added Kittens array is absent. Forced clips/frozen poses resume, and latched expressions return at held weight. Unlatched one-shot expressions stay stopped; intermediate expression easing is not checkpointed. Missing/ambiguous clip identity or unavailable native phase fields warn/fail the block. |
 | [Kiwi's Marbles](../kiwis-marbles.lib/KiwisMarblesSubmod.Persistence.cs) | Celestial source/vehicle-or-celestial target/offset and original orbital parent, epoch and state vectors. | Restores ordered welds and their future Unweld baseline. Non-vehicle targets resolve by exact id among the offered orbiters, so orbiting stars restore (5638). Cycles through both target dependencies and actual parent ancestry are rejected. This is a weld/orbit recipe, not all possible arbitrary celestial-system mutations. KSA 5707: Pluto is now tilted 113° (rev 5649), so 5638-era offsets for welds whose target is under Pluto point a different world direction; payload unchanged, no migration. |
 | Parts Now (**removed @5638**) | Nothing; legacy sidecars may still hold a `parts-now` v1 dependency record. | No participant owns the id: the coordinator reports `parts-now: unsupported feature/version 1`, retains the record and writes it back unchanged; the native load and every other feature proceed. Pinned by `saves.tests` `RetiredFeatureTests`. |
 | [Pebbles](../pebbles.lib/PebblesSubmod.Saves.cs) | Applied per-body clutter recipes, including their imported mesh identities/settings (`pebbles`); removed/displaced clutter on non-stock-spacing grids (`pebbles.clutter-state`, v1, order 61, new @5482). | Recreates applied fields and releases old import ownership. Stock-spacing removed/displaced clutter is saved natively by KSA 5482; Pebbles keeps those native entries stock-grid and restores override grids after recipes (native state wins). Workshop previews and unapplied recipe edits are not captured; pending unsynced hits are lost as natively. A missing record (vanilla/older saves) restores recipes and stock state only. Imported GLB assets remain required; changed content hashes reject the saved selection. KSA 5707 adds an optional recipe `UsesCustomNormals` flag; absent (older records) inherits the stock material's value, so record ids/versions are unchanged. |
@@ -451,8 +463,14 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
   continuation to an uninterrupted run through queue promotion; confirm elapsed offline time has no effect.
 - [ ] Save paused/running Disco lights with randomized color/movement and actuator control. Compare phase,
   switches and colors, then Stop and check original light/actuator values. Test an ownership conflict.
-- [ ] Save forced looping kitten motion, frozen pose and latched expression. Verify phase/pose, held facial
-  variant and tuning after reload. Verify an unlatched one-shot expression stays stopped.
+- [ ] Hold distinct body clips/frozen poses and latched faces on two EVA kittens in follow-controlled
+  mode. Switch between them and a rocket, move the camera away/back, hide the toolbox, then edit one
+  through the explicit picker. Both holds persist; clearing/disabling one leaves the other intact.
+- [ ] Save those two kittens while controlling a rocket; reload twice and A→B→A. Verify exact target
+  IDs, phase/pose, held facial variant, per-kitten strength and global tuning. Re-save before either
+  kitten becomes visible. Load a legacy single-target record and a vanilla/new scene; no stale holds
+  remain. Missing/destroyed targets warn without redirecting; exact-ID return rebinds. Unlatched
+  one-shot expressions stay stopped on load. Native culling need not animate an invisible body.
 - [ ] Save camera sequences including parallel groups and unfinished group recipes. They must restore
   stopped and remain editable/playable; verify native camera pose and return-to-start behavior.
 - [ ] Save audio during a track and repeat gap. Reload must be silent/paused; Resume starts at the beginning

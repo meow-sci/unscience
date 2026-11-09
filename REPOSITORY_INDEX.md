@@ -349,6 +349,7 @@ Light-part pixel grid builder. Builds Blinky-style NxM grids using KSA's built-i
 ### [kitten-animations](kitten-animations) / [kitten-animations.lib](kitten-animations.lib)
 Kitten avatar animation controller. Plays every animation the game has loaded for a selected live EVA kitten, triggers facial expressions, and exposes the blend weights and locomotion tuning that decide how hard each animation lands.
 - Filterable target dropdown: follow the controlled kitten automatically or pin the panel to any live EVA kitten by stable vehicle id without changing game control
+- Independent holds/settings per exact kitten vessel id: camera/control/selection changes preserve body clips, frozen poses, expressions and strength; scene saves restore all targets (legacy single-target records migrate)
 - Full ground/EVA locomotion set: idle, walk, run, jump, jump land, tumble/flail, ladder, moon walk, moon run, swim, swim idle, seated idle + seated idle actions
 - Full MMU set: idle default, idle actions, six directional loops, arm retract
 - Live blend samplers (walk/moonwalk, run/moonrun, swim pair, MMU directional) and overlay poses (blink, ear/helmet mask)
@@ -357,7 +358,12 @@ Kitten avatar animation controller. Plays every animation the game has loaded fo
 - Animation strength knobs: ear motion weight, eye look angle, eye pitch offset, personality mood-face weight, reactive-face cap
 - Animation-facing slice of `KittenLocomotionTuning.Current` (blend time, playback-rate clamps, nominal clip speeds, moonwalk/swim ramps, jump-land timing) with a scoped reset
 - Live readout: locomotion mode, control mode, ground speed, gravity, jump-chain stage, game playback rate, blend weights
-- **kitten-animations.lib**: `KittenAnimationsSubmod` (ISubmod — resolves and binds the selected kitten), `KittenAnimationCatalog` (discovers every loaded clip; ground set lives in private `KittenRenderable` fields), `KittenAnimProcessors` (typed handles on the game's four anim processors), `KittenExpressionController` (mod-owned `CatExpressionAnim` + envelope), `KittenAnimationDriver` (target ownership + override state applied from the pose prefix), `KittenAnimationPatches` (Harmony), `KittenAvatarAccessor` (live-kitten discovery/renderable/avatar access), `Ui/` (Target, Playback, AnimationLibrary, Expression, Strength, Tuning sections)
+- **kitten-animations.lib**: `KittenAnimationsSubmod` (ISubmod — per-kitten registry and all-target scene saves; selector chooses the editing target), `KittenAnimationCatalog` (discovers every loaded clip; ground set lives in private `KittenRenderable` fields), `KittenAnimProcessors` (typed handles on the game's four anim processors), `KittenExpressionController` (mod-owned `CatExpressionAnim` + envelope), `KittenAnimationDriver` (target ownership + override state applied from the pose prefix), `KittenAnimationPatches` (Harmony), `KittenAvatarAccessor` (live-kitten discovery/renderable/avatar access), `Ui/` (Target, Playback, AnimationLibrary, Expression, Strength, Tuning sections)
+
+### [kitten-animations.tests](kitten-animations.tests)
+Managed checks of production per-kitten ownership, background pose dispatch, expression holds,
+real save-adapter multi-target round trips, repeated/reset/rebind behavior, legacy migration,
+missing/ambiguous IDs and malformed payloads. Native render/catalog/UI seams are fixtures.
 
 ### [byo-music](byo-music) / [byo-music.lib](byo-music.lib)
 

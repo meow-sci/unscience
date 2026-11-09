@@ -1,5 +1,11 @@
 # Unscience — Full Game-Integration Scope
 
+Kitten Animations retains per-kitten holds across camera/control switches and saves all targets by
+exact vehicle ID; legacy records migrate. Ported from `feature/animation-stickyness` to KSA 5801;
+native multi-kitten rendering and save/load acceptance remain pending. See
+[character/materials](character-and-materials.md#kitten-animations) and
+[save ownership](saves.md#kitten-animation-holds).
+
 **War Paint** uses a preset editor with live previews across named kitten assignments, multi-target
 application, dirty-only saving and confirmed deletion/unpainting. Width-aware tables follow the
 ImGui design conventions, with padded/enlarged dialogs, taller materials, live text validation and

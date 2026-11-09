@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><RequiresKSAAssemblies>false</RequiresKSAAssemblies></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <Compile Include="../kitten-animations.lib/KittenAnimationsSubmod.cs" Link="KittenAnimationsSubmod.cs" />
+    <Compile Include="../kitten-animations.lib/KittenAnimationsSubmod.Targets.cs" Link="KittenAnimationsSubmod.Targets.cs" />
+    <Compile Include="../kitten-animations.lib/KittenAnimationsSubmod.Persistence.cs" Link="KittenAnimationsSubmod.Persistence.cs" />
+    <Compile Include="../kitten-animations.lib/KittenAnimationsSubmod.TargetPersistence.cs" Link="KittenAnimationsSubmod.TargetPersistence.cs" />
+    <Compile Include="../kitten-animations.lib/KittenAnimationDriver.cs" Link="KittenAnimationDriver.cs" />
+    <Compile Include="../kitten-animations.lib/KittenAnimationPatches.cs" Link="KittenAnimationPatches.cs" />
+    <Compile Include="../kitten-animations.lib/KittenExpressionController.cs" Link="KittenExpressionController.cs" />
+    <Compile Include="../kitten-animations.lib/KittenAvatarAccessor.cs" Link="KittenAvatarAccessor.cs" />
+    <Compile Include="../kitten-animations.lib/KittenAnimProcessors.cs" Link="KittenAnimProcessors.cs" />
+    <Compile Include="../kitten-animations.lib/KittenPlaybackPhase.cs" Link="KittenPlaybackPhase.cs" />
+    <Compile Include="../kitten-animations.lib/SavedAnimationTuning.cs" Link="SavedAnimationTuning.cs" />
+    <Compile Include="../kitten-animations.lib/Ui/AnimationUiContext.cs" Link="Ui/AnimationUiContext.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/ISaveParticipant.cs" Link="ISaveParticipant.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveJson.cs" Link="SaveJson.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/FiniteNumberConverters.cs" Link="FiniteNumberConverters.cs" />
+    <Compile Include="../ksa-abstractions.lib/VehicleProvider.cs" Link="VehicleProvider.cs" />
+  </ItemGroup>
+</Project>

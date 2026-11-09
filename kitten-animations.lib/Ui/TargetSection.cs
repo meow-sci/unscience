@@ -85,7 +85,8 @@ public static class TargetSection
                 ImGui.EndCombo();
             }
             ImGui.SetItemTooltip("Follow the controlled EVA kitten automatically, or pin this panel to any live EVA kitten.\n"
-                               + "Selecting a kitten does not change vehicle control or move the camera.");
+                               + "Selecting a kitten does not change vehicle control or move the camera.\n"
+                               + "Each kitten keeps its holds until you clear or disable them.");
 
             ImGui.EndTable();
         }

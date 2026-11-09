@@ -645,26 +645,28 @@ controlled kitten by default or pins the panel to any current-system `KittenEva`
 selection never changes game control.
 
 **Unscience integration** — `KittenAnimationsSubmod : ISubmod`
-(`kitten-animations.lib/KittenAnimationsSubmod.cs`) resolves and binds the selected `KittenEva` and owns a
-`KittenAnimationCatalog`, a `KittenAnimProcessors`, a `KittenExpressionController` and a
-`KittenAnimationDriver`. `Update(dt)` (from `[StarMapBeforeGui]`) rebinds on kitten/avatar change and
-advances the expression envelope. Explicit targets survive control changes; missing targets unbind
-without fallback and rebind if the same id returns. Driver bind/unbind snapshots and restores the
-persistent ear, eye-angle and personality values that the mod actually changed.
+(`kitten-animations.lib/KittenAnimationsSubmod{,.Targets}.cs`) retains one context/driver/expression
+controller per exact `Vehicle.Id`; selection only chooses the editing context. `Update(dt)` advances
+all registered expressions and rebinds missing/replaced avatars through `VehicleProvider.FindVehicle`
+(ambiguity-safe). Changing control/camera/selection leaves all earlier overrides active. Missing or
+disposed targets release native references but retain detached durable intent for exact-id return.
+Driver cleanup restores persistent ear, eye-angle and personality baselines on reset/unload/rebind.
 
 **Harmony (new this pass)** — one prefix on `AnimatedRenderable.UpdateAnimation(double dt)`
 (`KittenAnimationPatches`). Applied from `kitten-animations/Patcher.cs` standalone and from
 `unscience/Patcher.cs` (`TryApply("kitten-animations", …)`) when embedded. Required because
 `KittenRenderable.UpdateRenderData` calls `SetAnimation` unconditionally for nearly every locomotion
 mode, so a clip set from a StarMap callback is discarded before it is sampled. The prefix runs for
-every `AnimatedRenderable` in the scene and returns immediately unless the instance is the kitten body
-model; it also re-applies processor knobs the game rewrites per frame and can scale `dt`.
+every `AnimatedRenderable` in the scene and uses a model-reference dictionary to dispatch to the
+matching registered kitten, including uncontrolled targets. It also re-applies processor knobs the
+game rewrites per frame and can scale `dt`. Native visibility/animation LOD remains authoritative.
 
 **UI / hotkeys** — Standalone **F11** window (`kitten-animations/Mod.cs`); embedded in unscience.
 Sections: filterable Target Kitten selector, Playback, Animations, Expressions, Animation Strength,
 Locomotion Anim Tuning.
 
-**Persistence** — None.
+**Persistence** — Existing `kitten-animations` v1 record now explicitly migrates legacy single-target
+fields to a `Kittens` array; all targets retain clip/phase, settings and latched faces. See [saves](saves.md#kitten-animation-holds).
 
 ### Integration points
 
@@ -708,10 +710,12 @@ Locomotion Anim Tuning.
   `Program.VehiclesInFrame` and calls its `KittenRenderable.UpdateRenderData`, so the existing
   model-identity-filtered `AnimatedRenderable.UpdateAnimation` prefix works unchanged for an
   uncontrolled target. Seated IVA crew are separate renderables and remain out of scope.
-- ✅ **Target changes release target-owned state.** A forced clip/expression is cleared, the mod-owned
-  expression processor is detached, and persistent ear/eye-angle/personality values are restored on
-  the previous target. Reactive face and eye pitch remain game-driven and are rewritten before the
-  prefix each render. No new Harmony, reflection, shader or asset surface was added.
+- ✅ **Target changes preserve target-owned holds.** Independent controllers remain registered until
+  explicitly cleared/disabled. Only unavailable/replaced targets, scene reset and unload detach
+  processors and restore baselines. Detached durable settings rebind on exact-id return.
+  The existing pose prefix now dispatches by model reference across all targets; no new Harmony,
+  reflection, shader or asset surface was added. Managed ownership/save regressions are in
+  `kitten-animations.tests`; native multi-kitten rendering/culling acceptance remains pending.
 
 ### Update-risk findings (5348, rework pass)
 
@@ -727,8 +731,8 @@ Locomotion Anim Tuning.
   — i.e. always the same expression. **Fixed** by giving the mod its own `CatExpressionAnim` appended
   to `AnimProcessors`; the reactive processor is now only *capped*, never written.
 - ⚠️ **New Harmony surface in this area.** `AnimatedRenderable.UpdateAnimation` is now patched. It is
-  a hot path (called for every animated renderable per frame) — the prefix must stay a reference
-  compare plus an early return, and must never throw. Any future rename/resignature of
+  a hot path (called for every animated renderable per frame) — the prefix must stay a model-reference
+  lookup plus an early return, and must never throw. Any future rename/resignature of
   `UpdateAnimation` breaks the entire override feature (loud: `MissingMethodException` at `Apply`).
 - ⚠️ **The ground animation set is reflection-only.** Twelve `AnimationAssetRef` fields plus one list
   and four samplers on `KittenRenderable` are read by name. A rename fails **silently per field** — the
@@ -906,7 +910,8 @@ uploads update shared color tracking so later Humble Arteest edits are included.
 retain a runtime Vehicle reference for rename-safe snapshot capture.
 
 `kitten-animations.lib/KittenAnimationsSubmod.Persistence` resets processor ownership and rebinds
-native avatars after load. It persists exact selected clip identity/phase and reusable settings. Forced looping clips and
+all native avatars after load by exact vehicle ID. It persists per-kitten clip identity/phase and
+reusable settings, with explicit migration of legacy single-target records. Forced looping clips and
 frozen poses resume, as do latched expression clips; unlatched one-shot expressions stay stopped. `SavedAnimationTuning` reads/writes the 20 already exposed
 `KittenLocomotionTuning.Current` animation fields; physics fields are excluded. No new Harmony target is added. `KittenPlaybackPhase` resolves protected
 `AnimatedRenderable.RuntimeAnim`, `BoneAnimRuntime.TimeSinceTransition`, and

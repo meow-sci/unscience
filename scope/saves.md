@@ -567,3 +567,28 @@ any missing kitten. Despawn, prune and orphan removal go through
 `Universe.DestroyVehicle(kitten, CrewDisposition.Boarded)` (see
 [character-and-materials.md](character-and-materials.md#doh) #28). This leaves the save adapter, its
 reset order and the stale-set release unchanged. `doh.tests` (34 checks) adds teardown coverage.
+
+
+## Kitten animation holds
+
+`kitten-animations` keeps its v1 ID/version and adds `Kittens`, an array of exact `Vehicle.Id` records.
+Each carries clip source/label, active/paused state and phase, playback/strength controls, expression
+settings/variant and held clip identity. Panel target/follow mode and animation-facing global tuning
+remain scene-level. Missing/null `Kittens` explicitly migrates the legacy root single-target fields;
+legacy follow-controlled records resolve the native controlled kitten once (the old format did not
+record its identity). Empty arrays mean none; duplicate/blank IDs and malformed settings are rejected.
+
+Production `VehicleProvider.FindVehicle` rejects ambiguous IDs. Runtime disappearance releases old
+models/processors but preserves detached intent until exact-ID return. Restore reports unavailable
+or ambiguous targets and missing clip dependencies through save diagnostics without active-vehicle
+fallback. Capture includes every target regardless of panel/control/camera state. Reset before native
+reconstruction and on vanilla/new scenes/unload removes all owned processors, releases freeze and
+restores processor/tuning baselines. Replay uses the ordinary per-target bind/clip/expression APIs;
+repeated loads do not append duplicate processors. Pending frozen phases survive re-save before the
+first visible pose pass. No new native hook or reflection member is added.
+
+KSA owns vessel reconstruction/camera/time. Sidecar state owns holds and user settings, including
+global animation tuning. Unlatched one-shots, intermediate expression envelopes/cross-fade buffers,
+UI filtering, native object references and render/reflection caches are intentionally excluded.
+Managed production ownership/prefix/real-adapter checks: `kitten-animations.tests`. Actual multi-kitten
+rendering, native culling and KSA save/load remain unchecked in `plans/saves-acceptance.md`.

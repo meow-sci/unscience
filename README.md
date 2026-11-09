@@ -71,6 +71,10 @@ DOH's spawn controls include an editable vehicle name / batch prefix, initially 
 Single spawns use the text exactly, batches append numbers, and blank input uses automatic naming.
 The setting is scene-saved. See [DOH usage](doh/README.md#usage).
 
+Kitten Animations keeps holds and animation settings independently for each EVA kitten, even after
+switching control or the camera to another vessel. Select a kitten in the panel to edit or clear
+its holds. Scene saves restore all configured kittens. See [Kitten Animations](kitten-animations/README.md).
+
 # releases
 
 GitHub Actions uses `1.${GITHUB_RUN_NUMBER}.0` for stable releases from `main`

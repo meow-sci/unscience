@@ -8,6 +8,7 @@
     <Project Path="camera-controller-override.lib/camera-controller-override.lib.csproj" />
     <Project Path="kitten-animations/kitten-animations.csproj" />
     <Project Path="kitten-animations.lib/kitten-animations.lib.csproj" />
+    <Project Path="kitten-animations.tests/kitten-animations.tests.csproj" />
     <Project Path="byo-music/byo-music.csproj" />
     <Project Path="byo-music.lib/byo-music.lib.csproj" />
     <Project Path="glass/glass.csproj" />

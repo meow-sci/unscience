@@ -73,6 +73,9 @@ public sealed class KittenAnimationDriver
         _restartRequested = true;
     }
 
+    /// <summary>Captures a restored clock even before the target's first visible pose pass.</summary>
+    public float? CapturePhase() => _savedPlaybackPhase ?? KittenPlaybackPhase.Capture(TargetModel, ForcedAnimation);
+
     /// <summary>Restarts the current forced clip from its first frame.</summary>
     public void Restart()
     {
@@ -138,7 +141,7 @@ public sealed class KittenAnimationDriver
         _wasOverriding = false;
     }
 
-    /// <summary>Clears every override and forgets the resolved model. Called on unload / kitten change.</summary>
+    /// <summary>Clears every override and forgets the resolved model. Called on scene reset or target removal.</summary>
     public void Reset()
     {
         _savedPlaybackPhase = null;

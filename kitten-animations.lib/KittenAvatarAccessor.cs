@@ -13,7 +13,7 @@ public static class KittenAvatarAccessor
     public static KittenEva? GetControlledKitten()
     {
         var vehicle = VehicleProvider.GetControlledVehicle();
-        if (vehicle is KittenEva kitten)
+        if (vehicle is KittenEva { IsDisposed: false } kitten)
             return kitten;
         return null;
     }
@@ -23,6 +23,7 @@ public static class KittenAvatarAccessor
     {
         return VehicleProvider.GetAllVehicles()
             .OfType<KittenEva>()
+            .Where(kitten => !kitten.IsDisposed)
             .OrderBy(kitten => kitten.Id, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }

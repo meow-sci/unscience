@@ -6,6 +6,8 @@
 Plays any animation the game has loaded for a selected EVA kitten, triggers facial expressions, and
 exposes the blend weights and locomotion tuning that decide how hard each animation lands. The target
 can follow the controlled kitten automatically or be pinned to any live EVA kitten in the system.
+Each kitten keeps its own clip, frozen pose, latched expression and strength settings when you move
+control or the camera elsewhere. Select that kitten again to clear or disable its holds.
 
 ## Overview
 
@@ -128,11 +130,12 @@ standalone and from `unscience/Patcher.cs` when embedded.
 #### `KittenAnimationsSubmod`
 
 `ISubmod` implementation. `Update(dt)` resolves either the controlled kitten or the explicitly
-selected kitten id, rebinds when the kitten/avatar changes
-(rebuilding the catalog, re-reading the processors, re-attaching the expression processor), refreshes
-the driver target, and advances the expression envelope. Switching targets clears the target-specific
-clip/expression and restores persistent processor values on the old kitten. `RenderContent()` renders
-the sections below without any window framing.
+selected kitten id for editing. A registry keyed by exact `Vehicle.Id` retains independent drivers,
+expression controllers and settings for every visited kitten. All registered expressions advance
+each update and the pose prefix dispatches to all bound models, even when another vessel is active.
+Switching targets preserves the previous kitten's overrides. Unavailable targets detach native
+references while retaining settings; the exact ID returning or an avatar replacement rebinds safely.
+`RenderContent()` renders the sections below without any window framing.
 
 ### UI sections (`kitten-animations.lib/Ui`)
 
@@ -175,7 +178,11 @@ drag widgets: `SliderFloat` clamps typed input unconditionally, so a slider can 
 past its range. The three weight caps marked **slider** stay clamped on purpose — a
 processor weight outside 0 – 1 is not meaningful.
 
-Nothing is persisted; every setting resets on unload.
+Unscience scene saves retain every registered kitten's settings, forced clip/phase, frozen pose
+and latched expression, plus panel selection and global tuning. Existing single-target saves migrate
+automatically. Unlatched one-shot expressions remain transient; KSA owns the vessels themselves.
+Vanilla saves/new scenes and unload release all old processors and overrides. See the
+[library persistence details](../kitten-animations.lib/README.md).
 
 ## Notes
 
@@ -183,7 +190,7 @@ Nothing is persisted; every setting resets on unload.
   This mod exposes only the animation-facing subset, and its reset restores just those fields.
 - `KittenLocomotionTuning.Current` is global, so tuning edits affect every kitten, not only the
   controlled one.
-- If both this mod and unscience are installed, whichever initialises last owns the shared driver
+- If both this mod and unscience are installed, whichever initialises last owns the shared driver-registry
   reference in `KittenAnimationPatches`. Install one or the other.
 
 ## Dependencies

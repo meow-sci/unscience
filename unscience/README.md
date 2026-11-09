@@ -47,7 +47,7 @@ A unified supermod that consolidates 30 KSA feature libraries into a single ImGu
 | Iron Man | EVA/Iron Man flight-mode buttons, upright editing, configurable nodes, rocket controls and upright surface teleports in Iron Man mode |
 | Its So Shiny | Builds and controls Blinky-style pixel grids from built-in light parts |
 | Kitchen Sink | Editor fixes, IVA visibility, experimental see-through capsule windows, unlocked IVA camera and G-load protection |
-| Kitten Animations | Targets any live EVA kitten through a filterable picker, then plays body animations and expressions |
+| Kitten Animations | Edits any EVA kitten; independent body/expression holds survive camera/control switches and scene saves |
 | Kiwi's Marbles | Welds celestial bodies to other orbiters with CCI offsets |
 | Rocky McRock Face | Swaps planetary ring meshes/textures (Saturn's rock field) with any built-in mesh |
 | Pebbles — Ground Clutter | Replaces selected planet clutter types with built-in meshes or GLBs, with scale, collider editing and per-planet restore |
