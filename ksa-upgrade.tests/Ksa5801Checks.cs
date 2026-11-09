@@ -24,7 +24,8 @@ internal static class Ksa5801Checks
             ["CharacterAvatar+CharacterCore"] = ["Scale", "CharacterModel"],
             ["CatExpressionAnim"] = ["_expressionPose"],
             ["ChuteRenderable"] = ["_renderable"],
-            ["AnimatedRenderable"] = ["MaterialIndices"],
+            ["AnimatedRenderable"] = ["MaterialIndices", "RuntimeAnim"],
+            ["BoneAnimRuntime"] = ["TimeSinceTransition", "CurrentAnimation"],
             ["StaticMeshRenderable"] = ["MaterialIndices"],
             ["CatFurRenderable"] = ["MaterialIndices"],
             ["LightModule+TemplateData"] = ["Intensity", "ColorRgb"],
@@ -49,6 +50,12 @@ internal static class Ksa5801Checks
             var names = probe.Fields("KSA." + type).Select(f => f.Name).ToHashSet();
             foreach (string name in members) Require(names.Contains(name), $"KSA.{type}.{name} resolves");
         }
+        var kittenRenderCalls = probe.CallsOf("KSA.KittenRenderable", "UpdateRenderData").Single();
+        int locomotion = kittenRenderCalls.IndexOf("KSA.KittenRenderable::UpdateLocomotionAnimationState");
+        int condition = kittenRenderCalls.IndexOf("KSA.KittenRenderable::UpdateConditionPose");
+        int pose = kittenRenderCalls.IndexOf("KSA.AnimatedRenderable::UpdateAnimation");
+        Require(locomotion >= 0 && condition > locomotion && pose > condition,
+            "kitten pose prefix runs after native locomotion and condition selection for all rendered kittens");
         var nativeBits = probe.Fields("KSA.PartTreeRenderData+StateBit");
         Require(nativeBits.Count > 0 && nativeBits.All(f => f.Constant is { } bit && (bit & ~0x1fff) == 0),
             "all native state flags fit below the paint encoding");

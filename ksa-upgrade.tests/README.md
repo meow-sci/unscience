@@ -1,5 +1,10 @@
 # KSA 5438/5482/5638/5707/5801 managed upgrade checks
 
+The kitten animation hold port also checks CURRENT KSA.dll for the protected animation-clock fields
+used by phase capture/replay, and verifies the pose hook follows native locomotion/condition selection.
+Independent target ownership and save-adapter behavior are exercised by
+[`kitten-animations.tests`](../kitten-animations.tests/README.md); native rendering remains pending.
+
 ## Immediate white part-paint investigation
 
 `PaintCompilationChecks` exercises the production Harmony compiler prefix with non-null source:

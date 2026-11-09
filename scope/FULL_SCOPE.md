@@ -2,7 +2,8 @@
 
 Kitten Animations retains per-kitten holds across camera/control switches and saves all targets by
 exact vehicle ID; legacy records migrate. Ported from `feature/animation-stickyness` to KSA 5801;
-native multi-kitten rendering and save/load acceptance remain pending. See
+41 ownership/adapter checks, shared save/upgrade suites and the full build pass. Native multi-kitten
+rendering and save/load acceptance remain pending. See
 [character/materials](character-and-materials.md#kitten-animations) and
 [save ownership](saves.md#kitten-animation-holds).
 

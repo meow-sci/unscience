@@ -668,6 +668,13 @@ Locomotion Anim Tuning.
 **Persistence** — Existing `kitten-animations` v1 record now explicitly migrates legacy single-target
 fields to a `Kittens` array; all targets retain clip/phase, settings and latched faces. See [saves](saves.md#kitten-animation-holds).
 
+**5801 port** — Retains the behavior from `feature/animation-stickyness` (`7f77908`). CURRENT
+`KittenRenderable.UpdateRenderData` (`:378`) still selects locomotion (`:403`) and condition pose
+(`:413`) before calling `AnimatedRenderable.UpdateAnimation` (`:423`, implementation `:138`).
+`ksa-upgrade.tests` verifies that call order and the protected playback-clock fields in the real DLL.
+Native condition processors can still blend with custom expressions; animation culling and
+per-frame/viewport guards remain game-owned. Multi-kitten rendering/save acceptance is pending.
+
 ### Integration points
 
 | # | Kind | Mod code (file) | Game target (Type.Member + sig) | Decomp path (NEW) | In NEW? | Risk/notes |

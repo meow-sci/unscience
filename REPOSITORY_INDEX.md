@@ -811,3 +811,5 @@ parsing, including malformed definitions and real game shader transforms. KSA 57
 checks on the real KSA.dll (`Ksa5707Checks`, via the shared `KsaAssemblyProbe`): every `Part`
 constructor reaches the private seam Iron Man patches, Pebbles' material-binding list equals every stock
 binding method, and the static color pass skips null pipelines.
+The 5801 metadata checks also verify kitten animation phase fields and that the pose hook follows
+native locomotion/condition selection, alongside the per-kitten ownership/save regression suite.

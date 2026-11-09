@@ -10,6 +10,10 @@ retention before first visible render, legacy payloads, invalid data and vanilla
 Ported from `feature/animation-stickyness` commit `7f77908` onto the KSA **2026.11.10.5801** upgrade.
 The current sources still select locomotion/condition state before the `AnimatedRenderable.UpdateAnimation`
 pose hook; native animation culling and per-viewport/frame guards remain game-owned.
+Validation: all **41** kitten ownership/adapter checks, `saves.tests`, `world-saves.tests` and
+`ksa-upgrade.tests` pass, including real-5801-DLL phase-field/hook-order checks. Full solution
+`dotnet build -m:1 -p:UseSharedCompilation=false -nodeReuse:false` passes with zero warnings/errors,
+using explicit CURRENT `KSAFolder` and `/private/tmp/unscience-kitten-5801-dist` output.
 Native rendering/culling and actual KSA save/load acceptance remain pending.
 
 ## DOH native roster integration
