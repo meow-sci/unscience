@@ -19,6 +19,10 @@ Runtime startup includes the [shared networking bootstrap](00-architecture-and-a
 This folder maps the suite's game types, Harmony targets, reflection, shaders, assets and lifecycle
 contracts. Update the owning area and master index in the same change as an integration edit.
 
+DOH spawns now enter the native kitten roster and start an EVA mission. Existing tracked EVA
+kittens are repaired without replacing native history; roster/career data remain KSA-owned.
+[Native roster integration and acceptance](../plans/DOH_ROSTER_INTEGRATION.md).
+
 ## Version baseline
 
 - **Cataloged against:** KSA **2026.11.10.5801**, metadata date **2026-11-07**.
@@ -88,6 +92,8 @@ DOH **Smite / Smite All** replace custom despawning with KSA's native kill input
 which runs before the render-list refresh; the former physics handoff ran too late. Private War Paint
 materials release after native death, reusable presets remain, and unload leaves vehicles to KSA.
 Default offset and scene payloads stay unchanged. [Evidence, checks and native acceptance](../plans/DOH_NATIVE_KILL_5801.md).
+DOH's panel now uses a Name/Model/Smite table, equal-width spawn/refresh actions and full-width
+Smite All; transient action feedback uses KSA's logger instead of panel status/count labels.
 The earlier Unscience pre-renderer shutdown and ownership-aware Graffiti cleanup remain in place.
 
 Migrated resolved data/key references in rings, clutter, Pyro, Disco and capsule filtering. Fixed

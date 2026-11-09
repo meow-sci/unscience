@@ -17,6 +17,7 @@
     <Compile Include="../doh.lib/Spawning/KittenSpawner.Lifetime.cs" Link="KittenSpawner.Lifetime.cs" />
     <Compile Include="../doh.lib/Spawning/KittenSpawner.Construction.cs" Link="KittenSpawner.Construction.cs" />
     <Compile Include="../doh.lib/Spawning/KittenSpawner.Naming.cs" Link="KittenSpawner.Naming.cs" />
+    <Compile Include="../doh.lib/Spawning/KittenSpawner.Roster.cs" Link="KittenSpawner.Roster.cs" />
     <Compile Include="../doh.lib/Spawning/SpawnRequest.cs" Link="SpawnRequest.cs" />
     <Compile Include="../ksa-abstractions.lib/VehicleProvider.cs" Link="VehicleProvider.cs" />
     <Compile Include="../ksa-abstractions.lib/Persistence/ISaveParticipant.cs" Link="ISaveParticipant.cs" />

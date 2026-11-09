@@ -78,6 +78,8 @@ public sealed class SpawnedKittenRegistry
 
 public sealed class SpawnedKittenEntry
 {
+    // Transient duplicate-error suppression for legacy roster repair.
+    internal string? LastRosterError { get; set; }
     /// <summary>Runtime identity retained so a renamed kitten still captures its current native save ID.</summary>
     public KSA.Vehicle? Vehicle { get; init; }
     public string KittenId { get; init; } = "";

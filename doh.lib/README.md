@@ -3,6 +3,12 @@
 Headless spawning and tracking for DOH. All kitten paint, GPU material cloning and presets are
 owned by [`war-paint.lib`](../war-paint.lib/README.md), which has no dependency on DOH.
 
+`DohSubmod` renders a War Paint-style **Name / Model / unlabeled action** table with red **Smite**
+buttons. **Smite All** fills the panel width; spawn and refresh split an action row equally with
+6 px cell padding (12 px between buttons). Confirmations/errors use KSA's
+`Brutal.Logging.DefaultCategory.Log.Info/Error`, replacing status/count labels and preset helper
+text. This presentation and transient logging add no scene state or save fields.
+
 ## Spawning API
 
 `KittenSpawner(SpawnedKittenRegistry)` creates EVA kittens with reference-vehicle or absolute-orbit
@@ -31,6 +37,27 @@ moved from `MeowSci.DohLib.Materials` to `MeowSci.WarPaintLib.Materials`; caller
 public service rather than creating/releasing materials. The factory-taking constructor remains as
 a compatibility overload accepting the moved type. `SpawnedKittenEntry.MaterialSet` is a legacy
 view, not an owner; consult War Paint for current paint.
+
+## Native kitten roster
+
+Every successful spawn joins `Universe.KittenRoster.Kittens` through `KittenRosterEntryData` with
+its exact native name and actual character. Like KSA's starting EVA crew, DOH calls
+`StartMission(EvaAssignmentId)` and `MarkLaunched()`. The built-in roster can follow the EVA, and
+native health, radiation, life support, distance/speed and mission time apply normally. Boarding
+transfers the same crew member; recovery ends its mission; death retains a KIA row and native cause.
+DOH pruning and unload never delete these native records.
+
+The real save adapter backfills older unrostered tracked EVA kittens after reconstruction. A
+once-per-second live maintenance pass also repairs owned targets, including while paused. Existing
+valid records keep their mission count/start time, condition, dose and career history. An old kitten
+with no record starts tracking at repair time; unavailable past statistics are not fabricated.
+Conflicting, KIA, retired, ambiguous or differently assigned identities are rejected rather than
+overwritten; unresolved save targets retain their original sidecar records. Maintenance ignores
+untracked, stale and disposed objects.
+
+Roster registration and pose initialization are one creation transaction. If either fails, native
+constructor cleanup preserves earlier crew missions and removes only this spawn's provisional row;
+earlier successful batch members remain registered. See [evidence/acceptance](../plans/DOH_ROSTER_INTEGRATION.md).
 
 ## Native lifecycle
 
@@ -61,6 +88,9 @@ owns actual vehicles; DOH never respawns on restore. The reference-vehicle picke
 native kill inputs are transient. Native input retains the old object, so a same-name reconstructed
 kitten cannot be retargeted. Reset clears ownership and controls; War Paint owns old-world paint cleanup.
 Capture omits native-disposed kittens even before pruning. The save ID/version and payload stay unchanged.
+Crew records, health and statistics are already owned by KSA's `UniverseData.KittenRoster` inside
+`universe.xml`; they are not duplicated in the DOH sidecar. Replay reuses the native-restored roster
+entry without restarting its mission, creating rows only for older missing records.
 
 New capture leaves old per-kitten paint fields empty because War Paint saves active paint once in
 its own record. Legacy `Tint`, `Materials` (`Source` / `Name` / `Color`) and optional `MaterialGroup`

@@ -29,12 +29,14 @@ internal static partial class Checks
         NativeKillChecks(submod);
         ConstructionRollbackChecks();
         DefaultOffsetChecks();
+        RosterIntegrationChecks();
+        RosterSaveChecks();
 
         WarPaintService.Shared.Reset();
         WarPaintService.Shared.Update();
         if (System.IO.Directory.Exists(MeowSci.KsaAbstractions.KsaPaths.ModDataDir))
             System.IO.Directory.Delete(MeowSci.KsaAbstractions.KsaPaths.ModDataDir, recursive: true);
-        Console.WriteLine($"PASS: {_checks} DOH naming, save/restore, migration and native kill checks.");
+        Console.WriteLine($"PASS: {_checks} DOH naming, roster, save/restore, migration and native kill checks.");
     }
 
     private static KittenEva[] Kittens(params string[] ids) => ids.Select(id => new KittenEva(id)).ToArray();

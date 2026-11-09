@@ -9,26 +9,36 @@ public sealed partial class KittenSpawner
     /// Rolls back a failed constructor, which registers its base Vehicle before building the avatar.
     /// This is only for partially constructed objects; live kittens use the native input queue.
     /// </summary>
-    internal static void RemoveOrphanedKitten(CelestialSystem system, string kittenName)
+    internal static void RemoveOrphanedKitten(CelestialSystem system, string kittenName,
+        KittenRosterEntryData? createdRosterEntry = null)
     {
-        if (!system.All.TryGet(kittenName, out Astronomical? orphan) || orphan == null) return;
-        if (orphan is KittenEva kitten)
+        try
         {
-            try
+            if (!system.All.TryGet(kittenName, out Astronomical? orphan) || orphan is not KittenEva) return;
+            if (orphan is KittenEva kitten)
             {
-                WaitForVehicleSolverIdle();
-                JobSystems.NearestOrbitAndPerformanceWorker?.Wait();
-                Universe.DestroyVehicle(kitten);
+                try
+                {
+                    WaitForVehicleSolverIdle();
+                    JobSystems.NearestOrbitAndPerformanceWorker?.Wait();
+                    // A rejected name must never end an unrelated roster entry's mission.
+                    Universe.DestroyVehicle(kitten, CrewDisposition.Boarded);
+                }
+                catch (Exception ex) { Console.WriteLine($"doh: Failed to destroy orphaned '{kittenName}': {ex.Message}"); }
             }
-            catch (Exception ex) { Console.WriteLine($"doh: Failed to destroy orphaned '{kittenName}': {ex.Message}"); }
+            // A half-built avatar may throw before native disposal deregisters it.
+            if (system.All.TryGet(kittenName, out Astronomical? remaining) && ReferenceEquals(remaining, orphan))
+            {
+                try { system.Deregister(orphan); }
+                catch (Exception ex) { Console.WriteLine($"doh: Failed to deregister orphaned '{kittenName}': {ex.Message}"); }
+            }
+            Console.WriteLine($"doh: Removed partially constructed kitten '{kittenName}'");
         }
-        // A half-built avatar may throw before native disposal deregisters it.
-        if (system.All.TryGet(kittenName, out Astronomical? remaining) && ReferenceEquals(remaining, orphan))
+        finally
         {
-            try { system.Deregister(orphan); }
-            catch (Exception ex) { Console.WriteLine($"doh: Failed to deregister orphaned '{kittenName}': {ex.Message}"); }
+            // Remove only this transaction's new row, never any earlier crew/history entry.
+            if (createdRosterEntry != null) Universe.KittenRoster.Kittens.Remove(createdRosterEntry);
         }
-        Console.WriteLine($"doh: Removed partially constructed kitten '{kittenName}'");
     }
 
     // Constructing a Vehicle mutates the shapes registry held by the background physics step.

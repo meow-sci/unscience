@@ -1,5 +1,23 @@
 # Scene save implementation coverage and native acceptance
 
+## DOH native roster integration
+
+Every successful spawn now has a native roster record and active EVA mission. Crew health, dose,
+condition, statistics, assignment, mission time and KIA history persist through KSA's universe.xml,
+not an additional sidecar. DOH v1/order60 remains compatible; replay/live maintenance backfill old
+unrostered tracked EVA kittens and preserve valid existing history without restarting missions.
+Incompatible native records warn and retain the incoming sidecar instead of overwriting crew.
+Failed spawns roll back only their own provisional roster row. See [integration checklist](DOH_ROSTER_INTEGRATION.md).
+
+- [ ] Spawn native and custom-character batches; verify exact names, EVA assignment, roster follow,
+  health/dose/condition and mission/travel/speed statistics. Native crew must be unaffected.
+- [ ] Save/load twice and A-B-A; verify one row/mission per kitten, no lost history and no duplicates.
+  Load an older unrostered DOH save; verify repair without respawning vehicles.
+- [ ] Board and EVA again, recover and Smite; retain the same roster identity, native seated/home
+  state and KIA/cause history. Prune/unload must not erase native crew.
+- [ ] Exercise a partial spawn failure, existing name, dead/retired/assigned conflict and a missing
+  native target; preserve prior rows/history and retain unresolved sidecar data with diagnostics.
+
 ## War Paint consolidation
 
 `war-paint` v1/order85 owns all active per-kitten paint recipes. It restores exact native identities,
@@ -31,6 +49,11 @@ Status messages are transient game logs and add no saved state. Managed producti
 verify per-view visor-only gating, new kittens, default shown state and targeted unpatch/reset.
 
 ## 5801 despawn/shutdown follow-up
+
+DOH panel layout/logging changes preserve `doh` v1 capture/reset/replay. The kitten table is derived
+from the existing registry; removed status/count/hint labels and native log messages are transient.
+Native UI acceptance: check Name/Model/blank action headers, red Smite buttons, full-width Smite All,
+equal-width spawn/refresh with the standard gap, and confirmations/errors in KSA's log after loading.
 
 No save IDs/versions change. DOH transient Smite actions now use KSA's native kill-input queue,
 before render-list refresh, retaining exact old objects rather than resolving same-name restored
@@ -160,7 +183,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [BYO Music](../byo-music.lib/ByoMusicSubmod.Saves.cs) | Unfinished sounds' vehicle targets, filenames, repeat, gap, volume and range. | Every restored sound is paused. Resume starts at the beginning; sample position, current gap progress and former paused/playing distinction are not restored. Finished sounds are omitted. Sound files remain required. |
 | [Camera Controller Override](../camera-controller-override.lib/CameraControllerOverrideSubmod.Saves.cs) | Ordered typed keyframe recipes, parallel groups, pending group recipes, return-to-start duration/easing/powers. | Restores stopped. Current running segment, elapsed time and its captured start pose are not resumed. Native camera pose loads independently. Pressing Play starts the reconstructed sequence through its normal behavior. |
 | [Dent Wizard](../dent-wizard.lib/DentWizardSubmod.cs) | KSA saves the launched vessel's resulting orbit/physical state; v1 `dent-wizard` is an empty lifecycle record. Reset cancels automatic mode, armed and pending shots. Mass labels are read live from native vessel state and are not sidecar data. | Source selection and speed are input for the next one-shot action, not an applied registration or ongoing force; they reset to unselected/5 m/s. Launches never replay on load. Kitchen Sink independently saves any source/target G-load protection. |
-| [DOH](../doh.lib/DohSubmod.Persistence.cs) | Native-restored spawned kitten registry; name/prefix/offset/count/character; selected War Paint preset and detached spawn recipe. | Existing v1 tint/material/group records migrate into independent War Paint targets. Native kittens are rebound without respawning. Missing targets warn. Pending spawn/despawn actions are transient. |
+| [DOH](../doh.lib/DohSubmod.Persistence.cs) | Native-restored spawned kitten tracking; native roster integration/backfill; name/prefix/offset/count/character; selected War Paint preset and detached spawn recipe. Roster history remains KSA-owned. | Existing v1 tint/material/group records migrate into independent War Paint targets. Native kittens are rebound without respawning. Missing targets warn. Pending spawn/despawn actions are transient. |
 | [Don't Stifle Me](../dont-stifle-me.lib/DontStifleMeSubmod.Saves.cs) | Editor scale enable/snap flags and extended-value policy. | Existing part geometry/configuration remains native-owned. Does not serialize an editor undo stack or uncommitted operation. |
 | [Eternal Flame](../eternal-flame.lib/EternalFlameSubmod.Saves.cs) | Monitored vehicles, fuel/electricity switches and refill interval. | Monitoring resumes; interval timing restarts, without offline catch-up. Native save owns the current resource quantities. |
 | [Free Fallin'](../free-fallin.lib/FreeFallinSubmod.Saves.cs) | Applied global canopy material settings and effective albedo. | Recreates appearance, not a cloth simulation checkpoint. Applied state only; external textures remain dependencies. |

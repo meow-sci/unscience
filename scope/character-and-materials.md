@@ -1,5 +1,27 @@
 # Character / Material / GPU-Customization Mods — Game Integration Scope
 
+## DOH native roster integration (5801)
+
+`KittenSpawner.Roster.cs` joins newly created EVA vehicles to `Universe.KittenRoster.Kittens` with
+`new KittenRosterEntryData(name, character)`, `StartMission(EvaAssignmentId)` and `Vehicle.MarkLaunched`,
+matching native `Universe.AssignStartingCrew`. Native name/hash identity enables the roster follow
+link, health/dose/condition, statistics, boarding/recovery and KIA history. No Harmony hook is added.
+
+| Surface | Source | Contract |
+|---|---|---|
+| KittenRosterEntryData constructor, Name/NameHash/Character, AssignedVehicleId/AssignedToVehicle, Kia/Retired, StartMission/EvaAssignmentId | CURRENT KSA/KittenRosterEntryData.cs:8-70,206-250 | Existing valid entries keep history; new rows start one EVA mission; conflicting or unavailable identities fail |
+| Universe.KittenRoster.Kittens/Find | CURRENT KSA/KittenRosterData.cs:14,72-88; Universe.cs:126,290-301 | Case-insensitive native lookup; current unique vehicle required; missing old tracked rows backfill only |
+| Vehicle.MarkLaunched | CURRENT KSA/Vehicle.cs:1128 | Mirrors native starting EVA crew, avoiding double mission starts and preserving native end/death accounting |
+| Creation rollback | KittenSpawner.Construction.cs | Boarded disposition preserves unrelated crew missions; only this transaction's new row is removed; no live-kitten teardown path |
+| Native serialization | CURRENT KSA/UniverseData.cs:19,50; Universe.cs:2479 | Native universe.xml owns full roster/history; DOH v1 keeps identity/settings only; repeated replay reuses rows |
+
+Live ownership maintenance runs at one-second wall-time intervals and does not touch disposed or
+untracked kittens. Save replay diagnoses incompatibilities and retains incoming records. Earlier
+historical notes below describing DOH kittens as unrostered are superseded by this section.
+102 managed checks cover the real helper/adapter and managed native lifecycle fixtures. Actual
+roster UI, life support/radiation, boarding and XML reconstruction remain native acceptance:
+[checklist](../plans/DOH_ROSTER_INTEGRATION.md).
+
 ## War Paint consolidation (5801)
 
 The preset editor now tracks named assignments (including DOH spawns), previews edits across those
@@ -31,7 +53,7 @@ historical version comparisons; current material ownership and paths are listed 
 | Native data/assets | `war-paint.lib/Materials/MaterialFactory*.cs` | CharacterReference/CharacterTextures/PbrMaterialReference and native fur resource textures/sampler | Resolved graph links and fur ExtraData preserved; AlbedoColor at native offset16, MaterialData stride80 |
 | Typed target identity | `war-paint.lib/WarPaintService*.cs` | KittenEva.Character.Id, Vehicle.Id/IsDisposed, shared VehicleProvider | Unique current object required, no controlled/name-ambiguous fallback; private set per target |
 | Visor draw gate / global checkbox | `war-paint.lib/KittenVisorPatches.cs`, `WarPaintSubmod.cs` | Existing KittenRenderable.UpdateRenderData → Helmet.VisorMesh.Draw(ViewHandle) | Checked means shown; false omits all visor passes for every kitten/view. Default/reset/unload shown; legacy Humble HideVisor capture/reset/replay unchanged |
-| Native action logging | `war-paint.lib/WarPaintSubmod.cs` | Brutal.Logging.DefaultCategory.Log.Info/Error | Native game logging replaces persistent panel status labels; dialog validation remains local |
+| Native action logging | `war-paint.lib/WarPaintSubmod.cs`, `doh.lib/DohSubmod.cs` | Brutal.Logging.DefaultCategory.Log.Info/Error | Native game logging replaces persistent panel status labels; War Paint dialog validation remains local |
 | Scene lifecycle | `war-paint.lib/WarPaintService.Persistence.cs` | shared ISaveParticipantSource and pre-native-reset/post-native-replay handoff | New `war-paint` v1/order85; DOH60 and Humble80 migrations run first; only detached recipes persist |
 | ImGui / global files | `war-paint.lib/WarPaintSubmod*.cs`, `PaintPresetLibrary.cs` | Existing SubmodUI/pickers and KsaPaths.ModDataDir | Named presets with detached draft/live assignment previews; confirmed deletion unsets matches; source+slot maps compatible character materials without serializing handles |
 
@@ -347,6 +369,10 @@ Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
 **DOH** owns spawning, native registrations and queued despawn. Its controls select name/prefix,
 character, offset/count and a saved War Paint preset. The default offset is (1,1,-2)m. The spawn
 engine and existing native naming/roster collision checks remain under `doh.lib/Spawning/`.
+The spawned-kitten panel follows Live War Paint's three-column striped table, showing Name, Model
+and a blank action header with red Smite buttons. Smite All fills the width; spawn/refresh use
+equal-width cells with 6 px padding. Native Info/Error logging replaces the status/count labels;
+preset helper text is removed. This UI change adds no game-state mutation or save fields.
 DOH's v1 adapter migrates legacy material recipes and stores its selector/detached recipe; it no
 longer captures active paint or owns GPU materials. Despawn unsets War Paint before native teardown.
 

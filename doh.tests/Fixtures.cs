@@ -54,6 +54,8 @@ namespace KSA
     {
         public bool IsDisposed { get; set; }
         public bool IsDebris { get; set; }
+        public bool HasLaunched { get; private set; }
+        public void MarkLaunched() => HasLaunched = true;
     }
 
     public sealed class KittenEva(string id) : Vehicle(id)
@@ -100,18 +102,12 @@ namespace KSA
         public static Vehicle? ControlledVehicle { get; set; }
     }
 
-    /// <summary>KSA 5707: roster entries are found by a lowercased name hash.</summary>
-    internal sealed class KittenRosterData
-    {
-        public List<string> Names { get; } = new();
-        public string? Find(string name) => Names.Find(entry => string.Equals(entry, name, StringComparison.OrdinalIgnoreCase));
-    }
-
     internal static class Universe
     {
         public static CelestialSystem? CurrentSystem { get; set; }
         public static KittenRosterData KittenRoster { get; set; } = new();
         public static bool FailDestroy { get; set; }
+        public static double Now { get; set; } = 100;
 
         /// <summary>KSA 5638: crew handling, camera/control/target hand-off, then Dispose, which deregisters.</summary>
         public static void DestroyVehicle(Vehicle vehicle, CrewDisposition crew = CrewDisposition.EndMission,
@@ -120,6 +116,12 @@ namespace KSA
             if (vehicle.IsDisposed) return;
             Trace.Events.Add($"destroy {vehicle.Id} {crew} {cause}");
             if (FailDestroy) throw new System.InvalidOperationException("teardown failed");
+            if (vehicle is KittenEva)
+            {
+                var crewEntry = KittenRoster.Find(vehicle.Id);
+                if (crew == CrewDisposition.Kill) crewEntry?.Kill(vehicle.HasLaunched, cause);
+                if (crew != CrewDisposition.Boarded) crewEntry?.EndMission();
+            }
             if (Program.ControlledVehicle == vehicle) Program.ControlledVehicle = null;
             vehicle.IsDisposed = true;
             CurrentSystem?.Deregister(vehicle);

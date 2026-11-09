@@ -4,10 +4,11 @@ Run `dotnet run --project doh.tests` from the repository root.
 
 The suite links production DOH save/reset/replay, request DTO, registry, naming and native kill requests,
 plus production **War Paint** ownership, scene adapter, preset library, material-set and release code.
-Only native spawning, native material access and the ImGui shell are substituted. Preset IO uses a
-unique temporary directory removed after a successful run. These checks do not load KSA or Vulkan.
+Native spawning, material access, roster objects/lifecycle and the ImGui shell use managed
+stand-ins; the production roster integration helper, rollback and real save adapter are linked.
+Preset IO uses a unique temporary directory removed after a successful run. These checks do not load KSA or Vulkan.
 
-Current suite: **76 checks**.
+Current suite: **102 checks**.
 
 Coverage includes:
 
@@ -26,6 +27,12 @@ Coverage includes:
   retained global presets after the last user dies, idempotent cleanup and non-kitten/stale rejection;
 - saves before/after native dispatch, exact-object safety for same-name reconstructed kittens, and
   isolated failed-constructor rollback;
+- native roster creation with exact name/character, EVA assignment and launched state; repeated
+  repair without restarting missions or replacing health/career history; native boarding and KIA
+  retention after pruning; legacy live/load repair; collision/retired/KIA/assigned/stale refusal;
+- creation rollback removing only its own provisional record, leaving earlier crew and non-kittens
+  untouched; real adapter replay with a separately reconstructed native-roster fixture; repeated
+  loads with preserved history and no duplicate crew; incompatible roster/sidecar retention;
 - **(1, 1, -2) m** defaults for fresh UI/API, vanilla saves and legacy missing offsets, while explicit
   offsets round-trip unchanged.
 
@@ -38,3 +45,5 @@ assets, attachment/fur rendering, actual GPU pool recovery, load reconstruction 
 Windows animation crash. Real-DLL frame-order checks live in `ksa-upgrade.tests`.
 See [native kill follow-up](../plans/DOH_NATIVE_KILL_5801.md)
 and [scene acceptance](../plans/saves-acceptance.md).
+
+See [native roster integration and acceptance](../plans/DOH_ROSTER_INTEGRATION.md).

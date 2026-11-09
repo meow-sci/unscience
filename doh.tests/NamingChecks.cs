@@ -48,8 +48,8 @@ internal static partial class Checks
     {
         var spawner = new DohSubmod().Spawner;
         Universe.KittenRoster = new KittenRosterData();
-        Universe.KittenRoster.Names.Add("Valentina");
-        Universe.KittenRoster.Names.Add("Crew_0");
+        Universe.KittenRoster.Kittens.Add(new("Valentina", "Calico"));
+        Universe.KittenRoster.Kittens.Add(new("Crew_0", "Calico"));
         try
         {
             Require(spawner.GenerateKittenName(system, new SpawnRequest { VehicleName = "valentina" }) == null,

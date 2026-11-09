@@ -1,6 +1,8 @@
+using System;
 using System.Linq;
 using Brutal.ImGuiApi;
 using Brutal.Numerics;
+using KSA;
 using MeowSci.DohLib.Spawning;
 using MeowSci.WarPaintLib;
 
@@ -8,16 +10,71 @@ namespace MeowSci.DohLib;
 
 public sealed partial class DohSubmod
 {
-    private void RenderKittenItem(SpawnedKittenEntry entry, int index)
+    private void RenderKittenList()
     {
+        var kittens = _registry?.GetAll() ?? Array.Empty<SpawnedKittenEntry>();
+        ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new float2(6f, 6f));
+        if (ImGui.BeginTable("##doh_kittens"u8, 3,
+            ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersInnerH | ImGuiTableFlags.NoPadOuterX))
+        {
+            ImGui.TableSetupColumn("Name"u8, ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn("Model"u8, ImGuiTableColumnFlags.WidthStretch);
+            float smiteWidth = ImGui.CalcTextSize("Smite"u8).X + ImGui.GetStyle().FramePadding.X * 2f;
+            ImGui.TableSetupColumn("##doh_actions"u8, ImGuiTableColumnFlags.WidthFixed, smiteWidth);
+            ImGui.TableHeadersRow();
+            foreach (var entry in kittens)
+            {
+                ImGui.PushID(entry.KittenId);
+                RenderKittenItem(entry);
+                ImGui.PopID();
+            }
+            ImGui.EndTable();
+        }
+        ImGui.PopStyleVar();
+
+        if (kittens.Count == 0)
+        {
+            ImGui.TextDisabled("No spawned kittens."u8);
+            return;
+        }
+
+        ImGui.Spacing();
+        if (DangerButton(" Smite All ##doh"u8, new float2(-1, 0)))
+        {
+            int count = _spawner?.RequestSmiteAll() ?? 0;
+            LogStatus($"Smite requested for {count} kitten(s) through KSA's native kill action.", count == 0);
+        }
+    }
+
+    private void RenderKittenItem(SpawnedKittenEntry entry)
+    {
+        string name = entry.Vehicle?.Id ?? entry.KittenId;
+        ImGui.TableNextRow();
+        ImGui.TableNextColumn();
         ImGui.AlignTextToFramePadding();
-        ImGui.Text($"{entry.Vehicle?.Id ?? entry.KittenId} ({entry.CharacterId})");
-        ImGui.SameLine();
-        if (ImGui.SmallButton("Smite##doh"u8))
+        ImGui.Text(name);
+        ImGui.SetItemTooltip(name);
+        ImGui.TableNextColumn();
+        ImGui.AlignTextToFramePadding();
+        ImGui.Text(entry.CharacterId);
+        ImGui.SetItemTooltip(entry.CharacterId);
+        ImGui.TableNextColumn();
+        if (DangerButton("Smite##doh"u8, new float2(-1, 0)))
         {
             bool queued = _spawner?.RequestSmite(entry.KittenId) ?? false;
-            SetStatus(queued ? $"Smite requested for '{entry.Vehicle?.Id ?? entry.KittenId}'." : "That kitten is no longer available.", !queued);
+            LogStatus(queued ? $"Smite requested for '{name}'." : "That kitten is no longer available.", !queued);
         }
+    }
+
+    private static bool DangerButton(ImString label, float2 size)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Button, ImGui.GetColorU32(KSAColor.Xkcd.Scarlet));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new float4(.95f, .25f, .2f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new float4(.7f, .1f, .08f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetColorU32(KSAColor.Xkcd.PaleGrey));
+        bool pressed = ImGui.Button(label, size);
+        ImGui.PopStyleColor(4);
+        return pressed;
     }
 
     private void RenderPaintPresetRow()
@@ -37,9 +94,6 @@ public sealed partial class DohSubmod
                     SelectPaintPreset(name);
             ImGui.EndCombo();
         }
-        ImGui.TextDisabled("Create presets and edit live kittens in War Paint."u8);
-        if (_paintPresetName != null)
-            ImGui.TextDisabled("Selected colors are kept; reselect a preset to refresh."u8);
     }
 
     private void SelectPaintPreset(string? name)

@@ -415,16 +415,27 @@ Programmatic kitten spawning, exact single names or numbered batch prefixes, cha
 body-frame offsets (default **1, 1, -2 m**) and native **Smite / Smite All** kill actions. DOH selects an optional
 saved **War Paint** preset; all coloring is delegated to that central owner. The spawn API accepts
 a detached recipe or preset name; legacy tint API inputs still forward to War Paint.
+The panel uses a striped Name/Model/action table with red Smite buttons, full-width Smite All,
+equal-width spawn/refresh actions and native KSA Info/Error logging instead of status/count labels.
 
 `doh` v1 saves retain their ID/version and decode earlier tint/material/group payloads into independent
 War Paint targets. New captures store spawn settings/preset snapshot and native kitten registrations;
 active paints are captured once by War Paint. Legacy shared groups preserve effective colors while
 becoming independently editable. The material-budget preflight reserves room for KSA's own avatars.
 
+`KittenSpawner.Roster.cs` creates a native `KittenRosterEntryData`, starts its EVA mission and
+marks the vehicle launched. Creation rollback removes only its provisional row. Replay/live
+maintenance repair older tracked kittens, preserving existing native mission/dose/condition history.
+KSA owns roster persistence in universe.xml, seated assignments and retained KIA records; the DOH
+v1 sidecar continues storing only spawn settings and tracked native identities. Identity conflicts
+are diagnosed without reviving/stealing crew. See [integration](plans/DOH_ROSTER_INTEGRATION.md).
+
 ### [doh.tests](doh.tests)
 Links the actual DOH adapter, naming/registry/native kill-input code and central War Paint service
 against a native backend fixture. Covers names, defaults, deduplicated kill input, stale-world object
-identity, post-death private-slot release, reusable presets, legacy paint migration and scene capture. See its [README](doh.tests/README.md).
+identity, post-death private-slot release, reusable presets, legacy paint migration and scene capture.
+102 checks include native-roster registration/repair, preserved career history, boarding/KIA,
+creation rollback and real-adapter replay/retention. See its [README](doh.tests/README.md).
 
 ### [war-paint](war-paint) / [war-paint.lib](war-paint.lib)
 Preset-based coloring for all live EVA kittens: full-width filterable combo, name/confirmation

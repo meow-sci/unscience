@@ -1,5 +1,21 @@
 # Save/load lifecycle integration
 
+## DOH native roster integration
+
+DOH crew data are now native-owned `UniverseData.KittenRoster` records serialized in `universe.xml`.
+Fresh spawns start one EVA mission and mark the vehicle launched. No sidecar fields/version change:
+`doh` v1/order60 still stores spawn settings and exact tracked vehicle/character identities. After
+native reconstruction, replay reuses the matching roster row without restarting the mission or
+resetting health/dose/career history. Older tracked live kittens with no row are backfilled, starting
+statistics at repair time; current ownership maintenance also repairs missing live rows.
+
+Malformed/ambiguous/conflicting/KIA/retired/elsewhere-assigned records are not overwritten; replay
+warns and retains the incoming DOH record. Boarding/recovery/KIA updates belong to KSA. Pruning,
+unload and sidecar reset clear only DOH tracking, preserving native history; native new-scene/load
+replacement supplies the next roster. Failed initialization removes only its new provisional row.
+Managed real-adapter tests cover native-roster reconstruction fixtures, repeated replay/history,
+legacy repair, failure retention and native-owned end/death transitions. [Native acceptance](../plans/DOH_ROSTER_INTEGRATION.md).
+
 ## War Paint scene ownership and legacy migration
 
 `war-paint` v1/order85 captures active per-kitten tint/material recipes by exact vehicle ID plus
@@ -36,6 +52,10 @@ and new scenes show glass. War Paint unload also restores drawing. No schema, fi
 changes. Log feedback is transient KSA logging, not UI or scene state.
 
 ## 5801 native playtest: despawn and shutdown
+
+DOH's Name/Model/Smite table, equal-width spawn/refresh row and full-width Smite All change only
+presentation. Removed status/count/preset-hint labels carry no durable state; confirmations/errors
+now go to KSA's native logger. The `doh` v1 capture/reset/replay and spawn controls are unchanged.
 
 DOH Smite actions are transient native `VehicleDestroyBuffer` inputs, holding exact objects rather
 than name lookups. Native scene replacement disposes old vehicles; a pending input cannot retarget a

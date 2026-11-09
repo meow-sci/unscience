@@ -1,5 +1,16 @@
 ## Kitchen Sink capsule glass experiment (5541)
 
+## DOH native roster integration (5801)
+
+| Surface | Owner | Contract |
+|---|---|---|
+| Universe.KittenRoster.Kittens/Find; KittenRosterEntryData(name, character), NameHash/Character/Kia/Retired/AssignedVehicleId | doh / KittenSpawner.Roster | New/legacy tracked EVA registration; current unique targets only; no crew overwrite or resurrection |
+| KittenRosterEntryData.StartMission(EvaAssignmentId); Vehicle.MarkLaunched | doh / spawn transaction, save replay, live maintenance | Same launch/EVA bookkeeping as native starting crew; existing missions/history remain untouched |
+| UniverseData.KittenRoster + native boarding/recovery/KillCrew | KSA | Native roster/history persistence and lifecycle; no new DOH sidecar field or Harmony patch |
+| CrewDisposition.Boarded in failed-construction cleanup | doh / KittenSpawner.Construction | Do not end unrelated missions; remove only a transaction-owned provisional roster row |
+
+[Evidence, 102 managed checks and native acceptance](../plans/DOH_ROSTER_INTEGRATION.md).
+
 ## War Paint current integration ownership (5801)
 
 War Paint is the central kitten color owner. DOH material sources move to
@@ -15,7 +26,7 @@ its compatibility capture/reset/replay. DOH selects saved presets and forwards c
 | KittenEva.Character.Id, Vehicle identity/disposal, VehicleProvider | war-paint / WarPaintService | Exact current target; no ambiguous fallback |
 | ImGui.BeginPopupModal, WindowPadding, ImInputString.EvaluateLength | war-paint / WarPaintSubmod.Dialogs, WarPaintSubmod.Presets | Padding captured at Begin; enlarged dialogs/table; cached input length refreshed per frame despite EnterReturnsTrue; None deselection |
 | KittenRenderable.UpdateRenderData → Helmet.VisorMesh.Draw(ViewHandle) | war-paint / KittenVisorPatches | Existing single-call gate relocated from Humble; global Show visor glass checkbox, default visible; legacy Humble save field retained |
-| Brutal.Logging.DefaultCategory.Log.Info/Error | war-paint / WarPaintSubmod, KittenVisorPatches | Native action/error logging replaces panel status text |
+| Brutal.Logging.DefaultCategory.Log.Info/Error | war-paint / WarPaintSubmod, KittenVisorPatches; doh / DohSubmod | Native action/error logging replaces panel status text; DOH also removes its redundant count label |
 | ISubmod / ISaveParticipantSource | war-paint / WarPaintSubmod | `war-paint` v1/order85 adds optional PresetName; exact effective scene recipe replay and transient editor reset; no new Harmony target |
 | Persistent global recipes / preset editor | war-paint / PaintPresetLibrary, PaintPresetEditor, WarPaintService.Presets | `.unscience/war-paint-presets.json`; atomic writes, live previews by named assignment, confirmed delete/unset; read-only partial catalogs retry against existing original-binding paths every 500 ms, preserving edits/baselines |
 

@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Brutal.ImGuiApi;
+using Brutal.Logging;
 using Brutal.Numerics;
 using KSA;
 using MeowSci.WarPaintLib;
@@ -36,6 +37,7 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
     // UI state — spawn parameters
     private float3 _offset = DefaultSpawnOffset;
     private int _spawnCount = 1;
+    private long _nextRosterMaintenanceAt;
     private readonly ImInputString _spawnName = new(SpawnNameCapacity, SpawnRequest.DefaultNamePrefix);
     private bool _useCustomColor;
     private float4 _tintColor = new float4(1f, 1f, 1f, 1f);
@@ -44,10 +46,6 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
     // The legacy color fields above remain solely for lossless v1 save compatibility.
     private string? _paintPresetName;
     private PaintSettings? _spawnPaint;
-
-    // UI state — feedback
-    private string? _statusMessage;
-    private bool _statusIsError;
 
     public void Initialize()
     {
@@ -63,13 +61,18 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
     {
         // Kittens the game removes itself (boarding, destruction) must not keep GPU material slots.
         _spawner?.PruneDisposed();
+        long now = Environment.TickCount64;
+        if (now >= _nextRosterMaintenanceAt)
+        {
+            _spawner?.MaintainRoster();
+            _nextRosterMaintenanceAt = now + 1000;
+        }
     }
 
     public void RenderContent()
     {
         SubmodUI.BeginContentArea("##doh_content");
 
-        RenderStatus();
         RenderSpawnControls();
         ImGui.SeparatorText("Spawned Kittens");
         RenderKittenList();
@@ -85,23 +88,6 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
         _registry = null;
         _selectedVehicle = null;
         Console.WriteLine("doh: DohSubmod disposed");
-    }
-
-    // ---- Status ----
-
-    private void RenderStatus()
-    {
-        if (!string.IsNullOrEmpty(_statusMessage))
-        {
-            if (_statusIsError)
-                ImGui.TextColored(new float4(1f, 0.3f, 0.3f, 1f), _statusMessage);
-            else
-                ImGui.TextColored(new float4(0.4f, 1f, 0.4f, 1f), _statusMessage);
-            ImGui.Spacing();
-        }
-
-        ImGui.TextDisabled($"Spawned: {_registry?.Count ?? 0} kittens");
-        ImGui.Spacing();
     }
 
     // ---- Spawn Controls ----
@@ -141,23 +127,25 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
 
             ImGui.EndTable();
         }
-        ImGui.PopStyleVar(); // CellPadding
-
         ImGui.Spacing();
 
-        // Spawn button
-        bool canSpawn = _selectedVehicle != null && _spawner != null;
-        if (!canSpawn) ImGui.BeginDisabled();
-        if (ImGui.Button(" Spawn Kitten(s) ##doh"))
-            DoSpawn();
-        if (!canSpawn) ImGui.EndDisabled();
-
-        ImGui.SameLine(0, 12);
-        if (ImGui.Button(" Refresh Characters ##doh"))
+        if (ImGui.BeginTable("##doh_spawn_actions"u8, 2, ImGuiTableFlags.SizingStretchSame | ImGuiTableFlags.NoPadOuterX))
         {
-            _availableCharacters = _spawner?.GetAvailableCharacters() ?? Array.Empty<string>();
-            SetStatus($"Found {_availableCharacters.Length} characters.", false);
+            ImGui.TableNextColumn();
+            ImGui.BeginDisabled(_selectedVehicle == null || _spawner == null);
+            if (ImGui.Button(" Spawn Kitten(s) ##doh"u8, new float2(-1, 0)))
+                DoSpawn();
+            ImGui.EndDisabled();
+
+            ImGui.TableNextColumn();
+            if (ImGui.Button(" Refresh Characters ##doh"u8, new float2(-1, 0)))
+            {
+                _availableCharacters = _spawner?.GetAvailableCharacters() ?? Array.Empty<string>();
+                LogStatus($"Found {_availableCharacters.Length} characters.", false);
+            }
+            ImGui.EndTable();
         }
+        ImGui.PopStyleVar(); // CellPadding
 
         ImGui.Spacing();
     }
@@ -253,44 +241,13 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
         }
     }
 
-    // ---- Kitten List ----
-
-    private void RenderKittenList()
-    {
-        if (_registry == null || _registry.Count == 0)
-        {
-            ImGui.TextDisabled("No spawned kittens.");
-            return;
-        }
-
-        var kittens = _registry.GetAll();
-
-        for (int i = 0; i < kittens.Count; i++)
-        {
-            var entry = kittens[i];
-            ImGui.PushID(i);
-            RenderKittenItem(entry, i);
-            ImGui.PopID();
-        }
-
-        ImGui.Spacing();
-        ImGui.PushStyleColor(ImGuiCol.Button, ImGui.GetColorU32(KSAColor.Xkcd.Scarlet));
-        ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetColorU32(KSAColor.Xkcd.PaleGrey));
-        if (ImGui.Button(" Smite All ##doh"))
-        {
-            int count = _spawner?.RequestSmiteAll() ?? 0;
-            SetStatus($"Smite requested for {count} kitten(s) through KSA's native kill action.", count == 0);
-        }
-        ImGui.PopStyleColor(2);
-    }
-
     /// <summary>The selected vehicle if it still exists; otherwise clears it and reports why.</summary>
     private Vehicle? GetSpawnTarget()
     {
         if (_selectedVehicle == null || _selectedVehicle.IsDisposed)
         {
             _selectedVehicle = null;
-            SetStatus("No vehicle selected (the previous selection no longer exists).", true);
+            LogStatus("No vehicle selected (the previous selection no longer exists).", true);
             return null;
         }
 
@@ -300,16 +257,16 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
     private void ReportSpawnResult(SpawnResult result, Func<int, string> successMessage)
     {
         if (!result.Success)
-            SetStatus(result.Error ?? "Spawn failed.", true);
+            LogStatus(result.Error ?? "Spawn failed.", true);
         else if (result.Warning != null)
-            SetStatus(successMessage(result.Count) + " " + result.Warning, true);
+            LogStatus(successMessage(result.Count) + " " + result.Warning, true);
         else
-            SetStatus(successMessage(result.Count), false);
+            LogStatus(successMessage(result.Count), false);
     }
 
-    private void SetStatus(string message, bool isError)
+    private static void LogStatus(string message, bool isError)
     {
-        _statusMessage = message;
-        _statusIsError = isError;
+        if (isError) DefaultCategory.Log.Error($"doh: {message}");
+        else DefaultCategory.Log.Info($"doh: {message}");
     }
 }

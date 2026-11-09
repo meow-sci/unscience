@@ -18,7 +18,7 @@ namespace MeowSci.DohLib.Spawning;
 ///
 /// Partial files: Positioning (spawn frame), Materials (per-kitten cloning), Catalog (game lookups),
 /// Naming (exact names and numbered prefixes), Lifetime (native kill requests and pruning),
-/// Construction (failed-constructor rollback).
+/// Construction (failed-constructor rollback), Roster (native crew integration).
 /// MUST be called on the game thread (not from HTTP handlers directly).
 /// </summary>
 public sealed partial class KittenSpawner
@@ -141,6 +141,7 @@ public sealed partial class KittenSpawner
             // background vehicle physics step is still running. Wait for it to go idle.
             WaitForVehicleSolverIdle();
             KittenEva kittenEva;
+            KittenRosterEntryData? createdRosterEntry = null;
             try
             {
                 kittenEva = new KittenEva(
@@ -152,23 +153,22 @@ public sealed partial class KittenSpawner
                     kittenName,
                     backpackPart,
                     pos.ReferenceOrbit!);
+
+                createdRosterEntry = EnsureRoster(kittenEva, requireNew: true);
+
+                var orbitColor = pos.ReferenceOrbit?.OrbitLineColor ?? new byte4(255, 200, 0, 255);
+                var orbit = Orbit.CreateFromStateCci(
+                    pos.Parent!, pos.StateTime, kittenPosCci, kittenVelCci, orbitColor);
+                kittenEva.Teleport(orbit, null, null);
+                pos.Parent!.Children.Add(kittenEva);
+                kittenEva.UpdatePerFrameData();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"doh: KittenEva construction failed for '{kittenName}': {ex}");
-                RemoveOrphanedKitten(system, kittenName);
-                return Stopped(results, request.Count, $"Kitten construction failed: {ex.Message}");
+                Console.WriteLine($"doh: Kitten initialization failed for '{kittenName}': {ex}");
+                RemoveOrphanedKitten(system, kittenName, createdRosterEntry);
+                return Stopped(results, request.Count, $"Kitten initialization failed: {ex.Message}");
             }
-
-            // Create orbit and teleport
-            var orbitColor = pos.ReferenceOrbit?.OrbitLineColor ?? new byte4(255, 200, 0, 255);
-            var orbit = Orbit.CreateFromStateCci(
-                pos.Parent!, pos.StateTime, kittenPosCci, kittenVelCci, orbitColor);
-            kittenEva.Teleport(orbit, null, null);
-
-            // Register with parent body
-            pos.Parent!.Children.Add(kittenEva);
-            kittenEva.UpdatePerFrameData();
 
             // All coloring goes through War Paint's ownership API. Even a batch uses an
             // independent private material set for each kitten.

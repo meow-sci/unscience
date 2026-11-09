@@ -120,6 +120,12 @@ public sealed partial class DohSubmod
             { context.Warn($"DOH kitten missing: {item.VehicleId}."); continue; }
             if (kitten.Character.Id != item.CharacterId)
             { context.Warn($"DOH kitten character changed: {item.VehicleId}."); continue; }
+            try { KittenSpawner.EnsureRoster(kitten); }
+            catch (Exception ex)
+            {
+                context.Warn($"DOH roster unavailable for {item.VehicleId}: {ex.Message}");
+                continue;
+            }
             if (item.Tint.HasValue || item.Materials.Count > 0)
             {
                 // MaterialGroup represented shared mutable GPU slots. Import the effective recipe

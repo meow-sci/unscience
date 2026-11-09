@@ -13,6 +13,13 @@ replacing custom despawning. Native dispatch removes the kitten before the rende
 War Paint releases its private materials after death and preserves saved presets. The native cause
 is **Abandoned** (custom reason strings are unsupported). Default offset remains **(1, 1, -2) m**.
 The earlier [shutdown cleanup fix](plans/DOH_DESPAWN_5801_FOLLOWUP.md) remains; native retesting is pending.
+Its spawned-kitten table has **Name**, **Model** and red **Smite** actions, with full-width
+**Smite All** below. Spawn/refresh share equal-width buttons; feedback uses KSA's logger instead
+of persistent status/count labels. Scene-save behavior is unchanged.
+
+DOH spawns now join the native kitten roster with an active EVA mission and launched status.
+KSA maintains crew health/statistics, boarding, recovery and KIA history; older tracked DOH kittens
+are repaired on restore and while live. [Native roster integration](plans/DOH_ROSTER_INTEGRATION.md).
 
 **War Paint** is the central kitten coloring submod. Create/select a named preset, preview its
 material colors on all assigned kittens, save changes, and apply it to multiple EVA kittens.
