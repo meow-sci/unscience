@@ -2,6 +2,12 @@
 
 ## War Paint consolidation (5801)
 
+The preset editor now tracks named assignments (including DOH spawns), previews edits across those
+assignments and unsets them on confirmed deletion. Read-only material catalog discovery reuses the
+existing original-binding and asset-name paths below; it creates no GPU materials. The existing v1
+scene adapter adds optional preset names and resets transient editor/dialog state on replacement.
+No new Harmony/shader/ABI coupling. [Editor acceptance](../plans/WAR_PAINT_PRESET_EDITOR.md).
+
 War Paint is the sole owner of kitten color state. `WarPaintSubmod` is registered by Unscience;
 its optional development host applies HotkeyGuard. DOH exposes only a spawn preset selector and
 forwards legacy color API inputs to `WarPaintService`. Humble removes its global KittenColor
@@ -15,7 +21,7 @@ historical version comparisons; current material ownership and paths are listed 
 | Native data/assets | `war-paint.lib/Materials/MaterialFactory*.cs` | CharacterReference/CharacterTextures/PbrMaterialReference and native fur resource textures/sampler | Resolved graph links and fur ExtraData preserved; AlbedoColor at native offset16, MaterialData stride80 |
 | Typed target identity | `war-paint.lib/WarPaintService*.cs` | KittenEva.Character.Id, Vehicle.Id/IsDisposed, shared VehicleProvider | Unique current object required, no controlled/name-ambiguous fallback; private set per target |
 | Scene lifecycle | `war-paint.lib/WarPaintService.Persistence.cs` | shared ISaveParticipantSource and pre-native-reset/post-native-replay handoff | New `war-paint` v1/order85; DOH60 and Humble80 migrations run first; only detached recipes persist |
-| ImGui / global files | `war-paint.lib/WarPaintSubmod*.cs`, `PaintPresetLibrary.cs` | Existing SubmodUI/pickers and KsaPaths.ModDataDir | Global presets separate from active scene paints; source+slot maps compatible character materials without serializing handles |
+| ImGui / global files | `war-paint.lib/WarPaintSubmod*.cs`, `PaintPresetLibrary.cs` | Existing SubmodUI/pickers and KsaPaths.ModDataDir | Named presets with detached draft/live assignment previews; confirmed deletion unsets matches; source+slot maps compatible character materials without serializing handles |
 
 Unset, native boarding/deletion, vanilla/repeated load, slot recovery and native rendering need
 in-game acceptance. [Implementation and checks](../plans/WAR_PAINT_CONSOLIDATION.md).

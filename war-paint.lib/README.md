@@ -1,58 +1,66 @@
 # War Paint library
 
-War Paint owns kitten tinting and per-material color editing for Unscience. It works with every
-live `KittenEva` in the current system, including native crew and DOH spawns. Each painted kitten
-receives isolated GPU materials so changing it does not recolor another kitten or a shared asset.
+War Paint owns kitten material coloring for Unscience. Every painted EVA kitten, including native
+crew and DOH spawns, has a named preset assignment and independent private GPU materials.
 
 ## Using the panel
 
-1. Open **War Paint** in the Unscience Toolbox and explicitly select an EVA kitten. The picker
-   includes all live kittens and has a name filter.
-2. Pick **Tint all materials**, then click **Apply to kitten**. The material table now exposes the
-   kitten's body, head, fur, eyes, clothing and attachment materials available on that character.
-3. Adjust the tint or individual colors. Edits update the selected painted kitten immediately.
-   They remain usable without saving a preset. Material alpha affects the opaque model path;
-   visor glass visibility remains in Humble Arteest.
-4. Enter a preset name and click **Save preset** to reuse the current colors. Saving an existing
-   name replaces it. Select a preset and click **Apply to kitten** to copy it to another target.
-5. The **Active Kitten Paints** list shows every owned target. Select a row to edit it or click
-   **Unset** to restore its original material bindings and release its private material slots.
+1. Select a preset using the full-width filterable combo. Type to filter; Enter selects the first
+   match. **New Preset** opens a name dialog and creates a white preset. Names must be unique.
+2. **Preset Colors** is a line header. Its controls stay disabled until a preset is selected.
+   Pick an RGB color, then press **Apply to All Materials** to replace the preset's colors.
+   Filter the material table and click a swatch to edit just that material. Materials are discovered
+   from live EVA kittens without painting or allocating GPU slots; tint-only presets remain usable
+   when no kitten is on EVA. Each target retains its own textures.
+3. Edits immediately preview on every kitten assigned to that preset. **Save Changes** enables only
+   when the recipe differs from its saved colors and commits the global preset. Selecting another
+   preset or creating a new one discards unsaved previews and restores the previous saved colors.
+   Changing the RGB brush alone does not change the preset until **Apply to All Materials** is used.
+4. **Apply to Kittens** opens a checkbox/name table. Select one or more live kittens and use **Apply**;
+   **Cancel** changes nothing. Apply uses the current draft, including unsaved colors. Failed targets
+   stay selected with an error for retry; successful targets are removed from the selection.
+5. **Live War Paint** lists kitten and preset names. The red **X** restores one kitten's original
+   material bindings. **Delete** opens confirmation; confirming removes the global preset, unsets
+   every kitten assigned to it, and clears selection. A failed disk deletion leaves assignments intact.
 
-Deleting a preset leaves paint already applied to kittens intact. DOH's spawn controls read the
-same saved library; their preset selection applies a detached recipe to each new kitten.
-Choosing a preset before selecting a target keeps that draft until you apply it. Presets map colors
-to the same body or attachment material slot on compatible characters; each target keeps its own
-textures. Missing roles or slots report an incompatibility instead of painting a different material.
-The library is stored in `My Games/Kitten Space Agency/.unscience/war-paint-presets.json` under the
-user's Documents directory, separately from scene sidecars.
-Writes replace that file atomically, and callers receive detached recipe copies.
-**Load kitten colors** discards an unapplied draft and resumes editing the selected kitten's
-current paint. A failed live upload keeps the draft available for an explicit Apply retry.
+Actions fill the available width and wrap at smaller panel sizes. Material swatches occupy a compact
+column; long names clip within their table cells and remain available in tooltips. Dialog action
+buttons each use half the width. Sections do not collapse. Visor visibility remains in Humble Arteest.
+
+Presets live in `My Games/Kitten Space Agency/.unscience/war-paint-presets.json` in Documents,
+separately from scene saves. File replacement is atomic. DOH reads the same library and carries the
+preset name into each spawned kitten's assignment. Its prepared spawn recipe stays detached; reselect
+in DOH to refresh that recipe after changing the library.
 
 ## Ownership and scene saves
 
-`WarPaintService.Shared` is the reusable owner behind `WarPaintSubmod`. Its API applies/unsets
-paint, updates tint or exact material colors, returns detached snapshots, and enumerates active
-targets. `Materials/` contains the extracted cloning, GPU upload, slot accounting and release
-helpers formerly owned by DOH. The native backend retains original per-renderable bindings so
-Unset restores the target without writing shared global materials.
-Allocation preserves the game's 64-slot GPU material reserve. A failed complete allocation leaves
-the original bindings intact; legacy migration reports targets that cannot fit in the private-set
-budget through save diagnostics.
+`WarPaintService.Shared` applies named recipes, previews all matching assignments, deletes presets
+with their assignments, unsets paint and returns detached snapshots. Legacy API callers without a
+name import/reuse a named preset rather than creating anonymous paint. `PaintPresetEditor` owns
+selection, detached draft, saved baseline, dirty comparison and preview rollback separately from ImGui.
+`DescribeMaterials` reads original binding roles; it never binds/clones/writes native materials.
 
-The `war-paint` version-1 scene participant captures active recipes by stable vehicle and character
-identity. It resets old bindings before native replacement and restores only exact reconstructed
-targets. Missing, ambiguous, incompatible or malformed records produce save diagnostics. UI target
-selection, filter text and unapplied drafts are transient; reusable presets are global disk data,
-separate from scene paint. DOH and Humble Arteest keep their earlier save fields readable and hand
-legacy material recipes to War Paint; explicit new War Paint records replay after those migrations.
+`Materials/` owns cloning, GPU uploads, pool accounting and release. Original renderable bindings
+are retained. Unset restores still-owned bindings before freeing slots. Allocation preserves KSA's
+64-slot material reserve; insufficient budgets leave original bindings intact. Missing/incompatible
+source+slot roles report an error instead of coloring a different material. Legacy exact-name
+recipes remain accepted.
 
-The development StarMap host is [war-paint](../war-paint/README.md). Only the Unscience host ships
-and registers the scene-save participant.
+The unchanged `war-paint` v1/order85 scene participant adds an optional `PresetName` to each existing
+vehicle/character/recipe record. Effective live colors, including unsaved previews, remain scene
+state. Replay preserves those colors without overwriting an existing global preset. Missing global
+entries are recovered from the scene snapshot; earlier nameless v1 and DOH/Humble recipes import
+named presets. Consequently an older save can recover a preset deleted after that save was written.
+Malformed/unresolved records warn and retain their original payload. Repeated reconstruction reuses
+only exact surviving owned assets and clears stale bindings. Vanilla/new scenes remove assignments.
+
+Selection, brush, filters, dialog selection and the editor's saved baseline are transient and reset
+on scene replacement. The global library remains outside sidecars. Only the Unscience host registers
+scene persistence; the [development host](../war-paint/README.md) supplies UI/global storage.
 
 ## Validation
 
-Managed checks cover core ownership and persistence. Compilation and managed fixtures do not prove
-native GPU rendering. In-game acceptance still requires distinct native/DOH kitten colors, every
-attachment material, Unset, repeated scene loads, native deletion/boarding, GPU pool recovery, and
-shutdown before native renderer disposal.
+`war-paint.tests` links the production service, editor, library and scene adapter. Checks cover
+preview/save/discard/delete across multiple kittens, write failures, named/legacy scene replay and
+native ownership fixtures. Managed checks and compilation do not prove native Vulkan rendering or
+pixel layout. See the [acceptance checklist](../plans/WAR_PAINT_PRESET_EDITOR.md) for in-game checks.

@@ -9,7 +9,8 @@ owned by [`war-paint.lib`](../war-paint.lib/README.md), which has no dependency 
 positioning. `SpawnRequest` supplies `Count`, `CharacterId`, `VehicleName`, positioning and optional
 `PaintPresetName` / `PaintSettings`. `PaintSettings` clones on both assignment and retrieval: a
 prepared request remains detached from later preset edits. A supplied snapshot takes precedence;
-an unavailable named preset without a snapshot fails before creating kittens.
+an unavailable named preset fails before creating kittens, even when a prepared snapshot remains.
+This prevents a deleted preset from silently producing anonymous paint.
 
 Names are exact for one kitten and collision-free numbered prefixes for batches. Null/blank input
 uses `Kitten_doh_`. Both live vehicle IDs and rostered kitten names are reserved, case-insensitively;
@@ -17,8 +18,10 @@ KSA links EVA dose/sickness/death to a same-named roster entry. The naming count
 Default body-frame offset is **(1, 1, -2) m**. Reference objects retain target identity rather than
 using an unstable list index. Orbit time follows the reference state's `StateTime`.
 
-Every painted kitten is applied through `WarPaintService.Shared.Apply`; every batch member gets
-private materials. GPU preflight budgets a set per kitten plus native avatar capacity and keeps
+Every painted kitten is applied through `WarPaintService.Shared.Apply`, carrying the selected
+preset name into its live assignment; every batch member gets private materials. War Paint previews
+and confirmed preset deletion include these DOH assignments. Anonymous legacy recipe/tint requests
+import reusable named presets. GPU preflight budgets a set per kitten plus native avatar capacity and keeps
 War Paint's reserve available. A partial batch reports all successfully created kittens.
 
 Legacy `TintColor`, `PerKittenColors`, `UniqueMaterialsPerKitten` and `RecolorKitten` remain accepted

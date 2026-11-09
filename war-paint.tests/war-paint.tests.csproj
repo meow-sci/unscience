@@ -6,6 +6,7 @@
   <ItemGroup>
     <Compile Include="../war-paint.lib/PaintSettings.cs" Link="PaintSettings.cs" />
     <Compile Include="../war-paint.lib/PaintPresetLibrary.cs" Link="PaintPresetLibrary.cs" />
+    <Compile Include="../war-paint.lib/PaintPresetEditor.cs" Link="PaintPresetEditor.cs" />
     <Compile Include="../war-paint.lib/IKittenPaintBackend.cs" Link="IKittenPaintBackend.cs" />
     <Compile Include="../war-paint.lib/KittenMaterialReuse.cs" Link="KittenMaterialReuse.cs" />
     <Compile Include="../war-paint.lib/WarPaintService*.cs" Link="%(Filename)%(Extension)" />

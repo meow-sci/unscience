@@ -16,13 +16,14 @@ public sealed partial class WarPaintService
     {
         Kittens = GetActivePaints().Select(p => new SavedPaintedKitten
         {
-            VehicleId = p.VehicleId, CharacterId = p.CharacterId, Paint = Snapshot(p.Kitten)!
+            VehicleId = p.VehicleId, CharacterId = p.CharacterId, PresetName = p.PresetName, Paint = Snapshot(p.Kitten)!
         }).ToList()
     };
 
     /// <summary>Runs before KSA destroys the old world. Keep only detached, reusable GPU sets.</summary>
     public void Reset()
     {
+        SceneRevision++;
         foreach (var paint in _active.Values.ToArray())
         {
             if (!paint.Kitten.IsDisposed) _backend.Restore(paint.Bindings, paint.MaterialSet);
@@ -41,7 +42,13 @@ public sealed partial class WarPaintService
                 || string.IsNullOrWhiteSpace(k.CharacterId) || k.Paint == null)
             || saved.Kittens.Select(k => k.VehicleId).Distinct(StringComparer.Ordinal).Count() != saved.Kittens.Count)
             throw new InvalidOperationException("Invalid War Paint target identities.");
-        foreach (var kitten in saved.Kittens) kitten.Paint.Validate();
+        foreach (var kitten in saved.Kittens)
+        {
+            kitten.Paint.Validate();
+            if (kitten.PresetName != null && (string.IsNullOrWhiteSpace(kitten.PresetName)
+                || kitten.PresetName.Length > 128 || kitten.PresetName.Contains('\0')))
+                throw new InvalidOperationException("Invalid War Paint preset name.");
+        }
     }
 
     private void Restore(SavedWarPaint saved, SaveRestoreContext context)
@@ -54,7 +61,12 @@ public sealed partial class WarPaintService
             { context.Warn($"Painted kitten missing or ambiguous: {item.VehicleId}."); continue; }
             if (kitten.Character.Id != item.CharacterId)
             { context.Warn($"Painted kitten character changed: {item.VehicleId}."); continue; }
-            if (Apply(kitten, item.Paint) == null)
+            // The optional name is additive to v1. Earlier snapshots become named presets;
+            // a missing global entry is recreated from the scene recipe without replacing others.
+            string? name = item.PresetName;
+            if (name != null && !Presets.TryGet(name, out _) && !Presets.Save(name, item.Paint))
+            { context.Warn($"Could not recover paint preset '{name}': {Presets.LastError}"); continue; }
+            if (Apply(kitten, item.Paint, name) == null)
                 context.Warn($"Could not restore paint for {item.VehicleId}: {LastError}");
         }
         ReleaseDetached();
@@ -77,6 +89,7 @@ public sealed partial class WarPaintService
     {
         public string VehicleId { get; set; } = "";
         public string CharacterId { get; set; } = "";
+        public string? PresetName { get; set; }
         public PaintSettings Paint { get; set; } = new();
     }
 }

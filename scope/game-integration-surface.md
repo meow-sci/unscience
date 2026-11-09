@@ -12,8 +12,8 @@ through War Paint. Humble visor draw gating remains. DOH selects saved presets a
 | KittenEva._renderable → _characterAvatar; five renderable MaterialIndices paths | war-paint / NativeKittenPaintBackend | Extracted DOH path, original binding capture and guarded restore |
 | Program material/texture roots, AssetMap, native handles, BigBuffer/DeviceCtx, MaterialData stride80/AlbedoColor offset16 | war-paint / Materials | Existing cloning/upload path; exact native asset identity before reuse/release |
 | KittenEva.Character.Id, Vehicle identity/disposal, VehicleProvider | war-paint / WarPaintService | Exact current target; no ambiguous fallback |
-| ISubmod / ISaveParticipantSource | war-paint / WarPaintSubmod | Added Unscience entry, `war-paint` v1/order85, no new Harmony target |
-| Persistent global recipes | war-paint / PaintPresetLibrary | `.unscience/war-paint-presets.json`, detached copies, atomic replacement |
+| ISubmod / ISaveParticipantSource | war-paint / WarPaintSubmod | `war-paint` v1/order85 adds optional PresetName; exact effective scene recipe replay and transient editor reset; no new Harmony target |
+| Persistent global recipes / preset editor | war-paint / PaintPresetLibrary, PaintPresetEditor, WarPaintService.Presets | `.unscience/war-paint-presets.json`; atomic writes, live previews by named assignment, confirmed delete/unset; read-only catalog reuses original-binding paths |
 
 Legacy group/color migration, missing target retention and static/native verification boundaries:
 [implementation](../plans/WAR_PAINT_CONSOLIDATION.md), [save contracts](saves.md).

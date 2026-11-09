@@ -18,7 +18,7 @@ public interface IKittenPaintBackend
     bool SetColor(MaterialEntry material, float4 color);
     bool CanReuse(KittenMaterialSet materials);
     void Release(KittenMaterialSet materials);
-    /// <summary>Asset name of a source handle, used only to migrate legacy global color records.</summary>
+    /// <summary>Asset name of an original source handle, for preset discovery and legacy color import.</summary>
     string? GetMaterialName(int handle) => null;
 }
 
@@ -36,12 +36,13 @@ public sealed class ActivePaint
     public KittenEva Kitten { get; }
     public string VehicleId => Kitten.Id;
     public string CharacterId { get; }
+    public string PresetName { get; internal set; }
     public KittenMaterialSet MaterialSet { get; }
     internal IReadOnlyList<KittenMaterialBinding> Bindings { get; }
 
-    internal ActivePaint(KittenEva kitten, string characterId, KittenMaterialSet materialSet,
+    internal ActivePaint(KittenEva kitten, string characterId, string presetName, KittenMaterialSet materialSet,
         IReadOnlyList<KittenMaterialBinding> bindings)
     {
-        Kitten = kitten; CharacterId = characterId; MaterialSet = materialSet; Bindings = bindings;
+        Kitten = kitten; CharacterId = characterId; PresetName = presetName; MaterialSet = materialSet; Bindings = bindings;
     }
 }

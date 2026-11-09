@@ -19,6 +19,7 @@ public sealed partial class WarPaintService
     private bool _shutdown;
     public PaintPresetLibrary Presets { get; }
     public string? LastError { get; private set; }
+    public int SceneRevision { get; private set; }
 
     public WarPaintService(IKittenPaintBackend backend, PaintPresetLibrary presets)
     {
@@ -40,8 +41,10 @@ public sealed partial class WarPaintService
         paint = null!; return false;
     }
     public ActivePaint? Apply(KittenEva kitten, float4 tint) => Apply(kitten, new PaintSettings { Tint = tint });
+    public ActivePaint? Apply(KittenEva kitten, PaintSettings settings) => Apply(kitten, settings, null);
 
-    public ActivePaint? Apply(KittenEva kitten, PaintSettings settings)
+    /// <summary>Apply a named recipe. Legacy callers without a name import a reusable preset first.</summary>
+    public ActivePaint? Apply(KittenEva kitten, PaintSettings settings, string? presetName)
     {
         LastError = null;
         try
@@ -49,8 +52,15 @@ public sealed partial class WarPaintService
             settings.Validate();
             if (_shutdown || !IsCurrent(kitten))
                 return Fail("The selected kitten is no longer a unique live target.");
+            presetName ??= ImportPreset(settings, $"Imported paint - {kitten.Id}");
+            if (presetName == null) return Fail(Presets.LastError ?? "Could not create a named paint preset.");
+            if (!Presets.TryGet(presetName, out _)) return Fail($"Paint preset unavailable: {presetName}.");
             if (_active.TryGetValue(kitten, out var existing))
-                return ApplySettings(existing, settings) ? existing : null;
+            {
+                if (!ApplySettings(existing, settings)) return null;
+                existing.PresetName = presetName;
+                return existing;
+            }
             var bindings = _backend.CaptureBindings(kitten);
             if (bindings == null) return Fail("No kitten material bindings are available.");
             string characterId = kitten.Character.Id;
@@ -60,7 +70,7 @@ public sealed partial class WarPaintService
             if (set == null) return Fail("Private kitten materials are unavailable; the GPU material pool may be full.");
             // Claim the cache entry only when it actually supplied this target's set.
             if (ReferenceEquals(set, reusable)) _detached.Remove(key);
-            var paint = new ActivePaint(kitten, characterId, set, bindings);
+            var paint = new ActivePaint(kitten, characterId, presetName, set, bindings);
             try
             {
                 if (!ApplySettings(paint, settings))

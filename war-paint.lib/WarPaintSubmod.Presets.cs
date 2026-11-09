@@ -1,5 +1,6 @@
+using System;
 using Brutal.ImGuiApi;
-using System.Linq;
+using Brutal.Numerics;
 
 namespace MeowSci.WarPaintLib;
 
@@ -7,69 +8,105 @@ public sealed partial class WarPaintSubmod
 {
     private void RenderPresets()
     {
-        ImGui.SeparatorText("Presets"u8);
-        var library = _service.Presets;
-        var names = library.Names;
-        if (_selectedPreset != null && !names.Contains(_selectedPreset))
+        ImGui.SetNextItemWidth(-1f);
+        ImString preview = _editor.SelectedName == null ? "Select Preset..." : $"{_editor.SelectedName}{(_editor.HasChanges ? " *" : "")}";
+        if (ImGui.BeginCombo("##wp_presets"u8, preview, ImGuiComboFlags.HeightLarge))
         {
-            _selectedPreset = null;
-            _draftChanged = true;
-        }
-        ImGui.SetNextItemWidth(-90f);
-        if (ImGui.BeginCombo("##wp_presets"u8, _selectedPreset ?? "Choose a saved preset..."))
-        {
-            foreach (string name in names)
+            if (ImGui.IsWindowAppearing())
             {
-                if (!ImGui.Selectable(name, name == _selectedPreset)) continue;
-                if (library.TryGet(name, out var settings))
-                {
-                    _draft = settings;
-                    _selectedPreset = name;
-                    _presetName.Value16 = name;
-                    _liveEditing = false;
-                    _pendingApply = true;
-                    _draftChanged = false;
-                    SetStatus($"Loaded '{name}'. Apply it to the selected kitten.");
-                }
-                else SetStatus(library.LastError ?? "The preset could not be loaded.", true);
+                ImGui.SetKeyboardFocusHere();
+                _presetFilter.Clear();
             }
+            ImGui.SetNextItemWidth(-1f);
+            bool complete = ImGui.InputTextWithHint("##wp_preset_filter"u8, "Filter presets..."u8, _presetFilter, ImGuiInputTextFlags.EnterReturnsTrue);
+            string filter = _presetFilter.ToString().Trim();
+            bool any = false;
+            foreach (string name in _service.Presets.Names)
+            {
+                if (!name.Contains(filter, StringComparison.OrdinalIgnoreCase)) continue;
+                bool firstMatch = !any;
+                any = true;
+                bool selected = name == _editor.SelectedName;
+                if (ImGui.Selectable(name, selected) || (complete && firstMatch))
+                {
+                    SelectPreset(name);
+                    ImGui.CloseCurrentPopup();
+                    break;
+                }
+                if (selected) ImGui.SetItemDefaultFocus();
+            }
+            if (!any) ImGui.TextDisabled("No matching presets."u8);
             ImGui.EndCombo();
         }
-        ImGui.SameLine();
-        ImGui.BeginDisabled(_selectedPreset == null);
-        if (ImGui.Button("Delete##wp_preset"u8) && _selectedPreset != null)
+        RenderPresetActions();
+        if (_service.Presets.LastError != null)
         {
-            string name = _selectedPreset;
-            if (library.Delete(name))
-            {
-                _selectedPreset = null;
-                _draftChanged = true;
-                SetStatus($"Deleted '{name}'. Applied kitten paint is unchanged.");
-            }
-            else SetStatus(library.LastError ?? "The preset could not be deleted.", true);
+            ImGui.PushStyleColor(ImGuiCol.Text, new float4(1f, .3f, .3f, 1f));
+            ImGui.TextWrapped(_service.Presets.LastError);
+            ImGui.PopStyleColor();
         }
-        ImGui.EndDisabled();
-        ImGui.SetItemTooltip("Deletes the saved preset. Kittens already painted with it keep their colors."u8);
+    }
 
-        ImGui.SetNextItemWidth(-112f);
-        ImGui.InputTextWithHint("##wp_preset_name"u8, "Preset name"u8, _presetName);
-        ImGui.SameLine();
-        ImGui.BeginDisabled(string.IsNullOrWhiteSpace(_presetName.ToString()));
-        if (ImGui.Button("Save preset##wp"u8))
+    private void RenderPresetActions()
+    {
+        float padding = ImGui.GetStyle().FramePadding.X * 2;
+        float applyWidth = ImGui.CalcTextSize(" Apply to Kittens "u8).X + padding;
+        float saveWidth = ImGui.CalcTextSize(" Save Changes "u8).X + padding;
+        float createWidth = ImGui.CalcTextSize(" New Preset "u8).X + padding;
+        float deleteWidth = ImGui.CalcTextSize(" Delete "u8).X + padding;
+        float width = ImGui.GetContentRegionAvail().X;
+        int columns = width >= applyWidth + saveWidth + createWidth + deleteWidth + 36f
+            ? 4 : width >= (applyWidth + 12f) * 2 ? 2 : 1;
+        bool openApply = false, openCreate = false, openDelete = false;
+        ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new float2(6f, 6f));
+        if (ImGui.BeginTable("##wp_actions"u8, columns, ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.NoPadOuterX))
         {
-            string name = _presetName.ToString().Trim();
-            if (library.Save(name, _draft))
+            if (columns == 4)
             {
-                _selectedPreset = name;
-                _draftChanged = false;
-                if (!_liveEditing) _pendingApply = true;
-                SetStatus($"Saved '{name}'. It is now available in DOH.");
+                ImGui.TableSetupColumn("##apply"u8, ImGuiTableColumnFlags.WidthStretch, applyWidth);
+                ImGui.TableSetupColumn("##save"u8, ImGuiTableColumnFlags.WidthStretch, saveWidth);
+                ImGui.TableSetupColumn("##create"u8, ImGuiTableColumnFlags.WidthStretch, createWidth);
+                ImGui.TableSetupColumn("##delete"u8, ImGuiTableColumnFlags.WidthStretch, deleteWidth);
             }
-            else SetStatus(library.LastError ?? "The preset could not be saved.", true);
+            bool selected = _editor.SelectedName != null;
+            ImGui.TableNextColumn();
+            ImGui.BeginDisabled(!selected);
+            if (ImGui.Button(" Apply to Kittens ##wp"u8, new float2(-1, 0)))
+            {
+                _applySelection.Clear();
+                _dialogError = null;
+                openApply = true;
+            }
+            ImGui.EndDisabled();
+            ImGui.TableNextColumn();
+            ImGui.BeginDisabled(!_editor.HasChanges);
+            if (ImGui.Button(" Save Changes ##wp"u8, new float2(-1, 0)))
+            {
+                if (_editor.Save()) SetStatus($"Saved '{_editor.SelectedName}'.");
+                else SetStatus(_editor.LastError ?? "Could not save all preset changes.", true);
+            }
+            ImGui.EndDisabled();
+            ImGui.TableNextColumn();
+            if (ImGui.Button(" New Preset ##wp"u8, new float2(-1, 0)))
+            {
+                _presetName.Clear();
+                _dialogError = null;
+                openCreate = true;
+            }
+            ImGui.TableNextColumn();
+            ImGui.BeginDisabled(!selected);
+            if (DangerButton(" Delete ##wp_preset"u8, new float2(-1, 0)))
+            {
+                _dialogError = null;
+                openDelete = true;
+            }
+            ImGui.EndDisabled();
+            ImGui.EndTable();
         }
-        ImGui.EndDisabled();
-        ImGui.SetItemTooltip("Saves the current brush and material colors. An existing name replaces that preset."u8);
-        ImGui.TextDisabled(_draftChanged ? "Unsaved color changes" : "Presets are shared across scenes.");
-        if (library.LastError != null) ImGui.TextWrapped(library.LastError);
+        ImGui.PopStyleVar();
+        // Open and render popups at the content ID scope, outside the layout table.
+        if (openApply) ImGui.OpenPopup("Apply to Kittens##wp"u8);
+        if (openCreate) ImGui.OpenPopup("New War Paint Preset##wp"u8);
+        if (openDelete) ImGui.OpenPopup("Delete War Paint Preset##wp"u8);
     }
 }

@@ -1,8 +1,10 @@
 # Unscience — Full Game-Integration Scope
 
-**War Paint** now centralizes per-kitten colors, live editing, active-target Unset and global presets;
-DOH selects presets and Humble retains part paint/emissive/visor controls. Earlier kitten colors
-migrate through unchanged legacy save IDs; new scene ownership uses `war-paint` v1/order85.
+**War Paint** uses a preset editor with live previews across named kitten assignments, multi-target
+application, dirty-only saving and confirmed deletion/unpainting. Width-aware tables follow the
+ImGui design conventions. Earlier colors migrate into named presets; `war-paint` v1/order85 adds
+optional preset names while preserving effective scene colors. DOH carries names into assignments;
+Humble retains part paint/emissive/visor controls. [Editor acceptance](../plans/WAR_PAINT_PRESET_EDITOR.md).
 [Integration](character-and-materials.md#war-paint-consolidation-5801) · [acceptance](../plans/WAR_PAINT_CONSOLIDATION.md).
 
 Humble Arteest's reported immediate white vessels on Enable remain **unresolved**. Three

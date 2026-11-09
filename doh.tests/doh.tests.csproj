@@ -10,6 +10,7 @@
     <Compile Include="../war-paint.lib/IKittenPaintBackend.cs" Link="IKittenPaintBackend.cs" />
     <Compile Include="../war-paint.lib/WarPaintService.cs" Link="WarPaintService.cs" />
     <Compile Include="../war-paint.lib/WarPaintService.Persistence.cs" Link="WarPaintService.Persistence.cs" />
+    <Compile Include="../war-paint.lib/WarPaintService.Presets.cs" Link="WarPaintService.Presets.cs" />
     <Compile Include="../war-paint.lib/Materials/KittenMaterialSet.cs" Link="KittenMaterialSet.cs" />
     <Compile Include="../war-paint.lib/Materials/MaterialFactory.Lifetime.cs" Link="MaterialFactory.Lifetime.cs" />
     <Compile Include="../doh.lib/Spawning/SpawnedKittenRegistry.cs" Link="SpawnedKittenRegistry.cs" />

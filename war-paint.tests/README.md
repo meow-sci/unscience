@@ -1,18 +1,19 @@
 # War Paint managed checks
 
 Run `dotnet run --project war-paint.tests/war-paint.tests.csproj` from the repository root.
-The executable links production paint ownership, presets, scene adapter, material release/pool and
-fur-reuse logic against a native-independent backend and asset-map fixtures.
+The executable links production paint ownership, preset editor/library, scene adapter, material
+release/pool and fur reuse against a native-independent backend and asset-map fixtures.
 
-61 checks cover independent kitten tint/material edits; detached snapshots; Unset restoring only
-owned bindings before freeing slots; idempotent cleanup; disposed/stale/ambiguous targets; allocation
-failure; global preset restart/replacement/deletion and corrupt/future file protection; compatible
-character material-slot portability; legacy DOH/Humble imports; repeated scene replay and slot reuse;
-vanilla cleanup; invalid and missing-target retention; exact native asset identity and recycled slot
-protection; fixed-pool reserve accounting; and new native fur-source handle remapping.
+93 checks cover isolated material edits; detached snapshots; restoration before slot release;
+stale/disposed/ambiguous targets; allocation failure; global preset IO/corruption protection;
+read-only material discovery; required selection and unique preset creation; dirty state;
+live preview across assignments; save and discard; confirmed deletion and unaffected presets;
+write failures/retry; compatible material roles; DOH/Humble migration; named and older nameless
+v1 scene replay; effective unsaved scene colors; recovery of missing global presets; repeated
+loads/reuse; vanilla reset; malformed/missing record retention; asset identity/recycled slots;
+fixed-pool reserve accounting; and fur-source remapping.
 
-The real shared `VehicleProvider`, serializer and save coordinator participate in the checks. The
-backend records binding changes and GPU writes without loading KSA or Vulkan. Native source-key
-release and fur remapping helpers are production code; native asset disposal is a managed fixture.
-These tests do not prove actual shader output, GPU synchronization, portrait rendering or native
-save reconstruction. See [implementation and native acceptance](../plans/WAR_PAINT_CONSOLIDATION.md).
+The real `VehicleProvider`, serializer and save coordinator participate. Backend fixtures record
+binding changes and GPU writes without loading KSA/Vulkan. These checks do not validate the native
+ImGui layout, shader output, GPU synchronization or actual save reconstruction. See the
+[editor acceptance checklist](../plans/WAR_PAINT_PRESET_EDITOR.md).

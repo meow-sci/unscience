@@ -6,17 +6,11 @@ the parent reviewed lifecycle/save compatibility, added regression tests and val
 
 ## User workflow
 
-War Paint is the central kitten painting submod in the Unscience Toolbox. Select any live EVA
-kitten, apply a whole tint or saved preset, then edit its individual materials live. Ad-hoc edits
-need no saved preset. The active paints list selects targets and exposes Unset, which restores
-the kitten's original material bindings. A pending preset/draft survives changing the target;
-**Load kitten colors** explicitly replaces that draft with the target's current state.
-
-Named presets persist across scenes and restarts in `.unscience/war-paint-presets.json`. Presets
-and active paints are detached copies: editing/deleting a preset does not recolor existing targets,
-and live edits do not silently modify a preset. Source-renderable + material-slot identities let
-compatible characters use the same recipe while retaining their own textures. Missing/incompatible
-roles fail with a diagnostic. Source material names remain readable for legacy recipes.
+The subsequent [preset editor refactor](WAR_PAINT_PRESET_EDITOR.md) supersedes the original UI.
+War Paint now requires a named preset, previews edits across all matching kitten assignments,
+provides explicit Save Changes, applies to multiple selected EVA kittens and confirms deletion
+before removing the preset and all its live paint. Switching presets rolls back unsaved previews.
+Presets remain global atomic files; source+slot recipes keep compatible target textures independent.
 
 DOH removes its custom tint, individual paint, unique/shared batch and lucky-color controls and
 offers a War Paint preset selector. Selection captures a detached recipe; reselect to refresh after
@@ -45,8 +39,10 @@ fixed pool still reserves 64 slots for the game and refuses insufficient materia
 
 The new `war-paint` v1 participant restores at order85. Active recipes are scene state; native
 vehicle/character construction belongs to KSA. Presets are global files, atomically replaced.
-Invalid/future preset files are preserved. UI filters, selected target and unapplied brush edits are
-transient. No GPU handles, native objects, process-local clone names or pending commands are saved.
+Invalid/future preset files are preserved. Active records now include optional `PresetName` without
+changing v1; older nameless recipes import named presets. Effective live preview colors remain
+scene state. Missing global entries recover from snapshots without overwriting existing recipes.
+UI filters, selection, brush, editor baseline and dialog checkmarks are transient and reset on load. No GPU handles, native objects, process-local clone names or pending commands are saved.
 
 Existing `doh` v1/order60 and `humble-arteest` v1/order80 retain IDs/versions and legacy fields:
 
@@ -74,7 +70,9 @@ DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER=1 dotnet build ksa-mod-experiments.slnx \
   -p:SelectedDistModDir=/private/tmp/unscience-war-paint-dist/
 ```
 
-All **19 managed suites passed**, including **61 War Paint** and **74 DOH** checks. War Paint tests
+The original consolidation passed all **19 managed suites**, including **61 War Paint** and
+**74 DOH** checks. The subsequent editor refactor expands War Paint to **93** checks; its current
+validation and native acceptance are recorded in [the editor report](WAR_PAINT_PRESET_EDITOR.md). War Paint tests
 link the production service, preset library, adapter, material pool/release and fur-reuse helper.
 They cover independent and live edits, Unset/release ordering, detached presets and restart/delete,
 portable material roles, legacy imports, repeated/vanilla restore, cache reuse/retirement, identity

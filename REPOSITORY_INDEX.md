@@ -425,23 +425,28 @@ native backend fixture. Covers names, defaults, queued despawn/stale registratio
 migration, preset snapshot persistence and ownership. See its [README](doh.tests/README.md).
 
 ### [war-paint](war-paint) / [war-paint.lib](war-paint.lib)
-Central per-kitten coloring panel for every live EVA kitten: explicit target picker, whole tint,
-individual material colors, live unsaved editing, durable named presets, and active targets with
-Unset. DOH consumes the same preset library. Presets are detached copies at
-`.unscience/war-paint-presets.json`; changing/deleting a preset never changes already-painted kittens.
+Preset-based coloring for all live EVA kittens: full-width filterable combo, name/confirmation
+modals, multi-kitten checkbox application, dirty-only Save Changes, non-collapsible Preset Colors
+and Live War Paint sections, RGB whole-material action, and compact material swatches. Width-aware
+action tables wrap in narrow panels. Edits preview on all matching assignments; switching presets
+restores saved colors. Confirmed deletion unsets matching kittens; red X removes one assignment.
+DOH uses the same global library at `.unscience/war-paint-presets.json` and tracks preset names.
 
-`WarPaintService` owns private cloned materials, original bindings and the `war-paint` v1 scene
-participant (order85). `NativeKittenPaintBackend` contains the former DOH avatar binding path;
-`Materials/` contains its existing GPU cloning/upload/pool helpers. Unset restores bindings before
-release; reset detaches/reuses exact surviving assets after native reconstruction. Presets map
-renderable source + material slot across compatible character appearances. Legacy exact names
-remain accepted. Global Humble material recipes migrate into private per-kitten ownership.
+`PaintPresetEditor` owns detached draft/baseline and preview/save/discard/delete behavior.
+`WarPaintService` owns private materials, named assignments and `war-paint` v1/order85 scene state.
+Optional `PresetName` preserves payload compatibility; effective scene colors replay without
+replacing existing global recipes. Missing library entries recover from scene snapshots; old
+nameless recipes import named presets. UI state is transient and clears on scene replacement.
+`NativeKittenPaintBackend` retains original bindings before cloning, restores before release, and
+supports read-only material discovery. Source+slot recipes span compatible character textures;
+legacy exact names remain readable. See [usage](war-paint.lib/README.md).
 
 ### [war-paint.tests](war-paint.tests)
-Native-independent checks link production service, preset library and save adapter. Cover independent
-colors, live edits, original-binding restoration, detached/persistent presets, cross-character roles,
-repeat scene replay, cache reuse/retirement, vanilla/missing/invalid targets and legacy migration.
-Native Vulkan rendering and actual KSA save reconstruction still need playtesting.
+93 native-independent checks link the production editor, service, library and scene adapter. Cover
+required preset selection, dirty state, shared live preview, rollback, deletion isolation, failed
+writes/retry, named/legacy/missing-library scene replay, exact target identity and native material
+ownership/reuse fixtures. Native layout/Vulkan acceptance remains in-game; see its
+[README](war-paint.tests/README.md) and [checklist](plans/WAR_PAINT_PRESET_EDITOR.md).
 
 ---
 

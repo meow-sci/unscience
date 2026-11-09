@@ -13,11 +13,11 @@ and Unscience cleanup before native renderer disposal. Graffiti's unused/repeate
 no Vulkan state. DOH's default offset is now **(1, 1, -2) m**; explicit saved offsets are preserved.
 Native retesting of the reported crash remains pending.
 
-**War Paint** is the central kitten coloring submod. Select any live EVA kitten, apply a whole tint
-or saved preset, edit individual materials live, and Unset active paint to restore its original
-bindings. Named presets persist across scenes/restarts; DOH selects one when spawning. The old
-DOH/Humble color controls are removed and their legacy saved colors migrate.
-[Controls and ownership](war-paint.lib/README.md).
+**War Paint** is the central kitten coloring submod. Create/select a named preset, preview its
+material colors on all assigned kittens, save changes, and apply it to multiple EVA kittens.
+Confirmed preset deletion removes matching paint; red X buttons restore individual kittens.
+Presets persist across scenes/restarts; DOH assigns them when spawning. Legacy saved colors migrate.
+[Controls and ownership](war-paint.lib/README.md) · [layout and native acceptance](plans/WAR_PAINT_PRESET_EDITOR.md).
 
 Humble Arteest's immediate white vessels on part-paint Enable remain unresolved; this is separate
 from the working kitten coloring path. [Investigation](plans/HUMBLE_ARTEEST_5801_PAINT_INVESTIGATION.md).

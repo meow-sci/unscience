@@ -6,14 +6,18 @@
 private materials and original-binding ownership; detached slots can be reused after native reset.
 Global presets live in `.unscience/war-paint-presets.json`, outside scenes. Existing DOH/Humble
 records retain IDs/versions and migrate old effective colors; explicit new paints replay last.
-New DOH saves include a preset name and detached spawn recipe. UI brush/filter/target state is transient.
+New DOH saves include a preset name and detached spawn recipe. Active War Paint v1 records now
+add optional `PresetName`; older nameless recipes import named presets, and missing global entries
+recover from scene snapshots. Existing global recipes are not overwritten by scene previews.
+UI editor/brush/filter/dialog state is transient and resets on scene replacement.
 
 Production service/preset/adapter checks cover independent edits, Unset ordering, detached snapshots,
 restart persistence, portable material roles, legacy imports, repeated/vanilla loads and invalid or
 unresolved record retention. Native acceptance: paint native and spawned kittens differently; save
-presets and restart; spawn with the selected preset; live-edit without changing that preset; Unset;
+presets and restart; spawn with the selected preset; preview all matching assignments, Save or
+switch to discard; remove one kitten or confirm deletion of the preset and all its assignments;
 board/delete; repeatedly save/load and confirm resource recovery and late-shutdown safety.
-[Full implementation and checks](WAR_PAINT_CONSOLIDATION.md).
+[Editor and save acceptance](WAR_PAINT_PRESET_EDITOR.md) · [original consolidation](WAR_PAINT_CONSOLIDATION.md).
 
 ## 5801 despawn/shutdown follow-up
 
@@ -151,7 +155,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [Graffiti](../graffiti.lib/GraffitiSubmod.Saves.cs) | Terrain, part and canopy decal anchors, image names, projection geometry, cloth triangle/barycentric address, visibility, brightness/alpha. | Placement mode stops. Missing PNGs or unavailable canopy can leave a dormant entry with warnings; missing part/body cannot be rebound. Cloth deformation itself is not captured. Images and compatible canopy topology remain required. |
 | [Hot Pursuit](../hot-pursuit.lib/HotPursuitSubmod.Saves.cs) | Mounted part, surface basis, transform, FOV, dimensions, visibility and whether its viewport was open. | Placement mode stops. Attempts to reopen saved viewports; slot exhaustion keeps the camera setup and reports that its viewport needs reopening. No native viewport/texture handles persist. |
 | [Humble Arteest](../humble-arteest.lib/HumbleArteestSubmod.Persistence.cs) | Part paint activation/blend and global/template/part colors; visor hiding; engine emissive overrides. | Legacy v1 MaterialColors migrate to private War Paint ownership; unmatched assets warn. Part targets and module layouts use existing stable resolvers. |
-| [War Paint](../war-paint.lib/WarPaintService.Persistence.cs) | Active kitten identity, character, tint and per-material recipes. Global presets remain outside scenes. | New v1/order85; restore exact reconstructed targets after DOH/Humble migration; reset original bindings and safely reuse/retire exact owned slots. Missing/incompatible targets warn and retain records. |
+| [War Paint](../war-paint.lib/WarPaintService.Persistence.cs) | Active kitten identity, character, preset name and effective tint/material recipes, including previews. Global presets remain outside scenes. | v1/order85 with additive optional preset name; recover named legacy/missing-library recipes; restore exact reconstructed targets after DOH/Humble migration; reset original bindings and safely reuse/retire exact owned slots. Missing/incompatible targets warn and retain records. |
 | [I Feel Seen](../i-feel-seen.lib/IFeelSeenSubmod.Saves.cs) | Tracked vehicle identities and each force-visibility flag. | Rebuilds tracking on native-restored vehicles. Deleted/missing vehicles warn. |
 | [Iron Man](../iron-man.lib/IronManSubmod.Saves.cs) | Configured kittens, enabled mode, original EVA/control settings needed to disable the mode, current flight-computer preferences. | Mode restores with engines **disarmed**. Existing connectors are configured/reused through the normal code path. Runtime thrust/burn continuation is not promised; the player deliberately arms engines again. Custom anchors use a native Components envelope since 5801 (legacy Id markers migrate); the unchanged v1 payload is decoded at the private 11-argument Part constructor before index reconstruction. |
 | [It's So Shiny](../its-so-shiny.lib/ItsSoShinySubmod.Persistence.cs) | Existing host/light cell addresses, grid ownership/appearance, sparse mask, render flag, scroll recipe/offset and pending deletion. | Rebinds native cells without spawning or forcing ignition/switch state; scrolling resumes. Pending deletion restarts its delay. Shared light-template appearance retains the feature's existing shared-template semantics, with Zippo's template ledger restoring originals. |

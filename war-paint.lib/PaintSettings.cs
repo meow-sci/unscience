@@ -18,6 +18,14 @@ public sealed class PaintSettings
             { Source = m.Source, Name = m.Name, Slot = m.Slot, Color = m.Color }).ToList()
     };
 
+    /// <summary>Compare detached recipes, independent of material row order.</summary>
+    public bool EquivalentTo(PaintSettings other) => Tint == other.Tint
+        && Materials.Count == other.Materials.Count
+        && Materials.OrderBy(m => m.Source, StringComparer.Ordinal).ThenBy(m => m.Slot).ThenBy(m => m.Name, StringComparer.Ordinal)
+            .Zip(other.Materials.OrderBy(m => m.Source, StringComparer.Ordinal).ThenBy(m => m.Slot).ThenBy(m => m.Name, StringComparer.Ordinal))
+            .All(pair => pair.First.Source == pair.Second.Source && pair.First.Slot == pair.Second.Slot
+                && pair.First.Name == pair.Second.Name && pair.First.Color == pair.Second.Color);
+
     public void Validate()
     {
         if (!Finite(Tint) || Materials == null || Materials.Count > 10000

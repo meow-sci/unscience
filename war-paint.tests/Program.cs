@@ -20,6 +20,9 @@ internal static partial class WarPaintChecks
         {
             Ownership();
             PresetPersistence();
+            PresetEditing();
+            PresetWriteFailures();
+            NamedSceneRoundTrip();
             SceneRoundTrip();
             InvalidTargets();
             Compatibility();

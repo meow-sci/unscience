@@ -2,8 +2,10 @@
 
 ## War Paint scene ownership and legacy migration
 
-New `war-paint` v1/order85 captures active per-kitten tint/material recipes by exact vehicle ID plus
-character identity. Reset restores original bindings synchronously and detaches only owned material
+`war-paint` v1/order85 captures active per-kitten tint/material recipes by exact vehicle ID plus
+character identity and an additive optional `PresetName`. Effective colors include live previews;
+replay does not overwrite existing global recipes. Earlier nameless records import named presets;
+missing global entries recover from their scene snapshot, so older saves may recover deleted presets. Reset restores original bindings synchronously and detaches only owned material
 sets; replay reuses exact surviving native assets or allocates new private sets. Unused detached sets
 retire after reconstruction. Native kittens/vehicles remain KSA-owned. Missing/ambiguous/incompatible
 identities warn and retain the incoming record through the existing coordinator.
@@ -15,11 +17,13 @@ Humble MaterialColors remains readable and maps source assets to explicit live k
 isolated paints; unmatched assets warn. The explicit War Paint record replays last and wins on a
 shared target. New captures keep active recipes solely in War Paint.
 
-Named presets are global `.unscience/war-paint-presets.json` data, atomically replaced and detached
-from active targets; corrupt/future files are preserved. Changing/deleting presets does not retarget or
-alter scene paints. UI filters, target selection and unapplied brush state are transient. DOH saves
-its selected name plus detached spawn recipe so changes to the global library do not alter restored
-spawn setup. [Checks and native acceptance](../plans/WAR_PAINT_CONSOLIDATION.md).
+Named presets are global `.unscience/war-paint-presets.json` data with atomic replacement and
+corrupt/future-file protection. The editor previews a detached draft on matching assignments;
+Save commits it, switching presets rolls back unsaved colors, and confirmed deletion unsets all
+matching kittens. Only effective assigned colors and preset names are scene state. Editor selection,
+brush, filters, baseline and pending dialog targets reset on scene replacement. DOH retains its
+selected name plus detached spawn recipe and passes that name into new live assignments.
+[Editor checks and native acceptance](../plans/WAR_PAINT_PRESET_EDITOR.md).
 
 ## 5801 native playtest: despawn and shutdown
 

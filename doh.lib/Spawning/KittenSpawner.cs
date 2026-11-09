@@ -98,10 +98,11 @@ public sealed partial class KittenSpawner
             return SpawnResult.Failure("No character available.");
 
         PaintSettings? paint = request.PaintSettings;
-        if (paint == null && request.PaintPresetName != null)
+        if (request.PaintPresetName != null)
         {
-            if (!WarPaintService.Shared.Presets.TryGet(request.PaintPresetName, out paint))
+            if (!WarPaintService.Shared.Presets.TryGet(request.PaintPresetName, out var namedPaint))
                 return SpawnResult.Failure($"War Paint preset unavailable: {request.PaintPresetName}.");
+            paint ??= namedPaint;
         }
         paint?.Validate();
         bool tinted = paint != null || request.TintColor.HasValue || request.PerKittenColors != null;
@@ -174,7 +175,7 @@ public sealed partial class KittenSpawner
             if (tinted)
             {
                 var kittenPaint = request.GetPaintForKitten(paint, i)!;
-                matSet = WarPaintService.Shared.Apply(kittenEva, kittenPaint)?.MaterialSet;
+                matSet = WarPaintService.Shared.Apply(kittenEva, kittenPaint, request.PaintPresetName)?.MaterialSet;
                 if (matSet == null) untinted++;
             }
 

@@ -1,3 +1,4 @@
+using System;
 using Brutal.ImGuiApi;
 using Brutal.Numerics;
 
@@ -5,153 +6,121 @@ namespace MeowSci.WarPaintLib;
 
 public sealed partial class WarPaintSubmod
 {
-    private void RenderBrush()
+    private void RenderPresetColors()
     {
-        ImGui.SeparatorText("Kitten Paint"u8);
-        var tint = _draft.Tint;
-        if (ImGui.ColorEdit4("Tint all materials##wp"u8, ref tint, ImGuiColorEditFlags.AlphaBar))
+        ImGui.SeparatorText("Preset Colors"u8);
+        ImGui.BeginDisabled(_editor.SelectedName == null);
+        float width = ImGui.GetContentRegionAvail().X;
+        float buttonWidth = ImGui.CalcTextSize(" Apply to All Materials "u8).X + ImGui.GetStyle().FramePadding.X * 2;
+        // Keep RGB inputs usable when the host window is narrow; let the action wrap below.
+        float colorWidth = ImGui.GetFontSize() * 15f;
+        bool split = width >= buttonWidth + colorWidth + 24f;
+        ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new float2(6f, 6f));
+        if (ImGui.BeginTable("##wp_brush"u8, split ? 2 : 1, ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.NoPadOuterX))
         {
-            _draft.Tint = tint;
-            // Like DOH's original Tint All, the brush replaces every material color.
-            foreach (var material in _draft.Materials) material.Color = tint;
-            _draftChanged = true;
-            _pendingApply = !_liveEditing;
-            if (_liveEditing && _target != null && !_service.UpdateTint(_target, tint))
+            if (split)
             {
-                _liveEditing = false;
-                _pendingApply = true;
-                SetStatus(_service.LastError ?? "Could not update the kitten tint.", true);
+                ImGui.TableSetupColumn("##color"u8, ImGuiTableColumnFlags.WidthFixed, colorWidth);
+                ImGui.TableSetupColumn("##apply"u8, ImGuiTableColumnFlags.WidthStretch, 1f);
             }
-        }
-        ImGui.SetItemTooltip("Replaces every material color on this kitten. Edit individual materials below for finer control. Alpha affects opaque kitten surfaces; visor visibility is in Humble Arteest."u8);
-
-        ImGui.BeginDisabled(_target == null);
-        if (ImGui.Button("Apply to kitten##wp"u8) && _target != null)
-        {
-            if (_service.Apply(_target, _draft) != null)
+            ImGui.TableNextColumn();
+            ImGui.SetNextItemWidth(-1f);
+            ImGui.ColorEdit4("##wp_brush_color"u8, ref _brushColor,
+                ImGuiColorEditFlags.NoLabel | ImGuiColorEditFlags.NoAlpha | ImGuiColorEditFlags.Uint8 | ImGuiColorEditFlags.DisplayRGB);
+            ImGui.TableNextColumn();
+            if (ImGui.Button(" Apply to All Materials ##wp"u8, new float2(-1, 0)))
             {
-                _draft = _service.Snapshot(_target) ?? _draft;
-                _liveEditing = true;
-                _pendingApply = false;
-                SetStatus($"Paint applied to '{_target.Id}'. Color edits now update it live.");
+                _editor.Draft.Tint = _brushColor;
+                foreach (var material in _editor.Draft.Materials) material.Color = _brushColor;
+                PreviewChanges();
             }
-            else SetStatus(_service.LastError ?? "Could not paint the kitten.", true);
+            ImGui.EndTable();
         }
-        ImGui.SameLine();
-        ImGui.BeginDisabled(_target == null || !_service.TryGetPaint(_target, out _));
-        if (ImGui.Button("Unset##wp_target"u8) && _target != null)
-            UnsetTarget(_target);
+        ImGui.PopStyleVar();
+        ImGui.SetNextItemWidth(-1f);
+        ImGui.InputTextWithHint("##wp_material_filter"u8, "Filter materials..."u8, _materialFilter);
+        ImGui.SetItemTooltip("Filter materials by name or attachment."u8);
+        RenderMaterials();
         ImGui.EndDisabled();
-        ImGui.SameLine();
-        ImGui.BeginDisabled(!_pendingApply);
-        if (ImGui.Button("Load kitten colors##wp"u8) && _target != null)
-        {
-            _pendingApply = false;
-            SelectTarget(_target);
-        }
-        ImGui.EndDisabled();
-        ImGui.SetItemTooltip("Discards the unapplied brush and loads this kitten's current paint, or stock colors if unpainted."u8);
-        ImGui.EndDisabled();
-
-        if (_target == null)
-            ImGui.TextDisabled("Select a kitten, then apply your paint or a saved preset."u8);
-        else if (_liveEditing)
-            ImGui.TextDisabled("Color edits apply live. Save a preset to reuse them in DOH."u8);
-        else
-            ImGui.TextDisabled("Apply the brush to edit this kitten live and reveal its materials."u8);
-
-        if (_draft.Materials.Count > 0 && ImGui.CollapsingHeader("Individual Materials##wp"u8, ImGuiTreeNodeFlags.DefaultOpen))
-            RenderMaterials();
     }
 
     private void RenderMaterials()
     {
-        ImGui.SetNextItemWidth(-1f);
-        _materialFilter.Draw("Filter materials##wp"u8);
-        ImGui.TextDisabled("Presets match the same body or attachment material on compatible kittens."u8);
-        var flags = ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersInnerH
+        var flags = ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersInnerH
             | ImGuiTableFlags.ScrollY | ImGuiTableFlags.NoPadOuterX;
-        if (!ImGui.BeginTable("##wp_materials"u8, 2, flags, new float2(0, ImGui.GetTextLineHeightWithSpacing() * 10))) return;
-        ImGui.TableSetupColumn("Color"u8, ImGuiTableColumnFlags.WidthFixed, 175f);
-        ImGui.TableSetupColumn("Material"u8, ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableHeadersRow();
-        for (int i = 0; i < _draft.Materials.Count; i++)
+        ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new float2(6f, 6f));
+        if (ImGui.BeginTable("##wp_materials"u8, 2, flags, new float2(0, ImGui.GetFrameHeightWithSpacing() * 8)))
         {
-            var material = _draft.Materials[i];
-            if (!_materialFilter.PassFilter(material.Name) && !_materialFilter.PassFilter(material.Source)) continue;
-            ImGui.PushID(i);
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            var color = material.Color;
-            ImGui.SetNextItemWidth(-1f);
-            if (ImGui.ColorEdit4("##wp_color"u8, ref color, ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.AlphaBar))
+            ImGui.TableSetupColumn("Color"u8, ImGuiTableColumnFlags.WidthFixed,
+                Math.Max(ImGui.CalcTextSize("Color"u8).X, ImGui.GetFrameHeight()));
+            ImGui.TableSetupColumn("Material"u8, ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupScrollFreeze(0, 1);
+            ImGui.TableHeadersRow();
+            string filter = _materialFilter.ToString().Trim();
+            for (int i = 0; i < _editor.Draft.Materials.Count; i++)
             {
-                material.Color = color;
-                _draftChanged = true;
-                _pendingApply = !_liveEditing;
-                if (_liveEditing && _target != null && !_service.UpdateMaterial(_target, material.Source, material.Name, color))
+                var material = _editor.Draft.Materials[i];
+                if (!material.Name.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                    && !material.Source.Contains(filter, StringComparison.OrdinalIgnoreCase)) continue;
+                ImGui.PushID(i);
+                ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+                var color = material.Color;
+                if (ImGui.ColorEdit4("##wp_color"u8, ref color,
+                    ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.NoLabel | ImGuiColorEditFlags.NoAlpha))
                 {
-                    _liveEditing = false;
-                    _pendingApply = true;
-                    SetStatus(_service.LastError ?? $"Could not update '{material.Name}'.", true);
+                    material.Color = color;
+                    PreviewChanges();
                 }
+                ImGui.TableNextColumn();
+                ImGui.AlignTextToFramePadding();
+                ImGui.Text(material.Name);
+                ImGui.SetItemTooltip($"{material.Name}\n{material.Source}, material {material.Slot + 1}");
+                ImGui.PopID();
             }
-            ImGui.TableNextColumn();
-            ImGui.Text(material.Name);
-            ImGui.SetItemTooltip(material.Slot >= 0
-                ? $"{material.Source}, material {material.Slot + 1}. Presets reuse this body or attachment slot."
-                : material.Source);
-            ImGui.SameLine();
-            ImGui.TextDisabled($"({material.Source})");
-            ImGui.PopID();
+            ImGui.EndTable();
         }
-        ImGui.EndTable();
+        ImGui.PopStyleVar();
+        if (_editor.SelectedName != null && _editor.Draft.Materials.Count == 0)
+            ImGui.TextWrapped("Individual materials appear when an EVA kitten is available. You can still set the whole-material color."u8);
     }
 
     private void RenderActivePaints()
     {
+        ImGui.SeparatorText("Live War Paint"u8);
         var paints = _service.GetActivePaints();
-        ImGui.SeparatorText($"Active Kitten Paints ({paints.Count})");
-        if (paints.Count == 0)
+        ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new float2(6f, 6f));
+        if (ImGui.BeginTable("##wp_active"u8, 3,
+            ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersInnerH | ImGuiTableFlags.NoPadOuterX))
         {
-            ImGui.TextDisabled("No kittens have War Paint applied."u8);
-            return;
+            ImGui.TableSetupColumn("Kitten"u8, ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn("Preset"u8, ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn("##wp_actions"u8, ImGuiTableColumnFlags.WidthFixed, ImGui.GetFrameHeight());
+            ImGui.TableHeadersRow();
+            foreach (var paint in paints)
+            {
+                ImGui.PushID(paint.VehicleId);
+                ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+                ImGui.AlignTextToFramePadding();
+                ImGui.Text(paint.VehicleId);
+                ImGui.SetItemTooltip(paint.VehicleId);
+                ImGui.TableNextColumn();
+                ImGui.AlignTextToFramePadding();
+                ImGui.Text(paint.PresetName);
+                ImGui.SetItemTooltip(paint.PresetName);
+                ImGui.TableNextColumn();
+                if (DangerButton("X##wp_unset"u8, new float2(-1, 0)))
+                {
+                    if (_service.Unset(paint.Kitten)) SetStatus($"Removed paint from '{paint.VehicleId}'.");
+                    else SetStatus(_service.LastError ?? "Could not remove kitten paint.", true);
+                }
+                ImGui.SetItemTooltip("Restore this kitten's original materials."u8);
+                ImGui.PopID();
+            }
+            ImGui.EndTable();
         }
-        if (!ImGui.BeginTable("##wp_active"u8, 3, ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.RowBg | ImGuiTableFlags.NoPadOuterX)) return;
-        ImGui.TableSetupColumn("Kitten"u8, ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn("Tint"u8, ImGuiTableColumnFlags.WidthFixed, 34f);
-        ImGui.TableSetupColumn("##wp_actions"u8, ImGuiTableColumnFlags.WidthFixed, 60f);
-        ImGui.TableHeadersRow();
-        foreach (var paint in paints)
-        {
-            ImGui.PushID(paint.VehicleId);
-            ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            if (ImGui.Selectable(paint.VehicleId, ReferenceEquals(paint.Kitten, _target))) SelectTarget(paint.Kitten);
-            ImGui.TableNextColumn();
-            ImGui.ColorButton("##wp_tint"u8, paint.MaterialSet.TintColor, ImGuiColorEditFlags.NoTooltip, new float2(24, 18));
-            ImGui.TableNextColumn();
-            if (ImGui.SmallButton("Unset##wp"u8)) UnsetTarget(paint.Kitten);
-            ImGui.PopID();
-        }
-        ImGui.EndTable();
-    }
-
-    private void UnsetTarget(KSA.KittenEva kitten)
-    {
-        if (!_service.Unset(kitten))
-        {
-            SetStatus(_service.LastError ?? $"Could not unset '{kitten.Id}'.", true);
-            return;
-        }
-        if (ReferenceEquals(kitten, _target))
-        {
-            _draft = new();
-            _liveEditing = false;
-            _pendingApply = false;
-            _draftChanged = false;
-            _selectedPreset = null;
-        }
-        SetStatus($"Unset paint on '{kitten.Id}'. Original materials restored.");
+        ImGui.PopStyleVar();
+        if (paints.Count == 0) ImGui.TextDisabled("No kittens have War Paint applied."u8);
     }
 }
