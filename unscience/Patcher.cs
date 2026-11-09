@@ -10,6 +10,7 @@ using MeowSci.GarrysTorchLib;
 using MeowSci.GodzillaLib;
 using MeowSci.IFeelSeenLib;
 using MeowSci.HumbleArteestLib;
+using MeowSci.WarPaintLib;
 using MeowSci.ItsSoShinyLib;
 using MeowSci.KittenAnimationsLib;
 using MeowSci.KitchenSinkLib;

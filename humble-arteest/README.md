@@ -11,10 +11,6 @@ Standalone KSA mod providing visual customization features. Toggle with F11.
   runtime. Tick **Enable painting**, pick a brush color, then tick the parts you want. Blend modes:
   *Multiply* (keeps texture detail, can only darken), *Tint* (recolors by luminance, can brighten),
   *Replace* (flat color). Works in flight and in the vehicle editor.
-- **Kitten Visors** — **Hide visor glass** / **Show visor glass** controls all kitten visors,
-  including new spawns. It does not affect helmet shells or vehicle windows. The Unscience host
-  saves this toggle with the scene; scene reset and unload restore drawing. Kitten tinting and
-  material presets are now in [War Paint](../war-paint.lib/README.md).
 - **Engine Emissive** — Per-engine glow control via Temperature field override
 
 ## Notes on Vehicle Paint
@@ -27,13 +23,14 @@ painting. The native rendering cause remains unconfirmed.
 - Enabling paint, or changing the blend mode, triggers a **renderer rebuild** — a brief one-off hitch,
   the same one the game performs when you change a graphics setting. Picking colors is free.
 - Nothing on disk is modified. The game's shader files are read, patched **in memory**, and compiled.
-- Unscience saves vehicle paint, engine glow, and visor visibility with native scene sidecars.
+- Unscience saves vehicle paint and engine glow with native scene sidecars. The existing v1
+  `HideVisor` field remains the compatibility save owner for War Paint's global visor checkbox.
   This development host supplies the UI; sidecar saves are supplied by Unscience.
 - Windows (glass parts) are deliberately not painted.
 - KSA 5482 caches part render state per vehicle. Paint is written into that cache, and each paint
   change invalidates it once, so a change appears on the next frame. Paint also shows in raytraced
-  IVA; part thumbnails stay unpainted. The four paint hooks (previously five) and the per-view visor
-  draw hook have only compile and managed checks on 5482; they still need an in-game pass.
+  IVA; part thumbnails stay unpainted. The four paint hooks (previously five) still need native
+  acceptance. The visor control and draw patch now live in War Paint.
 
 ## Architecture
 

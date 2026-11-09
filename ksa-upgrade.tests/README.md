@@ -161,3 +161,12 @@ acceptance checks documented in `scope/`.
 - `StaticObjectRenderer.WriteCommandsColor` still skips a null pipeline, which Sphinx's postfix mirrors (rev 5640).
 
 The current constructor-chain checks pass on 5801 and reject the prior 5707/5638 seams. Without a resolvable `KSA.dll` they print a WARN and skip.
+
+## War Paint visor ownership
+
+`KittenVisorChecks.cs` links the production relocated `KittenVisorPatches` with the real Harmony
+package and native-independent draw fixtures. It installs the transpiler and verifies default shown
+state, glass-only gating in multiple views, global behavior for new kittens, re-enabling, and
+reset/native drawing after targeted removal. No GPU rendering is exercised. The visor save field
+remains unchanged in the Humble v1 adapter; native save/visual acceptance is documented in
+[the War Paint checklist](../plans/WAR_PAINT_PRESET_EDITOR.md).

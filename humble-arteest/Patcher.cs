@@ -18,7 +18,6 @@ internal static class Patcher
             HotkeyGuard.Patch(_harmony);
             VehiclePaintPatches.Apply(_harmony);
             EngineEmissivePatches.Apply(_harmony);
-            KittenVisorPatches.Apply(_harmony);
             Console.WriteLine("humble-arteest: Harmony patches applied");
         }
         catch (Exception ex)
@@ -36,7 +35,6 @@ internal static class Patcher
 
             if (_harmony != null)
             {
-                KittenVisorPatches.Remove(_harmony);
                 EngineEmissivePatches.Remove(_harmony);
                 VehiclePaintPatches.Remove(_harmony);
                 HotkeyGuard.Unpatch(_harmony);

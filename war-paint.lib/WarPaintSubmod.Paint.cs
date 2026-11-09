@@ -116,8 +116,8 @@ public sealed partial class WarPaintSubmod
                 ImGui.TableNextColumn();
                 if (DangerButton("X##wp_unset"u8, new float2(-1, 0)))
                 {
-                    if (_service.Unset(paint.Kitten)) SetStatus($"Removed paint from '{paint.VehicleId}'.");
-                    else SetStatus(_service.LastError ?? "Could not remove kitten paint.", true);
+                    if (_service.Unset(paint.Kitten)) LogStatus($"Removed paint from '{paint.VehicleId}'.");
+                    else LogStatus(_service.LastError ?? "Could not remove kitten paint.", true);
                 }
                 ImGui.PopID();
             }

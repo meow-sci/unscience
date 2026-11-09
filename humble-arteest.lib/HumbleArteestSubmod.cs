@@ -4,13 +4,13 @@ using MeowSci.KsaAbstractions;
 namespace MeowSci.HumbleArteestLib;
 
 /// <summary>
-/// Composite ISubmod that groups Vehicle Paint, visor visibility, and Engine Emissive
+/// Composite ISubmod that groups Vehicle Paint and Engine Emissive
 /// under a single "Humble Arteest" collapsing section in the Unscience Toolbox.
 /// </summary>
 public sealed partial class HumbleArteestSubmod : ISubmod, MeowSci.KsaAbstractions.Persistence.ISaveParticipantSource
 {
     public string Name => "Humble Arteest - Paint Stuff";
-    public string Tooltip => "Vehicle paint, kitten visor visibility, and engine emissive paint brushes";
+    public string Tooltip => "Vehicle paint and engine emissive paint brushes";
 
     private readonly VehiclePaintSubmod _vehiclePaint = new();
     private readonly EngineEmissiveSubmod _engineEmissive = new();
@@ -41,11 +41,6 @@ public sealed partial class HumbleArteestSubmod : ISubmod, MeowSci.KsaAbstractio
 
         ImGui.Spacing();
         ImGui.Spacing();
-        ImGui.SeparatorText("Kitten Visors"u8);
-        RenderVisorControl();
-
-        ImGui.Spacing();
-        ImGui.Spacing();
         ImGui.SeparatorText("Engine Emissive");
         ImGui.SetItemTooltip(
             "Overrides the Temperature field on dynamic engine parts to control\n" +
@@ -65,21 +60,7 @@ public sealed partial class HumbleArteestSubmod : ISubmod, MeowSci.KsaAbstractio
     public void Dispose()
     {
         _vehiclePaint.Dispose();
-        KittenVisorPatches.Hidden = false;
         _engineEmissive.Dispose();
     }
 
-    private static void RenderVisorControl()
-    {
-        ImGui.BeginDisabled(!KittenVisorPatches.IsApplied);
-        if (ImGui.Button(KittenVisorPatches.Hidden ? "Show visor glass##ha_visor" : "Hide visor glass##ha_visor"))
-            KittenVisorPatches.Hidden = !KittenVisorPatches.Hidden;
-        ImGui.EndDisabled();
-        ImGui.SetItemTooltip("Controls visor glass on all kittens, including newly spawned kittens. Saved with the scene.");
-        ImGui.SameLine();
-        ImGui.TextDisabled(KittenVisorPatches.Hidden ? "Visors hidden" : "Visors shown");
-        if (!KittenVisorPatches.IsApplied)
-            ImGui.TextWrapped(KittenVisorPatches.LastError ?? "Visor toggle patch is not installed.");
-        ImGui.TextDisabled("Kitten colors and presets are in War Paint."u8);
-    }
 }

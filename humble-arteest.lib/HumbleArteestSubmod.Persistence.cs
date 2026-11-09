@@ -38,6 +38,7 @@ public sealed partial class HumbleArteestSubmod
         {
             Enabled = VehiclePaint.Active, Blend = VehiclePaint.BlendMode, GlobalEnabled = VehiclePaint.GlobalEnabled,
             GlobalColor = VehiclePaint.GlobalColor,
+            // Keep the established v1 field for scenes written before the control moved.
             HideVisor = KittenVisorPatches.Hidden, GlobalEmissive = EngineEmissive.GlobalEnabled,
             Temperature = EngineEmissive.GlobalTemperature, Tfi = EngineEmissive.GlobalTfi
         };
@@ -116,6 +117,7 @@ public sealed partial class HumbleArteestSubmod
         public Dictionary<string, float3> Templates { get; set; } = new();
         public List<SavedPartPaint> Parts { get; set; } = new();
         public Dictionary<string, float4> MaterialColors { get; set; } = new();
+        // Compatibility save owner; the UI and draw patch now live in War Paint.
         public bool HideVisor { get; set; }
         public bool GlobalEmissive { get; set; }
         public float Temperature { get; set; }

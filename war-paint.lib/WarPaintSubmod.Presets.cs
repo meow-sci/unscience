@@ -46,12 +46,6 @@ public sealed partial class WarPaintSubmod
             ImGui.EndCombo();
         }
         RenderPresetActions();
-        if (_service.Presets.LastError != null)
-        {
-            ImGui.PushStyleColor(ImGuiCol.Text, new float4(1f, .3f, .3f, 1f));
-            ImGui.TextWrapped(_service.Presets.LastError);
-            ImGui.PopStyleColor();
-        }
     }
 
     private void RenderPresetActions()
@@ -89,8 +83,8 @@ public sealed partial class WarPaintSubmod
             ImGui.BeginDisabled(!_editor.HasChanges);
             if (ImGui.Button(" Save Changes ##wp"u8, new float2(-1, 0)))
             {
-                if (_editor.Save()) SetStatus($"Saved '{_editor.SelectedName}'.");
-                else SetStatus(_editor.LastError ?? "Could not save all preset changes.", true);
+                if (_editor.Save()) LogStatus($"Saved '{_editor.SelectedName}'.");
+                else LogStatus(_editor.LastError ?? "Could not save all preset changes.", true);
             }
             ImGui.EndDisabled();
             ImGui.TableNextColumn();

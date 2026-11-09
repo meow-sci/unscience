@@ -23,6 +23,13 @@ switch to discard; remove one kitten or confirm deletion of the preset and all i
 board/delete; repeatedly save/load and confirm resource recovery and late-shutdown safety.
 [Editor and save acceptance](WAR_PAINT_PRESET_EDITOR.md) · [original consolidation](WAR_PAINT_CONSOLIDATION.md).
 
+Visor UI/draw ownership is now War Paint, while the existing `humble-arteest` v1 `HideVisor` field
+continues to capture/reset/replay its global flag unchanged. Verify an older hidden-visor scene
+loads with the new checkbox unchecked; new/native-only scenes default checked. Toggle it without
+a paint preset, save/load twice and A-B-A, spawn while hidden, then unload and verify drawing.
+Status messages are transient game logs and add no saved state. Managed production-Harmony checks
+verify per-view visor-only gating, new kittens, default shown state and targeted unpatch/reset.
+
 ## 5801 despawn/shutdown follow-up
 
 No save IDs/versions change. DOH transient Smite actions now use KSA's native kill-input queue,
@@ -162,7 +169,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [Godzilla](../godzilla.lib/GodzillaSubmod.Persistence.cs) | Vessel Smart/Basic factors, physics/collider channels, global channels, original full/subpart scale, original full-part positions/pivot/avatar size and effective child scales. | Reconstructs scale ownership from original snapshots so repeated loads do not intentionally compound scale. Restore returns to those originals. Missing/changed topology and another scale owner are reported instead of guessing. |
 | [Graffiti](../graffiti.lib/GraffitiSubmod.Saves.cs) | Terrain, part and canopy decal anchors, image names, projection geometry, cloth triangle/barycentric address, visibility, brightness/alpha. | Placement mode stops. Missing PNGs or unavailable canopy can leave a dormant entry with warnings; missing part/body cannot be rebound. Cloth deformation itself is not captured. Images and compatible canopy topology remain required. |
 | [Hot Pursuit](../hot-pursuit.lib/HotPursuitSubmod.Saves.cs) | Mounted part, surface basis, transform, FOV, dimensions, visibility and whether its viewport was open. | Placement mode stops. Attempts to reopen saved viewports; slot exhaustion keeps the camera setup and reports that its viewport needs reopening. No native viewport/texture handles persist. |
-| [Humble Arteest](../humble-arteest.lib/HumbleArteestSubmod.Persistence.cs) | Part paint activation/blend and global/template/part colors; visor hiding; engine emissive overrides. | Legacy v1 MaterialColors migrate to private War Paint ownership; unmatched assets warn. Part targets and module layouts use existing stable resolvers. |
+| [Humble Arteest](../humble-arteest.lib/HumbleArteestSubmod.Persistence.cs) | Part paint activation/blend and global/template/part colors; engine emissive overrides; compatibility v1 HideVisor flag for War Paint's checkbox. | Legacy v1 MaterialColors migrate to private War Paint ownership; unmatched assets warn. Part targets and module layouts use existing stable resolvers. |
 | [War Paint](../war-paint.lib/WarPaintService.Persistence.cs) | Active kitten identity, character, preset name and effective tint/material recipes, including previews. Global presets remain outside scenes. | v1/order85 with additive optional preset name; recover named legacy/missing-library recipes; restore exact reconstructed targets after DOH/Humble migration; reset original bindings and safely reuse/retire exact owned slots. Missing/incompatible targets warn and retain records. |
 | [I Feel Seen](../i-feel-seen.lib/IFeelSeenSubmod.Saves.cs) | Tracked vehicle identities and each force-visibility flag. | Rebuilds tracking on native-restored vehicles. Deleted/missing vehicles warn. |
 | [Iron Man](../iron-man.lib/IronManSubmod.Saves.cs) | Configured kittens, enabled mode, original EVA/control settings needed to disable the mode, current flight-computer preferences. | Mode restores with engines **disarmed**. Existing connectors are configured/reused through the normal code path. Runtime thrust/burn continuation is not promised; the player deliberately arms engines again. Custom anchors use a native Components envelope since 5801 (legacy Id markers migrate); the unchanged v1 payload is decoded at the private 11-argument Part constructor before index reconstruction. |

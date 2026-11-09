@@ -21,6 +21,7 @@
     <Compile Include="../humble-arteest.lib/VehiclePaintShaderSource.cs" Link="VehiclePaintShaderSource.cs" />
     <Compile Include="../humble-arteest.lib/VehiclePaint.cs" Link="VehiclePaint.cs" />
     <Compile Include="../humble-arteest.lib/VehiclePaintPatches.cs" Link="VehiclePaintPatches.cs" />
+    <Compile Include="../war-paint.lib/KittenVisorPatches.cs" Link="KittenVisorPatches.cs" />
     <!-- KSA 5707: metadata-only checks against the real KSA.dll (never loaded). -->
     <AssemblyMetadata Include="KSAFolder" Value="$(KSAFolder)" />
     <Compile Include="../kitchen-sink.tests/KsaAssemblyProbe.cs" Link="KsaAssemblyProbe.cs" />

@@ -1,8 +1,9 @@
 # Unscience — Unified Supermod
 
 War Paint centralizes per-kitten colors, saved presets, live material editing and Unset. DOH selects
-a saved preset for spawning; Humble retains part paint, emissive and visor controls. Existing saved
-kitten colors migrate. [Controls](../war-paint.lib/README.md) · [validation](../plans/WAR_PAINT_CONSOLIDATION.md).
+a saved preset for spawning; Humble retains part paint and emissive controls. War Paint also owns
+the global Show visor glass checkbox and draw gate, with action feedback in the game logger.
+Existing saved kitten colors migrate. [Controls](../war-paint.lib/README.md) · [validation](../plans/WAR_PAINT_CONSOLIDATION.md).
 
 ## 5801 despawn / shutdown follow-up
 
@@ -41,7 +42,7 @@ A unified supermod that consolidates 30 KSA feature libraries into a single ImGu
 | Graffiti — PNG Decals | Click-to-place projected PNG decals on vehicle hulls, deployed parachute cloth, and terrain |
 | Free Fallin — Parachute Customizer | Applies a global stock tint, panel-tiled or cohesive full-canopy PNG, centered decal, and canopy PBR controls |
 | Hot Pursuit | Mounts live secondary cameras on vehicle parts |
-| Humble Arteest | Hide/Show visor glass, engine emissive controls, and experimental vehicle part paint |
+| Humble Arteest | Engine emissive controls and experimental vehicle part paint |
 | I Feel Seen | Forces vehicle render data updates at any distance |
 | Iron Man | EVA/Iron Man flight-mode buttons, upright editing, configurable nodes, rocket controls and upright surface teleports in Iron Man mode |
 | Its So Shiny | Builds and controls Blinky-style pixel grids from built-in light parts |
@@ -56,7 +57,7 @@ A unified supermod that consolidates 30 KSA feature libraries into a single ImGu
 | Sphinx | Places imported textured GLB statics with terrain alignment, XYZ transforms and shared PNG overrides |
 | The Tick | Makes chosen vessels indestructible by forces: unbreakable parts plus suppressed G-load / aero-pressure destruction |
 | Thug Life | Renders a custom textured quad through KSA's main render pass |
-| War Paint | Per-kitten colors, live material editing, saved presets and active paints with Unset |
+| War Paint | Preset material coloring, active assignments, game-log feedback and a global Show visor glass checkbox |
 | Zippo — Light Control | Controls light appearance and queued transitions, plus repeating Disco color, actuation, and spotlight-spread cycles |
 
 ## Usage

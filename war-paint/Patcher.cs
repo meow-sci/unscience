@@ -1,6 +1,7 @@
 using System;
 using HarmonyLib;
 using MeowSci.KsaAbstractions;
+using MeowSci.WarPaintLib;
 
 namespace MeowSci.WarPaint;
 
@@ -15,6 +16,7 @@ internal static class Patcher
         {
             _harmony ??= new Harmony("war-paint");
             HotkeyGuard.Patch(_harmony);
+            KittenVisorPatches.Apply(_harmony);
         }
         catch (Exception ex)
         {
@@ -26,7 +28,11 @@ internal static class Patcher
     {
         try
         {
-            if (_harmony != null) HotkeyGuard.Unpatch(_harmony);
+            if (_harmony != null)
+            {
+                HotkeyGuard.Unpatch(_harmony);
+                KittenVisorPatches.Remove(_harmony);
+            }
             _harmony?.UnpatchAll("war-paint");
             _harmony = null;
         }

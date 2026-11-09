@@ -29,6 +29,12 @@ retries without saving automatically, preserves current draft colors and extends
 with default role colors. None deselection rolls back unsaved previews and keeps named assignments.
 [Editor checks and native acceptance](../plans/WAR_PAINT_PRESET_EDITOR.md).
 
+The global visor checkbox and draw gate moved to War Paint. Persisted ownership intentionally
+remains `humble-arteest` v1 `HideVisor`: capture, reset and replay still reference the same global
+flag, now in `MeowSci.WarPaintLib.KittenVisorPatches`. Existing hidden scenes stay hidden; native-only
+and new scenes show glass. War Paint unload also restores drawing. No schema, field or version
+changes. Log feedback is transient KSA logging, not UI or scene state.
+
 ## 5801 native playtest: despawn and shutdown
 
 DOH Smite actions are transient native `VehicleDestroyBuffer` inputs, holding exact objects rather

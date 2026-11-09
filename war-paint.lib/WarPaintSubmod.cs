@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Brutal.ImGuiApi;
+using Brutal.Logging;
 using Brutal.Numerics;
 using KSA;
 using MeowSci.KsaAbstractions;
@@ -21,12 +22,11 @@ public sealed partial class WarPaintSubmod : ISubmod, ISaveParticipantSource
     private readonly HashSet<KittenEva> _applySelection = new();
     private readonly ImInputString _materialFilter = new(256);
     private float4 _brushColor = float4.One;
-    private string? _status;
-    private bool _statusIsError;
     private string? _dialogError;
     private int _sceneRevision;
     private bool _closeDialogs;
     private long _nextMaterialDiscoveryAt;
+    private string? _lastPreviewError;
 
     public IEnumerable<ISaveParticipant> SaveParticipants
     {
@@ -35,7 +35,9 @@ public sealed partial class WarPaintSubmod : ISubmod, ISaveParticipantSource
 
     public void Initialize()
     {
-        if (!_service.Initialize()) SetStatus(_service.LastError ?? "The kitten material system is unavailable.", true);
+        if (!_service.Initialize()) LogStatus(_service.LastError ?? "The kitten material system is unavailable.", true);
+        _ = _service.Presets.Names;
+        if (_service.Presets.LastError != null) LogStatus(_service.Presets.LastError, true);
     }
 
     public void Update(double dt)
@@ -50,7 +52,8 @@ public sealed partial class WarPaintSubmod : ISubmod, ISaveParticipantSource
             _presetFilter.Clear();
             _materialFilter.Clear();
             _brushColor = float4.One;
-            _status = _dialogError = null;
+            _dialogError = null;
+            _lastPreviewError = null;
             _closeDialogs = true;
             _nextMaterialDiscoveryAt = 0;
         }
@@ -74,14 +77,9 @@ public sealed partial class WarPaintSubmod : ISubmod, ISaveParticipantSource
             ImGui.Spacing();
             RenderPresetColors();
             ImGui.Spacing();
+            RenderVisorControl();
+            ImGui.Spacing();
             RenderActivePaints();
-            if (!string.IsNullOrEmpty(_status))
-            {
-                ImGui.Spacing();
-                ImGui.PushStyleColor(ImGuiCol.Text, _statusIsError ? new float4(1f, .3f, .3f, 1f) : new float4(.4f, 1f, .4f, 1f));
-                ImGui.TextWrapped(_status);
-                ImGui.PopStyleColor();
-            }
             RenderNewPresetDialog();
             RenderDeletePresetDialog();
             RenderApplyDialog();
@@ -94,28 +92,40 @@ public sealed partial class WarPaintSubmod : ISubmod, ISaveParticipantSource
     {
         _applySelection.Clear();
         _editor.Clear();
+        KittenVisorPatches.Hidden = false;
         _service.Cleanup();
     }
 
     private void SelectPreset(string? name)
     {
         bool selected = name == null ? _editor.Deselect() : _editor.Select(name);
-        if (!selected) { SetStatus(_editor.LastError ?? "Could not select the preset.", true); return; }
+        if (!selected) { LogStatus(_editor.LastError ?? "Could not select the preset.", true); return; }
         _brushColor = _editor.Draft.Tint;
         _nextMaterialDiscoveryAt = 0;
         _materialFilter.Clear();
-        _status = null;
+        _lastPreviewError = null;
     }
 
     private void PreviewChanges()
     {
-        if (!_editor.Preview()) SetStatus(_editor.LastError ?? "Some kittens could not preview these colors.", true);
-        else _status = null;
+        string? error = _editor.Preview() ? null : _editor.LastError ?? "Some kittens could not preview these colors.";
+        if (error != null && error != _lastPreviewError) LogStatus(error, true);
+        _lastPreviewError = error;
     }
 
-    private void SetStatus(string message, bool error = false)
+    private static void LogStatus(string message, bool error = false)
     {
-        _status = message;
-        _statusIsError = error;
+        if (error) DefaultCategory.Log.Error($"war-paint: {message}");
+        else DefaultCategory.Log.Info($"war-paint: {message}");
+    }
+
+    private static void RenderVisorControl()
+    {
+        ImGui.SeparatorText("Kitten Visors"u8);
+        bool showGlass = !KittenVisorPatches.Hidden;
+        ImGui.BeginDisabled(!KittenVisorPatches.IsApplied);
+        if (ImGui.Checkbox("Show visor glass (global setting)##wp_visor"u8, ref showGlass))
+            KittenVisorPatches.Hidden = !showGlass;
+        ImGui.EndDisabled();
     }
 }

@@ -10,10 +10,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ksa-abstractions.lib\ksa-abstractions.lib.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="Brutal.Logging" Condition="Exists('$(KSAFolder)Brutal.Logging.dll')">
+      <HintPath>$(KSAFolder)Brutal.Logging.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="BepuUtilities" Condition="Exists('$(KSAFolder)BepuUtilities.dll')">
       <HintPath>$(KSAFolder)BepuUtilities.dll</HintPath>
       <Private>false</Private>

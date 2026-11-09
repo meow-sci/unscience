@@ -19,7 +19,9 @@ material colors on all assigned kittens, save changes, and apply it to multiple 
 Confirmed preset deletion removes matching paint; red X buttons restore individual kittens.
 Presets persist across scenes/restarts; DOH assigns them when spawning. Dialogs have explicit
 padding and live name validation; the multi-kitten picker and material table are larger. Partial
-material catalogs retry, and the preset combo supports clearing selection. Legacy saved colors migrate.
+material catalogs retry, and the preset combo supports clearing selection. War Paint owns the global
+**Show visor glass** checkbox above Live War Paint; action feedback uses KSA's logger. Existing
+visor saves and legacy kitten colors remain compatible.
 [Controls and ownership](war-paint.lib/README.md) · [layout and native acceptance](plans/WAR_PAINT_PRESET_EDITOR.md).
 
 Humble Arteest's immediate white vessels on part-paint Enable remain unresolved; this is separate

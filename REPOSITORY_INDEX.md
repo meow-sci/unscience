@@ -439,6 +439,10 @@ input buffer on each edit while retaining Enter submission. Edits preview on all
 assignments; switching or deselecting presets restores saved colors. Confirmed deletion unsets
 matching kittens; red X removes one assignment.
 DOH uses the same global library at `.unscience/war-paint-presets.json` and tracks preset names.
+Kitten Visors, above Live War Paint, has a checked-by-default **Show visor glass (global setting)**
+checkbox. War Paint owns the per-view draw patch; Unscience and its development host apply it.
+Action feedback uses `Brutal.Logging.DefaultCategory.Log.Info/Error`, with no panel status label.
+The unchanged `humble-arteest` v1 `HideVisor` field retains durable capture/reset/replay for old saves.
 
 `PaintPresetEditor` owns detached draft/baseline and preview/save/discard/delete behavior.
 `WarPaintService` owns private materials, named assignments and `war-paint` v1/order85 scene state.
@@ -462,14 +466,16 @@ ownership/reuse fixtures. Native layout/Vulkan acceptance remains in-game; see i
 ## Visual Customization Mods
 
 ### [humble-arteest](humble-arteest) / [humble-arteest.lib](humble-arteest.lib)
-Vehicle part paint, engine emissive overrides, and a separate Hide/Show visor-glass draw gate.
+Vehicle part paint and engine emissive overrides. Visor UI/draw patching now belong to War Paint;
+the existing v1 HideVisor save field stays here for compatibility.
 Kitten coloring lives exclusively in War Paint; the old global material editor has been removed.
 The existing `humble-arteest` v1 `MaterialColors` field remains readable and migrates through War Paint.
 
 Vehicle Paint uses 6:6:6 sRGB in bits13–30 of native instance flags, preserving habitat highlight
 bits11/12, and intercepts part fragment compilation with native variant options. Four Harmony seams
 cover compilation, cached static/dynamic state writers and cache invalidation. Engine emissive uses
-native temperature/TFI rendering. Visor hiding gates the native visor draw, independently of color.
+native temperature/TFI rendering. Visor controls and native draw gating belong to War Paint; the
+unchanged Humble HideVisor save field retains scene compatibility.
 
 **Open native issue:** whole vessels glow white immediately on Enable. Three audits and 64 offline
 shader compilations found no confirmed exterior cause. Assembly/source/owner diagnostics and an
@@ -538,7 +544,7 @@ Unified supermod that consolidates the standalone feature mods into a single ImG
 - Each submod class lives in its `.lib` project (for example `BlinkySubmod` in `blinky.lib`)
 - `unscience/Submods/` directory removed — no thin UI wrapper layer; submod classes own their own ImGui rendering
 - `Update(dt)` runs every frame for all submods (even hidden) for frame-critical logic
-- Consolidated Harmony patches include blinky/its-so-shiny render-skip (shared `PartRenderFilter`), camera-controller-override sequence playback, free-fallin canopy material substitution + full-canopy shader projection, glass main-camera FOV override, hot-pursuit fixed-camera pose, humble-arteest vehicle paint + engine emissive + kitten visor draw toggle, i-feel-seen render distance, skittles hotkey blocking, pyro exhaust submission, and graffiti decal pass
+- Consolidated Harmony patches include blinky/its-so-shiny render-skip (shared `PartRenderFilter`), camera-controller-override sequence playback, free-fallin canopy material substitution + full-canopy shader projection, glass main-camera FOV override, hot-pursuit fixed-camera pose, humble-arteest vehicle paint + engine emissive, war-paint global kitten visor draw gate, i-feel-seen render distance, skittles hotkey blocking, pyro exhaust submission, and graffiti decal pass
 - References all feature `.lib` projects, including `hot-pursuit.lib`, plus `ksa-abstractions.lib`
 - Startup reports complete patch exceptions and per-run completed/failed group counts; helper
   completion does not claim every optional rendering path is active. These diagnostics are transient.
@@ -764,7 +770,8 @@ native session was run. In-game acceptance is pending.
 - `unscience`: new save status messages for failed native writes (no sidecar written) and unreadable saves.
 - `blinky.lib` / `its-so-shiny.lib`: render toggles use `PartRenderFilter` (raytraced IVA not filtered);
   blinky builds resource groups before its feed check (fixes a false "0/N reached a tank" warning).
-- `humble-arteest.lib`: Vehicle Paint writes into cached per-tree state flags (4 seams); visor gate uses `Draw(ViewHandle)`.
+- `humble-arteest.lib`: Vehicle Paint writes into cached per-tree state flags (4 seams).
+- `war-paint.lib`: global visor gate uses `Draw(ViewHandle)`; action feedback uses KSA logging.
 - `godzilla.lib`: visual cull redirected at `Vehicle.IsLargeEnoughToRender` (visual patches had rolled back).
 - `eternal-flame.lib`: fuel refill moved to the vehicle-solver prefix (refill during burns).
 - `garrys-torch.lib` / `dent-wizard.lib`: join the nearest-orbit job before teleports/launches.
@@ -778,6 +785,8 @@ Managed executable linking production Blinky feed diagnostics, Free Fallin mater
 and (5482) the shared `PartRenderFilter` and Vehicle Paint patches. Covers empty/selected drain
 views, per-canopy originals and re-enable behavior, external material changes; shared render-filter compaction, owners, dent
 alignment and fail-open cases; paint in cached static/dynamic state flags and single invalidation. Also links production capsule-glass filtering and shared IVA ownership for exact window isolation, late models, independent toggle orders, shadow-proxy preservation and unpatch cleanup.
+The production War Paint visor patch is tested through real Harmony for per-view glass-only
+gating, new kittens, default visible state and targeted removal/reset.
 Managed Harmony fixtures avoid native game and GPU initialization; see [README](ksa-upgrade.tests/README.md).
 Additional startup regressions exercise the production patch-group report and LF/CRLF/mixed shader
 parsing, including malformed definitions and real game shader transforms. KSA 5707 adds metadata-only

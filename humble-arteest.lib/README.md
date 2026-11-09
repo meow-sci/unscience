@@ -11,11 +11,10 @@ and a process-local **stock shader A/B** are available; follow the exact environ
 restart steps in [the 5801 paint investigation](../plans/HUMBLE_ARTEEST_5801_PAINT_INVESTIGATION.md).
 The comparison forwards unmodified stock GLSL and intentionally applies no vehicle colors.
 
-Humble Arteest provides vehicle visual customization and kitten visor visibility:
+Humble Arteest provides vehicle part paint and engine glow:
 
 1. **Vehicle Paint** — Recolors vehicle parts, per part instance, via a runtime-patched part fragment shader
-2. **Kitten Visors** — Independently hides/shows visor glass; kitten coloring is in [War Paint](../war-paint.lib/README.md)
-3. **Engine Emissive** — Controls per-engine glow/heat effects via Temperature field overrides
+2. **Engine Emissive** — Controls per-engine glow/heat effects via Temperature field overrides
 
 All features are accessible as `ISubmod` implementations for use in the unscience supermod or standalone.
 
@@ -32,7 +31,6 @@ the approach matched to its rendering path:
 |---|---|---|---|
 | Vehicle parts (static) | `MeshIndirect.{vert,frag}`, `ENABLE_EMISSIVE`+`ENABLE_THIN_FILM` variant | `PartModel.PerInstanceData` | Free bits of `StateBitFlag` + patched fragment shader |
 | Vehicle parts (dynamic) | `MeshIndirect.{vert,frag}`, `ENABLE_TEMPERATURE`+`ENABLE_THIN_FILM` variant | `PartModelDynamic.PerInstanceData` | Same, plus the game's own `Temperature` for glow |
-| Kitten visor glass | `ModelTranslucent.frag` (transparent pass) | `StaticMeshRenderable` submissions | Gate `VisorMesh.Draw()` to hide glass independently of fixed shader opacity |
 
 > **Shader-merge note (KSA rev 4693+).** The separate `DynamicMeshIndirect` shader no longer exists —
 > it was merged into a single, feature-gated `MeshIndirect.{vert,frag}` whose behaviour is selected at
@@ -236,25 +234,18 @@ it, so windows stay clear.
 
 ---
 
-## Feature 2: Kitten visor visibility
+## Former kitten visor control
 
-Use **Hide visor glass** / **Show visor glass** under Kitten Visors. The toggle affects all kittens,
-including new spawns, and is saved with the scene. Unload and scene reset restore visor drawing.
-Kitten tinting and material editing now belong to [War Paint](../war-paint.lib/README.md), which
-isolates each kitten's materials instead of changing shared global assets.
-
-`KittenVisorPatches` transpiles `KittenRenderable.UpdateRenderData`, replacing exactly one
-`CharacterAvatar.Helmet.VisorMesh.Draw(ViewHandle)` call with a conditional draw helper. Skipping
-that call omits transparent color and depth-prepass submissions. Other glass, helmet shells,
-animation and mesh visibility stay under native control. The button reports a patch error if the
-expected single IL match changes. Both hosts apply/remove this patch.
-
-Validation covers compilation and managed draw gating; native hide/show, spawning while hidden,
-view changes, scene save/load and unload acceptance remain pending.
+The control and `KittenVisorPatches` draw gate now live in [War Paint](../war-paint.lib/README.md).
+Humble Arteest no longer renders visor controls, status or cross-mod hint text, installs the visor
+patch, or resets it during panel disposal. To retain scene compatibility, this library's unchanged
+`humble-arteest` v1 `HideVisor` field still captures/resets/restores the War Paint flag. Existing hidden
+scenes stay hidden; fresh/vanilla scenes show glass. This compatibility adapter is the sole durable
+save owner; the draw patch and checkbox belong to War Paint.
 
 ---
 
-## Feature 3: Engine Emissive (Temperature Field Override)
+## Feature 2: Engine Emissive (Temperature Field Override)
 
 ### How It Works
 
@@ -327,11 +318,10 @@ humble-arteest.lib/                — Core library (referenced by unscience sup
 ├── PaintTargets.cs                — Paintable part enumeration (flight + editor)
 ├── VehiclePaintSubmod.cs          — ISubmod UI: shader state, brush, blend mode
 ├── VehiclePaintSubmodTables.cs    — ISubmod UI: per-part and per-part-type tables
-├── KittenVisorPatches.cs           — Per-view visor draw gate
 ├── EngineEmissive.cs              — Per-engine temperature state management
 ├── EngineEmissivePatches.cs       — Harmony prefix on PartModelDynamic.AddInstance
 ├── EngineEmissiveSubmod.cs        — ISubmod UI for engine glow control
-├── HumbleArteestSubmod.cs         — Vehicle paint, visor, and engine glow panel
+├── HumbleArteestSubmod.cs         — Vehicle paint and engine glow panel
 ├── Experiments/                   — Retained validation experiments
 │   ├── MaterialColorTest.cs       — Historical AlbedoColor material experiment
 │   └── TemperatureTest.cs         — Temperature field override test (Engine Emissive)
@@ -342,10 +332,10 @@ humble-arteest.lib/                — Core library (referenced by unscience sup
 
 ## Unscience Supermod Integration
 
-`HumbleArteestSubmod` implements `ISubmod` and provides the same vehicle paint, visor, and engine
-glow panel in Unscience and its development host. Unscience's consolidated patcher applies/removes
-`VehiclePaintPatches`, `EngineEmissivePatches` and `KittenVisorPatches`. Dispose restores visor
-visibility and cleans vehicle/engine ownership.
+`HumbleArteestSubmod` implements `ISubmod` and provides the vehicle paint and engine glow panel
+in Unscience and its development host. The patcher applies/removes `VehiclePaintPatches` and
+`EngineEmissivePatches`. Dispose cleans vehicle/engine ownership. War Paint owns visor controls
+and draw patching; the legacy scene adapter here retains the existing visor field.
 
 ---
 
@@ -387,7 +377,8 @@ were removed with the mechanism they validated: the padding bytes they probed ar
 ## Scene saves
 
 The unchanged version-1 `humble-arteest` participant persists shader activation/blend mode,
-global/template/instance vehicle paint, global and exact-module engine glow, and visor visibility.
+global/template/instance vehicle paint, global and exact-module engine glow, and the compatibility
+`HideVisor` flag for War Paint's global visor setting.
 Part addresses use shared stable vehicle IDs and validated full-part/subpart paths. Reset clears
 paint/emissive registries before native vehicle destruction; replay synchronizes the panels.
 

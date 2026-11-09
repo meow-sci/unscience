@@ -34,7 +34,11 @@ kitten material sets including row padding; larger custom layouts can still scro
 buttons each use half the width, with 20 px outer padding. Apply to Kittens is 660 px wide
 (viewport permitting) and at least 400 px tall, with a table filling the available height.
 Delete confirmation is 880 px wide (viewport permitting). Red X buttons have no tooltip.
-Sections do not collapse. Visor visibility remains in Humble Arteest.
+Sections do not collapse. **Kitten Visors** appears immediately above **Live War Paint** and has
+**Show visor glass (global setting)**, checked by default. Uncheck it to hide glass on every kitten,
+including newly spawned kittens. It works without a preset selection; helmet shells and vehicle
+glass remain native. Preset action confirmations and errors use KSA's `DefaultCategory.Log`
+(Info/Error), with no persistent status label. Dialog validation stays next to its input.
 
 Presets live in `My Games/Kitten Space Agency/.unscience/war-paint-presets.json` in Documents,
 separately from scene saves. File replacement is atomic. DOH reads the same library and carries the
@@ -62,6 +66,12 @@ entries are recovered from the scene snapshot; earlier nameless v1 and DOH/Humbl
 named presets. Consequently an older save can recover a preset deleted after that save was written.
 Malformed/unresolved records warn and retain their original payload. Repeated reconstruction reuses
 only exact surviving owned assets and clears stale bindings. Vanilla/new scenes remove assignments.
+
+Visor draw ownership is `KittenVisorPatches` in this library. Both Unscience's consolidated patcher
+and the War Paint development host install/remove the existing per-view visor draw gate. For save
+compatibility the global flag still round-trips through `humble-arteest` v1 `HideVisor`; that adapter
+continues resetting/restoring it, even though Humble Arteest has no visor UI or patch. No save ID,
+field or version changes. New scenes and War Paint unload restore shown glass.
 
 Selection, brush, filters, dialog selection and the editor's saved baseline are transient and reset
 on scene replacement. The global library remains outside sidecars. Only the Unscience host registers

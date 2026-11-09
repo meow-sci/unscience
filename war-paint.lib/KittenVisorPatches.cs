@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
+using Brutal.Logging;
 using KSA;
 using RenderCore.Systems;
 
-namespace MeowSci.HumbleArteestLib;
+namespace MeowSci.WarPaintLib;
 
 /// <summary>Gates only the helmet visor's draw submission, including its depth prepass.</summary>
 public static class KittenVisorPatches
@@ -29,13 +30,13 @@ public static class KittenVisorPatches
             _transpiler = AccessTools.Method(typeof(KittenVisorPatches), nameof(Transpile));
             harmony.Patch(_original, transpiler: new HarmonyMethod(_transpiler));
             IsApplied = true;
-            Console.WriteLine("humble-arteest: Kitten visor toggle patch applied");
+            DefaultCategory.Log.Info("war-paint: Kitten visor draw patch applied");
         }
         catch (Exception ex)
         {
             Hidden = false;
             LastError = "Visor toggle unavailable: " + ex.GetBaseException().Message;
-            Console.WriteLine($"humble-arteest: {LastError}");
+            DefaultCategory.Log.Error($"war-paint: {LastError}");
         }
     }
 

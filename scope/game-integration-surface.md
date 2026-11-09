@@ -5,7 +5,8 @@
 War Paint is the central kitten color owner. DOH material sources move to
 `war-paint.lib/Materials/`; avatar binding extraction moves to `NativeKittenPaintBackend.cs`.
 Humble's KittenColor global buffer writer/editor is removed; its old MaterialColors payload migrates
-through War Paint. Humble visor draw gating remains. DOH selects saved presets and forwards coloring.
+through War Paint. Visor UI/draw gating moves to War Paint; the Humble v1 HideVisor field keeps
+its compatibility capture/reset/replay. DOH selects saved presets and forwards coloring.
 
 | Surface | Current owner / source | Status |
 |---|---|---|
@@ -13,6 +14,8 @@ through War Paint. Humble visor draw gating remains. DOH selects saved presets a
 | Program material/texture roots, AssetMap, native handles, BigBuffer/DeviceCtx, MaterialData stride80/AlbedoColor offset16 | war-paint / Materials | Existing cloning/upload path; exact native asset identity before reuse/release |
 | KittenEva.Character.Id, Vehicle identity/disposal, VehicleProvider | war-paint / WarPaintService | Exact current target; no ambiguous fallback |
 | ImGui.BeginPopupModal, WindowPadding, ImInputString.EvaluateLength | war-paint / WarPaintSubmod.Dialogs, WarPaintSubmod.Presets | Padding captured at Begin; enlarged dialogs/table; cached input length refreshed per frame despite EnterReturnsTrue; None deselection |
+| KittenRenderable.UpdateRenderData → Helmet.VisorMesh.Draw(ViewHandle) | war-paint / KittenVisorPatches | Existing single-call gate relocated from Humble; global Show visor glass checkbox, default visible; legacy Humble save field retained |
+| Brutal.Logging.DefaultCategory.Log.Info/Error | war-paint / WarPaintSubmod, KittenVisorPatches | Native action/error logging replaces panel status text |
 | ISubmod / ISaveParticipantSource | war-paint / WarPaintSubmod | `war-paint` v1/order85 adds optional PresetName; exact effective scene recipe replay and transient editor reset; no new Harmony target |
 | Persistent global recipes / preset editor | war-paint / PaintPresetLibrary, PaintPresetEditor, WarPaintService.Presets | `.unscience/war-paint-presets.json`; atomic writes, live previews by named assignment, confirmed delete/unset; read-only partial catalogs retry against existing original-binding paths every 500 ms, preserving edits/baselines |
 
@@ -666,7 +669,7 @@ are recorded separately from native visual acceptance.
 ### KSA.KittenRenderable
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `UpdateRenderData(...)` → `CharacterAvatar.Helmet.VisorMesh.Draw(view)` | **Harmony transpiler** + typed field/call anchor | NEW `KSA/KittenRenderable.cs:356,370` (`ViewForViewport(viewport)` then `ldfld VisorMesh; ldloc view; call Draw(ViewHandle)`) | humble-arteest | `humble-arteest.lib/KittenVisorPatches.cs:57-84` | **CHANGED @5482** (fixed) | exactly one match required; replacement `DrawVisor(StaticMeshRenderable, ViewHandle)`; old `Draw()` lookup would have returned null (toggle disabled) |
+| `UpdateRenderData(...)` → `CharacterAvatar.Helmet.VisorMesh.Draw(view)` | **Harmony transpiler** + typed field/call anchor | NEW `KSA/KittenRenderable.cs:356,370` (`ViewForViewport(viewport)` then `ldfld VisorMesh; ldloc view; call Draw(ViewHandle)`) | war-paint | `war-paint.lib/KittenVisorPatches.cs:57-84` | **CHANGED @5482** (fixed) | exactly one match required; replacement `DrawVisor(StaticMeshRenderable, ViewHandle)`; old `Draw()` lookup would have returned null (toggle disabled) |
 | `_characterAvatar : private CharacterAvatar` | reflection-field (string) | `KSA/KittenRenderable.cs:12` | garrys-torch, doh, kitten-animations | `WeldScaleSnapshot.cs`; `KittenSpawner.Materials.cs:176`; `KittenAvatarAccessor.cs` | OK | garrys uses it to retain X in the scalar `CharacterCore.Scale` field |
 | `ModelToBodyMatrix() : private float4x4` | **Harmony postfix** + reflection-method (string) | `KSA/KittenRenderable.cs:106-109` | garrys-torch | `KittenScalePatches.cs` | OK @5402 | applies `(1,Y/X,Z/X)` before the stock scalar-scale + fixed-rotation matrix, enabling true XYZ KittenEva visuals; missing target fails loudly during patch application |
 | `_groundIdleAnim, _groundWalkAnim, _groundRunAnim, _ladderAnim, _jumpIntroAnim, _flailAnim, _jumpLandAnim, _moonWalkAnim, _moonRunAnim, _swimAnim, _swimIdleAnim, _seatedIdleAnim : private AnimationAssetRef?` | reflection-field (string, cached FieldInfo) | `KSA/KittenRenderable.cs:42-66` | kitten-animations | `KittenAnimationCatalog.cs` | OK | ⚠️ **the only route to the ground locomotion set** — it is not exposed on `CharacterAvatar`. Misses are collected in `UnresolvedFields`, logged, and shown as a red UI warning |
@@ -939,7 +942,7 @@ are recorded separately from native visual acceptance.
 ### KSA.StaticMeshRenderable
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `Draw(ViewHandle view)` | direct API + IL call anchor | NEW `KSA/StaticMeshRenderable.cs:56` | humble-arteest (visor) | `KittenVisorPatches.DrawVisor` | **CHANGED @5482** | rev 5474 per-view mesh buckets (`RenderCore.Systems.ViewHandle`); normal draw when shown, all passes for that view omitted when hidden |
+| `Draw(ViewHandle view)` | direct API + IL call anchor | NEW `KSA/StaticMeshRenderable.cs:56` | war-paint (visor) | `KittenVisorPatches.DrawVisor` | **CHANGED @5482** | rev 5474 per-view mesh buckets (`RenderCore.Systems.ViewHandle`); normal draw when shown, all passes for that view omitted when hidden |
 | `MaterialIndices : protected int[]` | reflection-field | `KSA/StaticMeshRenderable.cs:31` | doh | `KittenSpawner.Materials.cs:39-59,186-199` | OK | helmet/visor/mmu mesh handle swap |
 
 ### KSA.SubstanceLibrary
@@ -1254,7 +1257,7 @@ on every game update FIRST.
 | `MeshIndirect.frag` (Temperature LUT, `#ifdef ENABLE_TEMPERATURE`) | shader (read-only, no edit) | — | `Content/Core/Shaders/Mesh/MeshIndirect.frag:214-219` | humble-arteest (EngineEmissive) | OK (MOVED from `DynamicMeshIndirect.frag` rev 4693; feature still works) |
 | `Model.vert` + `Model_Skinned.vert` + `ModelPbr.frag` → `TextureSet.glsl` / `MaterialSet.glsl` | shader text-edit (in memory, via the `FromFile` prefix) | exact declaration/assignment/call anchors; added location-3 `vec2`; Full Canopy marker in `Material.extraData.w` | `Content/Core/Shaders/Mesh/Model{,_Skinned}.vert`; `Mesh/ModelPbr.frag`; `Common/{TextureSet,MaterialSet}.glsl` | free-fallin; existing read-only albedo effect also used by war-paint | OK @5402 — transformed shaders compile to valid SPIR-V; static vertex supplies pass-through varying, skinned vertex derives bind-pose X/Z projection, fragment substitutes only marked albedo sampling |
 | `ParachuteCanopyGlb` + `ParachuteCanopy_Material_CheckerLongOrange` | skinned GLTF + baseline PBR assets | verified native orange-checker source | `Core/ParachuteAssets.xml`; `Core/CoreUtilityAGameData.xml` | free-fallin | Migrated @5438: old ParachuteCanopy_Material removed; restore each canopy's own selected native handle. |
-| `ModelTranslucent.frag` + `CharacterRenderResources.GlassRenderer` | shader/pipeline research (no edits) | `ModelTranslucentFrag` + `ModelVert` in stock glass pipeline | `Content/Core/Shaders/Mesh/ModelTranslucent.frag:81,182`; `KSA/CharacterRenderResources.cs:77,189` | humble-arteest (visor visibility) | @5402 — fixed opacity 0.75 plus Fresnel ignores material alpha; transparent pass with depth writes. The visor draw gate avoids both this color pass and its prepass. |
+| `ModelTranslucent.frag` + `CharacterRenderResources.GlassRenderer` | shader/pipeline research (no edits) | `ModelTranslucentFrag` + `ModelVert` in stock glass pipeline | `Content/Core/Shaders/Mesh/ModelTranslucent.frag:81,182`; `KSA/CharacterRenderResources.cs:77,189` | war-paint (visor visibility) | @5402 — fixed opacity 0.75 plus Fresnel ignores material alpha; transparent pass with depth writes. The visor draw gate avoids both this color pass and its prepass. |
 | `DynamicMeshIndirect.vert/.frag`, `ModelEye.frag`, `ModelGlass.frag` | shader (removed) | (design assumption only) | — | humble-arteest (narrative), blinky/its-so-shiny GlassModule (C# only) | n/a (removed 4693/4745; `ModelTranslucent.frag` new 4747 — not referenced by id) |
 | Exhaust templates `EngineALarge`, `EngineAMed`, `EngineACompact`, `EngineAAuxiliary`, `RCS`, `MmuRcsVac` | template IDs | live catalog + fallback; exact legacy Vernier/Turbine aliases | `Core/ExhaustAssets.xml`; `Core/CorePropulsionAGameData.xml` | pyro | Migrated @5438: two old templates merged into Auxiliary; preserve explicit legacy IDs if another content mod provides them. |
 | Engine part templates `CorePropulsionA_Prefab_EngineA2..A6` | part template | `ModLibrary.Get<PartTemplate>(id)` (default A3 everywhere) | `Core/CorePropulsionAAssets.xml`; `Core/CorePropulsionAGameData.xml:118,182,246,291,373` | blinky | OK — **`EngineA1` is gone from Content entirely** and has been removed from blinky's presets and config default (2026-08-23) |

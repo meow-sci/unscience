@@ -8,6 +8,7 @@ FreeFallinShaderChecks.Run();
 CapsuleGlassChecks.Run();
 RenderFilterChecks.Run();
 VehiclePaintChecks.Run();
+KittenVisorChecks.Run();
 PaintCompilationChecks.Run();
 Ksa5707Checks.Run();
 Ksa5801Checks.Run();

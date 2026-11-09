@@ -30,7 +30,8 @@ public sealed partial class WarPaintSubmod
                 _brushColor = _editor.Draft.Tint;
                 _nextMaterialDiscoveryAt = 0;
                 _materialFilter.Clear();
-                SetStatus($"Created '{name}'.");
+                _lastPreviewError = null;
+                LogStatus($"Created '{name}'.");
                 ImGui.CloseCurrentPopup();
             }
             else _dialogError = _editor.LastError ?? "Could not create the preset.";
@@ -52,7 +53,8 @@ public sealed partial class WarPaintSubmod
         {
             if (_editor.Delete())
             {
-                SetStatus($"Deleted '{name}' and removed its kitten paint.");
+                _lastPreviewError = null;
+                LogStatus($"Deleted '{name}' and removed its kitten paint.");
                 ImGui.CloseCurrentPopup();
             }
             else _dialogError = _editor.LastError ?? "Could not delete the preset.";
@@ -119,7 +121,7 @@ public sealed partial class WarPaintSubmod
             }
             if (errors.Count == 0)
             {
-                SetStatus($"Applied '{_editor.SelectedName}' to {applied} kitten(s).");
+                LogStatus($"Applied '{_editor.SelectedName}' to {applied} kitten(s).");
                 ImGui.CloseCurrentPopup();
             }
             else _dialogError = string.Join("\n", errors);

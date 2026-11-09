@@ -92,3 +92,26 @@ for known roles. Existing edits and
 live bindings are untouched. Managed regressions reproduce a Fur-only initial result, then resolve
 body materials, check preserved edits/baselines and verify no duplicates or GPU allocations. None
 deselection has real-editor coverage for rollback and preservation of active assignments.
+
+## Visor control and game logging
+
+War Paint action confirmations/errors use `Brutal.Logging.DefaultCategory.Log.Info/Error` instead
+of a persistent status label; repeated identical preview errors are logged once until recovery.
+Dialog validation remains beside the name/target input. No cross-mod hint is rendered.
+
+Kitten Visors sits immediately above Live War Paint. Its checked-by-default checkbox is labeled
+Show visor glass (global setting); clearing it hides glass on all kittens, including new spawns,
+without changing the helmet shell or other glass. It is independent of paint preset selection.
+The existing `KittenVisorPatches` moves into War Paint; the War Paint development host and Unscience
+consolidated patcher install/remove it. Humble removes its control and patch ownership. The existing
+`humble-arteest` v1 `HideVisor` field deliberately keeps capture/reset/replay for compatibility,
+with no new save field or migration. Scene reset and War Paint unload show glass.
+
+Managed production-Harmony checks cover the default state, actual visor-only gating across views,
+new kittens and targeted unpatch/reset. Native acceptance remains: checkbox placement/padding,
+KSA log delivery with no panel status label, all visor passes, old hidden saves, repeated/vanilla
+scene loads and unloading while hidden.
+
+Validation for the move: full solution build passed with zero warnings/errors against CURRENT
+5801; all 107 War Paint checks and the managed KSA upgrade suite, including eight real-Harmony
+visor assertions, passed. Distribution validation still produces only the Unscience package.

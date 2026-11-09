@@ -9,5 +9,6 @@ to multiple EVA kittens. Live assignments have red X removal buttons; preset del
 removes all matching assignments. DOH uses the same global library and named assignments.
 
 Only the Unscience host registers scene sidecar persistence. This development host provides the
-shared UI and global preset storage. `Patcher` applies `HotkeyGuard`; paint ownership and GPU
-cleanup live in the library.
+shared UI and global preset storage. The Kitten Visors section has a checked-by-default global
+Show visor glass checkbox. `Patcher` applies/removes `HotkeyGuard` and the per-view visor gate;
+paint ownership and GPU cleanup live in the library. Action feedback uses the game logger.

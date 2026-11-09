@@ -19,7 +19,9 @@ No new Harmony/shader/ABI coupling. [Editor acceptance](../plans/WAR_PAINT_PRESE
 War Paint is the sole owner of kitten color state. `WarPaintSubmod` is registered by Unscience;
 its optional development host applies HotkeyGuard. DOH exposes only a spawn preset selector and
 forwards legacy color API inputs to `WarPaintService`. Humble removes its global KittenColor
-buffer writer/editor; visor hiding remains a separate Humble draw gate. The tables below retain
+buffer writer/editor. Visor UI and its unchanged per-view draw gate now belong to War Paint;
+Humble v1 HideVisor remains the compatibility save field. Action confirmations/errors use the
+game DefaultCategory logger, and the old cross-mod hint/status labels are removed. The tables below retain
 historical version comparisons; current material ownership and paths are listed here.
 
 | Kind | Current mod source | Game surface | Ownership / risk |
@@ -28,6 +30,8 @@ historical version comparisons; current material ownership and paths are listed 
 | GPU material bridge | `war-paint.lib/Materials/MaterialSystemAccessor*.cs` | Program material/texture systems; AssetMap, BigBuffer, DeviceCtx, CreateObject/GetOrLoad, fixed FreeListIndexPool | Same DOH cloning/upload ABI; exact asset reference identity protects recycled names/slots |
 | Native data/assets | `war-paint.lib/Materials/MaterialFactory*.cs` | CharacterReference/CharacterTextures/PbrMaterialReference and native fur resource textures/sampler | Resolved graph links and fur ExtraData preserved; AlbedoColor at native offset16, MaterialData stride80 |
 | Typed target identity | `war-paint.lib/WarPaintService*.cs` | KittenEva.Character.Id, Vehicle.Id/IsDisposed, shared VehicleProvider | Unique current object required, no controlled/name-ambiguous fallback; private set per target |
+| Visor draw gate / global checkbox | `war-paint.lib/KittenVisorPatches.cs`, `WarPaintSubmod.cs` | Existing KittenRenderable.UpdateRenderData → Helmet.VisorMesh.Draw(ViewHandle) | Checked means shown; false omits all visor passes for every kitten/view. Default/reset/unload shown; legacy Humble HideVisor capture/reset/replay unchanged |
+| Native action logging | `war-paint.lib/WarPaintSubmod.cs` | Brutal.Logging.DefaultCategory.Log.Info/Error | Native game logging replaces persistent panel status labels; dialog validation remains local |
 | Scene lifecycle | `war-paint.lib/WarPaintService.Persistence.cs` | shared ISaveParticipantSource and pre-native-reset/post-native-replay handoff | New `war-paint` v1/order85; DOH60 and Humble80 migrations run first; only detached recipes persist |
 | ImGui / global files | `war-paint.lib/WarPaintSubmod*.cs`, `PaintPresetLibrary.cs` | Existing SubmodUI/pickers and KsaPaths.ModDataDir | Named presets with detached draft/live assignment previews; confirmed deletion unsets matches; source+slot maps compatible character materials without serializing handles |
 
@@ -480,20 +484,22 @@ Engine Emissive** (Harmony override of the per-instance `Temperature`/`TfiThickn
 `VehiclePaintPatches.Apply` (four seams since 5482 — `FromFile` plus the `PartTreeRenderData`
 `WriteState` / `WriteDynamicState` / `EnsureBuilt` hooks, rows A1 and A3–A5) and
 `EngineEmissivePatches.Apply` (on `PartModelDynamic.AddInstance`). `VehiclePaint.Cleanup()` +
-`EngineEmissive.Cleanup()` on unload. Kitten Color tinting uses GPU writes; its visor toggle adds
-`KittenVisorPatches.Apply/Remove` on `KittenRenderable.UpdateRenderData` in both hosts.
+`EngineEmissive.Cleanup()` on unload. The earlier Kitten Color ownership is historical: War Paint
+now owns material editing and `KittenVisorPatches.Apply/Remove` on `KittenRenderable.UpdateRenderData`;
+Unscience and the War Paint host install/remove that draw gate.
 
 ### Kitten visor visibility (@5402)
 
-**Hide/Show visor glass** gates all kittens' visor submissions for the session. It works before
-material initialization and restores drawing on Kitten Color deactivation, disposal or patch removal.
-Color Reset is independent. Managed draw-gating checks cover isolation and restoration; live-game
+**Show visor glass (global setting)** is a checked-by-default War Paint checkbox above Live War Paint.
+Unchecking it gates all kittens' visor submissions, including new kittens, independently of preset
+selection. The Humble v1 HideVisor field retains scene compatibility; reset and War Paint unload
+restore drawing. Color reset is independent. Managed draw-gating checks cover isolation and restoration; live-game
 visual acceptance (multiple/new kittens, view changes, deactivation and unload) remains pending.
 
 | Integration | Game source (`current/decomp` or `current/Content`) | Dependency / update check |
 |---|---|---|
-| Harmony transpiler `KittenRenderable.UpdateRenderData` | `KSA/KittenRenderable.cs:311,356,370` @5482 | **CHANGED @5482 (fixed).** `KittenVisorPatches.Transpile` (`humble-arteest.lib/KittenVisorPatches.cs:56-76`) requires exactly one `ldfld CharacterAvatar.Helmet.VisorMesh` / `ldloc` (the `view` from `ViewForViewport(viewport)`, `:356`) / `call StaticMeshRenderable.Draw(ViewHandle)` sequence and replaces the call with `DrawVisor(StaticMeshRenderable, ViewHandle)` (`:84-88`). Missing/duplicate match fails installation and disables the UI. Before 5482 the receiver `ldfld` was directly adjacent to a parameterless `Draw()`. |
-| Typed `CharacterAvatar.Helmet.VisorMesh` and `StaticMeshRenderable.Draw(ViewHandle view)` | `KSA/CharacterAvatar.cs:109,467`; `KSA/StaticMeshRenderable.cs:56` @5482 | **Signature @5482** (rev 5474 per-view mesh buckets; `RenderCore.Systems.ViewHandle`, `humble-arteest.lib` already references `Planet.Render.Core`). Visor is a distinct non-opaque static mesh, `CastShadows=false`. Skipping `Draw(view)` prevents both translucency and depth-prepass submission for that view. Helmet/eyes/window draws and attachment state are preserved; no retained game objects or per-frame reflection. |
+| Harmony transpiler `KittenRenderable.UpdateRenderData` | `KSA/KittenRenderable.cs:311,356,370` @5482 | **CHANGED @5482 (fixed).** `KittenVisorPatches.Transpile` (`war-paint.lib/KittenVisorPatches.cs:56-76`) requires exactly one `ldfld CharacterAvatar.Helmet.VisorMesh` / `ldloc` (the `view` from `ViewForViewport(viewport)`, `:356`) / `call StaticMeshRenderable.Draw(ViewHandle)` sequence and replaces the call with `DrawVisor(StaticMeshRenderable, ViewHandle)` (`:84-88`). Missing/duplicate match fails installation and disables the UI. Before 5482 the receiver `ldfld` was directly adjacent to a parameterless `Draw()`. |
+| Typed `CharacterAvatar.Helmet.VisorMesh` and `StaticMeshRenderable.Draw(ViewHandle view)` | `KSA/CharacterAvatar.cs:109,467`; `KSA/StaticMeshRenderable.cs:56` @5482 | **Signature @5482** (rev 5474 per-view mesh buckets; `RenderCore.Systems.ViewHandle`, `war-paint.lib` references `Planet.Render.Core`). Visor is a distinct non-opaque static mesh, `CastShadows=false`. Skipping `Draw(view)` prevents both translucency and depth-prepass submission for that view. Helmet/eyes/window draws and attachment state are preserved; no retained game objects or per-frame reflection. |
 | Glass pipeline + shader (research dependency, no modification) | `KSA/CharacterRenderResources.cs:49,77,189`; `Core/Shaders/Mesh/ModelTranslucent.frag` | Glass uses transparent pass, alpha blend and depth writes. Non-EYE opacity is hard-coded `0.75`; final alpha mixes toward 1 by Fresnel, ignoring material alpha. Eye variant is also translucent but stays untouched. |
 
 These current sources correct the older blanket claim that all kitten surfaces use `ModelPbr.frag`.
