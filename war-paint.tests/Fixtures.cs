@@ -34,6 +34,7 @@ namespace KSA
     {
         public CharacterReference Character = new(character);
         public int[] Materials = [1, 2];
+        public int[] FurMaterials = [3];
     }
     public sealed class LookupCollection
     {
@@ -95,12 +96,19 @@ namespace MeowSci.WarPaintLib
 public class FakeBackend : IKittenPaintBackend
 {
     public int Created, Reused, Released;
+    public int MaterialNameLookups;
     public bool FailCreate, FailColor, Recycled, CharacterNames;
+    public bool MaterialNamesUnavailable, DiscoverFur, FailInitialize;
     public readonly List<string> Events = new();
     private int _next = 100;
-    public bool Initialize() => true;
-    public IReadOnlyList<KittenMaterialBinding>? CaptureBindings(KittenEva kitten) =>
-        kitten.IsDisposed ? null : new[] { new KittenMaterialBinding("CharacterModel", kitten.Materials) };
+    public bool Initialize() => !FailInitialize;
+    public IReadOnlyList<KittenMaterialBinding>? CaptureBindings(KittenEva kitten)
+    {
+        if (kitten.IsDisposed) return null;
+        var bindings = new List<KittenMaterialBinding> { new("CharacterModel", kitten.Materials) };
+        if (DiscoverFur) bindings.Add(new("Fur", kitten.FurMaterials));
+        return bindings;
+    }
     public KittenMaterialSet? CreateMaterials(IReadOnlyList<KittenMaterialBinding> bindings,
         string characterId, float4 tint, KittenMaterialSet? reusable)
     {
@@ -146,7 +154,11 @@ public class FakeBackend : IKittenPaintBackend
         return material.ApplyColor();
     }
     public bool CanReuse(KittenMaterialSet materials) => !Recycled && !materials.IsReleased;
-    public string? GetMaterialName(int handle) => "stock/" + handle;
+    public string? GetMaterialName(int handle)
+    {
+        MaterialNameLookups++;
+        return MaterialNamesUnavailable ? null : "stock/" + handle;
+    }
     public void Release(KittenMaterialSet materials)
     {
         if (materials.IsReleased) return;

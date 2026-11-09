@@ -49,10 +49,14 @@ public sealed partial class WarPaintSubmod
         var flags = ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersInnerH
             | ImGuiTableFlags.ScrollY | ImGuiTableFlags.NoPadOuterX;
         ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new float2(6f, 6f));
-        if (ImGui.BeginTable("##wp_materials"u8, 2, flags, new float2(0, ImGui.GetFrameHeightWithSpacing() * 8)))
+        float rowHeight = ImGui.GetFrameHeight() + ImGui.GetStyle().CellPadding.Y * 2f;
+        float headerHeight = ImGui.GetTextLineHeight() + ImGui.GetStyle().CellPadding.Y * 2f;
+        // Add 40% to the previous viewport, and fit normal kitten layouts including cell padding.
+        float height = Math.Max(ImGui.GetFrameHeightWithSpacing() * 8f * 1.4f,
+            headerHeight + rowHeight * Math.Min(_editor.Draft.Materials.Count, 11) + 2f);
+        if (ImGui.BeginTable("##wp_materials"u8, 2, flags, new float2(0, height)))
         {
-            ImGui.TableSetupColumn("Color"u8, ImGuiTableColumnFlags.WidthFixed,
-                Math.Max(ImGui.CalcTextSize("Color"u8).X, ImGui.GetFrameHeight()));
+            ImGui.TableSetupColumn("##wp_color_column"u8, ImGuiTableColumnFlags.WidthFixed, ImGui.GetFrameHeight());
             ImGui.TableSetupColumn("Material"u8, ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableSetupScrollFreeze(0, 1);
             ImGui.TableHeadersRow();
@@ -115,7 +119,6 @@ public sealed partial class WarPaintSubmod
                     if (_service.Unset(paint.Kitten)) SetStatus($"Removed paint from '{paint.VehicleId}'.");
                     else SetStatus(_service.LastError ?? "Could not remove kitten paint.", true);
                 }
-                ImGui.SetItemTooltip("Restore this kitten's original materials."u8);
                 ImGui.PopID();
             }
             ImGui.EndTable();

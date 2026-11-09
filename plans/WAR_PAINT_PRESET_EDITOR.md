@@ -4,7 +4,12 @@ The War Paint panel now edits named presets, with a full-width filterable combo 
 Kittens / Save Changes / New Preset / Delete actions. Width-aware layout tables wrap actions into
 two or one columns when necessary. Preset Colors and Live War Paint are non-collapsible line
 headers. Color controls stay disabled without selection; materials use compact swatches and
-clipped names with tooltips. Dialogs have equal-width Apply/Create/Delete and Cancel buttons.
+clipped names with tooltips. Dialogs have 20 px outer padding and equal-width Apply/Create/Delete
+and Cancel buttons. Apply to Kittens is 660 px wide (viewport permitting), at least 400 px tall
+(and taller with large fonts), and uses the remaining content height for its scrollable table.
+Delete confirmation is 880 px wide. The materials viewport grows by at least 40% and accounts for
+actual row padding to fit normal complete kitten layouts. Its swatch header is blank; red X
+removal buttons have no tooltip. None in the preset combo clears selection and discards previews.
 
 `PaintPresetEditor` separates selection, detached draft, saved baseline and dirty comparison from
 ImGui. Draft edits preview immediately on every matching assignment. Save persists; selecting or
@@ -23,7 +28,7 @@ or allocate. No shader, GPU ABI, Harmony target or StarMap lifecycle changes.
 
 ## Managed validation
 
-93 War Paint checks include the production editor, service, atomic library writes and scene adapter.
+107 War Paint checks include the production editor, service, atomic library writes and scene adapter.
 74 DOH checks cover compatibility, migration and teardown. All pass. Full solution compilation
 passed against the provided CURRENT 5801 DLLs with zero warnings/errors; distribution validation
 passed with one Unscience package and 32 referenced feature assemblies, with output under `/tmp`.
@@ -37,7 +42,16 @@ pending on the game host; this macOS workspace cannot run KSA/Vulkan.
   actions and the whole-material color row wrap. Try long kitten, preset and material names.
 - [ ] With no preset selected, verify disabled color/material/filter controls and Apply/Delete/Save;
   New Preset remains available. Create a unique name, reject blank/duplicate names, cancel, and
-  exercise keyboard Enter/Escape. Filter the combo and use Enter to choose the first match.
+  exercise keyboard Enter/Escape. Create must enable while typing/pasting a valid name and disable
+  immediately when blank or duplicate, without requiring Enter or losing focus. Confirm outer
+  padding on all three dialogs and the enlarged picker at normal font size. Filter the combo live
+  while typing, then use Enter to choose the first match. Select None to clear the editor; colors
+  revert to their saved values, assignments remain, and material controls disable.
+- [ ] Open a fresh preset immediately after native EVA/avatar creation. If only CatFur is ready,
+  wait for body/attachment rows to appear without reselecting, also while paused. Edit fur before
+  discovery completes; its draft color and dirty state must survive, with no duplicate rows.
+- [ ] Confirm the taller material table fits the normal full set without scrolling, has a blank
+  swatch header, and that red X removal buttons have no tooltip.
 - [ ] Edit a swatch; Save Changes enables. Restore its saved color; Save disables. Change RGB and
   click Apply to All Materials; every material matches. Restart after Save to verify persistence.
 - [ ] Apply one preset to several native and DOH EVA kittens. Unselected kittens remain unchanged.
@@ -54,3 +68,27 @@ pending on the game host; this macOS workspace cannot run KSA/Vulkan.
 - [ ] Spawn with a DOH preset, edit/preview that preset in War Paint, and delete it. Confirm DOH
   kittens participate in preview and removal. Verify all fur/attachment materials, boarding/native
   deletion, GPU slot recovery and orderly unload remain correct.
+
+## Dialog input and sizing follow-up
+
+Native screenshots showed missing popup edge padding and Create remaining disabled until Enter.
+All dialogs now capture explicit WindowPadding before BeginPopupModal, as the existing Skittles
+confirmation dialog does. The picker width grows from 440 to 660 px and its minimum height is
+400 px (or eight frame rows at large fonts). The table fills the content height after reserving
+buttons, empty-state text and wrapped errors, rather than shrinking to the kitten count.
+
+The 5801 InputTextWithHint wrapper refreshes ImInputString.Length only when its native return is
+true. EnterReturnsTrue therefore left ToString stale between keystrokes. Explicit EvaluateLength
+after the input preserves Enter submission and enables immediate validation/filtering in both
+the name dialog and preset combo. A scratch diagnostic against the actual 5801 ImInputString
+reproduced stale length and verified refresh after typing, paste, backspace, empty/whitespace and
+UTF-8 edits. The 107 managed War Paint checks pass, including delayed-catalog and deselection regressions. No durable state or save formats changed.
+Full solution build passed with zero warnings/errors; native padding/sizing acceptance is pending.
+
+Initial discovery also stopped after any row appeared, so CatFur could prevent later body material
+resolution. Discovery now retries every 500 ms using wall time, merges missing roles into both the
+draft and saved baseline, retries native bridge initialization and skips expensive name lookups
+for known roles. Existing edits and
+live bindings are untouched. Managed regressions reproduce a Fur-only initial result, then resolve
+body materials, check preserved edits/baselines and verify no duplicates or GPU allocations. None
+deselection has real-editor coverage for rollback and preservation of active assignments.

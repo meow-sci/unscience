@@ -3,6 +3,7 @@ using System.Linq;
 using Brutal.ImGuiApi;
 using Brutal.Numerics;
 using KSA;
+using MeowSci.KsaAbstractions;
 
 namespace MeowSci.WarPaintLib;
 
@@ -10,13 +11,13 @@ public sealed partial class WarPaintSubmod
 {
     private void RenderNewPresetDialog()
     {
-        PrepareDialog();
-        bool open = true;
-        if (!ImGui.BeginPopupModal("New War Paint Preset##wp"u8, ref open, ImGuiWindowFlags.AlwaysAutoResize)) return;
+        if (!BeginDialog("New War Paint Preset##wp"u8)) return;
         if (CloseStaleDialog()) return;
         if (ImGui.IsWindowAppearing()) ImGui.SetKeyboardFocusHere();
         ImGui.SetNextItemWidth(-1f);
         bool submitted = ImGui.InputTextWithHint("##wp_new_name"u8, "Name..."u8, _presetName, ImGuiInputTextFlags.EnterReturnsTrue);
+        // BRUTAL only refreshes Length on a true return (Enter here), despite editing Buffer live.
+        _presetName.EvaluateLength();
         string name = _presetName.ToString().Trim();
         bool valid = name.Length is > 0 and <= 128 && !_service.Presets.Names.Contains(name);
         if (name.Length > 128) ImGui.TextWrapped("Preset names can contain up to 128 characters."u8);
@@ -27,6 +28,7 @@ public sealed partial class WarPaintSubmod
             if (_editor.Create(name))
             {
                 _brushColor = _editor.Draft.Tint;
+                _nextMaterialDiscoveryAt = 0;
                 _materialFilter.Clear();
                 SetStatus($"Created '{name}'.");
                 ImGui.CloseCurrentPopup();
@@ -40,9 +42,7 @@ public sealed partial class WarPaintSubmod
 
     private void RenderDeletePresetDialog()
     {
-        PrepareDialog();
-        bool open = true;
-        if (!ImGui.BeginPopupModal("Delete War Paint Preset##wp"u8, ref open, ImGuiWindowFlags.AlwaysAutoResize)) return;
+        if (!BeginDialog("Delete War Paint Preset##wp"u8, width: 880f)) return;
         if (CloseStaleDialog()) return;
         string? name = _editor.SelectedName;
         int count = _service.GetActivePaints().Count(p => p.PresetName == name);
@@ -64,14 +64,19 @@ public sealed partial class WarPaintSubmod
 
     private void RenderApplyDialog()
     {
-        PrepareDialog();
-        bool open = true;
-        if (!ImGui.BeginPopupModal("Apply to Kittens##wp"u8, ref open, ImGuiWindowFlags.AlwaysAutoResize)) return;
+        float minHeight = Math.Max(400f, ImGui.GetFrameHeightWithSpacing() * 8f);
+        if (!BeginDialog("Apply to Kittens##wp"u8, width: 660f, minHeight: minHeight)) return;
         if (CloseStaleDialog()) return;
         var kittens = WarPaintService.VehicleKittens().ToArray();
         _applySelection.IntersectWith(kittens);
         ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new float2(6f, 6f));
-        float height = ImGui.GetFrameHeightWithSpacing() * Math.Clamp(kittens.Length + 1, 2, 10);
+        float footerHeight = ImGui.GetFrameHeightWithSpacing() + ImGui.GetStyle().CellPadding.Y * 2f
+            + ImGui.GetStyle().ItemSpacing.Y * 2f;
+        if (kittens.Length == 0) footerHeight += ImGui.GetTextLineHeightWithSpacing();
+        if (!string.IsNullOrEmpty(_dialogError))
+            footerHeight += ImGui.CalcTextSize(_dialogError, wrapWidth: ImGui.GetContentRegionAvail().X).Y
+                + ImGui.GetStyle().ItemSpacing.Y * 2f;
+        float height = Math.Max(ImGui.GetFrameHeightWithSpacing() * 2f, ImGui.GetContentRegionAvail().Y - footerHeight);
         if (ImGui.BeginTable("##wp_apply_kittens"u8, 2,
             ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.NoPadOuterX | ImGuiTableFlags.RowBg
             | ImGuiTableFlags.BordersInnerH | ImGuiTableFlags.ScrollY, new float2(0, height)))
@@ -124,10 +129,16 @@ public sealed partial class WarPaintSubmod
         ImGui.EndPopup();
     }
 
-    private static void PrepareDialog()
+    private static bool BeginDialog(ImString title, float width = 440f, float minHeight = 0f)
     {
-        float width = Math.Min(440f, ImGui.GetMainViewport().Size.X - 40f);
-        ImGui.SetNextWindowSizeConstraints(new float2(width, 0), new float2(width, float.MaxValue));
+        width = Math.Min(width, ImGui.GetMainViewport().Size.X - 40f);
+        ImGui.SetNextWindowSizeConstraints(new float2(width, minHeight), new float2(width, float.MaxValue));
+        // Popup windows capture padding at Begin, independently of the panel's child padding.
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new float2(SubmodUI.ContentPaddingX, SubmodUI.ContentPaddingY));
+        bool open = true;
+        bool began = ImGui.BeginPopupModal(title, ref open, ImGuiWindowFlags.AlwaysAutoResize);
+        ImGui.PopStyleVar();
+        return began;
     }
 
     private bool CloseStaleDialog()

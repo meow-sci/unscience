@@ -19,7 +19,14 @@ public sealed partial class WarPaintSubmod
             }
             ImGui.SetNextItemWidth(-1f);
             bool complete = ImGui.InputTextWithHint("##wp_preset_filter"u8, "Filter presets..."u8, _presetFilter, ImGuiInputTextFlags.EnterReturnsTrue);
+            // Keep filtering live even though the widget's return value signals Enter only.
+            _presetFilter.EvaluateLength();
             string filter = _presetFilter.ToString().Trim();
+            if (ImGui.Selectable("(None)##wp_clear_preset"u8, _editor.SelectedName == null))
+            {
+                SelectPreset(null);
+                ImGui.CloseCurrentPopup();
+            }
             bool any = false;
             foreach (string name in _service.Presets.Names)
             {

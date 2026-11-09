@@ -6,12 +6,16 @@ crew and DOH spawns, has a named preset assignment and independent private GPU m
 ## Using the panel
 
 1. Select a preset using the full-width filterable combo. Type to filter; Enter selects the first
-   match. **New Preset** opens a name dialog and creates a white preset. Names must be unique.
+   match. **New Preset** opens a padded name dialog and creates a white preset. Names must be unique;
+   Create enables as you type a valid name, and Enter remains a submission shortcut. Choose **(None)**
+   in the combo to clear selection and discard unsaved previews without removing kitten assignments.
 2. **Preset Colors** is a line header. Its controls stay disabled until a preset is selected.
    Pick an RGB color, then press **Apply to All Materials** to replace the preset's colors.
    Filter the material table and click a swatch to edit just that material. Materials are discovered
-   from live EVA kittens without painting or allocating GPU slots; tint-only presets remain usable
-   when no kitten is on EVA. Each target retains its own textures.
+   from live EVA kittens without painting or allocating GPU slots. Partial results retry every half
+   second, including while paused. Discovery retries native bridge initialization and merges late
+   body/attachment materials without replacing edits. Tint-only presets remain usable when no
+   kitten is on EVA. Each target retains its own textures.
 3. Edits immediately preview on every kitten assigned to that preset. **Save Changes** enables only
    when the recipe differs from its saved colors and commits the global preset. Selecting another
    preset or creating a new one discards unsaved previews and restores the previous saved colors.
@@ -24,8 +28,13 @@ crew and DOH spawns, has a named preset assignment and independent private GPU m
    every kitten assigned to it, and clears selection. A failed disk deletion leaves assignments intact.
 
 Actions fill the available width and wrap at smaller panel sizes. Material swatches occupy a compact
-column; long names clip within their table cells and remain available in tooltips. Dialog action
-buttons each use half the width. Sections do not collapse. Visor visibility remains in Humble Arteest.
+column with no header label; long names clip within their table cells and remain available in
+tooltips. The material table is at least 40% taller than its original viewport and fits normal
+kitten material sets including row padding; larger custom layouts can still scroll. Dialog action
+buttons each use half the width, with 20 px outer padding. Apply to Kittens is 660 px wide
+(viewport permitting) and at least 400 px tall, with a table filling the available height.
+Delete confirmation is 880 px wide (viewport permitting). Red X buttons have no tooltip.
+Sections do not collapse. Visor visibility remains in Humble Arteest.
 
 Presets live in `My Games/Kitten Space Agency/.unscience/war-paint-presets.json` in Documents,
 separately from scene saves. File replacement is atomic. DOH reads the same library and carries the

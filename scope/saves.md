@@ -23,6 +23,10 @@ Save commits it, switching presets rolls back unsaved colors, and confirmed dele
 matching kittens. Only effective assigned colors and preset names are scene state. Editor selection,
 brush, filters, baseline and pending dialog targets reset on scene replacement. DOH retains its
 selected name plus detached spawn recipe and passes that name into new live assignments.
+Dialog padding/minimum dimensions and per-edit text-buffer refresh affect only transient UI state;
+there is no new sidecar field, preset format or save lifecycle change. Partial material discovery
+retries without saving automatically, preserves current draft colors and extends the saved baseline
+with default role colors. None deselection rolls back unsaved previews and keeps named assignments.
 [Editor checks and native acceptance](../plans/WAR_PAINT_PRESET_EDITOR.md).
 
 ## 5801 native playtest: despawn and shutdown

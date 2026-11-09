@@ -25,6 +25,13 @@ public sealed class PaintPresetEditor(WarPaintService service)
         return true;
     }
 
+    public bool Deselect()
+    {
+        if (!DiscardPreview()) return false;
+        Clear();
+        return true;
+    }
+
     public bool Create(string name)
     {
         name = name.Trim();
@@ -85,10 +92,10 @@ public sealed class PaintPresetEditor(WarPaintService service)
         return success;
     }
 
-    /// <summary>Populate tint-only presets when a kitten first becomes available on EVA.</summary>
+    /// <summary>Merge newly available roles, including delayed body/attachment assets, without replacing edits.</summary>
     public void DiscoverMaterials()
     {
-        if (SelectedName == null || Draft.Materials.Count != 0) return;
+        if (SelectedName == null) return;
         Draft = service.DescribeMaterials(Draft);
         _saved = service.DescribeMaterials(_saved);
     }

@@ -428,8 +428,14 @@ migration, preset snapshot persistence and ownership. See its [README](doh.tests
 Preset-based coloring for all live EVA kittens: full-width filterable combo, name/confirmation
 modals, multi-kitten checkbox application, dirty-only Save Changes, non-collapsible Preset Colors
 and Live War Paint sections, RGB whole-material action, and compact material swatches. Width-aware
-action tables wrap in narrow panels. Edits preview on all matching assignments; switching presets
-restores saved colors. Confirmed deletion unsets matching kittens; red X removes one assignment.
+action tables wrap in narrow panels. Dialogs enforce 20 px outer padding; the kitten picker is
+660 px wide and at least 400 px tall with a filling table; delete confirmation is 880 px wide.
+The material viewport is at least 40% taller with a blank swatch header and no reset-button tooltip.
+Partial catalogs retry every 500 ms (also while paused), merging late roles without replacing edits.
+The combo has explicit None deselection. Name validation and preset filtering refresh the BRUTAL
+input buffer on each edit while retaining Enter submission. Edits preview on all matching
+assignments; switching or deselecting presets restores saved colors. Confirmed deletion unsets
+matching kittens; red X removes one assignment.
 DOH uses the same global library at `.unscience/war-paint-presets.json` and tracks preset names.
 
 `PaintPresetEditor` owns detached draft/baseline and preview/save/discard/delete behavior.
@@ -442,8 +448,9 @@ supports read-only material discovery. Source+slot recipes span compatible chara
 legacy exact names remain readable. See [usage](war-paint.lib/README.md).
 
 ### [war-paint.tests](war-paint.tests)
-93 native-independent checks link the production editor, service, library and scene adapter. Cover
-required preset selection, dirty state, shared live preview, rollback, deletion isolation, failed
+107 native-independent checks link the production editor, service, library and scene adapter. Cover
+required preset selection/deselection, delayed CatFur-only catalog completion, preserved draft and
+baseline colors, dirty state, shared live preview, rollback, deletion isolation, failed
 writes/retry, named/legacy/missing-library scene replay, exact target identity and native material
 ownership/reuse fixtures. Native layout/Vulkan acceptance remains in-game; see its
 [README](war-paint.tests/README.md) and [checklist](plans/WAR_PAINT_PRESET_EDITOR.md).

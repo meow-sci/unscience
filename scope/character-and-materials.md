@@ -6,6 +6,14 @@ The preset editor now tracks named assignments (including DOH spawns), previews 
 assignments and unsets them on confirmed deletion. Read-only material catalog discovery reuses the
 existing original-binding and asset-name paths below; it creates no GPU materials. The existing v1
 scene adapter adds optional preset names and resets transient editor/dialog state on replacement.
+Dialogs set WindowPadding before BeginPopupModal; the kitten picker uses a 660×400 minimum
+layout (width clamped to the viewport) and a filling scroll table. EnterReturnsTrue inputs explicitly
+refresh ImInputString.EvaluateLength on every frame: 5801 only refreshes cached length on a true
+return, which otherwise stalls live name validation and preset filtering until Enter. Delete
+confirmation is 880 px wide. Partial catalogs now retry every 500 ms (wall time), retaining edited
+rows/baselines and resolving missing body/attachment names after early CatFur-only detection.
+The native bridge initialization is retried too; known roles skip asset-name lookups. The material table is at least 40% taller with a blank swatch
+header; reset buttons have no tooltip. None deselection discards previews, preserving assignments.
 No new Harmony/shader/ABI coupling. [Editor acceptance](../plans/WAR_PAINT_PRESET_EDITOR.md).
 
 War Paint is the sole owner of kitten color state. `WarPaintSubmod` is registered by Unscience;

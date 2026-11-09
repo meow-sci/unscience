@@ -21,6 +21,8 @@ internal static partial class WarPaintChecks
             Ownership();
             PresetPersistence();
             PresetEditing();
+            DelayedMaterialDiscovery();
+            PresetDeselection();
             PresetWriteFailures();
             NamedSceneRoundTrip();
             SceneRoundTrip();

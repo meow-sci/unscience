@@ -2,7 +2,8 @@
 
 **War Paint** uses a preset editor with live previews across named kitten assignments, multi-target
 application, dirty-only saving and confirmed deletion/unpainting. Width-aware tables follow the
-ImGui design conventions. Earlier colors migrate into named presets; `war-paint` v1/order85 adds
+ImGui design conventions, with padded/enlarged dialogs, taller materials, live text validation and
+explicit deselection. Partial catalogs retry as native assets become ready. Earlier colors migrate into named presets; `war-paint` v1/order85 adds
 optional preset names while preserving effective scene colors. DOH carries names into assignments;
 Humble retains part paint/emissive/visor controls. [Editor acceptance](../plans/WAR_PAINT_PRESET_EDITOR.md).
 [Integration](character-and-materials.md#war-paint-consolidation-5801) · [acceptance](../plans/WAR_PAINT_CONSOLIDATION.md).

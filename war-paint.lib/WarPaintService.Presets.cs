@@ -49,6 +49,9 @@ public sealed partial class WarPaintService
     public PaintSettings DescribeMaterials(PaintSettings settings)
     {
         var result = settings.Clone();
+        // Startup discovery may run before the native material bridge is available. Retry its
+        // idempotent initialization too, rather than only retrying a permanently empty asset map.
+        if (_shutdown || !_backend.Initialize()) return result;
         var roles = result.Materials.Where(m => m.Slot >= 0).Select(m => (m.Source, m.Slot)).ToHashSet();
         foreach (var kitten in VehicleKittens())
         {
@@ -60,6 +63,7 @@ public sealed partial class WarPaintService
                 {
                     int handle = binding.OriginalIndices[slot];
                     if (handle < 0 || !seen.Add(handle)) continue;
+                    if (roles.Contains((binding.Source, slot))) continue;
                     string? name = binding.Source == "Fur" ? "CatFur" : _backend.GetMaterialName(handle);
                     if (name == null || !roles.Add((binding.Source, slot))) continue;
                     // A legacy name-addressed row already describes this slot.

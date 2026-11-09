@@ -9,7 +9,11 @@ records retain IDs/versions and migrate old effective colors; explicit new paint
 New DOH saves include a preset name and detached spawn recipe. Active War Paint v1 records now
 add optional `PresetName`; older nameless recipes import named presets, and missing global entries
 recover from scene snapshots. Existing global recipes are not overwritten by scene previews.
-UI editor/brush/filter/dialog state is transient and resets on scene replacement.
+UI editor/brush/filter/dialog state is transient and resets on scene replacement. Dialog padding,
+minimum picker dimensions and live name/filter buffer refresh are presentation-only changes;
+scene/global preset payloads and ownership are unchanged. Incremental discovery only extends the
+draft/baseline with default role colors; it never writes the preset library automatically. None
+deselection discards unsaved preview and clears transient editor state while preserving assignments.
 
 Production service/preset/adapter checks cover independent edits, Unset ordering, detached snapshots,
 restart persistence, portable material roles, legacy imports, repeated/vanilla loads and invalid or

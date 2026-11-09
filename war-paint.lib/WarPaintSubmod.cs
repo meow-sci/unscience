@@ -26,6 +26,7 @@ public sealed partial class WarPaintSubmod : ISubmod, ISaveParticipantSource
     private string? _dialogError;
     private int _sceneRevision;
     private bool _closeDialogs;
+    private long _nextMaterialDiscoveryAt;
 
     public IEnumerable<ISaveParticipant> SaveParticipants
     {
@@ -51,9 +52,17 @@ public sealed partial class WarPaintSubmod : ISubmod, ISaveParticipantSource
             _brushColor = float4.One;
             _status = _dialogError = null;
             _closeDialogs = true;
+            _nextMaterialDiscoveryAt = 0;
         }
         _applySelection.RemoveWhere(k => k.IsDisposed || !ReferenceEquals(VehicleProvider.FindVehicle(k.Id), k));
-        _editor.DiscoverMaterials();
+        // Native material assets can become ready after the first partial catalog. Retry even
+        // when some rows exist, using wall time so a paused game also finishes discovery.
+        long now = Environment.TickCount64;
+        if (now >= _nextMaterialDiscoveryAt)
+        {
+            _editor.DiscoverMaterials();
+            _nextMaterialDiscoveryAt = now + 500;
+        }
     }
 
     public void RenderContent()
@@ -88,10 +97,12 @@ public sealed partial class WarPaintSubmod : ISubmod, ISaveParticipantSource
         _service.Cleanup();
     }
 
-    private void SelectPreset(string name)
+    private void SelectPreset(string? name)
     {
-        if (!_editor.Select(name)) { SetStatus(_editor.LastError ?? "Could not select the preset.", true); return; }
+        bool selected = name == null ? _editor.Deselect() : _editor.Select(name);
+        if (!selected) { SetStatus(_editor.LastError ?? "Could not select the preset.", true); return; }
         _brushColor = _editor.Draft.Tint;
+        _nextMaterialDiscoveryAt = 0;
         _materialFilter.Clear();
         _status = null;
     }

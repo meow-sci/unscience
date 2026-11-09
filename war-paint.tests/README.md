@@ -4,9 +4,10 @@ Run `dotnet run --project war-paint.tests/war-paint.tests.csproj` from the repos
 The executable links production paint ownership, preset editor/library, scene adapter, material
 release/pool and fur reuse against a native-independent backend and asset-map fixtures.
 
-93 checks cover isolated material edits; detached snapshots; restoration before slot release;
+107 checks cover isolated material edits; detached snapshots; restoration before slot release;
 stale/disposed/ambiguous targets; allocation failure; global preset IO/corruption protection;
-read-only material discovery; required selection and unique preset creation; dirty state;
+read-only incremental material discovery, including CatFur-only initial results and delayed asset
+names; preservation of draft colors/baselines through retries; explicit preset deselection; required selection and unique preset creation; dirty state;
 live preview across assignments; save and discard; confirmed deletion and unaffected presets;
 write failures/retry; compatible material roles; DOH/Humble migration; named and older nameless
 v1 scene replay; effective unsaved scene colors; recovery of missing global presets; repeated
