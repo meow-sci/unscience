@@ -1,5 +1,21 @@
 # Save/load lifecycle integration
 
+## You Didn't See Anything
+
+`YouDidntSeeAnythingSubmod` exposes a version-1 `you-didnt-see-anything` participant through the
+existing `ISaveParticipantSource` discovery. Its detached DTO captures all three configuration
+booleans: `Enabled`, `DetachedOnly`, `HideGauges`. Restore prepares/validates the DTO before applying
+it through `VisibilitySettings.Restore`; reset clears configuration to disabled defaults.
+Repeated restore assigns flags rather than accumulating native state. No target identity is needed.
+
+The native F2 setting remains KSA-owned. ImGui positions/docking/layout retain existing ownership;
+context hooks, reflection caches, pointers, active input suppression and per-frame draw data are
+transient and must be removed/restored on disable/unload. No new state is written to global preset
+files. Missing legacy/vanilla records use reset defaults; malformed/unsupported records follow
+the coordinator's existing warning/retention policy.
+[Feature integration](ui-customization.md#you-didnt-see-anything-5801) ·
+[managed and native acceptance](../plans/YOU_DIDNT_SEE_ANYTHING.md).
+
 ## DOH native roster integration
 
 DOH crew data are now native-owned `UniverseData.KittenRoster` records serialized in `universe.xml`.

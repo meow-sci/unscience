@@ -1,0 +1,7 @@
+name = "you-didnt-see-anything"
+description = "Keep ImGui windows visible while the game UI is hidden"
+version = "0.1.0"
+author = "meow sci"
+
+[StarMap]
+EntryAssembly = "MeowSci.YouDidntSeeAnything"

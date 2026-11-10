@@ -1,5 +1,10 @@
 # Unscience — Full Game-Integration Scope
 
+**You Didn't See Anything** optionally retains ImGui windows during F2 hide UI, with detached
+platform-window selection and stock-gauge exclusion. Flags are scene-owned; native rendering/input
+acceptance remains pending. [UI integration](ui-customization.md#you-didnt-see-anything-5801) ·
+[implementation and acceptance](../plans/YOU_DIDNT_SEE_ANYTHING.md).
+
 Kitten Animations retains per-kitten holds across camera/control switches and saves all targets by
 exact vehicle ID; legacy records migrate. Ported from `feature/animation-stickyness` to KSA 5801;
 41 ownership/adapter checks, shared save/upgrade suites and the full build pass. Native multi-kitten
@@ -83,13 +88,13 @@ Scene-save adapters extend native saves; imported files remain external dependen
 | [`ground-clutter.md`](ground-clutter.md) | pebbles; [GLB materials](ground-clutter-glb-materials.md) | Per-body native clutter graphs, private materials, `ExecuteNextClothSolvers` transactions, collider/physics invalidation, shared copied GLB discovery, uploads and independent Workshop preview; shared Harmony ownership |
 | [`statics.md`](statics.md) | sphinx | Body-fixed GLB placement; live transforms and UV scale/offset, private vertex replacement, native static-renderer postfixes, shared GLB/PNG imports, terrain picking and automatic box/mesh colliders with per-bubble contact/lifetime hooks |
 | [`rings.md`](rings.md) | rocky-mcrock-face, bloomin-onion | planetary-ring mesh/texture swap (rocky) and **runtime ring definition on any celestial** (bloomin-onion) via the public `PlanetaryRingsReference` data tree + `Program.RebuildRenderer()`; **no Harmony patches**; `ModLibrary.AllMeshes`/`AllFiles` reflection, `MeshReference.<HostPrimitives>k__BackingField`, ctor-baking invariant in `PlanetaryRingsRenderData`; bloomin-onion adds `PlanetTransparenciesRenderer._anyRings` (load-bearing), `TextureReference.<TextureAsset>k__BackingField` (painted textures) and a cosmetic `DistantSphereRenderer._material` ring-shadow sync (moved from `_data` @5482); ring data also drives atmosphere ring shadows since 5470 |
-| [`ui-customization.md`](ui-customization.md) | skittles, kitchen-sink | `ImGui` style surface, editor refresh/IVA rendering, **experimental medium-capsule exterior-window reveal** via exact static-model filtering, and selected-vehicle G-load protection via `PhysicsBubble.DetectStructuralFailure`; Flexo diagnostics removed |
+| [`ui-customization.md`](ui-customization.md) | skittles, kitchen-sink, you-didnt-see-anything | `ImGui` style surface, F2 window/platform filtering, stock gauge exclusion, editor refresh/IVA rendering, **experimental medium-capsule exterior-window reveal** via exact static-model filtering, and selected-vehicle G-load protection via `PhysicsBubble.DetectStructuralFailure`; Flexo diagnostics removed |
 | [`audio.md`](audio.md) | byo-music | Shared sound imports, FMOD stream/channel ownership, vessel-relative 3D playback and repeat/gaps |
 
-Bundled in the unscience supermod (30): blinky, bloomin-onion, byo-music, camera-controller-override, dent-wizard, doh,
+Bundled in the unscience supermod (32): blinky, bloomin-onion, byo-music, camera-controller-override, dent-wizard, doh,
 dont-stifle-me, eternal-flame, free-fallin, garrys-torch, glass, godzilla, graffiti, hot-pursuit, humble-arteest,
 i-feel-seen, iron-man, its-so-shiny, kitchen-sink, kitten-animations, kiwis-marbles, pebbles, pyro,
-rocky-mcrock-face, save-yourself, skittles, sphinx, the-tick, thug-life, zippo. (jplrepo is a development reference and is not loaded by the supermod.)
+rocky-mcrock-face, save-yourself, skittles, sphinx, the-tick, thug-life, war-paint, you-didnt-see-anything, zippo. (jplrepo is a development reference and is not loaded by the supermod.)
 
 ---
 

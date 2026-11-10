@@ -1,5 +1,24 @@
 # Scene save implementation coverage and native acceptance
 
+## You Didn't See Anything
+
+The new version-1 `you-didnt-see-anything` record stores enabled, detached-only and stock-gauge
+exclusion flags as detached booleans. Reset/missing records disable the feature; replay assigns
+the validated settings without serializing window pointers or F2 state. ImGui layout keeps its
+existing ownership, and native context/input/patch state is transient.
+
+Managed feature persistence, production Harmony fixtures, shared `saves.tests`, upgrade checks,
+full solution build and package validation pass against 5801. Native acceptance below remains open.
+
+- [ ] Save different flag combinations and load A → B → A and the same save repeatedly. Confirm
+  exact selection with F2 active and with detached windows open.
+- [ ] Load a legacy/vanilla save and create a new system. Confirm disabled defaults and restored
+  input/visibility; no old native pointers or suppression may leak.
+- [ ] Exit/unload with F2 active and a filtered window focused. Confirm hook removal and input
+  restoration before native ImGui teardown.
+
+[Feature checks and native acceptance](YOU_DIDNT_SEE_ANYTHING.md).
+
 ## Kitten animation hold follow-up (5801 port)
 
 Per-kitten drivers/expressions survive control/camera/selection changes. The existing v1 record saves

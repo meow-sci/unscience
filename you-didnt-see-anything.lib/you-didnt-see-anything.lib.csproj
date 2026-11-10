@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>MeowSci.YouDidntSeeAnythingLib</AssemblyName>
+    <RootNamespace>MeowSci.YouDidntSeeAnythingLib</RootNamespace>
+    <Description>Controls ImGui visibility while KSA hides its UI.</Description>
+    <PackageId>MeowSci.YouDidntSeeAnythingLib</PackageId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../ksa-abstractions.lib/ksa-abstractions.lib.csproj" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Brutal.Core" Condition="Exists('$(KSAFolder)Brutal.Core.dll')"><HintPath>$(KSAFolder)Brutal.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Brutal.Numerics" Condition="Exists('$(KSAFolder)Brutal.Numerics.dll')"><HintPath>$(KSAFolder)Brutal.Numerics.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Brutal.ImGui" Condition="Exists('$(KSAFolder)Brutal.ImGui.dll')"><HintPath>$(KSAFolder)Brutal.ImGui.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Brutal.ImGui.Abstractions" Condition="Exists('$(KSAFolder)Brutal.ImGui.Abstractions.dll')"><HintPath>$(KSAFolder)Brutal.ImGui.Abstractions.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Brutal.Strings" Condition="Exists('$(KSAFolder)Brutal.Strings.dll')"><HintPath>$(KSAFolder)Brutal.Strings.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="KSA" Condition="Exists('$(KSAFolder)KSA.dll')"><HintPath>$(KSAFolder)KSA.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

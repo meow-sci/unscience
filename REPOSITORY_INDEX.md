@@ -48,6 +48,19 @@ All 19 managed suites and the 19-case startup harness pass; native game acceptan
 
 ## Distribution policy
 
+### [You Didn't See Anything](you-didnt-see-anything.lib/README.md)
+
+- `you-didnt-see-anything.lib`: optional F2 window retention, actual ImGui platform-viewport
+  filtering and stock gauge exclusion; scene-saved configuration with disabled reset defaults.
+- `you-didnt-see-anything`: thin development StarMap host; only Unscience ships the feature.
+- `you-didnt-see-anything.tests`: executable save-adapter, dispatch and window-policy checks plus
+  real CURRENT KSA.dll UI-gate/callback-order probes; native graphics/input are outside its scope.
+- `you-didnt-see-anything.patch-tests`: production Harmony installers/transpilers and the shared
+  fallback hook against native-independent game fixtures; callback counts, mid-frame disable,
+  fail-closed gate validation, rollback and preservation of foreign patches.
+- Game/ImGui hooks, native acceptance and validation: [implementation record](plans/YOU_DIDNT_SEE_ANYTHING.md)
+  and [UI integration](scope/ui-customization.md#you-didnt-see-anything-5801).
+
 `unscience` is the only shipped/publishable mod. Individual `.csproj` files remain code boundaries;
 legacy standalone hosts compile into `bin/` but have no deployment target. Feature libraries are
 bundled only through explicit project references. See the root README for installation migration.

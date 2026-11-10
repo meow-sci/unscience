@@ -8,6 +8,11 @@ It breaks physics, moves things around, resizes things, makes noises, changes co
 
 I describe it as a *supermod* that includes a suite of *submods*, each one has a fun unique name tangentially related to what it does, usually from some kind of pop culture reference.
 
+**You Didn't See Anything** keeps ImGui windows visible when **F2** hides the game UI. Enable it
+in the toolbox, then optionally select **Detached OS windows only** and **Hide stock gauges**.
+It starts disabled; its flags travel with scene saves. Native viewport/input acceptance is pending.
+[Controls and implementation](you-didnt-see-anything.lib/README.md).
+
 DOH's **Smite / Smite All** now use [KSA's native kill input](plans/DOH_NATIVE_KILL_5801.md),
 replacing custom despawning. Native dispatch removes the kitten before the render list is rebuilt;
 War Paint releases its private materials after death and preserves saved presets. The native cause

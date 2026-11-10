@@ -27,6 +27,7 @@ using MeowSci.FreeFallinLib;
 using MeowSci.HotPursuitLib;
 using MeowSci.PyroLib;
 using MeowSci.PebblesLib;
+using MeowSci.YouDidntSeeAnythingLib;
 
 namespace MeowSci.Unscience;
 
@@ -64,6 +65,7 @@ internal static class Patcher
         // BeforeGui/AfterGui targets are skipped by the game in that state. Callbacks are
         // registered in Mod.OnFullyLoaded before Patch() runs.
         report.TryApply("hidden-ui-frame-hook", () => HiddenUiFrameHook.Patch(_harmony!));
+        report.TryApply("you-didnt-see-anything", () => HiddenUiVisibilityPatches.Apply(_harmony!));
         report.TryApply("thug-life", () => ThugLifeRenderPatches.Apply(_harmony!));
         report.TryApply("menu-bar", () =>
         {
@@ -116,6 +118,7 @@ internal static class Patcher
             {
                 TryRemove("scene saves", () => NativeSaveHooks.Remove(_harmony!));
                 TryRemove("hotkey-guard", () => HotkeyGuard.Unpatch(_harmony!));
+                TryRemove("you-didnt-see-anything", () => HiddenUiVisibilityPatches.Remove(_harmony!));
                 TryRemove("hidden-ui-frame-hook", () => HiddenUiFrameHook.Unpatch(_harmony!));
                 TryRemove("menu-bar", () => MenuBarPatch.Remove(_harmony!));
                 TryRemove("blinky", () => BlinkyPatches.Remove(_harmony!));

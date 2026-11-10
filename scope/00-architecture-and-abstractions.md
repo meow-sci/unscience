@@ -1,5 +1,16 @@
 # 00 — Unscience supermod shell + `ksa-abstractions.lib` game-integration scope
 
+## Optional F2 window retention (5801)
+
+Unscience registers `YouDidntSeeAnythingSubmod` and its scene participant alongside existing
+features. Its patch group selectively permits the normal KSA UI callbacks while `Program.DrawUI`
+remains false. `HiddenUiFrameHook` consumes a dispatch marker to avoid a duplicate fallback update;
+this remains correct if the feature is disabled inside its own UI that frame.
+With the feature off, background updates retain their existing hidden-HUD fallback.
+Native ImGui hooks filter input and final draw data separately from KSA's world rendering.
+[Targets and ABI dependencies](ui-customization.md#you-didnt-see-anything-5801) ·
+[state ownership](saves.md#you-didnt-see-anything).
+
 ## War Paint ownership boundary (5801)
 
 Unscience explicitly references `war-paint.lib` and registers `WarPaintSubmod`; the new development

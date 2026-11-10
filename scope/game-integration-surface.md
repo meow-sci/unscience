@@ -1,3 +1,22 @@
+## You Didn't See Anything — F2 window retention (5801)
+
+| Surface | Owner | Contract |
+|---|---|---|
+| `Program.OnFrame(double,double)` / `OnDrawUiThreadSafe(double)` UI-only `DrawUI` gates | you-didnt-see-anything.lib / HiddenUiVisibilityPatches | Guarded Harmony transpilers resume window submission while `Program.DrawUI` remains false; exact call counts checked |
+| `Program.PrepareImGui(double)` | you-didnt-see-anything.lib | Prefix installs native ImGui context hooks before `NewFrame`; readiness failure keeps ordinary F2 behavior |
+| `Program.DrawMenuBar`, `Universe.OnDrawUi`, `GaugeCanvas.OnDrawUi/OnDrawUiFinal` | you-didnt-see-anything.lib | Keep native menu/world overlays hidden; optionally exclude the 15 stock canvas IDs |
+| `GaugeCanvas.AllCanvases`, `Id`, `DebugTitle` and `###` window identity | you-didnt-see-anything.lib | Resolve built-in gauges by stable canvas IDs rather than allocation-dependent ImGui window numbers |
+| ImGui context hooks / window flags, hierarchy, viewport IDs, draw lists and draw data | you-didnt-see-anything.lib | Native input/visibility filtering for detached-only selection; depends on game-shipped ImGui ABI; no managed Begin interception |
+| `HiddenUiFrameHook` fallback dispatch | ksa-abstractions.lib / Unscience | Avoid duplicate feature updates when normal StarMap callbacks run during hidden UI |
+| `ISubmod` / `ISaveParticipantSource` | you-didnt-see-anything.lib / YouDidntSeeAnythingSubmod | Scene record `you-didnt-see-anything` v1, disabled default and legacy/vanilla reset; no pointer persistence |
+
+Reflection/IL watchlist additions: exact private `Program.OnDrawUiThreadSafe`, protected
+`Program.OnFrame`, `Program.DrawMenuBar`, and `GaugeCanvas.OnDrawUiFinal` signatures plus expected
+`get_DrawUI` gate counts. Native ImGui layout/context hooks require re-verification after a Brutal
+update. No shaders or game assets are modified; `Content/Core/Gauges.xml` supplies denylist knowledge.
+Native rendering/input acceptance is pending. [Full UI map](ui-customization.md#you-didnt-see-anything-5801) ·
+[implementation record](../plans/YOU_DIDNT_SEE_ANYTHING.md).
+
 ## Kitchen Sink capsule glass experiment (5541)
 
 ## DOH native roster integration (5801)

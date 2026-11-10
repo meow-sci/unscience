@@ -1,5 +1,48 @@
 # UI / Customization Mods — Game Integration Scope
 
+## You Didn't See Anything (5801)
+
+`you-didnt-see-anything.lib` adds optional ImGui window retention while native `Program.DrawUI`
+remains false. It is registered through `ISubmod`, with patch installation/removal owned by the
+consolidated Unscience Harmony instance. The template-based standalone host is compile-only.
+
+F2 stops UI **submission**, not the final ImGui render. The feature selectively opens the two
+`DrawUI` gates in `Program.OnFrame(double,double)` and the initial gate in
+`Program.OnDrawUiThreadSafe(double)` without changing the player's `DrawUI` property. Normal
+StarMap GUI callbacks consequently run. The existing hidden-UI fallback must avoid a second
+`UpdateSubmods` call. World/orbit/gauge GPU render gates continue to read the original false value.
+Menu-bar and native world-overlay generation are excluded from the retained window path.
+
+| Integration surface (CURRENT decomp) | Contract / update risk |
+|---|---|
+| `KSA/Program.cs:2503,2508` — `OnFrame` UI gates | Exactly two targeted `get_DrawUI` calls; fail patch installation if the expected shape changes |
+| `KSA/Program.cs:3452` — `OnDrawUiThreadSafe` guard | Exactly one targeted `get_DrawUI`; other game reads keep F2 semantics |
+| `KSA/Program.cs` — `PrepareImGui(double)` | Prefix installs native context hooks before `NewFrame`, retrying context readiness; hook failures leave native F2 gates in effect |
+| `KSA/Program.cs:3733` — `DrawMenuBar(IGameViewport,int)` | Suppress native menu bar during hidden-UI retention |
+| `KSA/Universe.cs:1808` — `OnDrawUi(IGameViewport)` | World overlays remain hidden |
+| `KSA/GaugeCanvas.cs:694,1376` — `OnDrawUi`, `OnDrawUiFinal` | Exclude stock gauges on request; prevent gauge edit handles/overlays from reviving |
+| `KSA/GaugeCanvas.cs:342,632` — title / `DebugTitle`; `AllCanvases` | Stable canvas ID resolves runtime `DisplayName###GaugeCanvas_N`; never hardcode runtime numeric IDs |
+| `Brutal.ImGuiApi.Internal` context/window pointers and context hooks | Match game-shipped ImGui layout/ABI; delegates must remain rooted until hook removal |
+| Actual ImGui `ViewportId`, main viewport ID, window draw lists and viewport draw data | Independent OS window selection; KSA scene-camera `ViewportRegistry` is unrelated |
+| Window input/navigation ownership and per-frame draw-list filtering | Hidden windows must not intercept input; restore only mod-owned suppression on disable/unload |
+| `ISaveParticipantSource` | `you-didnt-see-anything` v1: enabled, detached-only and gauge-exclusion flags; disabled defaults on missing records |
+
+The exact stock canvas denylist is derived from CURRENT `Content/Core/Gauges.xml`:
+`RendezvousControl`, `BurnControl`, `Burn`, `EngineControl`, `KittenFlightControl`, `Telemetry`,
+`Radiation`, `AutopilotSettings`, `Altitude`, `Resources`, `GameTime`, `PitchYawRoll`, `Sequence`,
+`CrewPortraits`, `Navball`. Custom canvases are not excluded solely because they use `GaugeCanvas`.
+Runtime title resolution accommodates localized/display-title changes and canvas allocation order.
+
+ImGui wrappers can be JIT-inlined and native child/popup creation bypasses managed `Begin`, so
+managed wrapper patching alone is insufficient. Native context filtering is the authoritative
+visibility boundary. Popups, dock groups, newly created windows, focus and platform lifecycle
+require native acceptance; source/managed checks cannot establish those results.
+Excluded popup/modal chains are dismissed before hover processing and at end-frame; a modal first
+created during submission can still affect its creation frame. Excluded platform owners are hidden
+at end-frame only when no allowed active window shares the viewport, with the owned flag restored
+next frame/unload. This avoids blank platform windows without hiding unrelated docked content.
+[Implementation and acceptance](../plans/YOU_DIDNT_SEE_ANYTHING.md) · [save ownership](saves.md#you-didnt-see-anything).
+
 ## KSA 5707 → 5801 verification (2026-11-08)
 
 CapsuleGlassExperiment matches the same two exact window model strings through

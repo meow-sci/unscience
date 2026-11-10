@@ -20,8 +20,8 @@ namespace MeowSci.KsaAbstractions;
 /// the registered <see cref="BeforeGui"/> then <see cref="AfterGui"/> callbacks, so ordering guarantees the
 /// submods rely on (solver-queue timing, ImGui frame validity, GPU submit phase) are unchanged.
 ///
-/// <c>DrawUI</c> only flips from key handling in <c>PrepareFrame</c> (or from the menu bar, which draws
-/// after this point), so it is stable across a frame's UI phase and the hooks never double-fire.
+/// The optional dispatch predicate consumes a marker captured at the start of the UI phase;
+/// it remains correct even if a UI checkbox changes the feature setting during that phase.
 /// </remarks>
 public static class HiddenUiFrameHook
 {
@@ -35,6 +35,9 @@ public static class HiddenUiFrameHook
 
     /// <summary>Work normally done in <c>[StarMapAfterGui]</c>. Invoked only while the HUD is hidden, after <see cref="BeforeGui"/>.</summary>
     public static Action<double>? AfterGui { get; set; }
+
+    /// <summary>True when another patch dispatched the normal UI callbacks while F2 is active.</summary>
+    public static Func<bool>? UiCallbacksDispatched { get; set; }
 
     /// <summary>True while the game HUD is hidden (F2).</summary>
     public static bool IsUiHidden => !Program.DrawUI;
@@ -54,6 +57,7 @@ public static class HiddenUiFrameHook
             harmony.Unpatch(_original, _prefix);
         _original = null;
         _prefix = null;
+        UiCallbacksDispatched = null;
         BeforeGui = null;
         AfterGui = null;
         Console.WriteLine("ksa-abstractions: HiddenUiFrameHook patch removed");
@@ -63,10 +67,11 @@ public static class HiddenUiFrameHook
     {
         if (Program.DrawUI) return; // HUD visible: StarMap already fired the real hooks this frame
 
-        try { BeforeGui?.Invoke(dt); }
+        bool suppressUpdate = UiCallbacksDispatched?.Invoke() == true;
+        try { if (!suppressUpdate) BeforeGui?.Invoke(dt); }
         catch (Exception ex) { Console.WriteLine($"ksa-abstractions: HiddenUiFrameHook BeforeGui error: {ex.Message}"); }
 
-        try { AfterGui?.Invoke(dt); }
+        try { if (!suppressUpdate) AfterGui?.Invoke(dt); }
         catch (Exception ex) { Console.WriteLine($"ksa-abstractions: HiddenUiFrameHook AfterGui error: {ex.Message}"); }
     }
 }
