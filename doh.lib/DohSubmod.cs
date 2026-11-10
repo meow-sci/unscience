@@ -109,7 +109,7 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
             ImGui.Text(_spawnCount > 1 ? "Name prefix" : "Vehicle name");
             ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
             ImGui.InputText("##doh_name", _spawnName);
-            ImGui.SetItemTooltip("Single spawn: use this exact name. Batches: append numbers to this prefix. Leave blank for automatic Kitten_doh_ names.");
+            ImGui.SetItemTooltip("Single spawn: use this name if available. Occupied names advance to the next number. Batches: append numbers to this prefix. Leave blank for automatic Kitten_doh_ names.");
 
             // Offset
             ImGui.TableNextRow();

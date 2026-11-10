@@ -430,10 +430,13 @@ Global ImGui theme manager. Provides a theme picker and a full style editor that
 ## Kitten Spawning & Customization Mods
 
 ### [doh](doh) / [doh.lib](doh.lib)
-Programmatic kitten spawning, exact single names or numbered batch prefixes, character selection,
+Programmatic kitten spawning, preferred single names or numbered batch prefixes, character selection,
 body-frame offsets (default **1, 1, -2 m**) and native **Smite / Smite All** kill actions. DOH selects an optional
 saved **War Paint** preset; all coloring is delegated to that central owner. The spawn API accepts
 a detached recipe or preset name; legacy tint API inputs still forward to War Paint.
+Occupied single names automatically gain/advance a number above the highest matching suffix;
+batches also continue above native scene and roster names, including seated/retired/KIA crew.
+Numbering is derived per prefix after loads, with no cached counter or save schema change.
 The panel uses a striped Name/Model/action table with red Smite buttons, full-width Smite All,
 equal-width spawn/refresh actions and native KSA Info/Error logging instead of status/count labels.
 
@@ -453,8 +456,9 @@ are diagnosed without reviving/stealing crew. See [integration](plans/DOH_ROSTER
 Links the actual DOH adapter, naming/registry/native kill-input code and central War Paint service
 against a native backend fixture. Covers names, defaults, deduplicated kill input, stale-world object
 identity, post-death private-slot release, reusable presets, legacy paint migration and scene capture.
-102 checks include native-roster registration/repair, preserved career history, boarding/KIA,
-creation rollback and real-adapter replay/retention. See its [README](doh.tests/README.md).
+118 checks include collision recovery above sparse/restored suffixes, native-roster registration/repair,
+preserved career history, boarding/KIA, creation rollback and real-adapter replay/retention.
+See its [README](doh.tests/README.md).
 
 ### [war-paint](war-paint) / [war-paint.lib](war-paint.lib)
 Preset-based coloring for all live EVA kittens: full-width filterable combo, name/confirmation
@@ -754,7 +758,8 @@ all 19 managed suites pass (including new real-KSA.dll metadata checks); in-game
 - `sphinx.lib`: skips static color draws when KSA's 10-set pipeline failed to build (low-end GPUs).
 - `pebbles.lib`: redirects the new depth-normal pre-pass (`ClutterMaterialBindings`) and keeps the stock
   `UsesCustomNormals` foliage flag (optional recipe field).
-- `doh.lib`: spawn names already used by a rostered kitten are refused (radiation dose/KIA follow the name).
+- `doh.lib`: rostered kitten names remain reserved (radiation dose/KIA follow the name); current
+  collision recovery advances the suffix automatically.
 - Documented, no code: kitten radiation deaths outside The Tick, step-limited warp, collider-based spawns,
   Hot Pursuit clouds/VRAM, Pluto's tilt/lock, terrain height under statics and decals.
 

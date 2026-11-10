@@ -13,9 +13,9 @@ public sealed class SpawnRequest
     public const string DefaultNamePrefix = "Kitten_doh_";
 
     /// <summary>
-    /// Exact vehicle name for a single spawn, or a prefix for numbered batch names.
+    /// Preferred vehicle name for a single spawn, or a prefix for numbered batch names.
     /// Null, empty or whitespace uses the default prefix with automatic numbering.
-    /// An occupied exact name is rejected rather than silently changed.
+    /// Occupied single names advance their trailing number (or gain one) above existing suffixes.
     /// </summary>
     public string? VehicleName { get; init; }
 

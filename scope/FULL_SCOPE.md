@@ -33,6 +33,8 @@ contracts. Update the owning area and master index in the same change as an inte
 
 DOH spawns now enter the native kitten roster and start an EVA mission. Existing tracked EVA
 kittens are repaired without replacing native history; roster/career data remain KSA-owned.
+Spawn name collisions automatically advance above the highest matching native scene/roster suffix,
+including after loads; no counter or additional scene state is saved.
 [Native roster integration and acceptance](../plans/DOH_ROSTER_INTEGRATION.md).
 
 ## Version baseline

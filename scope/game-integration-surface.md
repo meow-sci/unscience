@@ -21,6 +21,12 @@ Native rendering/input acceptance is pending. [Full UI map](ui-customization.md#
 
 ## DOH native roster integration (5801)
 
+Naming scans `CelestialSystem.All.UnsafeAsList()` / `Astronomical.Id` and
+`Universe.KittenRoster.Kittens` / `KittenRosterEntryData.Name` for the highest matching numeric suffix.
+Occupied single names and numbered batches advance automatically; native `All.TryGet` / roster
+`Find` remain the final guards. Matching is case-insensitive; seated/retired/KIA names stay reserved.
+No cached counter, Harmony hook or sidecar change. See [current naming contract](character-and-materials.md#doh-native-roster-integration-5801).
+
 | Surface | Owner | Contract |
 |---|---|---|
 | Universe.KittenRoster.Kittens/Find; KittenRosterEntryData(name, character), NameHash/Character/Kia/Retired/AssignedVehicleId | doh / KittenSpawner.Roster | New/legacy tracked EVA registration; current unique targets only; no crew overwrite or resurrection |

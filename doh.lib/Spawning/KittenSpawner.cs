@@ -121,10 +121,8 @@ public sealed partial class KittenSpawner
             if (freeSlots >= 0 && freeSlots < MinFreeSlotsForKitten)
                 return Stopped(results, request.Count, $"GPU material pool exhausted ({freeSlots} slots free)");
 
-            // Preserve exact single names; batch/automatic names skip occupied IDs.
-            string? kittenName = GenerateKittenName(system, request);
-            if (kittenName == null)
-                return Stopped(results, request.Count, $"The name '{request.VehicleName}' is already used by a vehicle or a rostered kitten. Choose another name");
+            // Occupied single names and batch/automatic names advance past native suffixes.
+            string kittenName = GenerateKittenName(system, request);
 
             // Create backpack part
             Part? backpackPart = CreateBackpackPart();

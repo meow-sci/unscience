@@ -41,8 +41,8 @@ internal static partial class Checks
         Require(entry.Kia && entry.CauseOfDeath == KittenDeathCause.Abandoned && !entry.AssignedToVehicle
             && entry.TotalMissionTime == 70 && Universe.KittenRoster.Kittens.Contains(entry),
             "native death updates cause/mission history and retains the KIA roster entry after DOH pruning");
-        Require(submod.Spawner.GenerateKittenName(Universe.CurrentSystem!, new SpawnRequest { VehicleName = "roster CAT" }) == null,
-            "a dead roster identity remains reserved after its EVA vehicle is gone");
+        Require(submod.Spawner.GenerateKittenName(Universe.CurrentSystem!, new SpawnRequest { VehicleName = "roster CAT" }) == "roster CAT1",
+            "a dead roster identity gains a fresh suffix after its EVA vehicle is gone");
 
         var boarded = new KittenEva("Boarder"); SetWorld(boarded);
         var boardEntry = KittenSpawner.EnsureRoster(boarded, requireNew: true);

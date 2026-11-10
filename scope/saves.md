@@ -133,8 +133,8 @@ NEW (`decomp/KSA/`). **No participant ID, record version or existing payload cha
   lethally dosed `KittenEva` (`:3080`). Records targeting it then resolve as missing through the existing
   exact-identity resolvers. The death queue is drained before our deferred `DeserializeSave` replays.
   `DeserializeSave` does not reset the new `_stepLimitTime` (game-owned; at most one truncated step).
-  DOH now refuses spawn names held by the roster so its kittens do not inherit roster doses
-  (`doh.lib/Spawning/KittenSpawner.Naming.cs:30`); no save change.
+  DOH reserves names held by the roster so its kittens do not inherit roster doses; current naming
+  automatically advances their suffix (`doh.lib/Spawning/KittenSpawner.Naming.cs`); no save change.
 - ✅ **Iron Man marker load (fix, new in 5707).** Save loads now reach `Part` through a private 10-arg
   constructor (`Part.cs:1566`), so the connector marker is decoded there
   (`iron-man.lib/IronManConnectorPatches.cs:14-30`) instead of the removed 4-arg patch. The saved marker
@@ -550,10 +550,14 @@ The additive version-1 `SpawnName` field saves the editable name / batch prefix 
 buttons. Missing legacy fields and loads with no record reset to `Kitten_doh_`; blank input is
 preserved as automatic naming. Validation rejects null, embedded NUL and text of 256 or more UTF-8
 bytes before replay into the 256-byte ImGui buffer, retaining malformed records with diagnostics.
-Names of existing kittens remain native-owned; restore never renames or respawns them. The numeric
-counter is a transient search hint, with uniqueness enforced against native `All.TryGet` on each
-spawn after loading. The real-adapter checks cover detached Unicode/blank capture, repeated and
-cross-scene replay, legacy/missing fields and invalid names.
+Names of existing kittens remain native-owned; restore never renames or respawns them. Each spawn
+scans native system IDs and all roster names for the highest matching suffix, then confirms the
+candidate with native `All.TryGet` / roster `Find`. Occupied singles gain/advance a number; batches
+continue above the highest suffix instead of filling gaps. No counter or pending name is retained:
+numbering is derived from the reconstructed native world/roster, including seated, retired and KIA
+crew. Collision recovery leaves the persisted input unchanged and adds no payload fields/version.
+The real-adapter checks cover detached Unicode/blank capture, repeated and cross-scene replay,
+post-load numbering/registration, fresh vanilla scenes, legacy/missing fields and invalid names.
 
 Each saved kitten now carries an optional `MaterialGroup`: the set ID it rendered with when saved.
 Kittens with the same group get one shared set on restore, the way a non-unique batch was spawned.

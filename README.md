@@ -73,8 +73,10 @@ The switch is scene-saved and reversible; native visual acceptance is pending. S
 [the experiment](kitchen-sink/README.md#capsule-glass-experiment).
 
 DOH's spawn controls include an editable vehicle name / batch prefix, initially `Kitten_doh_`.
-Single spawns use the text exactly, batches append numbers, and blank input uses automatic naming.
-The setting is scene-saved. See [DOH usage](doh/README.md#usage).
+Available single names are used exactly; occupied names automatically advance above the highest
+existing suffix. Batches and blank-input automatic names also continue above native scene/roster
+numbers, including after save/load. The input is scene-saved; numbering is derived from KSA's
+current names. See [DOH usage](doh/README.md#usage).
 
 Kitten Animations keeps holds and animation settings independently for each EVA kitten, even after
 switching control or the camera to another vessel. Select a kitten in the panel to edit or clear

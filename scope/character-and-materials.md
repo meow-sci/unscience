@@ -2,6 +2,14 @@
 
 ## DOH native roster integration (5801)
 
+Spawn collision recovery derives the highest numeric suffix from `CelestialSystem.All.UnsafeAsList()`
+(`Astronomical.Id`) and `Universe.KittenRoster.Kittens` (`Name`), matching prefixes case-insensitively.
+Unused single names stay verbatim; occupied singles gain/advance their trailing number, while batch
+prefixes remain literal. Final `All.TryGet` / roster `Find` checks preserve native identity reservations.
+Seated, retired and KIA crew remain untouched. No counter is cached/persisted, and large suffixes
+use arbitrary-precision integers. The unchanged `doh` v1 input survives save/load; native names
+determine continuation. 118 managed DOH checks pass; native spawn/save-load acceptance is pending.
+
 `KittenSpawner.Roster.cs` joins newly created EVA vehicles to `Universe.KittenRoster.Kittens` with
 `new KittenRosterEntryData(name, character)`, `StartMission(EvaAssignmentId)` and `Vehicle.MarkLaunched`,
 matching native `Universe.AssignStartingCrew`. Native name/hash identity enables the roster follow

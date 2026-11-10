@@ -44,6 +44,17 @@ unrostered tracked EVA kittens and preserve valid existing history without resta
 Incompatible native records warn and retain the incoming sidecar instead of overwriting crew.
 Failed spawns roll back only their own provisional roster row. See [integration checklist](DOH_ROSTER_INTEGRATION.md).
 
+DOH collision recovery now advances occupied single names and numbered batches above the highest
+matching native scene/roster suffix, including seated/retired/KIA reservations. Available exact names
+stay unchanged. Numbering is derived after native reconstruction; no counter or additional sidecar
+state is needed, and the saved name input remains unchanged (`doh` v1/order60). All 118 managed DOH
+checks pass, including sparse/large suffixes, repeated real-adapter replay, new-scene reset and
+post-load roster registration. Native spawning and actual KSA save/load acceptance remain pending.
+The full solution builds against CURRENT 5801 with zero warnings/errors; `saves.tests`,
+`world-saves.tests` and `ksa-upgrade.tests` also pass. Build output uses
+`/private/tmp/unscience-doh-naming-dist`; this invocation uses `-p:NuGetAudit=false` because the
+package vulnerability feeds are unreachable on this host. Compiler warnings remain errors.
+
 - [ ] Spawn native and custom-character batches; verify exact names, EVA assignment, roster follow,
   health/dose/condition and mission/travel/speed statistics. Native crew must be unaffected.
 - [ ] Save/load twice and A-B-A; verify one row/mission per kitten, no lost history and no duplicates.
@@ -201,7 +212,7 @@ assumptions still require the in-game checks below.
 DOH naming addition (October 25, 2026): additive `SpawnName` in the existing version-1 `doh` record
 captures the editable exact name / batch prefix for both spawn buttons. Old records and vanilla/new
 scenes use `Kitten_doh_`; blank input preserves automatic naming. Existing kitten names remain
-native-owned. The runtime numeric counter need not persist because each spawn checks native names.
+native-owned. Current naming derives the next suffix from native scene/roster names without a counter.
 Managed naming and real-adapter checks cover Unicode/blank round-trips, detached capture, repeated
 and cross-scene loads, legacy/missing records and invalid text. `doh.tests` passes all 55 checks.
 Full `dotnet build -m:1 -p:UseSharedCompilation=false
@@ -457,10 +468,11 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
   native lost part names, and stopping/deleting one grid leaves the others intact.
 - [ ] Save DOH clones with distinct materials and an uncolored clone. Check roster/vehicle counts remain
   unchanged, unique tint remains unique, material selection still works and Despawn acts on restored clones.
-- [ ] In DOH, enter an exact name and spawn one kitten through each spawn button; an occupied name
-  must show an error. Spawn a batch with a custom prefix, then use blank input for automatic
-  `Kitten_doh_` names. Save/load and confirm both the name field and native kitten names survive;
-  repeated loads create no duplicates, and a legacy/vanilla save resets the field to its default.
+- [ ] In DOH, spawn repeatedly with the prefilled name and a custom name. Occupied names must
+  automatically advance above the highest matching suffix, including gaps and roster-only names.
+  Repeat with a numbered single name, custom batch prefix and blank automatic `Kitten_doh_` names.
+  Save/load twice and confirm continued numbering, unchanged input and native names, no duplicate
+  kittens/crew and preserved KIA/retired history. A legacy/vanilla save resets the field to its default.
 - [ ] Save a DOH non-unique tinted batch; reload and confirm the batch still shares one set ("Tint All" on
   one recolors all) while unique kittens stay independent. Watch the DOH window's GPU slot counter across
   repeated loads, a vanilla load plus a spawn, and Despawn All: usage must return to its baseline instead
@@ -472,7 +484,7 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
   anchors; the copy has the same anchors and no crash.
 - [ ] Radiation (5707): save/load with an EVA kitten killed by radiation and with a retired kitten.
   Records for the removed kitten are reported unresolved, with no stale-reference errors; KSA's roster
-  dose columns restore natively. DOH refuses a spawn name held by a rostered kitten.
+  dose columns restore natively. DOH automatically advances a spawn name held by a rostered kitten.
 - [ ] Verify Eternal Flame monitoring, I Feel Seen visibility, IVA rendering, editor flags and Glass FOV
   resume their saved policies, including disabled/false values and missing-target diagnostics.
 - [ ] IVA unlock: save away from the second seat with a changed speed; reload twice and A-B-A across
