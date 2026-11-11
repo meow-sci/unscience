@@ -20,6 +20,7 @@ using MeowSci.KiwisMarblesLib;
 using MeowSci.SkittlesLib;
 using MeowSci.SphinxLib;
 using MeowSci.IronManLib;
+using MeowSci.WingWalkerLib;
 using MeowSci.ZippoLib;
 using MeowSci.HumbleArteestLib;
 using MeowSci.DohLib;
@@ -37,6 +38,7 @@ using MeowSci.RockyMcRockFaceLib;
 using MeowSci.SaveYourselfLib;
 using MeowSci.BloominOnionLib;
 using MeowSci.WarPaintLib;
+using MeowSci.YouDidntSeeAnythingLib;
 
 namespace MeowSci.Unscience;
 
@@ -102,9 +104,11 @@ public class Mod
             _submods.Add(new SaveYourselfSubmod());
             _submods.Add(skittles);
             _submods.Add(new SphinxSubmod());
+            _submods.Add(new WingWalkerSubmod());
             _submods.Add(new TheTickSubmod());
             _submods.Add(new ThugLifeSubmod());
             _submods.Add(new WarPaintSubmod());
+            _submods.Add(new YouDidntSeeAnythingSubmod());
             _submods.Add(new ZippoSubmod());
 
             // Initialize all submods so Tracker is populated before patching
@@ -132,10 +136,8 @@ public class Mod
             Patcher.MenuBarToggle = () => _windowVisible = !_windowVisible;
             Patcher.BeforeGameDispose = Unload;
 
-            // While the game HUD is hidden (F2) StarMap's [StarMapBeforeGui]/[StarMapAfterGui]
-            // never fire (their game targets are skipped), so the non-UI per-frame work is
-            // replayed from HiddenUiFrameHook at the same frame phase. ImGui rendering is
-            // deliberately left out so mod windows honour the hidden HUD too.
+            // While F2 hides the game UI, run non-UI updates from the fallback hook unless
+            // You Didn't See Anything has restored the normal StarMap UI callbacks.
             HiddenUiFrameHook.BeforeGui = UpdateSubmods;
 
             _sceneSaves = new UnscienceSaves(_submods);
@@ -155,7 +157,7 @@ public class Mod
 
     /// <summary>
     /// Per-frame pre-UI work. Called by <see cref="OnBeforeUi"/> when the HUD is visible and by
-    /// <see cref="HiddenUiFrameHook"/> when it is hidden — never both in the same frame.
+    /// <see cref="HiddenUiFrameHook"/> when hidden unless normal UI callbacks are enabled.
     /// </summary>
     private void UpdateSubmods(double dt)
     {

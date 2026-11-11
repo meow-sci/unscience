@@ -9,8 +9,10 @@ package = root / "unscience"
 assert sorted(p.name for p in root.iterdir()) == ["unscience"], "Expected only unscience/ in dist"
 assert list(root.rglob("mod.toml")) == [package / "mod.toml"], "Expected one StarMap manifest"
 assert 'EntryAssembly = "MeowSci.Unscience"' in (package / "mod.toml").read_text()
-for name in ("MeowSci.Unscience.dll", "MeowSci.Unscience.deps.json", "Tomlyn.dll", "LICENSE"):
+assert 'assets = [ "WingWalker.xml" ]' in (package / "mod.toml").read_text()
+for name in ("MeowSci.Unscience.dll", "MeowSci.Unscience.deps.json", "Tomlyn.dll", "LICENSE", "WingWalker.xml"):
     assert (package / name).is_file(), f"Missing runtime file: {name}"
+assert (package / "WingWalker.xml").read_bytes() == (repo / "wing-walker/WingWalker.xml").read_bytes(), "Seat asset differs from source"
 expected = set()
 pending = [repo / "unscience/unscience.csproj"]
 visited = set()

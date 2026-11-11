@@ -12,6 +12,9 @@ Only the `unscience` mod is distributed. This project is a compile-checked devel
 2. Select the reference vehicle and optionally a character model; the default character is random.
 3. Enter a vehicle name (one kitten) or name prefix (batch). Blank input uses automatic
    `Kitten_doh_` numbering. Existing live or rostered kitten names are reserved, case-insensitively.
+   An occupied name automatically advances above the highest existing numeric suffix; for example,
+   retrying `Crew_7` when `Crew_20` exists spawns `Crew_21`. Batches also continue above the highest
+   suffix, including names restored from saves and names reserved by seated, retired or KIA crew.
 4. Set the body-frame offset (right, up, forward), default **(1, 1, -2) m**, and count (1–20).
 5. Choose a saved **War Paint preset**, or **stock appearance**, then click **Spawn Kitten(s)**.
 6. Use **Smite** or **Smite All** to request KSA's built-in kill action on the next input pass.
@@ -22,8 +25,8 @@ Only the `unscience` mod is distributed. This project is a compile-checked devel
 use KSA's logger; the panel has no persistent status/count labels or War Paint helper text.
 
 KSA handles death and vehicle removal. Its native action records **Abandoned** where a roster
-entry exists; custom reason strings such as "smote" are unsupported. DOH kittens normally have no
-roster entry. War Paint releases each dead kitten's private GPU materials after native destruction;
+entry exists; custom reason strings such as "smote" are unsupported. DOH kittens have native
+roster entries. War Paint releases each dead kitten's private GPU materials after native destruction;
 saved presets and other kittens' paint remain available. Unloading DOH leaves vehicles to KSA.
 
 The selected reference vehicle remains stable when vehicles appear or disappear. Removing it

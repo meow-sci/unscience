@@ -22,7 +22,7 @@ Unscience is the only distributed mod. `dotnet build` deploys one `unscience/` f
 feature libraries remain separate projects with explicit references. Former standalone hosts are
 retained for development and are not deployed or published. See [distribution](../README.md#distribution).
 
-A unified supermod that consolidates 30 KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
+A unified supermod that consolidates KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
 
 ## Included Submods
 
@@ -55,9 +55,11 @@ A unified supermod that consolidates 30 KSA feature libraries into a single ImGu
 | Save Yourself | Timed auto saves through KSA's own save path, named `<prefix>_YYYYMMDDTHHMMSS` |
 | Skittles — Theme Manager | Applies and saves ImGui themes with a built-in style editor |
 | Sphinx | Places imported textured GLB statics with terrain alignment, XYZ transforms and shared PNG overrides |
+| Wing Walker | Surface-mounted External Seat and Standing Mount for native crew, with finite supplies |
 | The Tick | Makes chosen vessels indestructible by forces: unbreakable parts plus suppressed G-load / aero-pressure destruction |
 | Thug Life | Renders a custom textured quad through KSA's main render pass |
 | War Paint | Preset material coloring, active assignments, game-log feedback and a global Show visor glass checkbox |
+| You Didn't See Anything | Keeps ImGui windows visible during F2 hide UI, optionally only detached OS windows and excluding stock gauges |
 | Zippo — Light Control | Controls light appearance and queued transitions, plus repeating Disco color, actuation, and spotlight-spread cycles |
 
 ## Usage
@@ -70,17 +72,32 @@ A unified supermod that consolidates 30 KSA feature libraries into a single ImGu
   automatic naming. The setting is restored by scene saves. [Details](../doh/README.md#usage).
 - The **Skittles Theme Editor** opens in a separate window via the "Open Theme Editor" button
 
+**You Didn't See Anything** starts disabled. Open its header and enable **Keep ImGui windows
+visible when UI is hidden** before pressing F2. **Detached OS windows only** selects independent
+platform windows; **Hide stock gauges** excludes KSA's built-in flight/EVA/editor gauge canvases.
+The switches are scene-saved. ImGui window layout retains its existing ownership. Native rendering,
+focus, docking and popup behavior still require in-game acceptance.
+Menus/dialogs owned by excluded windows are dismissed; overlays drawn outside ordinary windows
+remain hidden with F2.
+[Feature details](../you-didnt-see-anything.lib/README.md).
+
 Kitchen Sink → **See Inside Capsule (Experimental)** tries the stock medium/Gemini capsule
 with its opaque exterior windows hidden and native IVA glass retained. It is off by default,
 reversible, and saved in its own scene record. Interiors are revealed globally while enabled;
 **Always Render IVA Interiors** keeps its independent preference. Native glass alignment, tint
 and exterior lighting remain to be checked in game. [Controls and limits](../kitchen-sink/README.md#capsule-glass-experiment).
 
+**Wing Walker:** place an External Seat or Standing Mount from the editor’s External Crew category.
+Assign crew in the part controls or board near its entry point; the portrait offers EVA. Supplies are
+finite, there is no shielding, and a surface mount does not create a habitat passage. KSA saves the
+part, crew and life support; no new sidecar is used. [Details](../wing-walker.lib/README.md) ·
+[pending acceptance](../plans/WING_WALKER.md).
+
 ## Architecture
 
 - **`ISubmod`** interface (from `ksa-abstractions.lib`) defines the submod contract: `Name`, `Initialize()`, `Update(dt)`, `RenderContent()`, `Dispose()`
 - **`Mod.cs`** orchestrates all submods — instantiates lib submod classes directly, calls `Update()` every frame for all (even hidden), renders only visible ones
-- **Hidden-HUD (F2) resilience**: `HiddenUiFrameHook.BeforeGui` replays `UpdateSubmods(dt)` while KSA skips StarMap UI callbacks. Welds run independently through `GarrysTorchPatches` in `Program.PrepareFrame`; no after-GUI weld callback is registered. Mod windows and the F11 toggle remain hidden with the HUD.
+- **Hidden-HUD (F2) resilience**: `HiddenUiFrameHook.BeforeGui` replays `UpdateSubmods(dt)` while KSA skips StarMap UI callbacks. You Didn't See Anything optionally resumes normal GUI dispatch and suppresses that fallback update to avoid duplication. Welds run independently through `GarrysTorchPatches` in `Program.PrepareFrame`. With the feature disabled, mod windows and F11 follow normal F2 behavior.
 - **`Patcher.cs`** consolidates Harmony patches from blinky and its-so-shiny (render-skip through the shared `PartRenderFilter`), camera-controller-override (sequence playback via `CameraControllerOverridePatches`), free-fallin (canopy material substitution and material-gated full-canopy shader projection via `FreeFallinPatches`), garrys-torch (KittenEva XYZ render-scale correction via `KittenScalePatches`), glass (FOV override), graffiti (projected-decal render pass via `GraffitiPatches`), i-feel-seen (render distance), pyro (exhaust submission via `PyroPatches`), skittles (hotkey blocking), and dont-stifle-me (editor scale and configurable-value limits via `EditorScalePatches` / `EditorValueLimitPatches`), delegating to patch helpers in each lib
 - **Patch startup diagnostics**: a failed patch group logs its complete exception, including inner errors and stacks, while subsequent groups still run. The final log reports completed/attempted and failed group counts and names every failed group. “Completed without throwing” describes the installer call: optional helpers can still disable unsupported paths or have no controller. Each startup gets a fresh report; this transient diagnostic state is excluded from scene saves. Removal failures also log complete exceptions.
 - **Garry's Torch update timing**: the shared `GarrysTorchPatches` frame transpiler runs weld animation and teleports after completed orbit/vehicle/cloth results are applied and before any next-step physics snapshots. Teleports use `SimStep.PreviousTime`, preserving source actuator state and body/origin time alignment. Ordinary submod and UI updates do not advance welds. On KSA 5482, teleports, launches, queued mutations and deferred loads first join the game's nearest-orbit job (`PhysicsFrameHook.JoinOrbitReaders`), which reads orbit points that a teleport disposes.

@@ -18,6 +18,7 @@ using MeowSci.KsaAbstractions;
 using MeowSci.KsaAbstractions.Persistence;
 using MeowSci.SphinxLib;
 using MeowSci.IronManLib;
+using MeowSci.WingWalkerLib;
 using MeowSci.KiwisMarblesLib;
 using MeowSci.TheTickLib;
 using MeowSci.ThugLifeLib;
@@ -27,6 +28,7 @@ using MeowSci.FreeFallinLib;
 using MeowSci.HotPursuitLib;
 using MeowSci.PyroLib;
 using MeowSci.PebblesLib;
+using MeowSci.YouDidntSeeAnythingLib;
 
 namespace MeowSci.Unscience;
 
@@ -64,6 +66,7 @@ internal static class Patcher
         // BeforeGui/AfterGui targets are skipped by the game in that state. Callbacks are
         // registered in Mod.OnFullyLoaded before Patch() runs.
         report.TryApply("hidden-ui-frame-hook", () => HiddenUiFrameHook.Patch(_harmony!));
+        report.TryApply("you-didnt-see-anything", () => HiddenUiVisibilityPatches.Apply(_harmony!));
         report.TryApply("thug-life", () => ThugLifeRenderPatches.Apply(_harmony!));
         report.TryApply("menu-bar", () =>
         {
@@ -100,6 +103,7 @@ internal static class Patcher
         report.TryApply("kitten-animations", () => KittenAnimationPatches.Apply(_harmony!));
         report.TryApply("pyro", () => PyroPatches.Apply(_harmony!));
         report.TryApply("iron-man", () => IronManPatches.Apply(_harmony!));
+        report.TryApply("wing-walker", () => WingWalkerPatches.Apply(_harmony!));
         report.TryApply("sphinx", () => SphinxPatches.Apply(_harmony!));
         report.TryApply("graffiti", () => GraffitiPatches.Apply(_harmony!));
         report.TryApply("free-fallin", () => FreeFallinPatches.Apply(_harmony!));
@@ -116,6 +120,7 @@ internal static class Patcher
             {
                 TryRemove("scene saves", () => NativeSaveHooks.Remove(_harmony!));
                 TryRemove("hotkey-guard", () => HotkeyGuard.Unpatch(_harmony!));
+                TryRemove("you-didnt-see-anything", () => HiddenUiVisibilityPatches.Remove(_harmony!));
                 TryRemove("hidden-ui-frame-hook", () => HiddenUiFrameHook.Unpatch(_harmony!));
                 TryRemove("menu-bar", () => MenuBarPatch.Remove(_harmony!));
                 TryRemove("blinky", () => BlinkyPatches.Remove(_harmony!));
@@ -142,6 +147,7 @@ internal static class Patcher
                 TryRemove("the-tick indestructibility", () => TheTickPatches.Remove(_harmony!));
                 TryRemove("kitten-animations", () => KittenAnimationPatches.Remove(_harmony!));
                 TryRemove("iron-man", () => IronManPatches.Remove(_harmony!));
+                TryRemove("wing-walker", () => WingWalkerPatches.Remove(_harmony!));
                 TryRemove("sphinx", () => SphinxPatches.Remove(_harmony!));
                 TryRemove("pyro", () => PyroPatches.Remove(_harmony!));
                 TryRemove("graffiti", () => GraffitiPatches.Remove(_harmony!));

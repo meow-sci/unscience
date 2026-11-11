@@ -8,12 +8,15 @@ Native spawning, material access, roster objects/lifecycle and the ImGui shell u
 stand-ins; the production roster integration helper, rollback and real save adapter are linked.
 Preset IO uses a unique temporary directory removed after a successful run. These checks do not load KSA or Vulkan.
 
-Current suite: **102 checks**.
+Current suite: **118 checks**.
 
 Coverage includes:
 
-- exact names, Unicode/blank saved names, batch prefixes, roster reservations, stale native IDs and
-  malformed name retention;
+- available exact names, automatic collision recovery above sparse suffixes, numeric single names,
+  literal batch prefixes, large suffixes without overflow, independent prefixes and fresh scenes;
+- Unicode/blank saved names, roster reservations (including seated/retired/KIA crew), stale native IDs,
+  malformed name retention and repeated real-adapter replay followed by native roster registration
+  and continued numbering without changing the saved input;
 - unchanged `doh` v1 replay, legacy shared `MaterialGroup` migration to independent private paints,
   old tint/source/name material colors, stock kittens, old enabled/disabled UI color flags, deterministic
   preset import with collision protection, and separate central paint capture;

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <Compile Include="../you-didnt-see-anything.lib/HiddenUiVisibilityPatches.cs" Link="HiddenUiVisibilityPatches.cs" />
+    <Compile Include="../you-didnt-see-anything.lib/Purr2D2UiPatches.cs" Link="Purr2D2UiPatches.cs" />
+    <Compile Include="../you-didnt-see-anything.lib/UiGatePolicy.cs" Link="UiGatePolicy.cs" />
+    <Compile Include="../ksa-abstractions.lib/HiddenUiFrameHook.cs" Link="HiddenUiFrameHook.cs" />
+  </ItemGroup>
+</Project>

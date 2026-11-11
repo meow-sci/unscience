@@ -48,6 +48,22 @@ All 19 managed suites and the 19-case startup harness pass; native game acceptan
 
 ## Distribution policy
 
+### [You Didn't See Anything](you-didnt-see-anything.lib/README.md)
+
+- `you-didnt-see-anything.lib`: optional F2 window retention, actual ImGui platform-viewport
+  filtering and stock gauge exclusion; scene-saved configuration with disabled reset defaults.
+  `Purr2D2UiPatches` optionally opens purr2d2's own submission gates, restricts HUD panels to
+  detached hosts and guards custom input/gesture ownership without changing the F2 flag.
+- `you-didnt-see-anything`: thin development StarMap host; only Unscience ships the feature.
+- `you-didnt-see-anything.tests`: executable save-adapter, dispatch and window-policy checks plus
+  real CURRENT KSA.dll UI-gate/callback-order probes; native graphics/input are outside its scope.
+- `you-didnt-see-anything.patch-tests`: production Harmony installers/transpilers and the shared
+  fallback hook against native-independent game fixtures; callback counts, mid-frame disable,
+  fail-closed gate validation, rollback and preservation of foreign patches.
+  Includes purr2d2's existing Harmony postfix, panel guards, custom input and gesture transitions.
+- Game/ImGui hooks, native acceptance and validation: [implementation record](plans/YOU_DIDNT_SEE_ANYTHING.md)
+  and [UI integration](scope/ui-customization.md#you-didnt-see-anything-5801).
+
 `unscience` is the only shipped/publishable mod. Individual `.csproj` files remain code boundaries;
 legacy standalone hosts compile into `bin/` but have no deployment target. Feature libraries are
 bundled only through explicit project references. See the root README for installation migration.
@@ -416,11 +432,33 @@ Global ImGui theme manager. Provides a theme picker and a full style editor that
 
 ## Kitten Spawning & Customization Mods
 
+### [wing-walker](wing-walker) / [wing-walker.lib](wing-walker.lib)
+
+Native surface-mounted External Seat and Standing Mount parts, native crew assignment and EVA
+boarding, finite life support and scoped crew rendering. Posture derives from the part template;
+KSA owns persistent part, crew and resource state, so no feature sidecar is added. The library owns
+the patches; the thin standalone host is for development, while only Unscience ships.
+[Integration](scope/wing-walker.md) · [validation](plans/WING_WALKER.md).
+
+### [wing-walker.tests](wing-walker.tests)
+
+Native-free fixtures exercise the production Harmony patches: standing animation/origin, viewport
+and editor rendering, exact-seat boarding for repeated part IDs, exceptions and targeted unload.
+
+### [wing-walker.native-tests](wing-walker.native-tests)
+
+Runs the supplied KSA XML prepass/deserializer and checks native crew/part save data without a
+renderer. The documented ARM64 test option uses a temporary IL-only assembly header retarget;
+original game binaries and distributed files remain unchanged.
+
 ### [doh](doh) / [doh.lib](doh.lib)
-Programmatic kitten spawning, exact single names or numbered batch prefixes, character selection,
+Programmatic kitten spawning, preferred single names or numbered batch prefixes, character selection,
 body-frame offsets (default **1, 1, -2 m**) and native **Smite / Smite All** kill actions. DOH selects an optional
 saved **War Paint** preset; all coloring is delegated to that central owner. The spawn API accepts
 a detached recipe or preset name; legacy tint API inputs still forward to War Paint.
+Occupied single names automatically gain/advance a number above the highest matching suffix;
+batches also continue above native scene and roster names, including seated/retired/KIA crew.
+Numbering is derived per prefix after loads, with no cached counter or save schema change.
 The panel uses a striped Name/Model/action table with red Smite buttons, full-width Smite All,
 equal-width spawn/refresh actions and native KSA Info/Error logging instead of status/count labels.
 
@@ -440,8 +478,9 @@ are diagnosed without reviving/stealing crew. See [integration](plans/DOH_ROSTER
 Links the actual DOH adapter, naming/registry/native kill-input code and central War Paint service
 against a native backend fixture. Covers names, defaults, deduplicated kill input, stale-world object
 identity, post-death private-slot release, reusable presets, legacy paint migration and scene capture.
-102 checks include native-roster registration/repair, preserved career history, boarding/KIA,
-creation rollback and real-adapter replay/retention. See its [README](doh.tests/README.md).
+118 checks include collision recovery above sparse/restored suffixes, native-roster registration/repair,
+preserved career history, boarding/KIA, creation rollback and real-adapter replay/retention.
+See its [README](doh.tests/README.md).
 
 ### [war-paint](war-paint) / [war-paint.lib](war-paint.lib)
 Preset-based coloring for all live EVA kittens: full-width filterable combo, name/confirmation
@@ -557,7 +596,7 @@ Define **brand-new planetary rings at runtime** and apply them to **any celestia
 ### [unscience](unscience)
 Unified supermod that consolidates the standalone feature mods into a single ImGui window with collapsible headers and a gear icon (⚙) context menu for per-submod visibility toggles. All submod logic lives directly in the respective `.lib` projects — unscience instantiates these lib submods and orchestrates them via the `ISubmod` interface from `ksa-abstractions.lib`. A single Harmony instance consolidates their patches. Standalone mods continue to work independently.
 - F11 window toggle with unified panel for all core submods
-- Submods: Blinky, Bloomin' Onion, BYO Music, Camera Controller Override, Dent Wizard, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Iron Man, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Pebbles, Pyro, Rocky McRock Face, Save Yourself, Skittles, Sphinx, The Tick, Thug Life, Zippo (30 total; Parts Now was removed at KSA 5638)
+- Submods: Wing Walker, You Didn't See Anything, War Paint, Blinky, Bloomin' Onion, BYO Music, Camera Controller Override, Dent Wizard, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Iron Man, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Pebbles, Pyro, Rocky McRock Face, Save Yourself, Skittles, Sphinx, The Tick, Thug Life, Zippo (33 total; Parts Now was removed at KSA 5638)
 - Uses `ISubmod` interface (from `ksa-abstractions.lib`): `Name`, `Initialize()`, `Update(dt)`, `RenderContent()`, `Dispose()`
 - Each submod class lives in its `.lib` project (for example `BlinkySubmod` in `blinky.lib`)
 - `unscience/Submods/` directory removed — no thin UI wrapper layer; submod classes own their own ImGui rendering
@@ -741,7 +780,8 @@ all 19 managed suites pass (including new real-KSA.dll metadata checks); in-game
 - `sphinx.lib`: skips static color draws when KSA's 10-set pipeline failed to build (low-end GPUs).
 - `pebbles.lib`: redirects the new depth-normal pre-pass (`ClutterMaterialBindings`) and keeps the stock
   `UsesCustomNormals` foliage flag (optional recipe field).
-- `doh.lib`: spawn names already used by a rostered kitten are refused (radiation dose/KIA follow the name).
+- `doh.lib`: rostered kitten names remain reserved (radiation dose/KIA follow the name); current
+  collision recovery advances the suffix automatically.
 - Documented, no code: kitten radiation deaths outside The Tick, step-limited warp, collider-based spawns,
   Hot Pursuit clouds/VRAM, Pluto's tilt/lock, terrain height under statics and decals.
 

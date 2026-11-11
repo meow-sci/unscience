@@ -1,5 +1,31 @@
 # Save/load lifecycle integration
 
+## Wing Walker
+
+KSA saves the native part and template ID, `IVASeatData`, crew roster, tanks and life-support
+state. The template selects seated or standing posture; no Wing Walker sidecar or participant is
+needed. Render scope and diagnostics are transient, with no user feature flags. Repeated A–B–A
+native load, crew, resources and unload acceptance remain pending; see [plan](../plans/WING_WALKER.md).
+
+## You Didn't See Anything
+
+`YouDidntSeeAnythingSubmod` exposes a version-1 `you-didnt-see-anything` participant through the
+existing `ISaveParticipantSource` discovery. Its detached DTO captures all three configuration
+booleans: `Enabled`, `DetachedOnly`, `HideGauges`. Restore prepares/validates the DTO before applying
+it through `VisibilitySettings.Restore`; reset clears configuration to disabled defaults.
+Repeated restore assigns flags rather than accumulating native state. No target identity is needed.
+
+The native F2 setting remains KSA-owned. ImGui positions/docking/layout retain existing ownership;
+context hooks, reflection caches, pointers, active input suppression and per-frame draw data are
+transient and must be removed/restored on disable/unload. No new state is written to global preset
+files. Missing legacy/vanilla records use reset defaults; malformed/unsupported records follow
+the coordinator's existing warning/retention policy.
+The optional purr2d2 adapter adds only transient reflection handles and F2/retention transition
+markers; it releases purr2d2's existing input capture on transitions/unload. Panel placement,
+detachment and visibility remain purr2d2 preference-owned; the existing v1 scene record is unchanged.
+[Feature integration](ui-customization.md#you-didnt-see-anything-5801) ·
+[managed and native acceptance](../plans/YOU_DIDNT_SEE_ANYTHING.md).
+
 ## DOH native roster integration
 
 DOH crew data are now native-owned `UniverseData.KittenRoster` records serialized in `universe.xml`.
@@ -117,8 +143,8 @@ NEW (`decomp/KSA/`). **No participant ID, record version or existing payload cha
   lethally dosed `KittenEva` (`:3080`). Records targeting it then resolve as missing through the existing
   exact-identity resolvers. The death queue is drained before our deferred `DeserializeSave` replays.
   `DeserializeSave` does not reset the new `_stepLimitTime` (game-owned; at most one truncated step).
-  DOH now refuses spawn names held by the roster so its kittens do not inherit roster doses
-  (`doh.lib/Spawning/KittenSpawner.Naming.cs:30`); no save change.
+  DOH reserves names held by the roster so its kittens do not inherit roster doses; current naming
+  automatically advances their suffix (`doh.lib/Spawning/KittenSpawner.Naming.cs`); no save change.
 - ✅ **Iron Man marker load (fix, new in 5707).** Save loads now reach `Part` through a private 10-arg
   constructor (`Part.cs:1566`), so the connector marker is decoded there
   (`iron-man.lib/IronManConnectorPatches.cs:14-30`) instead of the removed 4-arg patch. The saved marker
@@ -534,10 +560,14 @@ The additive version-1 `SpawnName` field saves the editable name / batch prefix 
 buttons. Missing legacy fields and loads with no record reset to `Kitten_doh_`; blank input is
 preserved as automatic naming. Validation rejects null, embedded NUL and text of 256 or more UTF-8
 bytes before replay into the 256-byte ImGui buffer, retaining malformed records with diagnostics.
-Names of existing kittens remain native-owned; restore never renames or respawns them. The numeric
-counter is a transient search hint, with uniqueness enforced against native `All.TryGet` on each
-spawn after loading. The real-adapter checks cover detached Unicode/blank capture, repeated and
-cross-scene replay, legacy/missing fields and invalid names.
+Names of existing kittens remain native-owned; restore never renames or respawns them. Each spawn
+scans native system IDs and all roster names for the highest matching suffix, then confirms the
+candidate with native `All.TryGet` / roster `Find`. Occupied singles gain/advance a number; batches
+continue above the highest suffix instead of filling gaps. No counter or pending name is retained:
+numbering is derived from the reconstructed native world/roster, including seated, retired and KIA
+crew. Collision recovery leaves the persisted input unchanged and adds no payload fields/version.
+The real-adapter checks cover detached Unicode/blank capture, repeated and cross-scene replay,
+post-load numbering/registration, fresh vanilla scenes, legacy/missing fields and invalid names.
 
 Each saved kitten now carries an optional `MaterialGroup`: the set ID it rendered with when saved.
 Kittens with the same group get one shared set on restore, the way a non-unique batch was spawned.

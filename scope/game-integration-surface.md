@@ -1,6 +1,51 @@
+## Wing Walker (5801)
+
+`SuperMeshRenderSystem.ClearBuckets(IViewport)` postfix submits noncontrolled and editor external
+seats; native controlled/portrait paths remain in charge. Exact Harmony targets also include
+`IVASeat.UpdateSeatedRenderable(IViewport, int, double, ref readonly double4x4)`, private
+`KittenRenderable.UpdateSeatedAnimationState(double)` and
+`IVASeat.GetSeatedModelPointAsmb(in float3, double)`, `KittenEva.BoardVehicle(Vehicle, EVADoor)`
+and `Vehicle.AddCrew(KeyHash, string, string)`. Boarding scopes the exact aligned seat and uses
+native `Vehicle.SetSeatCrew` after duplicate, stale and occupied checks, avoiding ambiguity from
+repeated part runtime IDs; suit return and the remaining boarding path stay native. The private `AnimationAssetRef?` fields
+`_seatedIdleAnim` and `_groundIdleAnim` are name/type-checked watchlist entries; standing fallback
+is scoped and restored. Native part IDs, stock chair mesh/material dependencies, habitat, tanks,
+`CrewSeat` and `EVADoor` are inventoried in [Wing Walker](wing-walker.md). Solution build,
+managed fixtures, native XML checks and distribution checks passed; in-game acceptance remains pending.
+
+## You Didn't See Anything — F2 window retention (5801)
+
+| Surface | Owner | Contract |
+|---|---|---|
+| `Program.OnFrame(double,double)` / `OnDrawUiThreadSafe(double)` UI-only `DrawUI` gates | you-didnt-see-anything.lib / HiddenUiVisibilityPatches | Guarded Harmony transpilers resume window submission while `Program.DrawUI` remains false; exact call counts checked |
+| `Program.PrepareImGui(double)` | you-didnt-see-anything.lib | Prefix installs native ImGui context hooks before `NewFrame`; readiness failure keeps ordinary F2 behavior |
+| `Program.DrawMenuBar`, `Universe.OnDrawUi`, `GaugeCanvas.OnDrawUi/OnDrawUiFinal` | you-didnt-see-anything.lib | Keep native menu/world overlays hidden; optionally exclude the 15 stock canvas IDs |
+| `GaugeCanvas.AllCanvases`, `Id`, `DebugTitle` and `###` window identity | you-didnt-see-anything.lib | Resolve built-in gauges by stable canvas IDs rather than allocation-dependent ImGui window numbers |
+| ImGui context hooks / window flags, hierarchy, viewport IDs, draw lists and draw data | you-didnt-see-anything.lib | Native input/visibility filtering for detached-only selection; depends on game-shipped ImGui ABI; no managed Begin interception |
+| `HiddenUiFrameHook` fallback dispatch | ksa-abstractions.lib / Unscience | Avoid duplicate feature updates when normal StarMap callbacks run during hidden UI |
+| Optional `Purr2D2.Runtime.GameHooks` / `SaberRuntime`; `Program.GetWindow()` / `Brutal.GlfwApi.GlfwWindow` | you-didnt-see-anything.lib / Purr2D2UiPatches | Open the mod's two UI gates; retain detached panels, guard custom main-window input, release gestures on transitions/unload; exact reflection surface in UI map |
+| `ISubmod` / `ISaveParticipantSource` | you-didnt-see-anything.lib / YouDidntSeeAnythingSubmod | Scene record `you-didnt-see-anything` v1, disabled default and legacy/vanilla reset; no pointer persistence |
+
+Reflection/IL watchlist additions: exact private `Program.OnDrawUiThreadSafe`, protected
+`Program.OnFrame`, `Program.DrawMenuBar`, and `GaugeCanvas.OnDrawUiFinal` signatures plus expected
+`get_DrawUI` gate counts. Native ImGui layout/context hooks require re-verification after a Brutal
+update. No shaders or game assets are modified; `Content/Core/Gauges.xml` supplies denylist knowledge.
+Optional purr2d2 reflection watchlist: `GameHooks.Overlay`/`Runtime`, `SaberRuntime.OverlayVisible`,
+`BFL9KUiVisible`/`ForceUiVisible`/`KittenListVisible`, `IsHudDetached(HudPanel)` and enum names,
+`Frame`, `OverlayFocusLost`, `OverlayCapturesPointer`, and seven custom input methods. Changed
+gate counts or missing targets roll back only this compatibility patch group.
+Native rendering/input acceptance is pending. [Full UI map](ui-customization.md#you-didnt-see-anything-5801) ·
+[implementation record](../plans/YOU_DIDNT_SEE_ANYTHING.md).
+
 ## Kitchen Sink capsule glass experiment (5541)
 
 ## DOH native roster integration (5801)
+
+Naming scans `CelestialSystem.All.UnsafeAsList()` / `Astronomical.Id` and
+`Universe.KittenRoster.Kittens` / `KittenRosterEntryData.Name` for the highest matching numeric suffix.
+Occupied single names and numbered batches advance automatically; native `All.TryGet` / roster
+`Find` remain the final guards. Matching is case-insensitive; seated/retired/KIA names stay reserved.
+No cached counter, Harmony hook or sidecar change. See [current naming contract](character-and-materials.md#doh-native-roster-integration-5801).
 
 | Surface | Owner | Contract |
 |---|---|---|
@@ -1231,6 +1276,7 @@ on every game update FIRST.
 | `ChuteRenderable._renderable` → `AnimatedRenderable.MaterialIndices` | free-fallin | private/protected field chain used immediately before `ChuteRenderable.Draw`; writes material slot zero and weakly tracks the renderable for restore | OK @5402 — new game surface and new consumer; both exact names are load-bearing |
 | `CharacterAvatar.Core.{CharacterModel,Fur,Attachments}…MaterialIndices` (AnimatedRenderable/CatFurRenderable/StaticMeshRenderable) | doh | private field-path + `protected int[]` | OK |
 | `CatExpressionAnim._expressionPose` | kitten-animations | private field by name (cache bust) | OK |
+| `KittenRenderable.UpdateSeatedAnimationState(double)` / `_seatedIdleAnim` / `_groundIdleAnim` | wing-walker | Exact private method and `AnimationAssetRef` fields checked at install; scoped null enables ground-idle fallback and finalizer restores the seated field | 5801 method and fields verified by native assembly probe; in-game animation acceptance pending. Missing ground idle logs and keeps native seated animation. |
 | `KittenRenderable._ground{Idle,Walk,Run}Anim`, `_ladderAnim`, `_jumpIntroAnim`, `_flailAnim`, `_jumpLandAnim`, `_moon{Walk,Run}Anim`, `_swimAnim`, `_swimIdleAnim`, `_seatedIdleAnim`, `_seatedIdleActionAnims`, `_walk/_run/_swimPairSampler`, `_blendSampler` | kitten-animations | 17 private fields by name — the only route to the ground animation set | OK — degrades per field into a UI warning, never a crash |
 | `KittenRenderable._catPersonalityExpressionAnim / _catExpressionAnim / _catEyeAnim / _catEarAnim` | kitten-animations | private fields by name; distinguishes the two same-typed expression processors | OK |
 | `AnimatedRenderable.UpdateAnimation` | kitten-animations | `AccessTools.Method` by name (Harmony prefix) | OK — loud `MissingMethodException` at `Apply` if renamed |
@@ -1262,6 +1308,7 @@ on every game update FIRST.
 
 | Asset / shader | Kind | Referenced as | Content path (NEW) | Consumer | 5348 |
 |---|---|---|---|---|---|
+| `CoreIVAPropA_Subpart_ChairA`, `ChairAHeadrest`, `ChairAEjectionRunners`, `ChairABase`, corresponding `_VM` meshes and `CoreIVAPropA_Material` | stock chair assets | external `PartModel` / `MeshView` references in `WingWalker.xml` | `Content/Core/CoreIVAPropAAssets.xml` | wing-walker | Native visual acceptance pending; new part/model definitions leave stock props unchanged. |
 | `UnlitMesh.vert` / `UnlitMesh.frag` | shader | `ModLibrary.Get<ShaderReference>("UnlitMeshVert"/"UnlitMeshFrag")` | `Core/DefaultAssets.xml:66,67` → `Core/Shaders/Mesh/UnlitMesh.*` | thug-life | OK (**byte-identical 4750→5018**; also untouched by 4693/4745) |
 | `GridFrag` (path anchor only) + `Common/Camera.glsl` / `Common/TextureSet.glsl` (headers, `#include`d) | shader include root + headers | `ModLibrary.Get<ShaderReference>("GridFrag").ModPath` → its **directory** is the `#include` root for graffiti's two runtime-compiled decal shaders | `Content/Core/DefaultAssets.xml:373` → `Core/Shaders/Grid.frag`; `Core/Shaders/Common/*.glsl` | graffiti | OK @5348 — a `global.camera`/`global.lighting` struct or `SAMPLE_TEXTURE`/`SET_TEXTURE` macro change fails at shaderc compile (loud console line; decals self-disable) |
 | `MeshIndirect.frag` + `MeshIndirectRaytraced.frag` (paint injection) | shader text-edit (in memory, via the `FromFile` prefix) | matched by **file name**; anchor = first `vec3 sampledColor …;` line; requires `inStateFlags` varying and `gammaToLinear` (`Common/Shared.glsl:203`) | `Content/Core/Shaders/Mesh/MeshIndirect.frag:114`; `MeshIndirectRaytraced.frag:156` | humble-arteest (VehiclePaint) | OK (rebuilt for 5018) — if the anchor moves, `Enable` fails with a UI message and rendering stays stock |

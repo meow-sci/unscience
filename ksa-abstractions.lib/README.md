@@ -104,13 +104,17 @@ Keeps per-frame mod work alive while the game HUD is hidden (**F2** / `InputActi
 
 **Why it exists:** StarMap dispatches `[StarMapBeforeGui]` as a prefix of `Program.OnDrawUiFrame` and `[StarMapAfterGui]` as a postfix of `Program.OnDrawUiViewports`. Both sit inside `if (Program.DrawUI)` in `Program.OnFrame`, so while the HUD is hidden neither game method is called and neither StarMap hook fires — every `Update(dt)`-driven feature (weld physics, fuel refill, animations, RPC queue drain, …) silently freezes.
 
-**What it does:** Harmony-prefixes `Program.OnDrawUiConsole(double dt)`, which the game calls unconditionally in the same frame phase (after `PrepareFrame`, inside the ImGui `NewFrame`…`Render` window, before `OnPreRender`). The prefix is a no-op while `Program.DrawUI` is true; when it is false it invokes the registered `BeforeGui` then `AfterGui` callbacks. `DrawUI` only changes during input polling in `PrepareFrame`, so a frame never fires both StarMap's hooks and this fallback.
+**What it does:** Harmony-prefixes `Program.OnDrawUiConsole(double dt)`, which the game calls unconditionally in the same frame phase (after `PrepareFrame`, inside the ImGui `NewFrame`…`Render` window, before `OnPreRender`). The prefix is a no-op while `Program.DrawUI` is true; when it is false it invokes the registered `BeforeGui` then `AfterGui` callbacks unless an optional dispatch marker reports that normal GUI callbacks already ran.
 
 - `HiddenUiFrameHook.BeforeGui` / `.AfterGui` (`Action<double>?`) — register the non-ImGui parts of your `[StarMapBeforeGui]` / `[StarMapAfterGui]` bodies **before** calling `Patch`
 - `HiddenUiFrameHook.Patch(harmony)` / `.Unpatch(harmony)` — apply/remove alongside `HotkeyGuard`; `Unpatch` clears the callbacks
 - `HiddenUiFrameHook.IsUiHidden` — `!Program.DrawUI`
+- `HiddenUiFrameHook.UiCallbacksDispatched` (`Func<bool>?`) — optional consume-once dispatch
+  marker supplied by You Didn't See Anything. When normal GUI callbacks have already run during
+  F2, skip their fallback work for that frame, including a feature disable inside its own UI.
 
-ImGui *is* valid inside the callbacks, but hosts should keep window rendering out of them so mod windows honour the hidden HUD.
+ImGui *is* valid inside the callbacks. Hosts normally keep window rendering out of them so mod
+windows follow F2; You Didn't See Anything separately resumes native GUI dispatch when enabled.
 
 ### PngLibrary and PngFileBrowser
 

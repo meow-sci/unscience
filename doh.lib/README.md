@@ -18,9 +18,13 @@ prepared request remains detached from later preset edits. A supplied snapshot t
 an unavailable named preset fails before creating kittens, even when a prepared snapshot remains.
 This prevents a deleted preset from silently producing anonymous paint.
 
-Names are exact for one kitten and collision-free numbered prefixes for batches. Null/blank input
-uses `Kitten_doh_`. Both live vehicle IDs and rostered kitten names are reserved, case-insensitively;
-KSA links EVA dose/sickness/death to a same-named roster entry. The naming counter is a runtime hint.
+Available single names are used verbatim. Occupied names automatically gain or advance a numeric
+suffix above the highest existing match (`Crew_7` with `Crew_20` becomes `Crew_21`). Batches append
+numbers to the literal prefix; null/blank input uses `Kitten_doh_`, starting at zero in an empty scene.
+Number selection scans native system IDs and all roster names case-insensitively, including seated,
+retired and KIA crew. KSA links EVA dose/sickness/death to the same-named roster entry, so earlier
+identities stay reserved. No counter is cached or saved: each spawn derives the next suffix from
+the current native scene/roster, including after loads, with no fixed-width integer overflow.
 Default body-frame offset is **(1, 1, -2) m**. Reference objects retain target identity rather than
 using an unstable list index. Orbit time follows the reference state's `StateTime`.
 
@@ -101,8 +105,10 @@ remain round-tripped as compatibility metadata. Import failures retain the origi
 detached spawn recipe, with diagnostics. Missing targets/materials and invalid recipes also report
 and preserve earlier state. Later War Paint replay overrides old migration when both records exist.
 
-Spawn names preserve blank/Unicode input and reject null, NUL or 256+ UTF-8 bytes. Native kitten names
-remain native-owned. Explicit saved offsets survive; fresh/vanilla/missing fields use **(1, 1, -2) m**.
+Spawn names preserve blank/Unicode input and reject null, NUL or 256+ UTF-8 bytes. Collision recovery
+does not edit the saved input or rename existing kittens; actual names remain native-owned and
+numbering is derived after native reconstruction. Explicit saved offsets survive;
+fresh/vanilla/missing fields use **(1, 1, -2) m**.
 
 ## Validation and dependencies
 

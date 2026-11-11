@@ -1,5 +1,36 @@
 # Scene save implementation coverage and native acceptance
 
+## Wing Walker
+
+Native parts, `IVASeatData`, roster, tanks and life support own all durable state; part template
+selects posture. No feature sidecar is required, and rendering scope/diagnostics are transient.
+The native XML fixture round-trips two `IVASeatData` crew names and both part IDs within
+`PartInstance` data. It does not call `IVASeat.GetSaveData` or load a running scene. Repeated A–B–A
+in-game save/load and resource/crew acceptance remain pending; see [validation](WING_WALKER.md).
+
+## You Didn't See Anything
+
+The new version-1 `you-didnt-see-anything` record stores enabled, detached-only and stock-gauge
+exclusion flags as detached booleans. Reset/missing records disable the feature; replay assigns
+the validated settings without serializing window pointers or F2 state. ImGui layout keeps its
+existing ownership, and native context/input/patch state is transient.
+Optional purr2d2 compatibility adds no saved fields. Its patch caches and mode markers are
+transient; HUD detachment/positions/visibility retain purr2d2's preference ownership.
+
+Managed feature persistence, production Harmony fixtures, shared `saves.tests`, upgrade checks,
+full solution build and package validation pass against 5801. Native acceptance below remains open.
+
+- [ ] Save different flag combinations and load A → B → A and the same save repeatedly. Confirm
+  exact selection with F2 active and with detached windows open.
+- [ ] Load a legacy/vanilla save and create a new system. Confirm disabled defaults and restored
+  input/visibility; no old native pointers or suppression may leak.
+- [ ] Exit/unload with F2 active and a filtered window focused. Confirm hook removal and input
+  restoration before native ImGui teardown.
+- [ ] With purr2d2 panels detached, load enabled/disabled/vanilla scenes during F2. Confirm saved
+  retention flags apply, only detached panels survive, and old drags/capture do not leak across loads.
+
+[Feature checks and native acceptance](YOU_DIDNT_SEE_ANYTHING.md).
+
 ## Kitten animation hold follow-up (5801 port)
 
 Per-kitten drivers/expressions survive control/camera/selection changes. The existing v1 record saves
@@ -24,6 +55,17 @@ not an additional sidecar. DOH v1/order60 remains compatible; replay/live mainte
 unrostered tracked EVA kittens and preserve valid existing history without restarting missions.
 Incompatible native records warn and retain the incoming sidecar instead of overwriting crew.
 Failed spawns roll back only their own provisional roster row. See [integration checklist](DOH_ROSTER_INTEGRATION.md).
+
+DOH collision recovery now advances occupied single names and numbered batches above the highest
+matching native scene/roster suffix, including seated/retired/KIA reservations. Available exact names
+stay unchanged. Numbering is derived after native reconstruction; no counter or additional sidecar
+state is needed, and the saved name input remains unchanged (`doh` v1/order60). All 118 managed DOH
+checks pass, including sparse/large suffixes, repeated real-adapter replay, new-scene reset and
+post-load roster registration. Native spawning and actual KSA save/load acceptance remain pending.
+The full solution builds against CURRENT 5801 with zero warnings/errors; `saves.tests`,
+`world-saves.tests` and `ksa-upgrade.tests` also pass. Build output uses
+`/private/tmp/unscience-doh-naming-dist`; this invocation uses `-p:NuGetAudit=false` because the
+package vulnerability feeds are unreachable on this host. Compiler warnings remain errors.
 
 - [ ] Spawn native and custom-character batches; verify exact names, EVA assignment, roster follow,
   health/dose/condition and mission/travel/speed statistics. Native crew must be unaffected.
@@ -182,7 +224,7 @@ assumptions still require the in-game checks below.
 DOH naming addition (October 25, 2026): additive `SpawnName` in the existing version-1 `doh` record
 captures the editable exact name / batch prefix for both spawn buttons. Old records and vanilla/new
 scenes use `Kitten_doh_`; blank input preserves automatic naming. Existing kitten names remain
-native-owned. The runtime numeric counter need not persist because each spawn checks native names.
+native-owned. Current naming derives the next suffix from native scene/roster names without a counter.
 Managed naming and real-adapter checks cover Unicode/blank round-trips, detached capture, repeated
 and cross-scene loads, legacy/missing records and invalid text. `doh.tests` passes all 55 checks.
 Full `dotnet build -m:1 -p:UseSharedCompilation=false
@@ -225,6 +267,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [Save Yourself](../save-yourself.lib/AutoSaveSettingsStore.cs) | Nothing. Prefix, enabled flag and interval are a global Unscience preference (`.unscience/save-yourself.toml`), written through on change. | Intentional exclusion: auto saving is a session preference, not scene state, so loads never change it and the countdown continues across loads. Countdown position, last-save name and counters are transient. The feature produces native saves via `GameSaveProvider` so every other adapter runs as for a manual save. |
 | [Skittles](../skittles.lib/SkittlesSubmod.Saves.cs) | Effective ImGui theme colors and style values. | A scene can restore its theme; native saves without a sidecar reset to the captured startup-theme baseline. Global theme library/default preference and window layout autosave are separate. |
 | [Sphinx](../sphinx.lib/SphinxSubmod.Saves.cs) | Applied body-local statics, GLB/PNG identity, anchor position/normal, scale/rotation/offset, UV mapping, visibility/alignment and collision mode. | Recreates render resources and colliders under existing limits (32 statics and aggregate vertex budget). Pending placement actions are cleared. Assets are not bundled; collision behavior requires native verification. |
+| [Wing Walker](../wing-walker.lib/README.md) | No sidecar: native part/template, IVASeatData, roster, tanks and life support. | Template selects posture; transient rendering scope and diagnostics are not persisted. Native repeated A–B–A load and crew/resource checks pending. |
 | [The Tick](../the-tick.lib/TheTickSubmod.Saves.cs) | Indestructible vehicle IDs in a version-1 `the-tick` record (order 20). | Clears old references before reconstruction and rebinds exact IDs through the shared resolver; missing/ambiguous targets warn and retain the record; unavailable patches fail visibly. Vanilla and record-less saves restore nothing; picker/filter are transient; patch installation is global. |
 | [Thug Life](../thug-life.lib/ThugLifeSubmod.Persistence.cs) | Anchored sunglasses quads, local position/rotation, size and visibility. | An entrance slide saves its current pose and stays stopped after load. Its remaining animation is not replayed. |
 | [Zippo](../zippo.lib/ZippoSubmod.Persistence.cs) | Edited shared light component originals/current values; per-part default color baselines; Disco draft and active recipes, paused state, phase/seed, switch and actuator originals; active/queued light transitions. | Disco and queued transitions continue from saved phase/elapsed values. Restores actuator ownership using current module ordinals; conflicts/layout changes warn. Shared-template edits retain their original shared scope. GPU light/material objects and live queue keys are never serialized. |
@@ -438,10 +481,11 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
   native lost part names, and stopping/deleting one grid leaves the others intact.
 - [ ] Save DOH clones with distinct materials and an uncolored clone. Check roster/vehicle counts remain
   unchanged, unique tint remains unique, material selection still works and Despawn acts on restored clones.
-- [ ] In DOH, enter an exact name and spawn one kitten through each spawn button; an occupied name
-  must show an error. Spawn a batch with a custom prefix, then use blank input for automatic
-  `Kitten_doh_` names. Save/load and confirm both the name field and native kitten names survive;
-  repeated loads create no duplicates, and a legacy/vanilla save resets the field to its default.
+- [ ] In DOH, spawn repeatedly with the prefilled name and a custom name. Occupied names must
+  automatically advance above the highest matching suffix, including gaps and roster-only names.
+  Repeat with a numbered single name, custom batch prefix and blank automatic `Kitten_doh_` names.
+  Save/load twice and confirm continued numbering, unchanged input and native names, no duplicate
+  kittens/crew and preserved KIA/retired history. A legacy/vanilla save resets the field to its default.
 - [ ] Save a DOH non-unique tinted batch; reload and confirm the batch still shares one set ("Tint All" on
   one recolors all) while unique kittens stay independent. Watch the DOH window's GPU slot counter across
   repeated loads, a vanilla load plus a spawn, and Despawn All: usage must return to its baseline instead
@@ -453,7 +497,7 @@ save and screenshots/counts/reference values for comparison. All boxes begin unc
   anchors; the copy has the same anchors and no crash.
 - [ ] Radiation (5707): save/load with an EVA kitten killed by radiation and with a retired kitten.
   Records for the removed kitten are reported unresolved, with no stale-reference errors; KSA's roster
-  dose columns restore natively. DOH refuses a spawn name held by a rostered kitten.
+  dose columns restore natively. DOH automatically advances a spawn name held by a rostered kitten.
 - [ ] Verify Eternal Flame monitoring, I Feel Seen visibility, IVA rendering, editor flags and Glass FOV
   resume their saved policies, including disabled/false values and missing-target diagnostics.
 - [ ] IVA unlock: save away from the second seat with a changed speed; reload twice and A-B-A across

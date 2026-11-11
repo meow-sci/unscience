@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="KSAFolder" Value="$(KSAFolder)" />
+    <Compile Include="../kitchen-sink.tests/KsaAssemblyProbe.cs" Link="KsaAssemblyProbe.cs" />
+    <Compile Include="../kitchen-sink.tests/KsaAssemblyProbe.Members.cs" Link="KsaAssemblyProbe.Members.cs" />
+    <Compile Include="../you-didnt-see-anything.lib/NativeWindowFilterPolicy.cs" Link="NativeWindowFilterPolicy.cs" />
+    <Compile Include="../you-didnt-see-anything.lib/UiGatePolicy.cs" Link="UiGatePolicy.cs" />
+    <Compile Include="../you-didnt-see-anything.lib/VisibilitySettings.cs" Link="VisibilitySettings.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/ISaveParticipant.cs" Link="ISaveParticipant.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveJson.cs" Link="SaveJson.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/FiniteNumberConverters.cs" Link="FiniteNumberConverters.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveDocument.cs" Link="SaveDocument.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SaveStorage.cs" Link="SaveStorage.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/SceneSaveCoordinator.cs" Link="SceneSaveCoordinator.cs" />
+  </ItemGroup>
+</Project>

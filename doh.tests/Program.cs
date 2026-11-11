@@ -23,6 +23,7 @@ internal static partial class Checks
     {
         NamingChecks();
         SpawnNameSaveChecks();
+        SpawnNameContinuationSaveChecks();
         PaintMigrationChecks();
         PresetSnapshotChecks();
         var submod = new DohSubmod();

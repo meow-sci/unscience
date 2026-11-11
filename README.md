@@ -8,6 +8,12 @@ It breaks physics, moves things around, resizes things, makes noises, changes co
 
 I describe it as a *supermod* that includes a suite of *submods*, each one has a fun unique name tangentially related to what it does, usually from some kind of pop culture reference.
 
+**You Didn't See Anything** keeps ImGui windows visible when **F2** hides the game UI. Enable it
+in the toolbox, then optionally select **Detached OS windows only** and **Hide stock gauges**.
+It also retains purr2d2's detached Saber, Furce and Kittens controls while keeping its attached HUD hidden.
+It starts disabled; its flags travel with scene saves. Native viewport/input acceptance is pending.
+[Controls and implementation](you-didnt-see-anything.lib/README.md).
+
 DOH's **Smite / Smite All** now use [KSA's native kill input](plans/DOH_NATIVE_KILL_5801.md),
 replacing custom despawning. Native dispatch removes the kitten before the render list is rebuilt;
 War Paint releases its private materials after death and preserves saved presets. The native cause
@@ -34,6 +40,10 @@ visor saves and legacy kitten colors remain compatible.
 
 Humble Arteest's immediate white vessels on part-paint Enable remain unresolved; this is separate
 from the working kitten coloring path. [Investigation](plans/HUMBLE_ARTEEST_5801_PAINT_INVESTIGATION.md).
+
+**Wing Walker** adds the surface-mounted **External Seat** and **Standing Mount** for native
+crew assignment and EVA boarding. Supplies are finite and the mounts have no radiation shielding.
+[Usage and limits](wing-walker.lib/README.md) · [validation and pending in-game checks](plans/WING_WALKER.md).
 
 # game compatibility
 
@@ -68,8 +78,10 @@ The switch is scene-saved and reversible; native visual acceptance is pending. S
 [the experiment](kitchen-sink/README.md#capsule-glass-experiment).
 
 DOH's spawn controls include an editable vehicle name / batch prefix, initially `Kitten_doh_`.
-Single spawns use the text exactly, batches append numbers, and blank input uses automatic naming.
-The setting is scene-saved. See [DOH usage](doh/README.md#usage).
+Available single names are used exactly; occupied names automatically advance above the highest
+existing suffix. Batches and blank-input automatic names also continue above native scene/roster
+numbers, including after save/load. The input is scene-saved; numbering is derived from KSA's
+current names. See [DOH usage](doh/README.md#usage).
 
 Kitten Animations keeps holds and animation settings independently for each EVA kitten, even after
 switching control or the camera to another vessel. Select a kitten in the panel to edit or clear
