@@ -1,5 +1,17 @@
 # Save/load lifecycle integration
 
+## DOH click-to-spawn
+
+Native KSA owns completed surface-spawned kitten poses, velocities and crew; DOH's existing
+`doh` v1/order60 record rebinds exact IDs/settings and War Paint keeps paint ownership. The new
+armed gesture, surface preview, detached query scratch and unexecuted click are transient input.
+The real `ResetDoh` invalidates the placement generation, drops references and releases input;
+unload does the same. Missing/vanilla/new scenes and repeated/cross-scene loads cannot replay
+pending spawns. Fixed range/gap/orientation policy adds no durable setting or payload field.
+Production-adapter cancellation and unchanged legacy/missing record behavior are managed-checked;
+completed native pose/motion save/load still requires in-game acceptance.
+[Integration](doh-placement.md) · [acceptance](../plans/saves-acceptance.md#doh-click-to-spawn).
+
 ## Wing Walker
 
 KSA saves the native part and template ID, `IVASeatData`, crew roster, tanks and life-support

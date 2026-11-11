@@ -2,8 +2,19 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" PrivateAssets="all" />
+    <Reference Include="BepuPhysics"><HintPath>$(KSAFolder)BepuPhysics.dll</HintPath></Reference>
+    <Reference Include="BepuUtilities"><HintPath>$(KSAFolder)BepuUtilities.dll</HintPath></Reference>
+    <Compile Include="../doh.lib/Placement/PlacementSession.cs" Link="PlacementSession.cs" />
+    <Compile Include="../doh.lib/Placement/PlacementMouseCapture.cs" Link="PlacementMouseCapture.cs" />
+    <Compile Include="../doh.lib/Placement/PlacementInputPatches.cs" Link="PlacementInputPatches.cs" />
+    <Compile Include="../doh.lib/Placement/CapsulePlacementMath.cs" Link="CapsulePlacementMath.cs" />
+    <Compile Include="../doh.lib/Placement/CapsuleCollisionQuery.cs" Link="CapsuleCollisionQuery.cs" />
+    <Compile Include="../doh.lib/Placement/SurfaceRayMarch.cs" Link="SurfaceRayMarch.cs" />
+    <Compile Include="../doh.lib/DohSubmod.PlacementState.cs" Link="DohSubmod.PlacementState.cs" />
     <Compile Include="../doh.lib/DohSubmod.Persistence.cs" Link="DohSubmod.Persistence.cs" />
     <Compile Include="../war-paint.lib/PaintSettings.cs" Link="PaintSettings.cs" />
     <Compile Include="../war-paint.lib/PaintPresetLibrary.cs" Link="PaintPresetLibrary.cs" />

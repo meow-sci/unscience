@@ -1,6 +1,7 @@
 using System;
 using HarmonyLib;
 using MeowSci.KsaAbstractions;
+using MeowSci.DohLib.Placement;
 
 namespace MeowSci.Doh;
 
@@ -17,6 +18,8 @@ internal static class Patcher
             if (_harmony != null)
             {
                 HotkeyGuard.Patch(_harmony);
+                PhysicsFrameHook.Apply(_harmony);
+                PlacementInputPatches.Apply(_harmony);
             }
         }
         catch (Exception ex)
@@ -32,6 +35,8 @@ internal static class Patcher
             if (_harmony != null)
             {
                 HotkeyGuard.Unpatch(_harmony);
+                PlacementInputPatches.Remove(_harmony);
+                PhysicsFrameHook.Remove(_harmony);
             }
             _harmony?.UnpatchAll("doh");
             _harmony = null;

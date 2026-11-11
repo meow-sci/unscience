@@ -62,6 +62,7 @@ public class Mod
 
             if (_windowVisible)
                 RenderWindow();
+            _submod.RenderFloatingWindows();
         }
         catch (Exception ex)
         {

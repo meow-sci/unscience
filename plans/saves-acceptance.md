@@ -1,5 +1,26 @@
 # Scene save implementation coverage and native acceptance
 
+## DOH click-to-spawn
+
+**Spawn at...** beside **Spawn Kitten(s)** creates one native-owned EVA at a validated surface.
+The unchanged `doh` v1/order60 record saves existing controls/registry; native KSA saves pose/motion,
+name/crew and War Paint saves paint. Hover/armed/pending input is intentionally transient and is
+cancelled by the production adapter reset, including legacy/vanilla/new and repeated loads.
+Range/gap/orientation are fixed policies, not additional user settings. Managed Bepu geometry,
+production Harmony input and real-adapter cancellation checks pass alongside existing DOH tests.
+
+- [ ] Save placed kittens on terrain and a moving/rotating vessel, with selected names/models/paint.
+  Load repeatedly and A → B → A: exact native poses/motion/crew and paint, no duplicate vehicles/rows.
+- [ ] Save while placement is armed and while a click is queued. Load that scene, a vanilla scene
+  and a new system: no unexecuted spawn or retained input owner/preview; ordinary mouse input works.
+- [ ] During placement remove/change the target part, change viewport/editor/map/HUD state or
+  unload. No stale references or same-name reconstructed target may receive the queued action.
+- [ ] Check ground slopes, curved/scaled parts, ceilings/edges/nearby kittens, launchpads/clutter,
+  pause/warp and moving surfaces with native collider debug drawing. Blocked clicks keep the tool
+  armed; clear clicks leave a 2 cm initial capsule gap, with expected native settling/locomotion.
+
+[Implementation evidence](DOH_CLICK_TO_SPAWN_RESEARCH.md#implementation) · [scope](../scope/doh-placement.md).
+
 ## Wing Walker
 
 Native parts, `IVASeatData`, roster, tanks and life support own all durable state; part template

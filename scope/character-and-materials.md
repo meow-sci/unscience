@@ -1,5 +1,13 @@
 # Character / Material / GPU-Customization Mods — Game Integration Scope
 
+## DOH surface spawning (5801)
+
+**Spawn at...** adds physical collider/static/terrain picking, a full-capsule clearance preview and
+safe one-kitten placement with actual collider/centre-of-mass correction and surface velocity.
+Name/model/paint and roster integration keep their existing owners. Completed poses save natively;
+gestures/previews and unexecuted clicks cancel on scene reset. The detailed new input, physics and
+terrain surface is cataloged in [doh-placement.md](doh-placement.md). Native acceptance is pending.
+
 ## DOH native roster integration (5801)
 
 Spawn collision recovery derives the highest numeric suffix from `CelestialSystem.All.UnsafeAsList()`

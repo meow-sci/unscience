@@ -32,6 +32,10 @@ Runtime startup includes the [shared networking bootstrap](00-architecture-and-a
 This folder maps the suite's game types, Harmony targets, reflection, shaders, assets and lifecycle
 contracts. Update the owning area and master index in the same change as an integration edit.
 
+DOH **Spawn at...** adds viewport collider/terrain picking, a capsule-clearance preview, synchronized
+creation and scoped native input ownership. Native poses/crew and the existing DOH record retain
+save ownership; pending gestures cancel on reset. [Integration and native acceptance](doh-placement.md).
+
 DOH spawns now enter the native kitten roster and start an EVA mission. Existing tracked EVA
 kittens are repaired without replacing native history; roster/career data remain KSA-owned.
 Spawn name collisions automatically advance above the highest matching native scene/roster suffix,
@@ -76,6 +80,7 @@ Scene-save adapters extend native saves; imported files remain external dependen
 | Area file | Covers | Highlights / highest-risk seams |
 |---|---|---|
 | [`game-integration-surface.md`](game-integration-surface.md) | **Master cross-reference index** — every game type/member touched, merged across mods | Start here for "does the game still have X?"; includes the string-reflection watchlist + shader/asset table |
+| [`doh-placement.md`](doh-placement.md) | DOH click-to-spawn | Main-viewport mouse/key prefixes, physical part/static rays, accurate terrain, borrowed Bepu shape queries, capsule/COM/motion and scene cancellation; native acceptance pending |
 | [`wing-walker.md`](wing-walker.md) | wing-walker | Native surface-mounted crew parts, render submission, standing animation/origin hooks and stock chair assets; native acceptance pending |
 | [`saves.md`](saves.md) | Native scene save/load extension across all bundled features; save-yourself timed auto saves | Ordered cleanup/replay, deferred world replacement, native save directory sidecars and stable part references; Save Yourself produces native saves via `GameSaveProvider` (`SaveName.TryAccept` → `UncompressedSave.Make`, no patches) |
 | [`00-architecture-and-abstractions.md`](00-architecture-and-abstractions.md) | unscience supermod shell (`Mod.cs`/`Patcher.cs`/`MenuBarPatch`/`UnscienceState`) + `ksa-abstractions.lib` | StarMap lifecycle map, consolidated-Harmony cross-ref, `HotkeyGuard`, `IvaForceRender`, providers |

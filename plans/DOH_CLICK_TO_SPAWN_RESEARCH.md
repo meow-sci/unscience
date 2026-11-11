@@ -1,8 +1,81 @@
 # DOH: click-to-spawn research
 
-Status: research and proposed design; the feature is not implemented. Verified against the supplied
-KSA **2026.11.10.5801** CURRENT sources, Content and DLLs. The in-repository `decomp/ksa` tree and
-the modding skill's older 5554 examples were not used as the current API authority.
+Status: **implemented against KSA 2026.11.10.5801**, with managed validation complete and native
+acceptance pending. The implementation below supersedes the original research/proposals retained
+after it. CURRENT sources, Content and DLLs are authoritative; historical in-repository `decomp/ksa`
+and the modding skill's 5554 examples are not the current API baseline.
+
+## Implementation
+
+**Spawn at...** is immediately to the right of **Spawn Kitten(s)** in equal-width cells; refresh
+fills the next row. It snapshots the chosen name/model/paint and arms a one-kitten world picker.
+Left-click a clear surface to commit; miss/blocked/failure permits retry; Esc/right-click cancels.
+Relative count/offset behavior is unchanged. Starting a relative spawn cancels the picker.
+
+- `DohSubmod.Placement*` owns the gesture, 200 ms preview throttle, foreground capsule outline,
+  cursor hint and guarded queued work. The preview follows its owning surface between checks.
+- `PlacementInputPatches` prefixes `Program.OnMouseButton/OnKey`. Eligible main-flight clicks and
+  complete matching releases are owned before native vehicle/camera/orbit actions. UI, console,
+  map/editor, secondary views, pre-existing native drags and hidden HUD cannot commit placement.
+- `SurfaceScene` runs only at `PhysicsFrameHook`'s synchronized boundary. It compares physical
+  collider/fallback-box rays, accurate CPU terrain crossings and active native static rays within
+  2 km. Vehicle debris and other kittens are included in obstruction queries.
+- `CapsuleCollisionQuery` borrows the native shape registry and uses detached Bepu contact batches
+  against primitive/compound/mesh geometry. Current native statics plus a 10 cm local accurate-height
+  terrain mesh cover the full capsule footprint, including adjacent cliffs. Query scratch is returned;
+  previews create no extra vehicle, Bepu body or GPU render pipeline.
+- `SurfaceSpawnTarget` uses native −Z-up orientation and capsule support math with a 2 cm gap.
+  The spawner rechecks the actual newly constructed capsule and COM before teleporting. Consistent
+  state epoch, rotating ground velocity and craft angular point velocity determine initial motion.
+  Teleport position/velocity/epoch are verified before successful roster/paint/registry registration.
+- Existing spawn budget, naming, War Paint, native roster and provisional-object rollback remain
+  in the same transaction. Worker joins now occur before backpack/shape construction. Smite still
+  uses the native kill input and is not routed through the placement queue.
+- `ResetDoh` and unload invalidate the gesture generation, clear preview/request references and
+  release input ownership. Native KSA saves completed pose/motion/crew; DOH v1/order60 rebinds
+  tracked IDs and existing controls, and War Paint saves paint. Fixed range/gap/orientation introduce
+  no saved setting; an uncommitted click is transient input, never replayed on load.
+- Both Unscience and the standalone DOH development host install/remove the input hooks. The
+  standalone additionally installs the existing physics handoff and dispatches floating windows.
+
+Validation: **379 production-linked DOH checks**, including actual supplied Bepu primitive,
+compound and mesh queries, random rotated support/COM cases, real-adapter scene cancellation and
+production Harmony input fixtures. The whole solution builds with zero warnings/errors using:
+
+```bash
+DOTNET_CLI_USE_MSBUILD_SERVER=0 dotnet build ksa-mod-experiments.slnx --no-restore -m:1 \
+  -nodeReuse:false -p:UseSharedCompilation=false -p:NuGetAudit=false \
+  -p:UNSCIENCE_DIST_DIR=/private/tmp/unscience-doh-placement-dist
+dotnet doh.tests/bin/Debug/net10.0/doh.tests.dll
+```
+
+Shared `saves.tests` and CURRENT `ksa-upgrade.tests` pass. Distribution validation passes with one
+Unscience package and 34 explicitly referenced feature assemblies. Build/test logs use the
+`/private/tmp/doh-placement-*` prefix; no native game was launched.
+
+Managed fixtures do not exercise the native renderer, GLFW event pump, procedural terrain/contact
+representation or actual moving craft. CPU ray marching/10 cm terrain interpolation and currently
+active static geometry require acceptance against native terrain and future collider loading.
+Unusual kitten collider layouts are explicitly refused; terrain footprints above 64 cells/axis at
+10 cm are refused as oversized. Surface placement creates a free EVA with an initial pose, not a
+rigid attachment. These are documented bounds, not a claim of native playtest completion.
+
+Native acceptance:
+
+- [ ] Check button order, hidden/collapsed panel operation, green/red preview, cursor hint and
+  exact click position; arm/UI/console clicks must not spawn or trigger native world actions.
+- [ ] Place on flat/sloped ground, curved/scaled vessel parts and undersides. Compare the actual
+  collider debug outline with the preview; verify initial 2 cm gap and normal native settling.
+- [ ] Reject low ceilings, nearby walls/kittens/parts, cliff edges, launchpads/clutter and invalid
+  terrain. Verify misses and blocked locations remain armed and allow retry.
+- [ ] Test moving/spinning craft, rotating ground, pause/warp and camera/control switches. Confirm
+  no stale-frame displacement, accidental impulse, unintended attachment or broken native controls.
+- [ ] Cancel with Esc/right-click/HUD hide/map/editor/unload and load a scene between click/commit.
+  Release events must not leave a native input latch or operate another native action.
+- [ ] Save/reload placed kittens repeatedly and A → B → A, including while armed/pending. Confirm
+  native poses/velocity/crew/paint and DOH tracking without duplicates or old-world spawns.
+
+[Game integration](../scope/doh-placement.md) · [save acceptance](saves-acceptance.md#doh-click-to-spawn).
 
 ## Recommendation
 

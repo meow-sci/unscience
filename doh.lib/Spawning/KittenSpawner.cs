@@ -6,6 +6,7 @@ using KSA;
 using MeowSci.WarPaintLib;
 using MeowSci.WarPaintLib.Materials;
 using MeowSci.KsaAbstractions;
+using MeowSci.DohLib.Placement;
 
 namespace MeowSci.DohLib.Spawning;
 
@@ -38,10 +39,16 @@ public sealed partial class KittenSpawner
 
     /// <summary>Spawns kitten(s) according to the request parameters.</summary>
     public SpawnResult Spawn(SpawnRequest request)
+        => SpawnSafely(request, null);
+
+    internal SpawnResult SpawnAtSurface(SpawnRequest request, SurfaceSpawnTarget target)
+        => SpawnSafely(request, target);
+
+    private SpawnResult SpawnSafely(SpawnRequest request, SurfaceSpawnTarget? surface)
     {
         try
         {
-            return SpawnInternal(request);
+            return SpawnInternal(request, surface);
         }
         catch (Exception ex)
         {
@@ -74,7 +81,7 @@ public sealed partial class KittenSpawner
 
     // ---- Internal implementation ----
 
-    private SpawnResult SpawnInternal(SpawnRequest request)
+    private SpawnResult SpawnInternal(SpawnRequest request, SurfaceSpawnTarget? surface)
     {
         // Validate
         if (request.Count < 1 || request.Count > 100)
@@ -83,11 +90,22 @@ public sealed partial class KittenSpawner
         var system = Universe.CurrentSystem;
         if (system == null)
             return SpawnResult.Failure("No current system.");
+        if (surface != null && request.Count != 1)
+            return SpawnResult.Failure("Surface placement creates one kitten per click.");
+
+        // Part construction can create shapes too; join before constructing the backpack.
+        WaitForVehicleSolverIdle();
+        JobSystems.NearestOrbitAndPerformanceWorker?.Wait();
 
         PruneDisposed();
 
         // Resolve positioning
-        var pos = ResolvePositioning(request);
+        var pos = surface == null ? ResolvePositioning(request) : new PositionResult
+        {
+            Parent = surface.Parent, StateTime = surface.Time, BasePositionCci = surface.HitCci,
+            VelocityCci = surface.Velocity(surface.HitCci), Body2Cce = surface.Body2Cce,
+            BodyRates = surface.BodyRates, ReferenceOrbit = surface.InitialOrbit()
+        };
         if (pos.Error != null)
             return SpawnResult.Failure(pos.Error);
         if (pos.Parent == null)
@@ -110,6 +128,8 @@ public sealed partial class KittenSpawner
         string? budgetError = CheckMaterialBudget(tinted ? request.Count : 0);
         if (budgetError != null)
             return SpawnResult.Failure(budgetError);
+        if (surface != null && !surface.IsClear())
+            return SpawnResult.Failure("The kitten capsule would collide here. Choose a clearer spot.");
 
         // Spawn loop
         var results = new List<SpawnedKittenInfo>();
@@ -152,12 +172,24 @@ public sealed partial class KittenSpawner
                     backpackPart,
                     pos.ReferenceOrbit!);
 
-                createdRosterEntry = EnsureRoster(kittenEva, requireNew: true);
+                if (surface != null)
+                {
+                    // Authoritative geometry/COM now exist; validate again before exposing a live spawn.
+                    if (!surface.IsClear(kittenEva))
+                        throw new InvalidOperationException("The kitten capsule would collide at this location.");
+                    kittenPosCci = surface.ComPosition(kittenEva);
+                    kittenVelCci = surface.Velocity(kittenPosCci);
+                }
 
                 var orbitColor = pos.ReferenceOrbit?.OrbitLineColor ?? new byte4(255, 200, 0, 255);
                 var orbit = Orbit.CreateFromStateCci(
                     pos.Parent!, pos.StateTime, kittenPosCci, kittenVelCci, orbitColor);
                 kittenEva.Teleport(orbit, null, null);
+                if (surface != null && ((kittenEva.Orbit.StateVectors.PositionCci - kittenPosCci).Length() > .002
+                    || (kittenEva.Orbit.StateVectors.VelocityCci - kittenVelCci).Length() > .002
+                    || kittenEva.Orbit.StateVectors.StateTime != pos.StateTime))
+                    throw new InvalidOperationException("KSA could not apply the requested surface spawn pose.");
+                createdRosterEntry = EnsureRoster(kittenEva, requireNew: true);
                 pos.Parent!.Children.Add(kittenEva);
                 kittenEva.UpdatePerFrameData();
             }

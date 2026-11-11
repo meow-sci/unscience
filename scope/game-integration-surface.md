@@ -41,6 +41,21 @@ Native rendering/input acceptance is pending. [Full UI map](ui-customization.md#
 
 ## Kitchen Sink capsule glass experiment (5541)
 
+## DOH click-to-spawn (5801)
+
+| Surface | Owner | Contract |
+|---|---|---|
+| `Program.OnMouseButton` / `Program.OnKey` prefixes; main/hovered viewport, mouse latch, HUD/editor/map/console gates | doh / PlacementInputPatches | One-shot input ownership, complete press/release pairs and Escape cancellation; both hosts use targeted unpatch |
+| `Cursor.GetPosition`, `Camera.ScreenToEgoRay/GetPositionEgo/EgoToScreen` | doh / picker and preview | Viewport-correct pixel capture, EGO queries and surface-relative capsule outline |
+| `ColliderModule.RayCastEgo/Handle/PositionVehicleAsmb/Collider2VehicleAsmb`; native fallback `VehicleProperties.BoundingBoxAsmb` | doh / SurfaceScene | Physical parts/debris/kittens; actual scaled collider clearance |
+| `Vehicle.TryGetClutterStatics`, `ConstraintSim.ReadOnlyShapes/Simulation`, `BubbleOrigin.GetBub2Cce`, Bepu `Simulation.RayCast/BroadPhase.GetOverlaps/CollisionBatcher` | doh / SurfaceScene and CapsuleCollisionQuery | Current native static contacts and detached volume queries at the safe physics handoff; no shared-shape mutations |
+| `Celestial.GetTerrainHeightFromDirCcf(accurate:true)` / CCF transforms | doh / terrain picker and contact mesh | Nearest terrain/part/static comparison, slope normal and local 10 cm full-footprint mesh |
+| `CapsuleColliderTemplate`, `KittenEva` collider modules and `Vehicle.CenterOfMassAsmb` | doh / surface spawn transaction | Real support point/COM correction, −Z up, fixed 2 cm gap; verify teleport pose/velocity/epoch |
+| `ReadOnlyPhysicsStates.GetStatesCci/GetBodyRates/Time`, `CcfStatesToCci`, `IParentBody.GetAngularVelocityCci` | doh / SurfaceSpawnTarget | Coherent state and surface rotational velocity |
+| `PhysicsFrameHook.Enqueue/BeforePhysics`, `SavedPartReference`, existing `doh` v1 reset | doh / placement lifecycle | One generation per gesture, exact target ownership, no old-world work or duplicate replay |
+
+[Detailed integration, ownership and native acceptance](doh-placement.md).
+
 ## DOH native roster integration (5801)
 
 Naming scans `CelestialSystem.All.UnsafeAsList()` / `Astronomical.Id` and

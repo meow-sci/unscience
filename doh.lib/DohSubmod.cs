@@ -54,6 +54,7 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
         _spawner = new KittenSpawner(_registry);
 
         _availableCharacters = _spawner.GetAvailableCharacters();
+        InitializePlacement();
         Console.WriteLine("doh: DohSubmod initialized");
     }
 
@@ -82,6 +83,9 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
 
     public void Dispose()
     {
+        CancelPlacement();
+        PhysicsFrameHook.BeforePhysics -= PlacementFrame;
+        _placementCancelled = null;
         // Vehicles belong to KSA. Unloading DOH must not destroy avatars still in its render list.
         _registry?.Clear();
         _spawner = null;
@@ -137,6 +141,17 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
                 DoSpawn();
             ImGui.EndDisabled();
 
+            ImGui.TableNextColumn();
+            ImGui.BeginDisabled(_spawner == null || !PhysicsFrameHook.IsApplied
+                || !MeowSci.DohLib.Placement.PlacementInputPatches.IsApplied || Universe.CurrentSystem == null
+                || Program.EditorFlag || Program.MainViewport.Mode == CameraMode.Map);
+            if (ImGui.Button(" Spawn at... ##doh"u8, new float2(-1, 0))) ArmPlacement();
+            ImGui.EndDisabled();
+            ImGui.SetItemTooltip("Click ground or a vessel part to place one kitten with its capsule clear of the surface. Esc/right-click cancels. Count and offset apply to Spawn Kitten(s)."u8);
+            ImGui.EndTable();
+        }
+        if (ImGui.BeginTable("##doh_catalog_actions"u8, 1, ImGuiTableFlags.SizingStretchSame | ImGuiTableFlags.NoPadOuterX))
+        {
             ImGui.TableNextColumn();
             if (ImGui.Button(" Refresh Characters ##doh"u8, new float2(-1, 0)))
             {

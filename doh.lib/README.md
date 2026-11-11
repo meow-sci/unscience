@@ -4,8 +4,8 @@ Headless spawning and tracking for DOH. All kitten paint, GPU material cloning a
 owned by [`war-paint.lib`](../war-paint.lib/README.md), which has no dependency on DOH.
 
 `DohSubmod` renders a War Paint-style **Name / Model / unlabeled action** table with red **Smite**
-buttons. **Smite All** fills the panel width; spawn and refresh split an action row equally with
-6 px cell padding (12 px between buttons). Confirmations/errors use KSA's
+buttons. **Smite All** fills the panel width; **Spawn Kitten(s)** and **Spawn at...** split an action
+row equally, with full-width refresh below and 6 px cell padding (12 px between buttons). Confirmations/errors use KSA's
 `Brutal.Logging.DefaultCategory.Log.Info/Error`, replacing status/count labels and preset helper
 text. This presentation and transient logging add no scene state or save fields.
 
@@ -41,6 +41,33 @@ moved from `MeowSci.DohLib.Materials` to `MeowSci.WarPaintLib.Materials`; caller
 public service rather than creating/releasing materials. The factory-taking constructor remains as
 a compatibility overload accepting the moved type. `SpawnedKittenEntry.MaterialSet` is a legacy
 view, not an owner; consult War Paint for current paint.
+
+## Click-to-spawn implementation
+
+`DohSubmod.Placement*` snapshots a one-kitten request, owns the cancellable gesture and draws the
+physical capsule. `PlacementInputPatches` intercepts main-flight `Program.OnMouseButton/OnKey`
+events, preserving complete owned press/release pairs while leaving UI/native drags alone.
+Unscience and the standalone host install it; both dispatch the floating picker outside the panel.
+
+`SurfaceScene` runs exclusively at `PhysicsFrameHook.Enqueue`'s synchronized boundary. It compares
+live collider rays, native static rays and accurate CCF terrain marching within 2 km. Clearance
+uses detached Bepu contact batches against all nearby collider shapes/fallback boxes, active native
+statics and a 10 cm local accurate-height terrain mesh. Queries borrow the shared shapes registry
+and own/return their scratch pool. No extra physics body or GPU renderer is allocated for previews.
+
+`SurfaceSpawnTarget` retains exact scene/vehicle/part identity through `SavedPartReference`, samples
+one physics epoch, converts rotating-ground velocity with `CcfStatesToCci`, and includes host
+angular point velocity. `SpawnAtSurface` extends the existing transaction: join workers before any
+Part construction, preflight one capsule, construct the native kitten, recalculate from its actual
+collider/COM, recheck clearance, teleport/verify pose and register crew/paint/tracking. Failure rolls
+back only the provisional object/roster. The body uses native −Z up and the capsule support point,
+with a fixed 2 cm gap; no fixed avatar-height assumption or post-spawn collision disabling is used.
+
+Hover checks are throttled to 200 ms and surface-relative preview transforms remain responsive
+between them. Every click re-evaluates its viewport position at the handoff. Scene reset/unload/HUD
+hide/map/editor transition cancels the generation token; queued work cannot bind a reconstructed
+same-name target. Misses/blocked locations keep the tool armed. Native physics/input acceptance is
+still required; [implementation details](../plans/DOH_CLICK_TO_SPAWN_RESEARCH.md#implementation).
 
 ## Native kitten roster
 
@@ -88,8 +115,10 @@ global presets remain. War Paint also handles deaths/boarding independently of D
 
 The existing **`doh` v1**, order **60**, captures spawn name, offset/count/character, preset name and
 detached preset recipe, and the IDs/characters of native-owned tracked kittens. Native reconstruction
-owns actual vehicles; DOH never respawns on restore. The reference-vehicle picker and pending
-native kill inputs are transient. Native input retains the old object, so a same-name reconstructed
+owns actual vehicles; DOH never respawns on restore. The reference-vehicle picker, armed placement,
+hover preview and pending spawn/kill inputs are transient. Reset cancels placement generations and
+releases input ownership; the fixed range/skin/orientation policy adds no saved settings.
+Native input retains the old object, so a same-name reconstructed
 kitten cannot be retargeted. Reset clears ownership and controls; War Paint owns old-world paint cleanup.
 Capture omits native-disposed kittens even before pruning. The save ID/version and payload stay unchanged.
 Crew records, health and statistics are already owned by KSA's `UniverseData.KittenRoster` inside

@@ -97,7 +97,7 @@ namespace KSA
         }
     }
 
-    internal static class Program
+    internal sealed partial class Program
     {
         public static Vehicle? ControlledVehicle { get; set; }
     }
@@ -298,6 +298,8 @@ namespace MeowSci.DohLib
         public string? PresetName => _paintPresetName;
         public PaintSettings? SpawnPaint => _spawnPaint?.Clone();
         public string SpawnName { get => _spawnName.ToString(); set => _spawnName.SetValue(value.AsSpan()); }
+        internal MeowSci.DohLib.Placement.PlacementSession Placement => _placement;
+        internal Action? PlacementCancelled { set => _placementCancelled = value; }
 
         public void Track(KittenEva kitten, string characterId, KittenMaterialSet? set) =>
             _registry!.Register(kitten.Id, characterId, set);

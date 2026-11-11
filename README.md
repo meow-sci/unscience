@@ -82,7 +82,11 @@ DOH's spawn controls include an editable vehicle name / batch prefix, initially 
 Available single names are used exactly; occupied names automatically advance above the highest
 existing suffix. Batches and blank-input automatic names also continue above native scene/roster
 numbers, including after save/load. The input is scene-saved; numbering is derived from KSA's
-current names. See [DOH usage](doh/README.md#usage).
+current names. **Spawn at...**, to the right of **Spawn Kitten(s)**, places one kitten by clicking
+ground or a vessel part. Its green/red capsule preview checks clearance; Esc/right-click cancels.
+The native-created kitten's collider/centre of mass determine its pose, and moving surfaces supply
+its initial velocity. Scene replacement cancels pending input; completed spawns use native saves
+and unchanged DOH tracking. See [DOH usage](doh/README.md#usage).
 
 Kitten Animations keeps holds and animation settings independently for each EVA kitten, even after
 switching control or the camera to another vessel. Select a kitten in the panel to edit or clear
