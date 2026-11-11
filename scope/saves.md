@@ -95,9 +95,11 @@ changes. Log feedback is transient KSA logging, not UI or scene state.
 
 ## 5801 native playtest: despawn and shutdown
 
-DOH's Name/Model/Smite table, equal-width spawn/refresh row and full-width Smite All change only
-presentation. Removed status/count/preset-hint labels carry no durable state; confirmations/errors
+DOH's Name/Model/Smite table, equal-width Spawn Kitten(s)/Spawn at... row and full-width Smite All
+change only presentation. Removed status/count/preset-hint labels carry no durable state; confirmations/errors
 now go to KSA's native logger. The `doh` v1 capture/reset/replay and spawn controls are unchanged.
+Character choices load during initialization; removing manual refresh preserves saved character
+selection.
 
 DOH Smite actions are transient native `VehicleDestroyBuffer` inputs, holding exact objects rather
 than name lookups. Native scene replacement disposes old vehicles; a pending input cannot retarget a

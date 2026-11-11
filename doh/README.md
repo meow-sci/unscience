@@ -24,7 +24,7 @@ Only the `unscience` mod is distributed. This project is a compile-checked devel
 7. Use **Smite** or **Smite All** to request KSA's built-in kill action on the next input pass.
 
 **Spawn Kitten(s)** and **Spawn at...** share an equal-width action row with the standard
-12 px gap; **Refresh Characters** fills the row below. **Spawned Kittens** uses a striped
+12 px gap. Character choices load once when DOH initializes. **Spawned Kittens** uses a striped
 **Name / Model / unlabeled action** table, with a red
 **Smite** button per row and a full-width red **Smite All** below. Action confirmations and errors
 use KSA's logger; the panel has no persistent status/count labels or War Paint helper text.

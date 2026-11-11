@@ -461,9 +461,9 @@ Occupied single names automatically gain/advance a number above the highest matc
 batches also continue above native scene and roster names, including seated/retired/KIA crew.
 Numbering is derived per prefix after loads, with no cached counter or save schema change.
 The panel uses a striped Name/Model/action table with red Smite buttons, full-width Smite All,
-equal-width **Spawn Kitten(s) / Spawn at...** actions, full-width refresh below and native KSA
-Info/Error logging. Click placement compares collider/static/terrain hits, previews and validates
-the full capsule, then spawns at the synchronized physics handoff with collider/COM correction and
+equal-width **Spawn Kitten(s) / Spawn at...** actions and native KSA Info/Error logging. Character
+choices load once during initialization. Click placement compares collider/static/terrain hits,
+previews and validates the full capsule, then spawns at the synchronized physics handoff with collider/COM correction and
 surface velocity. Input prefixes own click/release pairs; exact targets and cancellation generations
 prevent old-world work. Native saves own the completed pose; gestures/previews are transient.
 [Placement integration](scope/doh-placement.md).

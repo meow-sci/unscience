@@ -20,8 +20,9 @@ War Paint releases its private materials after death and preserves saved presets
 is **Abandoned** (custom reason strings are unsupported). Default offset remains **(1, 1, -2) m**.
 The earlier [shutdown cleanup fix](plans/DOH_DESPAWN_5801_FOLLOWUP.md) remains; native retesting is pending.
 Its spawned-kitten table has **Name**, **Model** and red **Smite** actions, with full-width
-**Smite All** below. Spawn/refresh share equal-width buttons; feedback uses KSA's logger instead
-of persistent status/count labels. Scene-save behavior is unchanged.
+**Smite All** below. **Spawn Kitten(s)** and **Spawn at...** share equal-width buttons; character
+choices load once during initialization. Feedback uses KSA's logger instead of persistent
+status/count labels. Scene-save behavior is unchanged.
 
 DOH spawns now join the native kitten roster with an active EVA mission and launched status.
 KSA maintains crew health/statistics, boarding, recovery and KIA history; older tracked DOH kittens

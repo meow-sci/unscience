@@ -119,8 +119,9 @@ DOH **Smite / Smite All** replace custom despawning with KSA's native kill input
 which runs before the render-list refresh; the former physics handoff ran too late. Private War Paint
 materials release after native death, reusable presets remain, and unload leaves vehicles to KSA.
 Default offset and scene payloads stay unchanged. [Evidence, checks and native acceptance](../plans/DOH_NATIVE_KILL_5801.md).
-DOH's panel now uses a Name/Model/Smite table, equal-width spawn/refresh actions and full-width
-Smite All; transient action feedback uses KSA's logger instead of panel status/count labels.
+DOH's panel now uses a Name/Model/Smite table, equal-width Spawn Kitten(s)/Spawn at... actions and
+full-width Smite All; character choices load once during initialization. Transient action feedback
+uses KSA's logger instead of panel status/count labels.
 The earlier Unscience pre-renderer shutdown and ownership-aware Graffiti cleanup remain in place.
 
 Migrated resolved data/key references in rings, clutter, Pyro, Disco and capsule filtering. Fixed

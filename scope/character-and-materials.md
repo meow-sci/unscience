@@ -388,9 +388,11 @@ Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
 character, offset/count and a saved War Paint preset. The default offset is (1,1,-2)m. The spawn
 engine and existing native naming/roster collision checks remain under `doh.lib/Spawning/`.
 The spawned-kitten panel follows Live War Paint's three-column striped table, showing Name, Model
-and a blank action header with red Smite buttons. Smite All fills the width; spawn/refresh use
-equal-width cells with 6 px padding. Native Info/Error logging replaces the status/count labels;
-preset helper text is removed. This UI change adds no game-state mutation or save fields.
+and a blank action header with red Smite buttons. Smite All fills the width; Spawn Kitten(s) and
+Spawn at... use equal-width cells with 6 px padding. Character choices read `ModLibrary.AllCharacters`
+once during initialization; the manual refresh action is removed. Native Info/Error logging replaces
+the status/count labels; preset helper text is removed. This UI change adds no game-state mutation
+or save fields.
 DOH's v1 adapter migrates legacy material recipes and stores its selector/detached recipe; it no
 longer captures active paint or owns GPU materials. Despawn unsets War Paint before native teardown.
 

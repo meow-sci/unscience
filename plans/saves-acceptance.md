@@ -137,7 +137,10 @@ verify per-view visor-only gating, new kittens, default shown state and targeted
 DOH panel layout/logging changes preserve `doh` v1 capture/reset/replay. The kitten table is derived
 from the existing registry; removed status/count/hint labels and native log messages are transient.
 Native UI acceptance: check Name/Model/blank action headers, red Smite buttons, full-width Smite All,
-equal-width spawn/refresh with the standard gap, and confirmations/errors in KSA's log after loading.
+equal-width Spawn Kitten(s)/Spawn at... with the standard gap, and confirmations/errors in KSA's
+log after loading.
+Character choices load during initialization; the manual refresh button is removed without changing
+saved character selection or the `doh` v1 record.
 
 No save IDs/versions change. DOH transient Smite actions now use KSA's native kill-input queue,
 before render-list refresh, retaining exact old objects rather than resolving same-name restored

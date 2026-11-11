@@ -150,16 +150,6 @@ public sealed partial class DohSubmod : ISubmod, MeowSci.KsaAbstractions.Persist
             ImGui.SetItemTooltip("Click ground or a vessel part to place one kitten with its capsule clear of the surface. Esc/right-click cancels. Count and offset apply to Spawn Kitten(s)."u8);
             ImGui.EndTable();
         }
-        if (ImGui.BeginTable("##doh_catalog_actions"u8, 1, ImGuiTableFlags.SizingStretchSame | ImGuiTableFlags.NoPadOuterX))
-        {
-            ImGui.TableNextColumn();
-            if (ImGui.Button(" Refresh Characters ##doh"u8, new float2(-1, 0)))
-            {
-                _availableCharacters = _spawner?.GetAvailableCharacters() ?? Array.Empty<string>();
-                LogStatus($"Found {_availableCharacters.Length} characters.", false);
-            }
-            ImGui.EndTable();
-        }
         ImGui.PopStyleVar(); // CellPadding
 
         ImGui.Spacing();

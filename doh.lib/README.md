@@ -5,7 +5,8 @@ owned by [`war-paint.lib`](../war-paint.lib/README.md), which has no dependency 
 
 `DohSubmod` renders a War Paint-style **Name / Model / unlabeled action** table with red **Smite**
 buttons. **Smite All** fills the panel width; **Spawn Kitten(s)** and **Spawn at...** split an action
-row equally, with full-width refresh below and 6 px cell padding (12 px between buttons). Confirmations/errors use KSA's
+row equally, with 6 px cell padding (12 px between buttons). Character choices load once during
+initialization. Confirmations/errors use KSA's
 `Brutal.Logging.DefaultCategory.Log.Info/Error`, replacing status/count labels and preset helper
 text. This presentation and transient logging add no scene state or save fields.
 
