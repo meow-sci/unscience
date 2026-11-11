@@ -45,7 +45,8 @@ from the working kitten coloring path. [Investigation](plans/HUMBLE_ARTEEST_5801
 **Wing Walker** adds the surface-mounted **External Seat** and **Standing Mount** for native
 crew assignment and EVA boarding. A helmet and standing-pose fix awaits in-game retest. Supplies
 are finite and the mounts have no radiation shielding. Standing Mount has simple brown leather
-foot straps; External Seat uses the Core chair.
+foot straps; External Seat is a rainbow beach chair with a built-in gold foil frame and textured
+white plastic armrests. Both parts also appear under the editor’s Capsules filter.
 [Usage and limits](wing-walker.lib/README.md) · [validation and pending in-game checks](plans/WING_WALKER.md).
 
 # game compatibility

@@ -10,7 +10,7 @@ native `Vehicle.SetSeatCrew` after duplicate, stale and occupied checks, avoidin
 repeated part runtime IDs; suit return and the remaining boarding path stay native. The public render
 patch scopes helmet and ear pose for both external parts and an immediate ground idle for standing;
 five private appearance fields are name/type-checked and temporary changes restored. Native head
-masking, War Paint visor gating and seat-owned MMU remain intact. Native part IDs, stock chair mesh/material dependencies, habitat, tanks,
+masking, War Paint visor gating and seat-owned MMU remain intact. Native part IDs, custom beach chair/strap atlases, native gold foil material, Capsules tags, habitat, tanks,
 `CrewSeat` and `EVADoor` are inventoried in [Wing Walker](wing-walker.md). Earlier solution, fixture, XML and distribution checks passed. The appearance fix passes the focused
 and full solution builds, distribution check and 5801 native signature/CPU animation probe; the
 updated production fixture passes, while in-game visual acceptance remains pending.
@@ -950,9 +950,12 @@ are recorded separately from native visual acceptance.
 
 ### KSA.PbrMaterialReference
 
-Wing Walker's standing mount also declares a native `MeshAtlas`, a visible/picking mesh pair and
-diffuse/normal/ORM `Texture` rows in `WingWalker.xml`. Exported vertices bake KSA part space; both
-hosts package the GLB and PNGs. Legacy subpart keys/order remain stable. [Asset contracts and risks](wing-walker.md).
+Wing Walker declares GLB atlases and diffuse/normal/ORM `Texture` rows for both mounts in
+`WingWalker.xml`. The beach chair has separate webbing/plastic and native `CoreSurfacesB_Material`
+foil-frame meshes with a combined picking twin; the frame uses a wrinkled UV region from
+`CoreStructuralA_Prefab_StrutOcto2HB`. Both hosts package custom GLB/PNG art; Core foil is referenced
+without shipping its textures. Vertices bake KSA part space. Legacy subpart IDs/keys/order remain
+stable, and both templates include the native `Capsules` editor tag. [Asset contracts and risks](wing-walker.md).
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
 | `{DiffuseReference, NormalReference, PBRMap, EmissiveMap} : DataReference<TextureReference>`; `Id` on the direct material | resolved-data/reflection | CURRENT `KSA/PbrMaterialReference.cs:12-21` | doh, free-fallin, rings, pebbles | `GameDataReference.cs`; feature material controllers | Migrated @5801 | Get() removed; follow Value, keeping unresolved links null. TexturePowerReference retired |
@@ -1329,7 +1332,7 @@ on every game update FIRST.
 
 | Asset / shader | Kind | Referenced as | Content path (NEW) | Consumer | 5348 |
 |---|---|---|---|---|---|
-| `CoreIVAPropA_Subpart_ChairA`, `ChairAHeadrest`, `ChairAEjectionRunners`, `ChairABase`, corresponding `_VM` meshes and `CoreIVAPropA_Material` | stock chair assets | external `PartModel` / `MeshView` references in `WingWalker.xml` | `Content/Core/CoreIVAPropAAssets.xml` | wing-walker | Native visual acceptance pending; new part/model definitions leave stock props unchanged. |
+| `CoreSurfacesB_Material` and its diffuse/normal/PBR texture atlas | native gold foil | beach chair frame only in `WingWalker.xml`; GLB UV U=0.495–0.605/V=0.39–0.49 samples the wrinkled `TrussFFoilA` island | `Content/Core/CoreSurfacesBAssets.xml`; `CoreStructuralA_Prefab_StrutOcto2HB` | wing-walker | Custom chair/strap GLBs and custom webbing/plastic/leather maps ship; Core payload is referenced only. Both parts retain IDs/subpart order and include `Capsules`. Native visual acceptance pending. |
 | `UnlitMesh.vert` / `UnlitMesh.frag` | shader | `ModLibrary.Get<ShaderReference>("UnlitMeshVert"/"UnlitMeshFrag")` | `Core/DefaultAssets.xml:66,67` → `Core/Shaders/Mesh/UnlitMesh.*` | thug-life | OK (**byte-identical 4750→5018**; also untouched by 4693/4745) |
 | `GridFrag` (path anchor only) + `Common/Camera.glsl` / `Common/TextureSet.glsl` (headers, `#include`d) | shader include root + headers | `ModLibrary.Get<ShaderReference>("GridFrag").ModPath` → its **directory** is the `#include` root for graffiti's two runtime-compiled decal shaders | `Content/Core/DefaultAssets.xml:373` → `Core/Shaders/Grid.frag`; `Core/Shaders/Common/*.glsl` | graffiti | OK @5348 — a `global.camera`/`global.lighting` struct or `SAMPLE_TEXTURE`/`SET_TEXTURE` macro change fails at shaderc compile (loud console line; decals self-disable) |
 | `MeshIndirect.frag` + `MeshIndirectRaytraced.frag` (paint injection) | shader text-edit (in memory, via the `FromFile` prefix) | matched by **file name**; anchor = first `vec3 sampledColor …;` line; requires `inStateFlags` varying and `gammaToLinear` (`Common/Shared.glsl:203`) | `Content/Core/Shaders/Mesh/MeshIndirect.frag:114`; `MeshIndirectRaytraced.frag:156` | humble-arteest (VehiclePaint) | OK (rebuilt for 5018) — if the anchor moves, `Enable` fails with a UI message and rendering stays stock |

@@ -17,9 +17,9 @@ completed native pose/motion save/load still requires in-game acceptance.
 KSA saves the native part and template ID, `IVASeatData`, crew roster, tanks and life-support
 state. The template selects seated or standing posture; no Wing Walker sidecar or participant is
 needed. The helmet/standing appearance scope, weak animation markers and diagnostics are transient;
-the appearance fix adds no flags or settings. The leather strap art replaces standing visual
-references, connector and collider, retaining both part IDs and all five subpart keys in the same
-order (including the EvaDoor module); native positional module matching and save format remain intact. Repeated A–B–A
+the appearance fix adds no flags or settings. The beach chair and leather strap art replace
+visual references and collider data, retaining both part IDs and all five subpart IDs/keys in the
+same order (including the EvaDoor module). The Capsules tag is static template metadata; native positional module matching and save format remain intact. Repeated A–B–A
 native load, crew, resources and unload acceptance remain pending; see [plan](../plans/WING_WALKER.md).
 
 ## You Didn't See Anything

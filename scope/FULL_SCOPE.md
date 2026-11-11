@@ -81,7 +81,7 @@ Scene-save adapters extend native saves; imported files remain external dependen
 |---|---|---|
 | [`game-integration-surface.md`](game-integration-surface.md) | **Master cross-reference index** — every game type/member touched, merged across mods | Start here for "does the game still have X?"; includes the string-reflection watchlist + shader/asset table |
 | [`doh-placement.md`](doh-placement.md) | DOH click-to-spawn | Main-viewport mouse/key prefixes, physical part/static rays, accurate terrain, borrowed Bepu shape queries, capsule/COM/motion and scene cancellation; native acceptance pending |
-| [`wing-walker.md`](wing-walker.md) | wing-walker | Native surface-mounted crew parts, render submission, standing animation/origin hooks and stock chair assets; native acceptance pending |
+| [`wing-walker.md`](wing-walker.md) | wing-walker | Native surface-mounted crew parts, render submission, standing animation/origin hooks, custom chair/strap assets and native foil; native acceptance pending |
 | [`saves.md`](saves.md) | Native scene save/load extension across all bundled features; save-yourself timed auto saves | Ordered cleanup/replay, deferred world replacement, native save directory sidecars and stable part references; Save Yourself produces native saves via `GameSaveProvider` (`SaveName.TryAccept` → `UncompressedSave.Make`, no patches) |
 | [`00-architecture-and-abstractions.md`](00-architecture-and-abstractions.md) | unscience supermod shell (`Mod.cs`/`Patcher.cs`/`MenuBarPatch`/`UnscienceState`) + `ksa-abstractions.lib` | StarMap lifecycle map, consolidated-Harmony cross-ref, `HotkeyGuard`, `IvaForceRender`, providers |
 | [`vehicle-physics.md`](vehicle-physics.md) | dent-wizard, eternal-flame, garrys-torch, godzilla, i-feel-seen, the-tick | `Universe.ExecuteNextVehicleSolvers` (Eternal Flame fuel + electricity refills since 5482), `Battery.Refill`, `Vehicle.Teleport` (+ `PhysicsFrameHook.JoinOrbitReaders`), KittenEva reflection, Godzilla's `IsLargeEnoughToRender` cull redirect; **Godzilla separates visual, collider and nominal physics size; garrys-torch preserves actuator results; default-off source collisions use scoped Bepu shape suppression**; The Tick prefixes `Part.CrashTolerancePascals` and prefix/postfixes `PhysicsBubble.DetectStructuralFailure` for per-vessel indestructibility |
@@ -113,7 +113,8 @@ Wing Walker adds native crew parts, scoped boarding and rendering hooks. Prior c
 helmet and standing-pose fix passes focused and full builds, packaging and the native CPU probe; the
 updated production fixture passes; the in-game visual retest remains pending. [Integration and risks](wing-walker.md) · [validation](../plans/WING_WALKER.md).
 Standing Mount now uses custom brown leather foot straps with a GLB/picking atlas and PBR textures;
-all legacy subpart slots retain their order for native saved-state matching.
+all legacy subpart slots retain their order for native saved-state matching. External Seat uses
+rainbow webbing, textured white armrests and a native gold foil frame; both parts have the Capsules tag.
 
 DOH **Smite / Smite All** replace custom despawning with KSA's native kill input (Kill/Abandoned),
 which runs before the render-list refresh; the former physics handoff ran too late. Private War Paint

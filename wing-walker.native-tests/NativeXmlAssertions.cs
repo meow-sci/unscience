@@ -113,6 +113,11 @@ internal static class NativeXmlAssertions
         Require(parts.Count == 2, $"expected 2 final Part rows, got {parts.Count}");
         object seated = parts["Unscience_WingWalker_Seated"];
         object standing = parts["Unscience_WingWalker_Standing"];
+        foreach (object part in new[] { seated, standing })
+            Require(Items(GetMember(part, "EditorTagRefs"))
+                .Select(tag => (string)GetMember(tag, "Ref")!).ToHashSet(StringComparer.Ordinal)
+                .SetEquals(new[] { "External Crew", "Capsules" }),
+                "both parts appear under External Crew and the native Capsules filter");
 
         object[] seatedSubParts = Items(GetMember(seated, "SubPartInstances")).ToArray();
         object[] standingSubParts = Items(GetMember(standing, "SubPartInstances")).ToArray();
@@ -120,6 +125,10 @@ internal static class NativeXmlAssertions
         string[] seatedKeys = seatedSubParts.Select(item => (string)GetMember(item, "Key")!).Order(StringComparer.Ordinal).ToArray();
         string[] standingKeys = standingSubParts.Select(item => (string)GetMember(item, "Key")!).Order(StringComparer.Ordinal).ToArray();
         Require(seatedSubParts.Length == 5 && seatedKeys.SequenceEqual(expectedKeys), "seated part has the five authored keyed subparts");
+        Require(seatedSubParts.Select(item => (string)GetMember(item, "Ref")!).SequenceEqual(new[]
+            { "Unscience_WingWalker_Chair", "Unscience_WingWalker_Headrest", "Unscience_WingWalker_Runners",
+              "Unscience_WingWalker_Base", "Unscience_WingWalker_Door" }),
+            "beach chair retains all original seated subpart references and order for saved modules");
         Require(standingSubParts.Length == 5 && standingKeys.SequenceEqual(expectedKeys), "native pre-pass flattened all five parent subparts into the standing part");
         Require(seatedSubParts.Select(item => (string)GetMember(item, "Key")!)
             .SequenceEqual(standingSubParts.Select(item => (string)GetMember(item, "Key")!)),
@@ -176,21 +185,36 @@ internal static class NativeXmlAssertions
             .ToDictionary(item => item.Id, item => item.Value, StringComparer.Ordinal);
         foreach (string id in new[]
         {
-            "Unscience_WingWalker_Chair", "Unscience_WingWalker_Headrest",
-            "Unscience_WingWalker_Runners", "Unscience_WingWalker_Base", "Unscience_WingWalker_FootStraps"
+            "Unscience_WingWalker_Chair", "Unscience_WingWalker_FootStraps"
         })
         {
             object subpart = subparts[id];
-            object model = ComponentsOf(subpart, "KSA.PartModelModule+Template").Single();
-            Require(!(bool)GetMember(model, "Internal")!, $"{id} PartModel is external");
-            object modelMesh = GetMember(model, "Mesh")!;
-            Require(!string.IsNullOrEmpty((string)GetMember(modelMesh, "Ref")!), $"{id} model mesh has a native Ref");
+            object[] models = ComponentsOf(subpart, "KSA.PartModelModule+Template");
+            Require(models.Length == (id == "Unscience_WingWalker_Chair" ? 2 : 1),
+                $"{id} has the expected independently materialed model meshes");
+            if (id == "Unscience_WingWalker_Chair")
+                Require(models.Select(model => (string)GetMember(GetMember(model, "Mesh")!, "Ref")!)
+                    .Order(StringComparer.Ordinal).SequenceEqual(new[]
+                        { "Unscience_WingWalker_BeachChair", "Unscience_WingWalker_BeachChair_Frame" }),
+                    "seated part renders custom webbing/plastic and a separate foil frame");
+            foreach (object model in models)
+            {
+                Require(!(bool)GetMember(model, "Internal")!, $"{id} PartModel is external");
+                object modelMesh = GetMember(model, "Mesh")!;
+                Require(!string.IsNullOrEmpty((string)GetMember(modelMesh, "Ref")!), $"{id} model mesh has a native Ref");
+                if ((string)GetMember(modelMesh, "Ref")! == "Unscience_WingWalker_BeachChair_Frame")
+                    Require((string)GetMember(GetMember(model, "Material")!, "Ref")! == "CoreSurfacesB_Material",
+                        "the chair frame references native gold foil, separately from webbing/plastic");
+            }
             object view = ComponentsOf(subpart, "KSA.MeshViewModule+Template").Single();
             string viewRef = (string)GetMember(GetMember(view, "MeshView")!, "Ref")!;
             Require(viewRef.EndsWith("_VM", StringComparison.Ordinal), $"{id} MeshView targets a _VM mesh: {viewRef}");
         }
         Require(!Items(GetMember(subparts["Unscience_WingWalker_Empty"], "Components")).Any(),
             "legacy chair slots have no renderable or picking geometry on the standing mount");
+        foreach (string id in new[] { "Headrest", "Runners", "Base" })
+            Require(!Items(GetMember(subparts["Unscience_WingWalker_" + id], "Components")).Any(),
+                $"legacy seated {id} slot remains without old chair geometry");
 
         object evaDoor = subparts["Unscience_WingWalker_Door"];
         object doorTemplate = ComponentsOf(evaDoor, "KSA.EVADoor+Template").Single();

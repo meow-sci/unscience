@@ -25,58 +25,47 @@
   <!-- Keep the legacy subpart slots and order so saved crew/modules still line up. -->
   <SubPart Id="Unscience_WingWalker_Empty" />
 
-  <!-- Reuse Core's visual and view meshes without making the stock IVA props external. -->
+  <MeshAtlas Id="Unscience_WingWalker_BeachChairAtlas" Path="Meshes/WingWalker_BeachChair.glb" />
+  <Texture Id="Unscience_WingWalker_BeachChairDiffuse" Path="Textures/WingWalker_BeachChair_Diffuse.png" Category="Vessel" />
+  <Texture Id="Unscience_WingWalker_BeachChairNormal" Path="Textures/WingWalker_BeachChair_Normal.png" Category="Vessel" />
+  <Texture Id="Unscience_WingWalker_BeachChairORM" Path="Textures/WingWalker_BeachChair_ORM.png" Category="Vessel" />
+  <PbrMaterial Id="Unscience_WingWalker_BeachChairMaterial">
+    <Diffuse Ref="Unscience_WingWalker_BeachChairDiffuse" />
+    <Normal Ref="Unscience_WingWalker_BeachChairNormal" />
+    <AoRoughMetal Ref="Unscience_WingWalker_BeachChairORM" />
+  </PbrMaterial>
   <SubPart Id="Unscience_WingWalker_Chair">
     <Components>
       <PartModel Key="ChairModel">
         <Internal>false</Internal>
-        <Mesh Ref="CoreIVAPropA_Subpart_ChairA" />
-        <Material Ref="CoreIVAPropA_Material" />
+        <Mesh Ref="Unscience_WingWalker_BeachChair" />
+        <Material Ref="Unscience_WingWalker_BeachChairMaterial" />
         <RayTracing>Enabled</RayTracing>
       </PartModel>
-      <MeshView><Mesh Ref="CoreIVAPropA_Subpart_ChairA_VM" /></MeshView>
-    </Components>
-  </SubPart>
-  <SubPart Id="Unscience_WingWalker_Headrest">
-    <Components>
-      <PartModel Key="HeadrestModel">
+      <PartModel Key="ChairFrameModel">
         <Internal>false</Internal>
-        <Mesh Ref="CoreIVAPropA_Subpart_ChairAHeadrest" />
-        <Material Ref="CoreIVAPropA_Material" />
+        <Mesh Ref="Unscience_WingWalker_BeachChair_Frame" />
+        <!-- Native wrinkled foil from CoreStructuralA_Prefab_StrutOcto2HB. -->
+        <Material Ref="CoreSurfacesB_Material" />
         <RayTracing>Enabled</RayTracing>
       </PartModel>
-      <MeshView><Mesh Ref="CoreIVAPropA_Subpart_ChairAHeadrest_VM" /></MeshView>
+      <MeshView><Mesh Ref="Unscience_WingWalker_BeachChair_VM" /></MeshView>
     </Components>
   </SubPart>
-  <SubPart Id="Unscience_WingWalker_Runners">
-    <Components>
-      <PartModel Key="RunnersModel">
-        <Internal>false</Internal>
-        <Mesh Ref="CoreIVAPropA_Subpart_ChairAEjectionRunners" />
-        <Material Ref="CoreIVAPropA_Material" />
-        <RayTracing>Enabled</RayTracing>
-      </PartModel>
-      <MeshView><Mesh Ref="CoreIVAPropA_Subpart_ChairAEjectionRunners_VM" /></MeshView>
-    </Components>
-  </SubPart>
-  <SubPart Id="Unscience_WingWalker_Base">
-    <Components>
-      <PartModel Key="BaseModel">
-        <Internal>false</Internal>
-        <Mesh Ref="CoreIVAPropA_Subpart_ChairABase" />
-        <Material Ref="CoreIVAPropA_Material" />
-        <RayTracing>Enabled</RayTracing>
-      </PartModel>
-      <MeshView><Mesh Ref="CoreIVAPropA_Subpart_ChairABase_VM" /></MeshView>
-    </Components>
-  </SubPart>
+  <!-- Legacy IDs and positional save slots remain, with no old chair geometry. -->
+  <SubPart Id="Unscience_WingWalker_Headrest" />
+  <SubPart Id="Unscience_WingWalker_Runners" />
+  <SubPart Id="Unscience_WingWalker_Base" />
   <!-- The helper has no renderable or pick mesh; the crew portrait exposes EVA. -->
   <SubPart Id="Unscience_WingWalker_Door">
     <Components><EVADoor Key="Door" SeatId="CrewSeat" /></Components>
   </SubPart>
 
   <Part Id="Unscience_WingWalker_Seated" DisplayName="External Seat">
-    <EditorTags><EditorTag Ref="External Crew" /></EditorTags>
+    <EditorTags>
+      <EditorTag Ref="External Crew" />
+      <EditorTag Ref="Capsules" />
+    </EditorTags>
     <SubParts>
       <SubPart Key="Chair" Ref="Unscience_WingWalker_Chair" />
       <SubPart Key="Headrest" Ref="Unscience_WingWalker_Headrest">
@@ -98,7 +87,7 @@
         <Flags>ToSurface</Flags>
       </Connector>
     </Connectors>
-    <!-- Uniform cuboid approximation of the 12 kg seat, excluding consumables. -->
+    <!-- Retain the original 12 kg simulation mass/inertia, excluding consumables. -->
     <InertMasses>
       <CustomMass>
         <LocationAsmb X="-0.03410935" Z="-0.13590665" />
@@ -126,23 +115,32 @@
           <OuterRadius M="0.0635" /><WallThickness M="0.001" /><RoleAffinity>Water</RoleAffinity>
         </SphericalTank>
       </Tank>
-      <!-- Conservative bounds for each mesh; these are physics, not the view meshes. -->
+      <!-- Seat/back, two folding-leg envelopes and the plastic armrest pads. -->
       <Collider Key="SeatCollider">
         <Colliders>
           <Box Key="ChairBox">
-            <LengthX M="0.573117434" /><LengthY M="0.672234536" /><LengthZ M="0.603121042" />
+            <LocationAsmb X="0.06904" Y="0.00495" Z="0.0821768" />
+            <LengthX M="0.43" /><LengthY M="0.576" /><LengthZ M="0.035" />
           </Box>
           <Box Key="HeadrestBox">
-            <LocationAsmb X="-0.28522" Y="-0.00136" Z="-0.44234" />
-            <LengthX M="0.2502564" /><LengthY M="0.450436086" /><LengthZ M="0.423300148" />
+            <LocationAsmb X="-0.20096" Y="0.00495" Z="-0.1778232" />
+            <LengthX M="0.168" /><LengthY M="0.576" /><LengthZ M="0.548" />
           </Box>
           <Box Key="RunnersBox">
-            <LocationAsmb X="0.05037" Z="0.31351" />
-            <LengthX M="0.583519" /><LengthY M="0.35981962" /><LengthZ M="0.037043456" />
+            <LocationAsmb X="0.26404" Y="0.00495" Z="0.2251768" />
+            <LengthX M="0.128" /><LengthY M="0.576" /><LengthZ M="0.314" />
           </Box>
           <Box Key="BaseBox">
-            <LocationAsmb X="-0.01706" Z="0.33615" />
-            <LengthX M="0.367230296" /><LengthY M="0.4849594" /><LengthZ M="0.0920535252" />
+            <LocationAsmb X="-0.22596" Y="0.00495" Z="0.1301768" />
+            <LengthX M="0.128" /><LengthY M="0.576" /><LengthZ M="0.504" />
+          </Box>
+          <Box Key="ArmrestLeftBox">
+            <LocationAsmb X="0.05904" Y="-0.30105" Z="-0.1228232" />
+            <LengthX M="0.44" /><LengthY M="0.075" /><LengthZ M="0.020" />
+          </Box>
+          <Box Key="ArmrestRightBox">
+            <LocationAsmb X="0.05904" Y="0.31095" Z="-0.1228232" />
+            <LengthX M="0.44" /><LengthY M="0.075" /><LengthZ M="0.020" />
           </Box>
         </Colliders>
       </Collider>

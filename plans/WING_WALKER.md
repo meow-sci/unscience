@@ -3,6 +3,37 @@
 Implementation adds native External Seat and Standing Mount parts to Unscience. The
 standalone host is for development; only the combined package is released. [Surface inventory](../scope/wing-walker.md).
 
+## Seated beach chair and editor tags
+
+External Seat uses a custom rainbow woven beach chair with rounded folding-leg tubes and
+textured white plastic armrests. The frame alone references `CoreSurfacesB_Material`, with GLB
+UV U=0.495–0.605/V=0.39–0.49 selecting wrinkled foil from `CoreSurfacesB_Subpart_TrussFFoilA`,
+used by `CoreStructuralA_Prefab_StrutOcto2HB`. The built-in atlas was decoded temporarily for
+UV inspection and the preview render; no Core texture or geometry payload is included in the
+editable source, GLB or distribution. The portable Blender source has a procedural gold proxy.
+
+The visible webbing/plastic mesh, foil-frame mesh and combined picking twin share one GLB.
+Custom diffuse/normal/ORM textures are 512px; runtime visible geometry is 12,100 triangles.
+The model was fitted in Blender against the installed kitten and seated idle, including the
+native -0.63 m seated offset. The original seated eye point and ground connector are retained,
+with six collision envelopes for the seat/back, legs and armrest pads. All original seated
+subpart IDs/keys/order and both part IDs remain; Headrest/Runners/Base are empty aliases.
+Both templates carry `External Crew` and the built-in `Capsules` tag, inherited by Standing Mount.
+No new save participant or scene-owned settings are introduced.
+
+The final full solution build passes with zero warnings/errors. Native 5801 XML checks pass:
+20 rows, zero content errors, two parts with both editor tags, preserved subpart references/order,
+separate foil material, original eye points, connector math and crew-save serialization.
+The production Harmony fixture and the fresh `/private/tmp/unscience-wing-walker-beach-dist`
+distribution check pass. Offline GLB checks verify mesh names, normal/tangent streams, identity
+nodes, finite bounds, exact picking union, ground plane, the foil UV region, native material
+provenance and absence of Core images. [Editable art and preview](../wing-walker/Art/README.md).
+
+Native acceptance remains: both parts appear in the Capsules filter; seated kitten/helmet/hand
+fit, foil wrinkles, plastic grain, woven overlap, picking/thumbnails, surface placement, contacts
+and loading older seated craft/scenes with all original subpart slots. Repeated native scene
+save/load and the broader appearance/boarding checks below remain pending.
+
 ## Standing Mount leather art
 
 Standing Mount replaces the chair visuals with two simple brown leather straps over the boots,
