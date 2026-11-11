@@ -23,6 +23,7 @@ internal static class NativeXmlAssertions
     {
         CheckPatchSignatures(ksa, context);
         CheckPartAndSubPartData(ksa, context, decoded);
+        BoneAnimRuntimeChecks.Run();
         CheckStrictDeserialization(ksa, tagTable);
         CheckInstanceSaveSerialization(ksa);
         Require(PartCollectionCount(ksa) == partCollectionCountBefore,
@@ -41,24 +42,67 @@ internal static class NativeXmlAssertions
         Type vehicle = RequiredType(ksa, "KSA.Vehicle");
         Type door = RequiredType(ksa, "KSA.EVADoor");
         Type crewSeatResult = RequiredType(ksa, "KSA.CrewSeatResult");
+        Type avatar = RequiredType(ksa, "KSA.CharacterAvatar");
+        Type catEar = RequiredType(ksa, "KSA.CatEarAnim");
+        Type catCondition = RequiredType(ksa, "KSA.CatConditionAnim");
+        Type animatedRenderable = RequiredType(ksa, "KSA.AnimatedRenderable");
+        Type staticMeshRenderable = RequiredType(ksa, "KSA.StaticMeshRenderable");
         Type keyHash = vehicle.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
             .Single(method => method.Name == "AddCrew" && method.GetParameters().Length == 3)
             .GetParameters()[0].ParameterType;
         Type float3 = RequiredType(numericsAssembly, "Brutal.Numerics.float3");
         Type double3 = RequiredType(numericsAssembly, "Brutal.Numerics.double3");
+        Type float4x4 = RequiredType(numericsAssembly, "Brutal.Numerics.float4x4");
         Type double4x4 = RequiredType(numericsAssembly, "Brutal.Numerics.double4x4");
+        Type locomotionState = RequiredType(ksa, "KSA.LocomotionState");
+        Type animInputs = RequiredType(ksa, "KSA.KittenAnimInputs");
+        Type animation = RequiredType(ksa, "KSA.IAnimation");
 
         RequireMethod(typeof(void), renderer, "ClearBuckets", viewport);
         MethodInfo updateSeat = RequireMethod(typeof(void), seat, "UpdateSeatedRenderable",
             viewport, typeof(int), typeof(double), double4x4.MakeByRefType());
         Require(updateSeat.GetParameters()[3].IsIn, "IVASeat.UpdateSeatedRenderable keeps its readonly matrix parameter");
-        RequireMethod(typeof(void), renderable, "UpdateSeatedAnimationState", typeof(double));
+        MethodInfo updateRenderData = RequirePublicMethod(typeof(void), renderable, "UpdateRenderData", viewport,
+            typeof(int), typeof(double), float4x4, double3, double3,
+            locomotionState.MakeByRefType(), animInputs.MakeByRefType());
+        Require(updateRenderData.GetParameters()[6].IsIn && updateRenderData.GetParameters()[7].IsIn,
+            "KittenRenderable.UpdateRenderData keeps both readonly state parameters");
         MethodInfo origin = RequireMethod(double3, seat, "GetSeatedModelPointAsmb", float3.MakeByRefType(), typeof(double));
         Require(origin.GetParameters()[0].IsIn, "IVASeat.GetSeatedModelPointAsmb keeps its readonly seat-offset parameter");
         RequireMethod(crewSeatResult, eva, "BoardVehicle", vehicle, door);
         RequireMethod(crewSeatResult, vehicle, "AddCrew", keyHash, typeof(string), typeof(string));
+        RequirePublicMethod(typeof(void), animatedRenderable, "PlayAnimation", animation, typeof(float));
+        RequirePublicMethod(typeof(void), animatedRenderable, "SetAnimation", animation, typeof(float));
         RequireField(renderable, "_seatedIdleAnim", RequiredType(ksa, "KSA.AnimationAssetRef"));
         RequireField(renderable, "_groundIdleAnim", RequiredType(ksa, "KSA.AnimationAssetRef"));
+        RequireField(renderable, "_characterAvatar", avatar);
+        RequireField(renderable, "_catEarAnim", catEar);
+        RequireField(renderable, "_catConditionAnim", catCondition);
+        CheckAppearanceSurfaces(avatar, catEar, catCondition, animatedRenderable, staticMeshRenderable);
+    }
+
+    private static void CheckAppearanceSurfaces(Type avatar, Type catEar, Type catCondition,
+        Type animatedRenderable, Type staticMeshRenderable)
+    {
+        Type attachments = RequiredType(avatar, "CharacterAttachments");
+        Type helmet = RequiredType(avatar, "Helmet");
+        Type avatarCore = RequiredType(avatar, "CharacterCore");
+        Type kittenRenderable = RequiredType(avatar.Assembly, "KSA.KittenRenderable");
+        RequirePublicField(avatar, "Core", avatarCore);
+        RequirePublicField(avatarCore, "CharacterModel", animatedRenderable);
+        RequirePublicField(avatar, "Attachments", attachments);
+        RequirePublicField(attachments, "Helmet", helmet);
+        RequirePublicField(helmet, "Enabled", typeof(bool));
+        RequirePublicField(helmet, "HelmetMesh", staticMeshRenderable);
+        RequirePublicField(helmet, "VisorMesh", staticMeshRenderable);
+        RequirePublicField(catEar, "ExpressionWeight", typeof(float));
+        RequirePublicField(catCondition, "PoseEars", typeof(bool));
+        RequirePublicField(animatedRenderable, "FreezeAnimation", typeof(bool));
+        RequirePublicField(kittenRenderable, "HideHead", typeof(bool));
+
+        PropertyInfo? visible = staticMeshRenderable.GetProperty("Visible", BindingFlags.Instance | BindingFlags.Public);
+        Require(visible?.PropertyType == typeof(bool) && visible.GetMethod?.IsPublic == true && visible.SetMethod?.IsPublic == true,
+            "StaticMeshRenderable.Visible remains a public read/write bool");
     }
 
     private static void CheckPartAndSubPartData(Assembly ksa, AssemblyLoadContext context,
@@ -69,6 +113,11 @@ internal static class NativeXmlAssertions
         Require(parts.Count == 2, $"expected 2 final Part rows, got {parts.Count}");
         object seated = parts["Unscience_WingWalker_Seated"];
         object standing = parts["Unscience_WingWalker_Standing"];
+        foreach (object part in new[] { seated, standing })
+            Require(Items(GetMember(part, "EditorTagRefs"))
+                .Select(tag => (string)GetMember(tag, "Ref")!).ToHashSet(StringComparer.Ordinal)
+                .SetEquals(new[] { "External Crew", "Capsules" }),
+                "both parts appear under External Crew and the native Capsules filter");
 
         object[] seatedSubParts = Items(GetMember(seated, "SubPartInstances")).ToArray();
         object[] standingSubParts = Items(GetMember(standing, "SubPartInstances")).ToArray();
@@ -76,10 +125,18 @@ internal static class NativeXmlAssertions
         string[] seatedKeys = seatedSubParts.Select(item => (string)GetMember(item, "Key")!).Order(StringComparer.Ordinal).ToArray();
         string[] standingKeys = standingSubParts.Select(item => (string)GetMember(item, "Key")!).Order(StringComparer.Ordinal).ToArray();
         Require(seatedSubParts.Length == 5 && seatedKeys.SequenceEqual(expectedKeys), "seated part has the five authored keyed subparts");
+        Require(seatedSubParts.Select(item => (string)GetMember(item, "Ref")!).SequenceEqual(new[]
+            { "Unscience_WingWalker_Chair", "Unscience_WingWalker_Headrest", "Unscience_WingWalker_Runners",
+              "Unscience_WingWalker_Base", "Unscience_WingWalker_Door" }),
+            "beach chair retains all original seated subpart references and order for saved modules");
         Require(standingSubParts.Length == 5 && standingKeys.SequenceEqual(expectedKeys), "native pre-pass flattened all five parent subparts into the standing part");
-        Require(seatedSubParts.Select(item => (string)GetMember(item, "Ref")!).Order(StringComparer.Ordinal)
-            .SequenceEqual(standingSubParts.Select(item => (string)GetMember(item, "Ref")!).Order(StringComparer.Ordinal)),
-            "standing part inherits the same subpart references as the seated parent");
+        Require(seatedSubParts.Select(item => (string)GetMember(item, "Key")!)
+            .SequenceEqual(standingSubParts.Select(item => (string)GetMember(item, "Key")!)),
+            "standing art retains the parent subpart order for positional save-data matching");
+        Require(standingSubParts.Select(item => (string)GetMember(item, "Ref")!).SequenceEqual(new[]
+            { "Unscience_WingWalker_FootStraps", "Unscience_WingWalker_Empty", "Unscience_WingWalker_Empty",
+              "Unscience_WingWalker_Empty", "Unscience_WingWalker_Door" }),
+            "standing mount replaces only the four chair visual slots and retains the EVA helper");
 
         object[] seatedSeats = ComponentsOf(seated, "KSA.IVASeat+IVASeatTemplate");
         object[] standingSeats = ComponentsOf(standing, "KSA.IVASeat+IVASeatTemplate");
@@ -118,24 +175,46 @@ internal static class NativeXmlAssertions
         object connector = Items(GetMember(seated, "Connectors"))
             .Single(candidate => HasEnumFlag(GetMember(candidate, "Flags")!, "ToSurface"));
         CheckSurfaceNormal(ksa, context, connector);
+        object standingConnector = Items(GetMember(standing, "Connectors")).Single();
+        CheckSurfaceNormal(ksa, context, standingConnector);
+        object standingTransform = GetMember(standingConnector, "Transform")!;
+        Require(Near(Number(GetMember(GetMember(standingTransform, "PositionValue")!, "Z")), 0.2901232),
+            "standing surface connector lies at the boot soles and strap tabs");
 
         var subparts = decoded.Where(item => item.Tag == "SubPart")
             .ToDictionary(item => item.Id, item => item.Value, StringComparer.Ordinal);
         foreach (string id in new[]
         {
-            "Unscience_WingWalker_Chair", "Unscience_WingWalker_Headrest",
-            "Unscience_WingWalker_Runners", "Unscience_WingWalker_Base"
+            "Unscience_WingWalker_Chair", "Unscience_WingWalker_FootStraps"
         })
         {
             object subpart = subparts[id];
-            object model = ComponentsOf(subpart, "KSA.PartModelModule+Template").Single();
-            Require(!(bool)GetMember(model, "Internal")!, $"{id} PartModel is external");
-            object modelMesh = GetMember(model, "Mesh")!;
-            Require(!string.IsNullOrEmpty((string)GetMember(modelMesh, "Ref")!), $"{id} model mesh has a native Ref");
+            object[] models = ComponentsOf(subpart, "KSA.PartModelModule+Template");
+            Require(models.Length == (id == "Unscience_WingWalker_Chair" ? 2 : 1),
+                $"{id} has the expected independently materialed model meshes");
+            if (id == "Unscience_WingWalker_Chair")
+                Require(models.Select(model => (string)GetMember(GetMember(model, "Mesh")!, "Ref")!)
+                    .Order(StringComparer.Ordinal).SequenceEqual(new[]
+                        { "Unscience_WingWalker_BeachChair", "Unscience_WingWalker_BeachChair_Frame" }),
+                    "seated part renders custom webbing/plastic and a separate foil frame");
+            foreach (object model in models)
+            {
+                Require(!(bool)GetMember(model, "Internal")!, $"{id} PartModel is external");
+                object modelMesh = GetMember(model, "Mesh")!;
+                Require(!string.IsNullOrEmpty((string)GetMember(modelMesh, "Ref")!), $"{id} model mesh has a native Ref");
+                if ((string)GetMember(modelMesh, "Ref")! == "Unscience_WingWalker_BeachChair_Frame")
+                    Require((string)GetMember(GetMember(model, "Material")!, "Ref")! == "CoreSurfacesB_Material",
+                        "the chair frame references native gold foil, separately from webbing/plastic");
+            }
             object view = ComponentsOf(subpart, "KSA.MeshViewModule+Template").Single();
             string viewRef = (string)GetMember(GetMember(view, "MeshView")!, "Ref")!;
             Require(viewRef.EndsWith("_VM", StringComparison.Ordinal), $"{id} MeshView targets a _VM mesh: {viewRef}");
         }
+        Require(!Items(GetMember(subparts["Unscience_WingWalker_Empty"], "Components")).Any(),
+            "legacy chair slots have no renderable or picking geometry on the standing mount");
+        foreach (string id in new[] { "Headrest", "Runners", "Base" })
+            Require(!Items(GetMember(subparts["Unscience_WingWalker_" + id], "Components")).Any(),
+                $"legacy seated {id} slot remains without old chair geometry");
 
         object evaDoor = subparts["Unscience_WingWalker_Door"];
         object doorTemplate = ComponentsOf(evaDoor, "KSA.EVADoor+Template").Single();
@@ -274,10 +353,24 @@ internal static class NativeXmlAssertions
         return method!;
     }
 
+    private static MethodInfo RequirePublicMethod(Type returnType, Type declaringType, string name, params Type[] parameters)
+    {
+        MethodInfo method = RequireMethod(returnType, declaringType, name, parameters);
+        Require(method.IsPublic, $"native typed surface remains public: {declaringType.FullName}.{name}");
+        return method;
+    }
+
     private static void RequireField(Type declaringType, string name, Type expectedType)
     {
         FieldInfo? field = declaringType.GetField(name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
         Require(field?.FieldType == expectedType, $"native injected field exists with type: {declaringType.FullName}.{name}");
+    }
+
+    private static void RequirePublicField(Type declaringType, string name, Type expectedType)
+    {
+        FieldInfo? field = declaringType.GetField(name, BindingFlags.Instance | BindingFlags.Public);
+        Require(field?.IsPublic == true && field.FieldType == expectedType,
+            $"native public field exists with type: {declaringType.FullName}.{name}");
     }
 
     private static IEnumerable<object> Items(object? value) =>
@@ -328,6 +421,9 @@ internal static class NativeXmlAssertions
     private static bool Near(double left, double right) => Math.Abs(left - right) <= Tolerance;
 
     private static Type RequiredType(Assembly assembly, string name) => assembly.GetType(name, throwOnError: true)!;
+    private static Type RequiredType(Type declaringType, string nestedName) =>
+        declaringType.GetNestedType(nestedName, BindingFlags.Public | BindingFlags.NonPublic)
+        ?? throw new TypeLoadException($"{declaringType.FullName}+{nestedName}");
     private static Type RequiredType(AssemblyLoadContext context, string assemblyName, string typeName) =>
         RequiredType(context.LoadFromAssemblyName(new AssemblyName(assemblyName)), typeName);
 

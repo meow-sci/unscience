@@ -7,6 +7,7 @@
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
     <Compile Include="../wing-walker.lib/ExternalCrewParts.cs" Link="ExternalCrewParts.cs" />
     <Compile Include="../wing-walker.lib/WingWalkerPatches.cs" Link="WingWalkerPatches.cs" />
+    <Compile Include="../wing-walker.lib/WingWalkerPatches.Appearance.cs" Link="WingWalkerPatches.Appearance.cs" />
     <Compile Include="../wing-walker.lib/WingWalkerPatches.Rendering.cs" Link="WingWalkerPatches.Rendering.cs" />
     <Compile Include="../wing-walker.lib/WingWalkerPatches.Boarding.cs" Link="WingWalkerPatches.Boarding.cs" />
   </ItemGroup>

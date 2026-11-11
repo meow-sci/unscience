@@ -10,7 +10,8 @@ Existing saved kitten colors migrate. [Controls](../war-paint.lib/README.md) · 
 `GameShutdownPatches` calls the existing Unload at the start of native Program.Dispose, after joining
 workers and draining the live device. All feature resources and UI settings are handled while KSA's
 renderer/ImGui still exist. Unload is idempotent, so StarMap's subsequent callback cannot use freed
-Vulkan handles. DOH UI removals use the physics handoff; its default offset is (1, 1, -2) m.
+Vulkan handles. DOH surface spawns use the physics handoff; Smite uses the native kill buffer.
+Its default relative offset is (1, 1, -2) m.
 
 See [evidence and native acceptance](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
 
@@ -69,7 +70,10 @@ A unified supermod that consolidates KSA feature libraries into a single ImGui w
 - Each submod has a **collapsible header** that can be expanded or collapsed
 - **DOH** — edit **Vehicle name** / **Name prefix** before either spawn button. The field defaults
   to `Kitten_doh_`; single spawns use the exact text, batches append numbers, and blank input uses
-  automatic naming. The setting is restored by scene saves. [Details](../doh/README.md#usage).
+  automatic naming. **Spawn at...** is immediately right of **Spawn Kitten(s)**: click a ground/part
+  surface to place one kitten with a green/red capsule clearance preview; Esc/right-click cancels.
+  Count/offset apply to the relative spawn action. Completed kittens save natively, and scene reset
+  cancels unexecuted placement input. [Details](../doh/README.md#usage).
 - The **Skittles Theme Editor** opens in a separate window via the "Open Theme Editor" button
 
 **You Didn't See Anything** starts disabled. Open its header and enable **Keep ImGui windows
@@ -88,7 +92,8 @@ reversible, and saved in its own scene record. Interiors are revealed globally w
 and exterior lighting remain to be checked in game. [Controls and limits](../kitchen-sink/README.md#capsule-glass-experiment).
 
 **Wing Walker:** place an External Seat or Standing Mount from the editor’s External Crew category.
-Assign crew in the part controls or board near its entry point; the portrait offers EVA. Supplies are
+Assign crew in the part controls or board near its entry point; the portrait offers EVA. A helmet
+and standing-pose fix awaits in-game visual retest. Supplies are
 finite, there is no shielding, and a surface mount does not create a habitat passage. KSA saves the
 part, crew and life support; no new sidecar is used. [Details](../wing-walker.lib/README.md) ·
 [pending acceptance](../plans/WING_WALKER.md).

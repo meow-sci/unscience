@@ -15,6 +15,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" PrivateAssets="all" />
+    <Reference Include="BepuPhysics">
+      <HintPath>$(KSAFolder)BepuPhysics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Glfw">
+      <HintPath>$(KSAFolder)Brutal.Glfw.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Brutal.Logging" Condition="Exists('$(KSAFolder)Brutal.Logging.dll')">
       <HintPath>$(KSAFolder)Brutal.Logging.dll</HintPath>
       <Private>false</Private>

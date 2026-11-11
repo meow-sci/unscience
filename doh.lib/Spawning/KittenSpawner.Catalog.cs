@@ -58,7 +58,7 @@ public sealed partial class KittenSpawner
     }
 
     /// <summary>Finds a PartTemplate by name via reflection on ModLibrary.AllParts (internal).</summary>
-    private static PartTemplate? FindPartTemplate(string partName)
+    internal static PartTemplate? FindPartTemplate(string partName)
     {
         try
         {

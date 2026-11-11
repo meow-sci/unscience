@@ -13,7 +13,7 @@ public static partial class WingWalkerPatches
     private static readonly List<(MethodBase Target, MethodInfo Patch)> Patches = new();
     private static bool _renderErrorLogged;
     private static bool _missingIdleLogged;
-    [ThreadStatic] private static IVASeat? _standingSeat;
+    [ThreadStatic] private static IVASeat? _externalSeat;
 
     public static bool IsApplied { get; private set; }
     public static string? LastError { get; private set; }
@@ -24,23 +24,28 @@ public static partial class WingWalkerPatches
         LastError = null;
         try
         {
-            RequireField("_seatedIdleAnim");
-            RequireField("_groundIdleAnim");
+            RequireField("_seatedIdleAnim", typeof(AnimationAssetRef));
+            RequireField("_groundIdleAnim", typeof(AnimationAssetRef));
+            RequireField("_characterAvatar", typeof(CharacterAvatar));
+            RequireField("_catEarAnim", typeof(CatEarAnim));
+            RequireField("_catConditionAnim", typeof(CatConditionAnim));
             Add(harmony, Required(typeof(SuperMeshRenderSystem), nameof(SuperMeshRenderSystem.ClearBuckets), typeof(IViewport)),
                 postfix: nameof(AfterClearBuckets));
+            Add(harmony, Required(typeof(IVASeat), nameof(IVASeat.GetSeatedModelPointAsmb),
+                    typeof(float3).MakeByRefType(), typeof(double)), postfix: nameof(AdjustStandingOrigin));
+            Add(harmony, Required(typeof(KittenRenderable), nameof(KittenRenderable.UpdateRenderData),
+                    typeof(IViewport), typeof(int), typeof(double), typeof(float4x4), typeof(double3), typeof(double3),
+                    typeof(LocomotionState).MakeByRefType(), typeof(KittenAnimInputs).MakeByRefType()),
+                prefix: nameof(BeginExternalAppearance), finalizer: nameof(FinishExternalAppearance));
             Add(harmony, Required(typeof(IVASeat), nameof(IVASeat.UpdateSeatedRenderable),
                     typeof(IViewport), typeof(int), typeof(double), typeof(double4x4).MakeByRefType()),
                 prefix: nameof(BeginSeat), finalizer: nameof(FinishSeat));
-            Add(harmony, Required(typeof(KittenRenderable), "UpdateSeatedAnimationState", typeof(double)),
-                prefix: nameof(BeginStandingAnimation), finalizer: nameof(FinishStandingAnimation));
-            Add(harmony, Required(typeof(IVASeat), nameof(IVASeat.GetSeatedModelPointAsmb),
-                    typeof(float3).MakeByRefType(), typeof(double)), postfix: nameof(AdjustStandingOrigin));
             Add(harmony, Required(typeof(KittenEva), nameof(KittenEva.BoardVehicle), typeof(Vehicle), typeof(EVADoor)),
                 prefix: nameof(BeginBoarding), finalizer: nameof(FinishBoarding));
             Add(harmony, Required(typeof(Vehicle), nameof(Vehicle.AddCrew), typeof(KeyHash), typeof(string), typeof(string)),
                 prefix: nameof(AddCrewToBoardingSeat));
             IsApplied = true;
-            Console.WriteLine("wing-walker: external crew rendering and standing posture ready");
+            Console.WriteLine("wing-walker: helmeted external crew and immediate standing posture ready");
         }
         catch (Exception ex)
         {
@@ -56,7 +61,8 @@ public static partial class WingWalkerPatches
         for (int i = Patches.Count - 1; i >= 0; i--)
             harmony.Unpatch(Patches[i].Target, Patches[i].Patch);
         Patches.Clear();
-        _standingSeat = null;
+        _externalSeat = null;
+        StandingBodies.Clear();
         _boardingTarget = null;
         _renderErrorLogged = false;
         _missingIdleLogged = false;
@@ -66,11 +72,11 @@ public static partial class WingWalkerPatches
     private static MethodInfo Required(Type type, string name, params Type[] args) =>
         AccessTools.Method(type, name, args) ?? throw new MissingMethodException(type.FullName, name);
 
-    private static void RequireField(string name)
+    private static void RequireField(string name, Type fieldType)
     {
         FieldInfo field = AccessTools.Field(typeof(KittenRenderable), name)
             ?? throw new MissingFieldException(typeof(KittenRenderable).FullName, name);
-        if (field.FieldType != typeof(AnimationAssetRef))
+        if (field.FieldType != fieldType)
             throw new InvalidOperationException($"KittenRenderable.{name} has an unsupported type.");
     }
 
@@ -91,39 +97,11 @@ public static partial class WingWalkerPatches
 
     private static void BeginSeat(IVASeat __instance, out IVASeat? __state)
     {
-        __state = _standingSeat;
-        _standingSeat = ExternalCrewParts.IsStanding(__instance) ? __instance : null;
+        __state = _externalSeat;
+        _externalSeat = ExternalCrewParts.IsExternal(__instance) ? __instance : null;
     }
 
-    private static void FinishSeat(IVASeat? __state) => _standingSeat = __state;
-
-    private readonly record struct StandingAnimationState(bool Changed, AnimationAssetRef? Original);
-
-    private static void BeginStandingAnimation(KittenRenderable __instance,
-        ref AnimationAssetRef? ____seatedIdleAnim, AnimationAssetRef? ____groundIdleAnim,
-        out StandingAnimationState __state)
-    {
-        __state = default;
-        if (_standingSeat == null || !ReferenceEquals(_standingSeat.Renderable, __instance)) return;
-        if (____groundIdleAnim == null)
-        {
-            if (!_missingIdleLogged)
-            {
-                _missingIdleLogged = true;
-                Console.WriteLine("wing-walker: character has no standing idle; retaining its native seated animation");
-            }
-            return;
-        }
-        __state = new StandingAnimationState(true, ____seatedIdleAnim);
-        // Native selection falls back to ground idle and returns before scheduling seated shuffles.
-        ____seatedIdleAnim = null;
-    }
-
-    private static void FinishStandingAnimation(ref AnimationAssetRef? ____seatedIdleAnim,
-        StandingAnimationState __state)
-    {
-        if (__state.Changed) ____seatedIdleAnim = __state.Original;
-    }
+    private static void FinishSeat(IVASeat? __state) => _externalSeat = __state;
 
     private static void AdjustStandingOrigin(IVASeat __instance, in float3 __0, ref double3 __result)
     {

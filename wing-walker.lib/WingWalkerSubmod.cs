@@ -17,9 +17,9 @@ public sealed class WingWalkerSubmod : ISubmod
         SubmodUI.BeginContentArea("##wing_walker_content");
         try
         {
-            ImGui.TextWrapped("Place External Seat or Standing Mount from the editor's External Crew category."u8);
+            ImGui.TextWrapped("Place External Seat or Standing Mount from the editor's External Crew category or Capsules filter."u8);
             ImGui.TextWrapped("Assign a kitten in the part's Crew controls, or board its entry point during flight. Use the crew portrait's EVA action to leave."u8);
-            ImGui.TextWrapped("Both parts reuse the stock chair. Standing Mount changes the occupant's pose. Supplies are finite; refill or connect appropriate life support before long missions."u8);
+            ImGui.TextWrapped("External Seat is a rainbow beach chair with a gold foil frame and white plastic armrests. Standing Mount secures the kitten's boots with brown leather straps and uses an upright pose, including while paused. Both show helmeted crew. Supplies are finite; refill or connect appropriate life support before long missions."u8);
             if (!WingWalkerPatches.IsApplied)
                 ImGui.TextWrapped("Crew visibility support is unavailable. Check the game log."u8);
             if (WingWalkerPatches.LastError is string error)

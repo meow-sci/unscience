@@ -1,5 +1,13 @@
 # Character / Material / GPU-Customization Mods — Game Integration Scope
 
+## DOH surface spawning (5801)
+
+**Spawn at...** adds physical collider/static/terrain picking, a full-capsule clearance preview and
+safe one-kitten placement with actual collider/centre-of-mass correction and surface velocity.
+Name/model/paint and roster integration keep their existing owners. Completed poses save natively;
+gestures/previews and unexecuted clicks cancel on scene reset. The detailed new input, physics and
+terrain surface is cataloged in [doh-placement.md](doh-placement.md). Native acceptance is pending.
+
 ## DOH native roster integration (5801)
 
 Spawn collision recovery derives the highest numeric suffix from `CelestialSystem.All.UnsafeAsList()`
@@ -380,9 +388,11 @@ Evidence: [KSA_5482_UPGRADE](../plans/KSA_5482_UPGRADE.md).
 character, offset/count and a saved War Paint preset. The default offset is (1,1,-2)m. The spawn
 engine and existing native naming/roster collision checks remain under `doh.lib/Spawning/`.
 The spawned-kitten panel follows Live War Paint's three-column striped table, showing Name, Model
-and a blank action header with red Smite buttons. Smite All fills the width; spawn/refresh use
-equal-width cells with 6 px padding. Native Info/Error logging replaces the status/count labels;
-preset helper text is removed. This UI change adds no game-state mutation or save fields.
+and a blank action header with red Smite buttons. Smite All fills the width; Spawn Kitten(s) and
+Spawn at... use equal-width cells with 6 px padding. Character choices read `ModLibrary.AllCharacters`
+once during initialization; the manual refresh action is removed. Native Info/Error logging replaces
+the status/count labels; preset helper text is removed. This UI change adds no game-state mutation
+or save fields.
 DOH's v1 adapter migrates legacy material recipes and stores its selector/detached recipe; it no
 longer captures active paint or owns GPU materials. Despawn unsets War Paint before native teardown.
 

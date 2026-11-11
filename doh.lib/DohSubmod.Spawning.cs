@@ -108,6 +108,7 @@ public sealed partial class DohSubmod
 
     private void DoSpawn()
     {
+        CancelPlacement();
         var target = GetSpawnTarget();
         if (_spawner == null || target == null) return;
 

@@ -1,10 +1,25 @@
 # Save/load lifecycle integration
 
+## DOH click-to-spawn
+
+Native KSA owns completed surface-spawned kitten poses, velocities and crew; DOH's existing
+`doh` v1/order60 record rebinds exact IDs/settings and War Paint keeps paint ownership. The new
+armed gesture, surface preview, detached query scratch and unexecuted click are transient input.
+The real `ResetDoh` invalidates the placement generation, drops references and releases input;
+unload does the same. Missing/vanilla/new scenes and repeated/cross-scene loads cannot replay
+pending spawns. Fixed range/gap/orientation policy adds no durable setting or payload field.
+Production-adapter cancellation and unchanged legacy/missing record behavior are managed-checked;
+completed native pose/motion save/load still requires in-game acceptance.
+[Integration](doh-placement.md) · [acceptance](../plans/saves-acceptance.md#doh-click-to-spawn).
+
 ## Wing Walker
 
 KSA saves the native part and template ID, `IVASeatData`, crew roster, tanks and life-support
 state. The template selects seated or standing posture; no Wing Walker sidecar or participant is
-needed. Render scope and diagnostics are transient, with no user feature flags. Repeated A–B–A
+needed. The helmet/standing appearance scope, weak animation markers and diagnostics are transient;
+the appearance fix adds no flags or settings. The beach chair and leather strap art replace
+visual references and collider data, retaining both part IDs and all five subpart IDs/keys in the
+same order (including the EvaDoor module). The Capsules tag is static template metadata; native positional module matching and save format remain intact. Repeated A–B–A
 native load, crew, resources and unload acceptance remain pending; see [plan](../plans/WING_WALKER.md).
 
 ## You Didn't See Anything
@@ -80,9 +95,11 @@ changes. Log feedback is transient KSA logging, not UI or scene state.
 
 ## 5801 native playtest: despawn and shutdown
 
-DOH's Name/Model/Smite table, equal-width spawn/refresh row and full-width Smite All change only
-presentation. Removed status/count/preset-hint labels carry no durable state; confirmations/errors
+DOH's Name/Model/Smite table, equal-width Spawn Kitten(s)/Spawn at... row and full-width Smite All
+change only presentation. Removed status/count/preset-hint labels carry no durable state; confirmations/errors
 now go to KSA's native logger. The `doh` v1 capture/reset/replay and spawn controls are unchanged.
+Character choices load during initialization; removing manual refresh preserves saved character
+selection.
 
 DOH Smite actions are transient native `VehicleDestroyBuffer` inputs, holding exact objects rather
 than name lookups. Native scene replacement disposes old vehicles; a pending input cannot retarget a

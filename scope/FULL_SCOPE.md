@@ -32,6 +32,10 @@ Runtime startup includes the [shared networking bootstrap](00-architecture-and-a
 This folder maps the suite's game types, Harmony targets, reflection, shaders, assets and lifecycle
 contracts. Update the owning area and master index in the same change as an integration edit.
 
+DOH **Spawn at...** adds viewport collider/terrain picking, a capsule-clearance preview, synchronized
+creation and scoped native input ownership. Native poses/crew and the existing DOH record retain
+save ownership; pending gestures cancel on reset. [Integration and native acceptance](doh-placement.md).
+
 DOH spawns now enter the native kitten roster and start an EVA mission. Existing tracked EVA
 kittens are repaired without replacing native history; roster/career data remain KSA-owned.
 Spawn name collisions automatically advance above the highest matching native scene/roster suffix,
@@ -76,7 +80,8 @@ Scene-save adapters extend native saves; imported files remain external dependen
 | Area file | Covers | Highlights / highest-risk seams |
 |---|---|---|
 | [`game-integration-surface.md`](game-integration-surface.md) | **Master cross-reference index** — every game type/member touched, merged across mods | Start here for "does the game still have X?"; includes the string-reflection watchlist + shader/asset table |
-| [`wing-walker.md`](wing-walker.md) | wing-walker | Native surface-mounted crew parts, render submission, standing animation/origin hooks and stock chair assets; native acceptance pending |
+| [`doh-placement.md`](doh-placement.md) | DOH click-to-spawn | Main-viewport mouse/key prefixes, physical part/static rays, accurate terrain, borrowed Bepu shape queries, capsule/COM/motion and scene cancellation; native acceptance pending |
+| [`wing-walker.md`](wing-walker.md) | wing-walker | Native surface-mounted crew parts, render submission, standing animation/origin hooks, custom chair/strap assets and native foil; native acceptance pending |
 | [`saves.md`](saves.md) | Native scene save/load extension across all bundled features; save-yourself timed auto saves | Ordered cleanup/replay, deferred world replacement, native save directory sidecars and stable part references; Save Yourself produces native saves via `GameSaveProvider` (`SaveName.TryAccept` → `UncompressedSave.Make`, no patches) |
 | [`00-architecture-and-abstractions.md`](00-architecture-and-abstractions.md) | unscience supermod shell (`Mod.cs`/`Patcher.cs`/`MenuBarPatch`/`UnscienceState`) + `ksa-abstractions.lib` | StarMap lifecycle map, consolidated-Harmony cross-ref, `HotkeyGuard`, `IvaForceRender`, providers |
 | [`vehicle-physics.md`](vehicle-physics.md) | dent-wizard, eternal-flame, garrys-torch, godzilla, i-feel-seen, the-tick | `Universe.ExecuteNextVehicleSolvers` (Eternal Flame fuel + electricity refills since 5482), `Battery.Refill`, `Vehicle.Teleport` (+ `PhysicsFrameHook.JoinOrbitReaders`), KittenEva reflection, Godzilla's `IsLargeEnoughToRender` cull redirect; **Godzilla separates visual, collider and nominal physics size; garrys-torch preserves actuator results; default-off source collisions use scoped Bepu shape suppression**; The Tick prefixes `Part.CrashTolerancePascals` and prefix/postfixes `PhysicsBubble.DetectStructuralFailure` for per-vessel indestructibility |
@@ -104,15 +109,20 @@ rocky-mcrock-face, save-yourself, skittles, sphinx, wing-walker, the-tick, thug-
 
 ## Current status against 5801
 
-Wing Walker adds native crew parts, scoped boarding and rendering hooks; solution build, managed
-tests, native XML checks and distribution checks passed. In-game acceptance remains pending. [Integration and risks](wing-walker.md) · [validation](../plans/WING_WALKER.md).
+Wing Walker adds native crew parts, scoped boarding and rendering hooks. Prior checks passed; its
+helmet and standing-pose fix passes focused and full builds, packaging and the native CPU probe; the
+updated production fixture passes; the in-game visual retest remains pending. [Integration and risks](wing-walker.md) · [validation](../plans/WING_WALKER.md).
+Standing Mount now uses custom brown leather foot straps with a GLB/picking atlas and PBR textures;
+all legacy subpart slots retain their order for native saved-state matching. External Seat uses
+rainbow webbing, textured white armrests and a native gold foil frame; both parts have the Capsules tag.
 
 DOH **Smite / Smite All** replace custom despawning with KSA's native kill input (Kill/Abandoned),
 which runs before the render-list refresh; the former physics handoff ran too late. Private War Paint
 materials release after native death, reusable presets remain, and unload leaves vehicles to KSA.
 Default offset and scene payloads stay unchanged. [Evidence, checks and native acceptance](../plans/DOH_NATIVE_KILL_5801.md).
-DOH's panel now uses a Name/Model/Smite table, equal-width spawn/refresh actions and full-width
-Smite All; transient action feedback uses KSA's logger instead of panel status/count labels.
+DOH's panel now uses a Name/Model/Smite table, equal-width Spawn Kitten(s)/Spawn at... actions and
+full-width Smite All; character choices load once during initialization. Transient action feedback
+uses KSA's logger instead of panel status/count labels.
 The earlier Unscience pre-renderer shutdown and ownership-aware Graffiti cleanup remain in place.
 
 Migrated resolved data/key references in rings, clutter, Pyro, Disco and capsule filtering. Fixed

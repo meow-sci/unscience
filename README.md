@@ -20,8 +20,9 @@ War Paint releases its private materials after death and preserves saved presets
 is **Abandoned** (custom reason strings are unsupported). Default offset remains **(1, 1, -2) m**.
 The earlier [shutdown cleanup fix](plans/DOH_DESPAWN_5801_FOLLOWUP.md) remains; native retesting is pending.
 Its spawned-kitten table has **Name**, **Model** and red **Smite** actions, with full-width
-**Smite All** below. Spawn/refresh share equal-width buttons; feedback uses KSA's logger instead
-of persistent status/count labels. Scene-save behavior is unchanged.
+**Smite All** below. **Spawn Kitten(s)** and **Spawn at...** share equal-width buttons; character
+choices load once during initialization. Feedback uses KSA's logger instead of persistent
+status/count labels. Scene-save behavior is unchanged.
 
 DOH spawns now join the native kitten roster with an active EVA mission and launched status.
 KSA maintains crew health/statistics, boarding, recovery and KIA history; older tracked DOH kittens
@@ -42,7 +43,10 @@ Humble Arteest's immediate white vessels on part-paint Enable remain unresolved;
 from the working kitten coloring path. [Investigation](plans/HUMBLE_ARTEEST_5801_PAINT_INVESTIGATION.md).
 
 **Wing Walker** adds the surface-mounted **External Seat** and **Standing Mount** for native
-crew assignment and EVA boarding. Supplies are finite and the mounts have no radiation shielding.
+crew assignment and EVA boarding. A helmet and standing-pose fix awaits in-game retest. Supplies
+are finite and the mounts have no radiation shielding. Standing Mount has simple brown leather
+foot straps; External Seat is a rainbow beach chair with a built-in gold foil frame and textured
+white plastic armrests. Both parts also appear under the editor’s Capsules filter.
 [Usage and limits](wing-walker.lib/README.md) · [validation and pending in-game checks](plans/WING_WALKER.md).
 
 # game compatibility
@@ -81,7 +85,11 @@ DOH's spawn controls include an editable vehicle name / batch prefix, initially 
 Available single names are used exactly; occupied names automatically advance above the highest
 existing suffix. Batches and blank-input automatic names also continue above native scene/roster
 numbers, including after save/load. The input is scene-saved; numbering is derived from KSA's
-current names. See [DOH usage](doh/README.md#usage).
+current names. **Spawn at...**, to the right of **Spawn Kitten(s)**, places one kitten by clicking
+ground or a vessel part. Its green/red capsule preview checks clearance; Esc/right-click cancels.
+The native-created kitten's collider/centre of mass determine its pose, and moving surfaces supply
+its initial velocity. Scene replacement cancels pending input; completed spawns use native saves
+and unchanged DOH tracking. See [DOH usage](doh/README.md#usage).
 
 Kitten Animations keeps holds and animation settings independently for each EVA kitten, even after
 switching control or the camera to another vessel. Select a kitten in the panel to edit or clear

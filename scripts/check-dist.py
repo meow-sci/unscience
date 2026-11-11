@@ -13,6 +13,11 @@ assert 'assets = [ "WingWalker.xml" ]' in (package / "mod.toml").read_text()
 for name in ("MeowSci.Unscience.dll", "MeowSci.Unscience.deps.json", "Tomlyn.dll", "LICENSE", "WingWalker.xml"):
     assert (package / name).is_file(), f"Missing runtime file: {name}"
 assert (package / "WingWalker.xml").read_bytes() == (repo / "wing-walker/WingWalker.xml").read_bytes(), "Seat asset differs from source"
+for asset in ET.parse(repo / "wing-walker/WingWalker.xml").getroot():
+    if "Path" in asset.attrib:
+        relative = asset.attrib["Path"]
+        assert (package / relative).is_file(), f"Missing Wing Walker art: {relative}"
+        assert (package / relative).read_bytes() == (repo / "wing-walker" / relative).read_bytes(), f"Stale Wing Walker art: {relative}"
 expected = set()
 pending = [repo / "unscience/unscience.csproj"]
 visited = set()

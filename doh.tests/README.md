@@ -8,9 +8,25 @@ Native spawning, material access, roster objects/lifecycle and the ImGui shell u
 stand-ins; the production roster integration helper, rollback and real save adapter are linked.
 Preset IO uses a unique temporary directory removed after a successful run. These checks do not load KSA or Vulkan.
 
-Current suite: **118 checks**.
+The placement checks also link production capsule math/contact queries, ray marching,
+gesture/reset state and native input prefixes. They execute the supplied **BepuPhysics** DLL
+and **Harmony** against managed fixtures, without loading KSA, ImGui or Vulkan. Bepu reference
+assemblies resolve through the repository's normal `KSAFolder`/`KSA_DLL_DIR` setting.
+
+Current suite: **379 checks**.
 
 Coverage includes:
+
+- capsule end-cap height, native −Z-up heading (including degenerate camera headings), arbitrary
+  rotated support points, actual COM correction and rotating-surface point velocity;
+- real Bepu clearance/penetration against floors, slopes, adjacent walls, low ceilings, other
+  capsules, borrowed collider handles, compound children and mesh/two-sided terrain contacts;
+- terrain bracketing/bisection, nearest-hit range bounds, sky/underground/nonfinite rejection;
+- one-shot click deduplication/retry and stale scene/generation rejection; real-adapter capture
+  omits pending gestures, and reset cancels them across repeated, vanilla and cross-scene loads;
+- production Harmony prefixes suppress native placement press/release and Escape, including a
+  release after cancellation; ImGui/console/native drag/map/editor/secondary/HUD gates and unpatch
+  retain native input. These are fixtures, not a running GLFW/ImGui acceptance test;
 
 - available exact names, automatic collision recovery above sparse suffixes, numeric single names,
   literal batch prefixes, large suffixes without overflow, independent prefixes and fresh scenes;

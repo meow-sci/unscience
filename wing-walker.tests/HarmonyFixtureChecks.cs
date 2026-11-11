@@ -21,7 +21,7 @@ internal static class HarmonyFixtureChecks
     {
         CheckPartMarking();
         CheckHarmonyLifecycleAndRendering();
-        CheckStandingAnimationScopes();
+        AppearanceFixtureChecks.Run();
         Console.WriteLine("PASS: external-seat marking, standing origin and posture, render scope, filtering, and Harmony lifecycle");
     }
 
@@ -79,7 +79,6 @@ internal static class HarmonyFixtureChecks
         var warm = Seat(ExternalCrewParts.StandingPartId);
         warm.UpdateSeatedRenderable(viewport, 0, 0.01, in Matrix);
         warm.GetSeatedModelPointAsmb(in Zero, 0);
-        Avatar().SelectAnimation(0.01);
         BoardingFixtureChecks.Warm();
         foreign.Patch(AccessTools.Method(typeof(SuperMeshRenderSystem), nameof(SuperMeshRenderSystem.ClearBuckets)),
             postfix: new HarmonyMethod(typeof(HarmonyFixtureChecks), nameof(ForeignClearPostfix)));
@@ -218,61 +217,12 @@ internal static class HarmonyFixtureChecks
         Require(replacementSeat.RenderCalls == 1, "new scene renderer binds without stale cached state");
     }
 
-    private static void CheckStandingAnimationScopes()
-    {
-        var harmony = new Harmony("wing-walker.fixture.animation");
-        var renderer = new SuperMeshRenderSystem();
-        var viewport = new TestViewport();
-        Program.Instance = new GameProgram { SuperMeshRenderSystem = renderer };
-        Program.RenderedViewport = viewport;
-        WingWalkerPatches.Apply(harmony);
-
-        var standingAvatar = Avatar();
-        var standing = Seat(ExternalCrewParts.StandingPartId, renderable: standingAvatar);
-        standing.UpdateSeatedRenderable(viewport, 1, 0.01, in Matrix);
-        Require(ReferenceEquals(standingAvatar.Selected, Ground), "standing occupant selects the ground idle clip");
-        Require(ReferenceEquals(standingAvatar.SeatedIdle, Seated), "standing animation restores original seated field");
-
-        var seatedAvatar = Avatar();
-        var seated = Seat(ExternalCrewParts.SeatedPartId, renderable: seatedAvatar);
-        seated.UpdateSeatedRenderable(viewport, 1, 0.01, in Matrix);
-        Require(ReferenceEquals(seatedAvatar.Selected, Seated) && ReferenceEquals(seatedAvatar.SeatedIdle, Seated),
-            "external seated occupant keeps native seated animation");
-
-        var nativeAvatar = Avatar();
-        Seat("CoreSeat", renderable: nativeAvatar).UpdateSeatedRenderable(viewport, 1, 0.01, in Matrix);
-        Require(ReferenceEquals(nativeAvatar.Selected, Seated), "native seat animation is unaffected");
-
-        var outerAvatar = Avatar();
-        var innerAvatar = Avatar();
-        var outer = Seat(ExternalCrewParts.StandingPartId, renderable: outerAvatar);
-        var inner = Seat(ExternalCrewParts.SeatedPartId, renderable: innerAvatar);
-        outerAvatar.BeforeSelect = () => inner.UpdateSeatedRenderable(viewport, 1, 0.01, in Matrix);
-        outer.UpdateSeatedRenderable(viewport, 1, 0.01, in Matrix);
-        Require(ReferenceEquals(outerAvatar.Selected, Ground) && ReferenceEquals(innerAvatar.Selected, Seated),
-            "nested seat update restores the outer standing scope");
-
-        var exceptionAvatar = Avatar();
-        exceptionAvatar.ThrowOnSelect = true;
-        var exceptionSeat = Seat(ExternalCrewParts.StandingPartId, renderable: exceptionAvatar);
-        bool threw = false;
-        try { exceptionSeat.UpdateSeatedRenderable(viewport, 1, 0.01, in Matrix); }
-        catch (InvalidOperationException) { threw = true; }
-        Require(threw && ReferenceEquals(exceptionAvatar.SeatedIdle, Seated), "animation finalizer restores original field after an exception");
-
-        var followingAvatar = Avatar();
-        var following = Seat(ExternalCrewParts.SeatedPartId, renderable: followingAvatar);
-        following.UpdateSeatedRenderable(viewport, 1, 0.01, in Matrix);
-        Require(ReferenceEquals(followingAvatar.Selected, Seated), "seat finalizer clears standing state after an exception");
-
-        var noGroundAvatar = new KittenRenderable(Seated, null);
-        Seat(ExternalCrewParts.StandingPartId, renderable: noGroundAvatar).UpdateSeatedRenderable(viewport, 1, 0.01, in Matrix);
-        Require(ReferenceEquals(noGroundAvatar.Selected, Seated), "missing ground idle safely retains native seated animation");
-        WingWalkerPatches.Remove(harmony);
-    }
-
     private static IVASeat Seat(string partId, string seatKey = "CrewSeat", KittenRenderable? renderable = null) =>
-        new(partId, seatKey) { Renderable = renderable };
+        new(partId, seatKey)
+        {
+            AssignedKittenHash = KeyHash.Make("fixture-crew"),
+            RenderableFactory = () => renderable ?? Avatar()
+        };
 
     private static KittenRenderable Avatar() => new(Seated, Ground);
     private static Vehicle VehicleWith(params IVASeat[] seats) => new(new PartTree(seats));

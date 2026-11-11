@@ -101,6 +101,8 @@
 
   <ItemGroup>
     <None Include="../wing-walker/WingWalker.xml" Link="WingWalker.xml" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../wing-walker/Meshes/**/*.glb" Link="Meshes/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../wing-walker/Textures/**/*.png" Link="Textures/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="mod.toml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -117,6 +119,11 @@
       <FilesToCopy Include="$(MSBuildThisFileDirectory)..\LICENSE" />
     </ItemGroup>
     <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(DistDir)" />
+    <ItemGroup>
+      <WingWalkerArt Include="$(TargetDir)Meshes/**/*.glb"><ArtDirectory>Meshes</ArtDirectory></WingWalkerArt>
+      <WingWalkerArt Include="$(TargetDir)Textures/**/*.png"><ArtDirectory>Textures</ArtDirectory></WingWalkerArt>
+    </ItemGroup>
+    <Copy SourceFiles="@(WingWalkerArt)" DestinationFiles="@(WingWalkerArt->'$(DistDir)%(ArtDirectory)/%(RecursiveDir)%(Filename)%(Extension)')" />
     <ItemGroup>
       <!-- Copy only resolved project dependencies, never stale DLLs left in bin by old builds. -->
       <MeowSciAssemblies Include="@(ReferenceCopyLocalPaths)"

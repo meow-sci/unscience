@@ -29,6 +29,7 @@ using MeowSci.HotPursuitLib;
 using MeowSci.PyroLib;
 using MeowSci.PebblesLib;
 using MeowSci.YouDidntSeeAnythingLib;
+using MeowSci.DohLib.Placement;
 
 namespace MeowSci.Unscience;
 
@@ -75,6 +76,7 @@ internal static class Patcher
         });
         report.TryApply("scene saves", () => NativeSaveHooks.Apply(_harmony!));
         report.TryApply("dent-wizard physics handoff", () => PhysicsFrameHook.Apply(_harmony!));
+        report.TryApply("doh surface placement input", () => PlacementInputPatches.Apply(_harmony!));
         report.TryApply("blinky", () => BlinkyPatches.Apply(_harmony!));
         report.TryApply("its-so-shiny", () => ShinyPatches.Apply(_harmony!));
         report.TryApply("camera-controller-override", () =>
@@ -120,6 +122,7 @@ internal static class Patcher
             {
                 TryRemove("scene saves", () => NativeSaveHooks.Remove(_harmony!));
                 TryRemove("hotkey-guard", () => HotkeyGuard.Unpatch(_harmony!));
+                TryRemove("doh surface placement input", () => PlacementInputPatches.Remove(_harmony!));
                 TryRemove("you-didnt-see-anything", () => HiddenUiVisibilityPatches.Remove(_harmony!));
                 TryRemove("hidden-ui-frame-hook", () => HiddenUiFrameHook.Unpatch(_harmony!));
                 TryRemove("menu-bar", () => MenuBarPatch.Remove(_harmony!));

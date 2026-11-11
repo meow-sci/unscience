@@ -17,10 +17,15 @@ Only the `unscience` mod is distributed. This project is a compile-checked devel
    suffix, including names restored from saves and names reserved by seated, retired or KIA crew.
 4. Set the body-frame offset (right, up, forward), default **(1, 1, -2) m**, and count (1–20).
 5. Choose a saved **War Paint preset**, or **stock appearance**, then click **Spawn Kitten(s)**.
-6. Use **Smite** or **Smite All** to request KSA's built-in kill action on the next input pass.
+6. Alternatively, click **Spawn at...** immediately to its right. Point at ground or a vessel part
+   in the main flight viewport: a green capsule marks a clear placement, red marks an obstruction.
+   Left-click to spawn **one** kitten; Esc/right-click cancels. Misses/blocked spots keep the picker
+   active. No reference vehicle is required. Count/offset apply to **Spawn Kitten(s)**.
+7. Use **Smite** or **Smite All** to request KSA's built-in kill action on the next input pass.
 
-**Spawn Kitten(s)** and **Refresh Characters** share an equal-width action row with the standard
-12 px gap. **Spawned Kittens** uses a striped **Name / Model / unlabeled action** table, with a red
+**Spawn Kitten(s)** and **Spawn at...** share an equal-width action row with the standard
+12 px gap. Character choices load once when DOH initializes. **Spawned Kittens** uses a striped
+**Name / Model / unlabeled action** table, with a red
 **Smite** button per row and a full-width red **Smite All** below. Action confirmations and errors
 use KSA's logger; the panel has no persistent status/count labels or War Paint helper text.
 
@@ -35,6 +40,27 @@ checks refuse a painted batch that would consume the game's reserved GPU slots.
 
 DOH contains no tint picker, random-color spawn button, material table or live recoloring controls.
 War Paint owns all kitten paint, including kittens created by native KSA and other mods.
+
+## Surface placement
+
+The picker checks physical part colliders, nearby active static geometry and accurate celestial
+terrain within **2 km**, choosing the nearest hit. It aligns the kitten's local −Z up with the
+clicked outward normal and leaves a **2 cm** capsule gap. Walls/undersides therefore produce a
+sideways/inverted initial pose; gravity and native EVA locomotion take over. This does not attach
+the kitten to a vessel. Vessel rotation and planetary rotation contribute the initial velocity.
+
+Placement validates the full capsule against neighbouring vessels/kittens, native statics and a
+local terrain mesh. The preview updates five times per second and follows its surface between
+checks; the click rechecks current geometry before spawning at the safe physics handoff. The
+native-created kitten's actual collider and centre of mass are checked again. A blocked spawn
+does not create a roster entry. Existing naming, paint and constructor-failure cleanup still apply.
+
+The picker uses the selected name/model/paint snapshot taken when armed. ImGui, console,
+secondary-viewport, editor and map clicks do not place kittens. Hiding the HUD, changing scenes
+or unloading cancels the gesture and pending work. Native clicks/releases are consumed while
+placing so the same click cannot also operate KSA's vehicle/camera/orbit controls.
+Native terrain contact, preview/input behavior and moving-surface acceptance remain pending;
+see [implementation and validation](../plans/DOH_CLICK_TO_SPAWN_RESEARCH.md#implementation).
 
 ## Built-in kitten roster
 
@@ -58,6 +84,10 @@ independent, identically painted kittens: editing one no longer recolors its for
 New scene saves store active kitten paint in War Paint's own record.
 
 Explicit saved offsets survive. Fresh, vanilla and missing-offset records use **(1, 1, -2) m**.
+Surface-spawned kittens are native-owned vehicles saved with their actual pose, motion and roster;
+the unchanged `doh` v1 record rebinds ownership without spawning duplicates. The armed gesture,
+hover preview and an unexecuted click are transient input and are cancelled by the real save reset.
+The fixed placement range, gap and orientation policy add no configurable/persisted fields.
 Native kill inputs retain the exact object, so a pending request cannot delete a same-name kitten
 reconstructed by a scene load. Native physics/GPU acceptance remains required; see
 [kill-action evidence](../plans/DOH_NATIVE_KILL_5801.md) and [managed checks](../doh.tests/README.md).

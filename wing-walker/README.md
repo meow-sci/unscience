@@ -4,8 +4,16 @@ Wing Walker is bundled in **Unscience**, the only distributed release. This thin
 project is a development host; do not load it alongside Unscience. Both hosts load the same
 `WingWalker.xml` assets and shared library patches. The standalone information panel opens with F11.
 
-In the editor, place **External Seat** or **Standing Mount** from **Unscience External
-Crew**, then assign a kitten with the native Crew controls. In flight, a kitten can board near the
+Both mounts are intended to show a helmeted occupant, with the Standing Mount standing upright.
+The appearance fix awaits a native visual retest.
+Standing Mount uses two simple brown leather straps over the boots, with subtle stitching;
+External Seat is a rainbow webbed beach chair with a built-in gold foil frame and textured white
+plastic armrests. Editable Blender art, previews and the rebuild scripts are in
+[`Art/`](Art/README.md). Development and release builds include both GLBs and the custom texture
+sets; gold foil is referenced from Core.
+
+In the editor, find **External Seat** or **Standing Mount** under **Unscience External Crew** or
+**Capsules**, then assign a kitten with the native Crew controls. In flight, a kitten can board near the
 entry point and leave using the crew portrait's EVA action. Supplies are finite, the mounts have no
 radiation shielding or Control module, and their surface connections are not habitat passages. Food
 and scrubber supplies are local and isolated by default. There are no feature

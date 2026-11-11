@@ -435,7 +435,9 @@ Global ImGui theme manager. Provides a theme picker and a full style editor that
 ### [wing-walker](wing-walker) / [wing-walker.lib](wing-walker.lib)
 
 Native surface-mounted External Seat and Standing Mount parts, native crew assignment and EVA
-boarding, finite life support and scoped crew rendering. Posture derives from the part template;
+boarding, finite life support and scoped helmet/standing crew rendering (visual retest pending). Posture derives from the part template;
+the standing model uses brown leather foot straps; the seated model is a rainbow beach chair with
+a native gold foil frame and textured white armrests. Both have editable Blender art and bundled custom PBR textures, and appear in the Capsules filter.
 KSA owns persistent part, crew and resource state, so no feature sidecar is added. The library owns
 the patches; the thin standalone host is for development, while only Unscience ships.
 [Integration](scope/wing-walker.md) · [validation](plans/WING_WALKER.md).
@@ -460,7 +462,12 @@ Occupied single names automatically gain/advance a number above the highest matc
 batches also continue above native scene and roster names, including seated/retired/KIA crew.
 Numbering is derived per prefix after loads, with no cached counter or save schema change.
 The panel uses a striped Name/Model/action table with red Smite buttons, full-width Smite All,
-equal-width spawn/refresh actions and native KSA Info/Error logging instead of status/count labels.
+equal-width **Spawn Kitten(s) / Spawn at...** actions and native KSA Info/Error logging. Character
+choices load once during initialization. Click placement compares collider/static/terrain hits,
+previews and validates the full capsule, then spawns at the synchronized physics handoff with collider/COM correction and
+surface velocity. Input prefixes own click/release pairs; exact targets and cancellation generations
+prevent old-world work. Native saves own the completed pose; gestures/previews are transient.
+[Placement integration](scope/doh-placement.md).
 
 `doh` v1 saves retain their ID/version and decode earlier tint/material/group payloads into independent
 War Paint targets. New captures store spawn settings/preset snapshot and native kitten registrations;
@@ -478,8 +485,10 @@ are diagnosed without reviving/stealing crew. See [integration](plans/DOH_ROSTER
 Links the actual DOH adapter, naming/registry/native kill-input code and central War Paint service
 against a native backend fixture. Covers names, defaults, deduplicated kill input, stale-world object
 identity, post-death private-slot release, reusable presets, legacy paint migration and scene capture.
-118 checks include collision recovery above sparse/restored suffixes, native-roster registration/repair,
-preserved career history, boarding/KIA, creation rollback and real-adapter replay/retention.
+Checks include collision recovery above sparse/restored suffixes, native-roster registration/repair,
+preserved career history, boarding/KIA, creation rollback and real-adapter replay/retention, plus
+production capsule/COM math, actual Bepu primitive/compound/mesh contacts, real-adapter placement
+cancellation and production Harmony input fixtures. Native game rendering/physics acceptance remains open.
 See its [README](doh.tests/README.md).
 
 ### [war-paint](war-paint) / [war-paint.lib](war-paint.lib)

@@ -21,10 +21,14 @@ KSA_EXTRA_DLL_DIRS=/path/to/matching-managed-dependencies \
 `KSA_DLL_DIR` can select a different assembly directory; by default it loads
 `../ksa-game-assemblies/current/dll/`. The runner reports the matching `current/version.json` build,
 reflected KSA assembly identity, and file version. It invokes native `GameContentTags.Build`,
-`ContentPrePass.Resolve`, and `ContentDeserializer.Deserialize`; checks the inherited part rows,
-module values, enum values, connector normal via KSA math, and the six Harmony target methods plus
-two injected fields; then rejects an unknown XML attribute as a strictness check. It also exercises
-native `Habitat.ComputeFullLoad` and round-trips two distinct `IVASeatData` names inside actual
-`PartInstance` components through KSA's XML overrides. It does not initialize a renderer or need GPU
-access. The parser does not resolve asset references or load rows into the live Core library;
-`IVASeat.GetSaveData` is not called because it requires the game's initialized crew roster.
+`ContentPrePass.Resolve`, and `ContentDeserializer.Deserialize`; checks inherited part rows, module
+values, enum values, connector normal via KSA math, and the six Harmony target methods plus five
+injected fields. It verifies the appearance patch's typed public surfaces, including animation
+selection, helmet visibility, avatar attachments, and ear state, then rejects an unknown XML
+attribute as a strictness check. A synthetic one-bone `Skeleton` and `IAnimation` run against the
+native `BoneAnimRuntime` reproduces the constructor-selected seated clip's zero-delta crossfade and
+confirms a zero-blend restart applies the standing pose immediately. The executable also exercises native `Habitat.ComputeFullLoad`
+and round-trips two distinct `IVASeatData` names inside actual `PartInstance` components through
+KSA's XML overrides. It does not initialize a renderer or need GPU access. The parser does not
+resolve asset references or load rows into the live Core library; `IVASeat.GetSaveData` is not
+called because it requires the game's initialized crew roster.

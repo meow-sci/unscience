@@ -78,6 +78,7 @@ public sealed partial class DohSubmod
 
     private void ResetDoh()
     {
+        CancelPlacement();
         // Native load owns kitten destruction and War Paint owns material cleanup/rebinding.
         _registry?.Clear();
         _selectedVehicle = null;

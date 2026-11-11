@@ -4,4 +4,26 @@
     <AssemblyName>MeowSci.WingWalker.NativeTests</AssemblyName>
     <RequiresKSAAssemblies>false</RequiresKSAAssemblies>
   </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="KSA" Condition="Exists('$(KSAFolder)KSA.dll')">
+      <HintPath>$(KSAFolder)KSA.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Collections" Condition="Exists('$(KSAFolder)Brutal.Collections.dll')">
+      <HintPath>$(KSAFolder)Brutal.Collections.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Memory" Condition="Exists('$(KSAFolder)Brutal.Memory.dll')">
+      <HintPath>$(KSAFolder)Brutal.Memory.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Brutal.Numerics" Condition="Exists('$(KSAFolder)Brutal.Numerics.dll')">
+      <HintPath>$(KSAFolder)Brutal.Numerics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Planet.Render.Core" Condition="Exists('$(KSAFolder)Planet.Render.Core.dll')">
+      <HintPath>$(KSAFolder)Planet.Render.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
 </Project>
