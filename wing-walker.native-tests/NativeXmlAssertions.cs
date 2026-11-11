@@ -121,9 +121,13 @@ internal static class NativeXmlAssertions
         string[] standingKeys = standingSubParts.Select(item => (string)GetMember(item, "Key")!).Order(StringComparer.Ordinal).ToArray();
         Require(seatedSubParts.Length == 5 && seatedKeys.SequenceEqual(expectedKeys), "seated part has the five authored keyed subparts");
         Require(standingSubParts.Length == 5 && standingKeys.SequenceEqual(expectedKeys), "native pre-pass flattened all five parent subparts into the standing part");
-        Require(seatedSubParts.Select(item => (string)GetMember(item, "Ref")!).Order(StringComparer.Ordinal)
-            .SequenceEqual(standingSubParts.Select(item => (string)GetMember(item, "Ref")!).Order(StringComparer.Ordinal)),
-            "standing part inherits the same subpart references as the seated parent");
+        Require(seatedSubParts.Select(item => (string)GetMember(item, "Key")!)
+            .SequenceEqual(standingSubParts.Select(item => (string)GetMember(item, "Key")!)),
+            "standing art retains the parent subpart order for positional save-data matching");
+        Require(standingSubParts.Select(item => (string)GetMember(item, "Ref")!).SequenceEqual(new[]
+            { "Unscience_WingWalker_FootStraps", "Unscience_WingWalker_Empty", "Unscience_WingWalker_Empty",
+              "Unscience_WingWalker_Empty", "Unscience_WingWalker_Door" }),
+            "standing mount replaces only the four chair visual slots and retains the EVA helper");
 
         object[] seatedSeats = ComponentsOf(seated, "KSA.IVASeat+IVASeatTemplate");
         object[] standingSeats = ComponentsOf(standing, "KSA.IVASeat+IVASeatTemplate");
@@ -162,13 +166,18 @@ internal static class NativeXmlAssertions
         object connector = Items(GetMember(seated, "Connectors"))
             .Single(candidate => HasEnumFlag(GetMember(candidate, "Flags")!, "ToSurface"));
         CheckSurfaceNormal(ksa, context, connector);
+        object standingConnector = Items(GetMember(standing, "Connectors")).Single();
+        CheckSurfaceNormal(ksa, context, standingConnector);
+        object standingTransform = GetMember(standingConnector, "Transform")!;
+        Require(Near(Number(GetMember(GetMember(standingTransform, "PositionValue")!, "Z")), 0.2901232),
+            "standing surface connector lies at the boot soles and strap tabs");
 
         var subparts = decoded.Where(item => item.Tag == "SubPart")
             .ToDictionary(item => item.Id, item => item.Value, StringComparer.Ordinal);
         foreach (string id in new[]
         {
             "Unscience_WingWalker_Chair", "Unscience_WingWalker_Headrest",
-            "Unscience_WingWalker_Runners", "Unscience_WingWalker_Base"
+            "Unscience_WingWalker_Runners", "Unscience_WingWalker_Base", "Unscience_WingWalker_FootStraps"
         })
         {
             object subpart = subparts[id];
@@ -180,6 +189,8 @@ internal static class NativeXmlAssertions
             string viewRef = (string)GetMember(GetMember(view, "MeshView")!, "Ref")!;
             Require(viewRef.EndsWith("_VM", StringComparison.Ordinal), $"{id} MeshView targets a _VM mesh: {viewRef}");
         }
+        Require(!Items(GetMember(subparts["Unscience_WingWalker_Empty"], "Components")).Any(),
+            "legacy chair slots have no renderable or picking geometry on the standing mount");
 
         object evaDoor = subparts["Unscience_WingWalker_Door"];
         object doorTemplate = ComponentsOf(evaDoor, "KSA.EVADoor+Template").Single();

@@ -25,7 +25,9 @@ production Harmony input and real-adapter cancellation checks pass alongside exi
 
 Native parts, `IVASeatData`, roster, tanks and life support own all durable state; part template
 selects posture. No feature sidecar is required, and appearance scope, weak animation markers and
-diagnostics are transient. The appearance fix adds no settings and leaves IDs, XML and save format unchanged.
+diagnostics are transient. The appearance fix adds no settings. The standing strap model changes
+XML visual references, connector and collider while preserving both part IDs, all five subpart
+keys/order, the EvaDoor module and save format. The native parser check verifies that order.
 The native XML fixture round-trips two `IVASeatData` crew names and both part IDs within
 `PartInstance` data. It does not call `IVASeat.GetSaveData` or load a running scene. Repeated A–B–A
 in-game save/load and resource/crew acceptance remain pending; see [validation](WING_WALKER.md).

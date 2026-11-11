@@ -1,8 +1,9 @@
 # Wing Walker library
 
 Wing Walker adds **External Seat** and **Standing Mount** as regular surface-mounted
-vehicle parts in the editor's **External Crew** category. Both use the stock chair's
-appearance; the stand is intended to display its occupant upright and both parts display helmets.
+vehicle parts in the editor's **External Crew** category. External Seat uses the stock chair;
+Standing Mount uses two simple stitched brown leather straps over the boots. The stand is
+intended to display its occupant upright and both parts display helmets.
 Assign a kitten through the part's native
 Crew controls, or approach the entry point in flight (about one metre) and board; use the crew
 portrait's EVA action to leave. The panel is informational and has no feature toggles.
@@ -17,7 +18,10 @@ separate concerns.
 The saved native part template determines posture. KSA owns the part, seat assignment, roster,
 tanks and life-support state, so this feature adds no save sidecar. Render scope and diagnostic
 flags are temporary. The two IDs are `Unscience_WingWalker_Seated` and
-`Unscience_WingWalker_Standing`; the latter inherits the former and patches the seat position.
+`Unscience_WingWalker_Standing`; the latter inherits the former and patches the seat position,
+visual references, surface connector and collider. All five legacy subpart keys retain their
+original order: the Chair slot holds the straps, Headrest/Runners/Base use empty templates, and
+EvaDoor retains its native module. This preserves the positional layout used for saved modules.
 
 Boarding scopes the exact aligned door and seat, so multiple copies of the same part do not resolve
 to the wrong seat when native runtime IDs coincide. Native crew assignment, suit return, EVA
@@ -40,8 +44,12 @@ cleared on unload. Missing ground idle logs once and retains the native seated a
 origin correction uses KSA's 0.7552 m portrait eye height while retaining the seat position for IVA
 cameras. Patches roll back on installation failure and are removed on unload.
 
-The shared XML creates new external model definitions referencing stock chair meshes and material;
-it does not change the stock IVA props. Both the combined and standalone development host load the
+The shared XML creates external seated models referencing stock chair meshes and material, plus
+a custom GLB atlas, picking twin and diffuse/normal/ORM leather textures for the standing mount.
+The strap tabs and boot soles align with the surface connector at Z=0.2901232; a small bounding
+box replaces the chair collider. The inherited simulation mass and life support are retained.
+Editable art and the Blender rebuild script live in [`wing-walker/Art`](../wing-walker/Art/README.md).
+Both the combined and standalone development host load the
 same asset and install the same library patches. Use only one host at a time. **Unscience is the only
 release**; the standalone host is for development. See the [integration inventory](../scope/wing-walker.md)
 and [validation plan](../plans/WING_WALKER.md). Focused and full builds, packaging and the native

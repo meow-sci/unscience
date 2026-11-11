@@ -2,6 +2,29 @@
 <Assets>
   <EditorTagDef Id="External Crew" />
 
+  <MeshAtlas Id="Unscience_WingWalker_StandingAtlas" Path="Meshes/WingWalker_StandingMount.glb" />
+  <Texture Id="Unscience_WingWalker_LeatherDiffuse" Path="Textures/WingWalker_Leather_Diffuse.png" Category="Vessel" />
+  <Texture Id="Unscience_WingWalker_LeatherNormal" Path="Textures/WingWalker_Leather_Normal.png" Category="Vessel" />
+  <Texture Id="Unscience_WingWalker_LeatherORM" Path="Textures/WingWalker_Leather_ORM.png" Category="Vessel" />
+  <PbrMaterial Id="Unscience_WingWalker_Leather">
+    <Diffuse Ref="Unscience_WingWalker_LeatherDiffuse" />
+    <Normal Ref="Unscience_WingWalker_LeatherNormal" />
+    <AoRoughMetal Ref="Unscience_WingWalker_LeatherORM" />
+  </PbrMaterial>
+  <SubPart Id="Unscience_WingWalker_FootStraps">
+    <Components>
+      <PartModel Key="FootStrapsModel">
+        <Internal>false</Internal>
+        <Mesh Ref="Unscience_WingWalker_FootStraps" />
+        <Material Ref="Unscience_WingWalker_Leather" />
+        <RayTracing>Enabled</RayTracing>
+      </PartModel>
+      <MeshView><Mesh Ref="Unscience_WingWalker_FootStraps_VM" /></MeshView>
+    </Components>
+  </SubPart>
+  <!-- Keep the legacy subpart slots and order so saved crew/modules still line up. -->
+  <SubPart Id="Unscience_WingWalker_Empty" />
+
   <!-- Reuse Core's visual and view meshes without making the stock IVA props external. -->
   <SubPart Id="Unscience_WingWalker_Chair">
     <Components>
@@ -127,11 +150,30 @@
   </Part>
 
   <Part Id="Unscience_WingWalker_Standing" Parent="Unscience_WingWalker_Seated" DisplayName="Standing Mount">
+    <SubParts Modify="Extend">
+      <SubPart Key="Chair" Ref="Unscience_WingWalker_FootStraps" Modify="Patch" />
+      <SubPart Key="Headrest" Ref="Unscience_WingWalker_Empty" Modify="Patch" />
+      <SubPart Key="Runners" Ref="Unscience_WingWalker_Empty" Modify="Patch" />
+      <SubPart Key="Base" Ref="Unscience_WingWalker_Empty" Modify="Patch" />
+    </SubParts>
+    <Connectors Modify="Extend">
+      <Connector Key="SurfaceMount" Modify="Patch">
+        <Transform Modify="Patch"><Position Z="0.2901232" /></Transform>
+      </Connector>
+    </Connectors>
     <Components Modify="Extend">
       <IVASeat Key="CrewSeat" Modify="Patch">
-        <!-- Base top is Z=0.2901232; 0.7552 m eye height along up (-Z). -->
+        <!-- Boot soles and strap tabs are Z=0.2901232; eye height is 0.7552 m. -->
         <Position X="0.01404" Y="0.00495" Z="-0.4650768" />
       </IVASeat>
+      <Collider Key="SeatCollider" Modify="Replace">
+        <Colliders>
+          <Box Key="FootStrapsBox">
+            <LocationAsmb X="0.04104" Y="0.00495" Z="0.2351232" />
+            <LengthX M="0.082" /><LengthY M="0.524" /><LengthZ M="0.11" />
+          </Box>
+        </Colliders>
+      </Collider>
     </Components>
   </Part>
 </Assets>

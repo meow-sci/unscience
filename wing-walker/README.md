@@ -6,6 +6,9 @@ project is a development host; do not load it alongside Unscience. Both hosts lo
 
 Both mounts are intended to show a helmeted occupant, with the Standing Mount standing upright.
 The appearance fix awaits a native visual retest.
+Standing Mount uses two simple brown leather straps over the boots, with subtle stitching;
+External Seat uses the Core chair. Editable Blender art, a preview and the rebuild script are in
+[`Art/`](Art/README.md). Both development and release builds include the GLB and leather textures.
 
 In the editor, place **External Seat** or **Standing Mount** from **Unscience External
 Crew**, then assign a kitten with the native Crew controls. In flight, a kitten can board near the

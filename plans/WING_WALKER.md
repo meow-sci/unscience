@@ -3,6 +3,30 @@
 Implementation adds native External Seat and Standing Mount parts to Unscience. The
 standalone host is for development; only the combined package is released. [Surface inventory](../scope/wing-walker.md).
 
+## Standing Mount leather art
+
+Standing Mount replaces the chair visuals with two simple brown leather straps over the boots,
+with small flat tabs and subtle edge stitching. The Blender source, rebuild script and preview are
+in [`wing-walker/Art`](../wing-walker/Art/README.md). One GLB holds a visible and `_VM` picking mesh;
+three 256px PNGs supply diffuse, normal and packed AO/roughness/metalness. The model was checked
+around the installed 5707.1 kitten boots in Blender; no Core art is included in the source/export.
+
+The existing standing eye point is retained. Tabs/soles and the surface connector share
+Z=0.2901232; the chair collider is replaced with the strap envelope. Both part IDs and all five
+subpart keys/order remain stable, with Chair holding the straps, Headrest/Runners/Base using an
+empty template, and EvaDoor retained. Native life support and simulation mass are inherited.
+The 5801 native parser check passes with 15 rows and zero content errors, including the original
+subpart order, strap references, crew eye point, connector math and crew-save serialization.
+The production Harmony fixture passes. Native editor/flight visuals, standing-idle fit and
+repeated save/load still need in-game acceptance.
+
+The full solution and final Unscience package builds pass with zero warnings/errors. The fresh
+`/private/tmp/unscience-wing-walker-straps-dist` passes `scripts/check-dist.py`, including exact
+source-byte comparisons of the GLB and all three textures. Offline GLB checks verify the mesh
+names/picking twin, identity node transforms, normal/UV/tangent streams, finite bounds, the sole
+plane and three embedded textures. Blender source textures are packed and the source contains
+only the straps and preview camera/lights.
+
 Chair placement and native schema come from CURRENT 5801 XML/source. Mesh names and bounds were
 also checked against the installed macOS 5707.1 Core chair atlas; the reference snapshot contains
 no mesh payload. Live 5801 visual acceptance therefore remains necessary.
@@ -57,6 +81,9 @@ Graphics, physics, boarding and scene save/load still require the in-game accept
   portraits and animation, with helmets and ears in external views, including a paused frame (dt=0).
   Check own IVA head/helmet/visor hiding, external/portrait views in the same frame, and War Paint
   visor behavior. Test absent standing idle if a suitable character exists.
+- Check brown leather straps over both boots, grain/stitching, editor picking/thumbnail, shadows,
+  surface attachment and the small collider. Confirm no chair visuals remain on Standing Mount
+  and load an earlier standing craft/scene with its original five subparts.
 - Verify controlled, noncontrolled and no-controlled-vehicle views, multiple vehicles and secondary
   viewports; check for missing or duplicate crew and consistent ear pose. Test scaled parts,
   transitions between seated and standing occupants, and unload/reload.

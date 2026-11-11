@@ -949,6 +949,10 @@ are recorded separately from native visual acceptance.
 | `Controls : (control modules)` (rev 4699, backs `Vehicle.IsControllable`) | direct API | `KSA/PartTree.cs:49` | (informational) | — | ADDITIVE | new in 4750; not consumed |
 
 ### KSA.PbrMaterialReference
+
+Wing Walker's standing mount also declares a native `MeshAtlas`, a visible/picking mesh pair and
+diffuse/normal/ORM `Texture` rows in `WingWalker.xml`. Exported vertices bake KSA part space; both
+hosts package the GLB and PNGs. Legacy subpart keys/order remain stable. [Asset contracts and risks](wing-walker.md).
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
 | `{DiffuseReference, NormalReference, PBRMap, EmissiveMap} : DataReference<TextureReference>`; `Id` on the direct material | resolved-data/reflection | CURRENT `KSA/PbrMaterialReference.cs:12-21` | doh, free-fallin, rings, pebbles | `GameDataReference.cs`; feature material controllers | Migrated @5801 | Get() removed; follow Value, keeping unresolved links null. TexturePowerReference retired |
