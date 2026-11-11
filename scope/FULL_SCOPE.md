@@ -75,6 +75,7 @@ Scene-save adapters extend native saves; imported files remain external dependen
 | Area file | Covers | Highlights / highest-risk seams |
 |---|---|---|
 | [`game-integration-surface.md`](game-integration-surface.md) | **Master cross-reference index** — every game type/member touched, merged across mods | Start here for "does the game still have X?"; includes the string-reflection watchlist + shader/asset table |
+| [`wing-walker.md`](wing-walker.md) | wing-walker | Native surface-mounted crew parts, render submission, standing animation/origin hooks and stock chair assets; native acceptance pending |
 | [`saves.md`](saves.md) | Native scene save/load extension across all bundled features; save-yourself timed auto saves | Ordered cleanup/replay, deferred world replacement, native save directory sidecars and stable part references; Save Yourself produces native saves via `GameSaveProvider` (`SaveName.TryAccept` → `UncompressedSave.Make`, no patches) |
 | [`00-architecture-and-abstractions.md`](00-architecture-and-abstractions.md) | unscience supermod shell (`Mod.cs`/`Patcher.cs`/`MenuBarPatch`/`UnscienceState`) + `ksa-abstractions.lib` | StarMap lifecycle map, consolidated-Harmony cross-ref, `HotkeyGuard`, `IvaForceRender`, providers |
 | [`vehicle-physics.md`](vehicle-physics.md) | dent-wizard, eternal-flame, garrys-torch, godzilla, i-feel-seen, the-tick | `Universe.ExecuteNextVehicleSolvers` (Eternal Flame fuel + electricity refills since 5482), `Battery.Refill`, `Vehicle.Teleport` (+ `PhysicsFrameHook.JoinOrbitReaders`), KittenEva reflection, Godzilla's `IsLargeEnoughToRender` cull redirect; **Godzilla separates visual, collider and nominal physics size; garrys-torch preserves actuator results; default-off source collisions use scoped Bepu shape suppression**; The Tick prefixes `Part.CrashTolerancePascals` and prefix/postfixes `PhysicsBubble.DetectStructuralFailure` for per-vessel indestructibility |
@@ -93,14 +94,17 @@ Scene-save adapters extend native saves; imported files remain external dependen
 | [`ui-customization.md`](ui-customization.md) | skittles, kitchen-sink, you-didnt-see-anything | `ImGui` style surface, F2 window/platform filtering, stock gauge exclusion, editor refresh/IVA rendering, **experimental medium-capsule exterior-window reveal** via exact static-model filtering, and selected-vehicle G-load protection via `PhysicsBubble.DetectStructuralFailure`; Flexo diagnostics removed |
 | [`audio.md`](audio.md) | byo-music | Shared sound imports, FMOD stream/channel ownership, vessel-relative 3D playback and repeat/gaps |
 
-Bundled in the unscience supermod (32): blinky, bloomin-onion, byo-music, camera-controller-override, dent-wizard, doh,
+Bundled in the unscience supermod (33): blinky, bloomin-onion, byo-music, camera-controller-override, dent-wizard, doh,
 dont-stifle-me, eternal-flame, free-fallin, garrys-torch, glass, godzilla, graffiti, hot-pursuit, humble-arteest,
 i-feel-seen, iron-man, its-so-shiny, kitchen-sink, kitten-animations, kiwis-marbles, pebbles, pyro,
-rocky-mcrock-face, save-yourself, skittles, sphinx, the-tick, thug-life, war-paint, you-didnt-see-anything, zippo. (jplrepo is a development reference and is not loaded by the supermod.)
+rocky-mcrock-face, save-yourself, skittles, sphinx, wing-walker, the-tick, thug-life, war-paint, you-didnt-see-anything, zippo. (jplrepo is a development reference and is not loaded by the supermod.)
 
 ---
 
 ## Current status against 5801
+
+Wing Walker adds native crew parts, scoped boarding and rendering hooks; solution build, managed
+tests, native XML checks and distribution checks passed. In-game acceptance remains pending. [Integration and risks](wing-walker.md) · [validation](../plans/WING_WALKER.md).
 
 DOH **Smite / Smite All** replace custom despawning with KSA's native kill input (Kill/Abandoned),
 which runs before the render-list refresh; the former physics handoff ran too late. Private War Paint

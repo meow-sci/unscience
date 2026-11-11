@@ -1,5 +1,12 @@
 # Save/load lifecycle integration
 
+## Wing Walker
+
+KSA saves the native part and template ID, `IVASeatData`, crew roster, tanks and life-support
+state. The template selects seated or standing posture; no Wing Walker sidecar or participant is
+needed. Render scope and diagnostics are transient, with no user feature flags. Repeated A–B–A
+native load, crew, resources and unload acceptance remain pending; see [plan](../plans/WING_WALKER.md).
+
 ## You Didn't See Anything
 
 `YouDidntSeeAnythingSubmod` exposes a version-1 `you-didnt-see-anything` participant through the

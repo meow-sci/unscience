@@ -1,0 +1,8 @@
+name = "wing-walker"
+description = "Seats for EVA kittens"
+version = "0.1.0"
+author = "meow sci"
+assets = [ "WingWalker.xml" ]
+
+[StarMap]
+EntryAssembly = "MeowSci.WingWalker"

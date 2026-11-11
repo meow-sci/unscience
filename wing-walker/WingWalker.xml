@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Assets>
+  <EditorTagDef Id="External Crew" />
+
+  <!-- Reuse Core's visual and view meshes without making the stock IVA props external. -->
+  <SubPart Id="Unscience_WingWalker_Chair">
+    <Components>
+      <PartModel Key="ChairModel">
+        <Internal>false</Internal>
+        <Mesh Ref="CoreIVAPropA_Subpart_ChairA" />
+        <Material Ref="CoreIVAPropA_Material" />
+        <RayTracing>Enabled</RayTracing>
+      </PartModel>
+      <MeshView><Mesh Ref="CoreIVAPropA_Subpart_ChairA_VM" /></MeshView>
+    </Components>
+  </SubPart>
+  <SubPart Id="Unscience_WingWalker_Headrest">
+    <Components>
+      <PartModel Key="HeadrestModel">
+        <Internal>false</Internal>
+        <Mesh Ref="CoreIVAPropA_Subpart_ChairAHeadrest" />
+        <Material Ref="CoreIVAPropA_Material" />
+        <RayTracing>Enabled</RayTracing>
+      </PartModel>
+      <MeshView><Mesh Ref="CoreIVAPropA_Subpart_ChairAHeadrest_VM" /></MeshView>
+    </Components>
+  </SubPart>
+  <SubPart Id="Unscience_WingWalker_Runners">
+    <Components>
+      <PartModel Key="RunnersModel">
+        <Internal>false</Internal>
+        <Mesh Ref="CoreIVAPropA_Subpart_ChairAEjectionRunners" />
+        <Material Ref="CoreIVAPropA_Material" />
+        <RayTracing>Enabled</RayTracing>
+      </PartModel>
+      <MeshView><Mesh Ref="CoreIVAPropA_Subpart_ChairAEjectionRunners_VM" /></MeshView>
+    </Components>
+  </SubPart>
+  <SubPart Id="Unscience_WingWalker_Base">
+    <Components>
+      <PartModel Key="BaseModel">
+        <Internal>false</Internal>
+        <Mesh Ref="CoreIVAPropA_Subpart_ChairABase" />
+        <Material Ref="CoreIVAPropA_Material" />
+        <RayTracing>Enabled</RayTracing>
+      </PartModel>
+      <MeshView><Mesh Ref="CoreIVAPropA_Subpart_ChairABase_VM" /></MeshView>
+    </Components>
+  </SubPart>
+  <!-- The helper has no renderable or pick mesh; the crew portrait exposes EVA. -->
+  <SubPart Id="Unscience_WingWalker_Door">
+    <Components><EVADoor Key="Door" SeatId="CrewSeat" /></Components>
+  </SubPart>
+
+  <Part Id="Unscience_WingWalker_Seated" DisplayName="External Seat">
+    <EditorTags><EditorTag Ref="External Crew" /></EditorTags>
+    <SubParts>
+      <SubPart Key="Chair" Ref="Unscience_WingWalker_Chair" />
+      <SubPart Key="Headrest" Ref="Unscience_WingWalker_Headrest">
+        <Transform><Position X="-0.28522" Y="-0.00136" Z="-0.44234" /></Transform>
+      </SubPart>
+      <SubPart Key="Runners" Ref="Unscience_WingWalker_Runners">
+        <Transform><Position X="0.05037" Z="0.31351" /></Transform>
+      </SubPart>
+      <SubPart Key="Base" Ref="Unscience_WingWalker_Base">
+        <Transform><Position X="-0.01706" Z="0.33615" /></Transform>
+      </SubPart>
+      <SubPart Key="EvaDoor" Ref="Unscience_WingWalker_Door">
+        <Transform><Position X="0.40" Z="-0.25" /></Transform>
+      </SubPart>
+    </SubParts>
+    <Connectors>
+      <Connector Key="SurfaceMount">
+        <Transform><Position Z="0.3821768" /><Rotation Y="-1.57079632679" /></Transform>
+        <Flags>ToSurface</Flags>
+      </Connector>
+    </Connectors>
+    <!-- Uniform cuboid approximation of the 12 kg seat, excluding consumables. -->
+    <InertMasses>
+      <CustomMass>
+        <LocationAsmb X="-0.03410935" Z="-0.13590665" />
+        <Mass Kg="12" />
+        <MassSpecificInertia Ixx="0.12719" Iyy="0.13672" Izz="0.08485" />
+      </CustomMass>
+    </InertMasses>
+    <Components>
+      <IVASeat Key="CrewSeat">
+        <Position X="0.01404" Y="0.00495" Z="-0.44326" />
+        <ForwardAxis X="1" /><UpAxis Z="-1" />
+      </IVASeat>
+      <Habitat Key="OpenSeat">
+        <HabitableVolume M3="0.1" /><StorageVolume M3="0.0105" />
+      </Habitat>
+      <Tank Key="OxygenBottle">
+        <SphericalTank>
+          <Material Ref="Aluminum.2014" Phase="Solid" />
+          <OuterRadius M="0.068" /><WallThickness M="0.00323" /><RoleAffinity>Air</RoleAffinity>
+        </SphericalTank>
+      </Tank>
+      <Tank Key="WaterTank">
+        <SphericalTank>
+          <Material Ref="Aluminum.2014" Phase="Solid" />
+          <OuterRadius M="0.0635" /><WallThickness M="0.001" /><RoleAffinity>Water</RoleAffinity>
+        </SphericalTank>
+      </Tank>
+      <!-- Conservative bounds for each mesh; these are physics, not the view meshes. -->
+      <Collider Key="SeatCollider">
+        <Colliders>
+          <Box Key="ChairBox">
+            <LengthX M="0.573117434" /><LengthY M="0.672234536" /><LengthZ M="0.603121042" />
+          </Box>
+          <Box Key="HeadrestBox">
+            <LocationAsmb X="-0.28522" Y="-0.00136" Z="-0.44234" />
+            <LengthX M="0.2502564" /><LengthY M="0.450436086" /><LengthZ M="0.423300148" />
+          </Box>
+          <Box Key="RunnersBox">
+            <LocationAsmb X="0.05037" Z="0.31351" />
+            <LengthX M="0.583519" /><LengthY M="0.35981962" /><LengthZ M="0.037043456" />
+          </Box>
+          <Box Key="BaseBox">
+            <LocationAsmb X="-0.01706" Z="0.33615" />
+            <LengthX M="0.367230296" /><LengthY M="0.4849594" /><LengthZ M="0.0920535252" />
+          </Box>
+        </Colliders>
+      </Collider>
+    </Components>
+  </Part>
+
+  <Part Id="Unscience_WingWalker_Standing" Parent="Unscience_WingWalker_Seated" DisplayName="Standing Mount">
+    <Components Modify="Extend">
+      <IVASeat Key="CrewSeat" Modify="Patch">
+        <!-- Base top is Z=0.2901232; 0.7552 m eye height along up (-Z). -->
+        <Position X="0.01404" Y="0.00495" Z="-0.4650768" />
+      </IVASeat>
+    </Components>
+  </Part>
+</Assets>

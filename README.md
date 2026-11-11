@@ -40,6 +40,10 @@ visor saves and legacy kitten colors remain compatible.
 Humble Arteest's immediate white vessels on part-paint Enable remain unresolved; this is separate
 from the working kitten coloring path. [Investigation](plans/HUMBLE_ARTEEST_5801_PAINT_INVESTIGATION.md).
 
+**Wing Walker** adds the surface-mounted **External Seat** and **Standing Mount** for native
+crew assignment and EVA boarding. Supplies are finite and the mounts have no radiation shielding.
+[Usage and limits](wing-walker.lib/README.md) · [validation and pending in-game checks](plans/WING_WALKER.md).
+
 # game compatibility
 
 The current checkout targets **KSA 2026.11.10.5801**, upgraded from 2026.10.25.5707.

@@ -1,3 +1,18 @@
+## Wing Walker (5801)
+
+`SuperMeshRenderSystem.ClearBuckets(IViewport)` postfix submits noncontrolled and editor external
+seats; native controlled/portrait paths remain in charge. Exact Harmony targets also include
+`IVASeat.UpdateSeatedRenderable(IViewport, int, double, ref readonly double4x4)`, private
+`KittenRenderable.UpdateSeatedAnimationState(double)` and
+`IVASeat.GetSeatedModelPointAsmb(in float3, double)`, `KittenEva.BoardVehicle(Vehicle, EVADoor)`
+and `Vehicle.AddCrew(KeyHash, string, string)`. Boarding scopes the exact aligned seat and uses
+native `Vehicle.SetSeatCrew` after duplicate, stale and occupied checks, avoiding ambiguity from
+repeated part runtime IDs; suit return and the remaining boarding path stay native. The private `AnimationAssetRef?` fields
+`_seatedIdleAnim` and `_groundIdleAnim` are name/type-checked watchlist entries; standing fallback
+is scoped and restored. Native part IDs, stock chair mesh/material dependencies, habitat, tanks,
+`CrewSeat` and `EVADoor` are inventoried in [Wing Walker](wing-walker.md). Solution build,
+managed fixtures, native XML checks and distribution checks passed; in-game acceptance remains pending.
+
 ## You Didn't See Anything — F2 window retention (5801)
 
 | Surface | Owner | Contract |
@@ -1256,6 +1271,7 @@ on every game update FIRST.
 | `ChuteRenderable._renderable` → `AnimatedRenderable.MaterialIndices` | free-fallin | private/protected field chain used immediately before `ChuteRenderable.Draw`; writes material slot zero and weakly tracks the renderable for restore | OK @5402 — new game surface and new consumer; both exact names are load-bearing |
 | `CharacterAvatar.Core.{CharacterModel,Fur,Attachments}…MaterialIndices` (AnimatedRenderable/CatFurRenderable/StaticMeshRenderable) | doh | private field-path + `protected int[]` | OK |
 | `CatExpressionAnim._expressionPose` | kitten-animations | private field by name (cache bust) | OK |
+| `KittenRenderable.UpdateSeatedAnimationState(double)` / `_seatedIdleAnim` / `_groundIdleAnim` | wing-walker | Exact private method and `AnimationAssetRef` fields checked at install; scoped null enables ground-idle fallback and finalizer restores the seated field | 5801 method and fields verified by native assembly probe; in-game animation acceptance pending. Missing ground idle logs and keeps native seated animation. |
 | `KittenRenderable._ground{Idle,Walk,Run}Anim`, `_ladderAnim`, `_jumpIntroAnim`, `_flailAnim`, `_jumpLandAnim`, `_moon{Walk,Run}Anim`, `_swimAnim`, `_swimIdleAnim`, `_seatedIdleAnim`, `_seatedIdleActionAnims`, `_walk/_run/_swimPairSampler`, `_blendSampler` | kitten-animations | 17 private fields by name — the only route to the ground animation set | OK — degrades per field into a UI warning, never a crash |
 | `KittenRenderable._catPersonalityExpressionAnim / _catExpressionAnim / _catEyeAnim / _catEarAnim` | kitten-animations | private fields by name; distinguishes the two same-typed expression processors | OK |
 | `AnimatedRenderable.UpdateAnimation` | kitten-animations | `AccessTools.Method` by name (Harmony prefix) | OK — loud `MissingMethodException` at `Apply` if renamed |
@@ -1287,6 +1303,7 @@ on every game update FIRST.
 
 | Asset / shader | Kind | Referenced as | Content path (NEW) | Consumer | 5348 |
 |---|---|---|---|---|---|
+| `CoreIVAPropA_Subpart_ChairA`, `ChairAHeadrest`, `ChairAEjectionRunners`, `ChairABase`, corresponding `_VM` meshes and `CoreIVAPropA_Material` | stock chair assets | external `PartModel` / `MeshView` references in `WingWalker.xml` | `Content/Core/CoreIVAPropAAssets.xml` | wing-walker | Native visual acceptance pending; new part/model definitions leave stock props unchanged. |
 | `UnlitMesh.vert` / `UnlitMesh.frag` | shader | `ModLibrary.Get<ShaderReference>("UnlitMeshVert"/"UnlitMeshFrag")` | `Core/DefaultAssets.xml:66,67` → `Core/Shaders/Mesh/UnlitMesh.*` | thug-life | OK (**byte-identical 4750→5018**; also untouched by 4693/4745) |
 | `GridFrag` (path anchor only) + `Common/Camera.glsl` / `Common/TextureSet.glsl` (headers, `#include`d) | shader include root + headers | `ModLibrary.Get<ShaderReference>("GridFrag").ModPath` → its **directory** is the `#include` root for graffiti's two runtime-compiled decal shaders | `Content/Core/DefaultAssets.xml:373` → `Core/Shaders/Grid.frag`; `Core/Shaders/Common/*.glsl` | graffiti | OK @5348 — a `global.camera`/`global.lighting` struct or `SAMPLE_TEXTURE`/`SET_TEXTURE` macro change fails at shaderc compile (loud console line; decals self-disable) |
 | `MeshIndirect.frag` + `MeshIndirectRaytraced.frag` (paint injection) | shader text-edit (in memory, via the `FromFile` prefix) | matched by **file name**; anchor = first `vec3 sampledColor …;` line; requires `inStateFlags` varying and `gammaToLinear` (`Common/Shared.glsl:203`) | `Content/Core/Shaders/Mesh/MeshIndirect.frag:114`; `MeshIndirectRaytraced.frag:156` | humble-arteest (VehiclePaint) | OK (rebuilt for 5018) — if the anchor moves, `Enable` fails with a UI message and rendering stays stock |

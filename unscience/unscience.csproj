@@ -27,6 +27,7 @@
     <ProjectReference Include="../godzilla.lib/godzilla.lib.csproj" />
     <ProjectReference Include="../sphinx.lib/sphinx.lib.csproj" />
     <ProjectReference Include="../iron-man.lib/iron-man.lib.csproj" />
+    <ProjectReference Include="../wing-walker.lib/wing-walker.lib.csproj" />
     <ProjectReference Include="..\graffiti.lib\graffiti.lib.csproj" />
     <ProjectReference Include="..\free-fallin.lib\free-fallin.lib.csproj" />
     <ProjectReference Include="..\hot-pursuit.lib\hot-pursuit.lib.csproj" />
@@ -99,6 +100,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="../wing-walker/WingWalker.xml" Link="WingWalker.xml" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="mod.toml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -108,6 +110,7 @@
     <MakeDir Directories="$(DistDir)" />
     <ItemGroup>
       <FilesToCopy Include="$(OutputPath)mod.toml" />
+      <FilesToCopy Include="$(OutputPath)WingWalker.xml" />
       <FilesToCopy Include="$(OutputPath)$(AssemblyName).dll" />
       <FilesToCopy Include="$(OutputPath)$(AssemblyName).pdb" />
       <FilesToCopy Include="$(OutputPath)$(AssemblyName).deps.json" />

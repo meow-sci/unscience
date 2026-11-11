@@ -74,6 +74,10 @@
     <Project Path="iron-man-flight.tests/iron-man-flight.tests.csproj" />
     <Project Path="iron-man-mode.tests/iron-man-mode.tests.csproj" />
     <Project Path="iron-man.lib/iron-man.lib.csproj" />
+    <Project Path="wing-walker/wing-walker.csproj" />
+    <Project Path="wing-walker.lib/wing-walker.lib.csproj" />
+    <Project Path="wing-walker.tests/wing-walker.tests.csproj" />
+    <Project Path="wing-walker.native-tests/wing-walker.native-tests.csproj" />
     <Project Path="saves.tests/saves.tests.csproj" />
     <Project Path="world-saves.tests/world-saves.tests.csproj" />
     <Project Path="camera-saves.tests/camera-saves.tests.csproj" />

@@ -429,6 +429,25 @@ Global ImGui theme manager. Provides a theme picker and a full style editor that
 
 ## Kitten Spawning & Customization Mods
 
+### [wing-walker](wing-walker) / [wing-walker.lib](wing-walker.lib)
+
+Native surface-mounted External Seat and Standing Mount parts, native crew assignment and EVA
+boarding, finite life support and scoped crew rendering. Posture derives from the part template;
+KSA owns persistent part, crew and resource state, so no feature sidecar is added. The library owns
+the patches; the thin standalone host is for development, while only Unscience ships.
+[Integration](scope/wing-walker.md) · [validation](plans/WING_WALKER.md).
+
+### [wing-walker.tests](wing-walker.tests)
+
+Native-free fixtures exercise the production Harmony patches: standing animation/origin, viewport
+and editor rendering, exact-seat boarding for repeated part IDs, exceptions and targeted unload.
+
+### [wing-walker.native-tests](wing-walker.native-tests)
+
+Runs the supplied KSA XML prepass/deserializer and checks native crew/part save data without a
+renderer. The documented ARM64 test option uses a temporary IL-only assembly header retarget;
+original game binaries and distributed files remain unchanged.
+
 ### [doh](doh) / [doh.lib](doh.lib)
 Programmatic kitten spawning, preferred single names or numbered batch prefixes, character selection,
 body-frame offsets (default **1, 1, -2 m**) and native **Smite / Smite All** kill actions. DOH selects an optional
@@ -574,7 +593,7 @@ Define **brand-new planetary rings at runtime** and apply them to **any celestia
 ### [unscience](unscience)
 Unified supermod that consolidates the standalone feature mods into a single ImGui window with collapsible headers and a gear icon (⚙) context menu for per-submod visibility toggles. All submod logic lives directly in the respective `.lib` projects — unscience instantiates these lib submods and orchestrates them via the `ISubmod` interface from `ksa-abstractions.lib`. A single Harmony instance consolidates their patches. Standalone mods continue to work independently.
 - F11 window toggle with unified panel for all core submods
-- Submods: Blinky, Bloomin' Onion, BYO Music, Camera Controller Override, Dent Wizard, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Iron Man, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Pebbles, Pyro, Rocky McRock Face, Save Yourself, Skittles, Sphinx, The Tick, Thug Life, Zippo (30 total; Parts Now was removed at KSA 5638)
+- Submods: Wing Walker, You Didn't See Anything, War Paint, Blinky, Bloomin' Onion, BYO Music, Camera Controller Override, Dent Wizard, Doh, Don't Stifle Me, Eternal Flame, Free Fallin, Garry's Torch, Glass, Godzilla, Graffiti, Hot Pursuit, Humble Arteest (Vehicle Paint, Kitten Color, Engine Emissive), I Feel Seen, Iron Man, Its So Shiny, Kitchen Sink, Kitten Animations, Kiwi's Marbles, Pebbles, Pyro, Rocky McRock Face, Save Yourself, Skittles, Sphinx, The Tick, Thug Life, Zippo (33 total; Parts Now was removed at KSA 5638)
 - Uses `ISubmod` interface (from `ksa-abstractions.lib`): `Name`, `Initialize()`, `Update(dt)`, `RenderContent()`, `Dispose()`
 - Each submod class lives in its `.lib` project (for example `BlinkySubmod` in `blinky.lib`)
 - `unscience/Submods/` directory removed — no thin UI wrapper layer; submod classes own their own ImGui rendering

@@ -20,6 +20,7 @@ using MeowSci.KiwisMarblesLib;
 using MeowSci.SkittlesLib;
 using MeowSci.SphinxLib;
 using MeowSci.IronManLib;
+using MeowSci.WingWalkerLib;
 using MeowSci.ZippoLib;
 using MeowSci.HumbleArteestLib;
 using MeowSci.DohLib;
@@ -103,6 +104,7 @@ public class Mod
             _submods.Add(new SaveYourselfSubmod());
             _submods.Add(skittles);
             _submods.Add(new SphinxSubmod());
+            _submods.Add(new WingWalkerSubmod());
             _submods.Add(new TheTickSubmod());
             _submods.Add(new ThugLifeSubmod());
             _submods.Add(new WarPaintSubmod());

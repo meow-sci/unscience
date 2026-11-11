@@ -18,6 +18,7 @@ using MeowSci.KsaAbstractions;
 using MeowSci.KsaAbstractions.Persistence;
 using MeowSci.SphinxLib;
 using MeowSci.IronManLib;
+using MeowSci.WingWalkerLib;
 using MeowSci.KiwisMarblesLib;
 using MeowSci.TheTickLib;
 using MeowSci.ThugLifeLib;
@@ -102,6 +103,7 @@ internal static class Patcher
         report.TryApply("kitten-animations", () => KittenAnimationPatches.Apply(_harmony!));
         report.TryApply("pyro", () => PyroPatches.Apply(_harmony!));
         report.TryApply("iron-man", () => IronManPatches.Apply(_harmony!));
+        report.TryApply("wing-walker", () => WingWalkerPatches.Apply(_harmony!));
         report.TryApply("sphinx", () => SphinxPatches.Apply(_harmony!));
         report.TryApply("graffiti", () => GraffitiPatches.Apply(_harmony!));
         report.TryApply("free-fallin", () => FreeFallinPatches.Apply(_harmony!));
@@ -145,6 +147,7 @@ internal static class Patcher
                 TryRemove("the-tick indestructibility", () => TheTickPatches.Remove(_harmony!));
                 TryRemove("kitten-animations", () => KittenAnimationPatches.Remove(_harmony!));
                 TryRemove("iron-man", () => IronManPatches.Remove(_harmony!));
+                TryRemove("wing-walker", () => WingWalkerPatches.Remove(_harmony!));
                 TryRemove("sphinx", () => SphinxPatches.Remove(_harmony!));
                 TryRemove("pyro", () => PyroPatches.Remove(_harmony!));
                 TryRemove("graffiti", () => GraffitiPatches.Remove(_harmony!));

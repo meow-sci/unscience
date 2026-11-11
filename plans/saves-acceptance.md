@@ -1,5 +1,13 @@
 # Scene save implementation coverage and native acceptance
 
+## Wing Walker
+
+Native parts, `IVASeatData`, roster, tanks and life support own all durable state; part template
+selects posture. No feature sidecar is required, and rendering scope/diagnostics are transient.
+The native XML fixture round-trips two `IVASeatData` crew names and both part IDs within
+`PartInstance` data. It does not call `IVASeat.GetSaveData` or load a running scene. Repeated A–B–A
+in-game save/load and resource/crew acceptance remain pending; see [validation](WING_WALKER.md).
+
 ## You Didn't See Anything
 
 The new version-1 `you-didnt-see-anything` record stores enabled, detached-only and stock-gauge
@@ -255,6 +263,7 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [Save Yourself](../save-yourself.lib/AutoSaveSettingsStore.cs) | Nothing. Prefix, enabled flag and interval are a global Unscience preference (`.unscience/save-yourself.toml`), written through on change. | Intentional exclusion: auto saving is a session preference, not scene state, so loads never change it and the countdown continues across loads. Countdown position, last-save name and counters are transient. The feature produces native saves via `GameSaveProvider` so every other adapter runs as for a manual save. |
 | [Skittles](../skittles.lib/SkittlesSubmod.Saves.cs) | Effective ImGui theme colors and style values. | A scene can restore its theme; native saves without a sidecar reset to the captured startup-theme baseline. Global theme library/default preference and window layout autosave are separate. |
 | [Sphinx](../sphinx.lib/SphinxSubmod.Saves.cs) | Applied body-local statics, GLB/PNG identity, anchor position/normal, scale/rotation/offset, UV mapping, visibility/alignment and collision mode. | Recreates render resources and colliders under existing limits (32 statics and aggregate vertex budget). Pending placement actions are cleared. Assets are not bundled; collision behavior requires native verification. |
+| [Wing Walker](../wing-walker.lib/README.md) | No sidecar: native part/template, IVASeatData, roster, tanks and life support. | Template selects posture; transient rendering scope and diagnostics are not persisted. Native repeated A–B–A load and crew/resource checks pending. |
 | [The Tick](../the-tick.lib/TheTickSubmod.Saves.cs) | Indestructible vehicle IDs in a version-1 `the-tick` record (order 20). | Clears old references before reconstruction and rebinds exact IDs through the shared resolver; missing/ambiguous targets warn and retain the record; unavailable patches fail visibly. Vanilla and record-less saves restore nothing; picker/filter are transient; patch installation is global. |
 | [Thug Life](../thug-life.lib/ThugLifeSubmod.Persistence.cs) | Anchored sunglasses quads, local position/rotation, size and visibility. | An entrance slide saves its current pose and stays stopped after load. Its remaining animation is not replayed. |
 | [Zippo](../zippo.lib/ZippoSubmod.Persistence.cs) | Edited shared light component originals/current values; per-part default color baselines; Disco draft and active recipes, paused state, phase/seed, switch and actuator originals; active/queued light transitions. | Disco and queued transitions continue from saved phase/elapsed values. Restores actuator ownership using current module ordinals; conflicts/layout changes warn. Shared-template edits retain their original shared scope. GPU light/material objects and live queue keys are never serialized. |

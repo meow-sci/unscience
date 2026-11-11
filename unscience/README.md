@@ -55,6 +55,7 @@ A unified supermod that consolidates KSA feature libraries into a single ImGui w
 | Save Yourself | Timed auto saves through KSA's own save path, named `<prefix>_YYYYMMDDTHHMMSS` |
 | Skittles — Theme Manager | Applies and saves ImGui themes with a built-in style editor |
 | Sphinx | Places imported textured GLB statics with terrain alignment, XYZ transforms and shared PNG overrides |
+| Wing Walker | Surface-mounted External Seat and Standing Mount for native crew, with finite supplies |
 | The Tick | Makes chosen vessels indestructible by forces: unbreakable parts plus suppressed G-load / aero-pressure destruction |
 | Thug Life | Renders a custom textured quad through KSA's main render pass |
 | War Paint | Preset material coloring, active assignments, game-log feedback and a global Show visor glass checkbox |
@@ -85,6 +86,12 @@ with its opaque exterior windows hidden and native IVA glass retained. It is off
 reversible, and saved in its own scene record. Interiors are revealed globally while enabled;
 **Always Render IVA Interiors** keeps its independent preference. Native glass alignment, tint
 and exterior lighting remain to be checked in game. [Controls and limits](../kitchen-sink/README.md#capsule-glass-experiment).
+
+**Wing Walker:** place an External Seat or Standing Mount from the editor’s External Crew category.
+Assign crew in the part controls or board near its entry point; the portrait offers EVA. Supplies are
+finite, there is no shielding, and a surface mount does not create a habitat passage. KSA saves the
+part, crew and life support; no new sidecar is used. [Details](../wing-walker.lib/README.md) ·
+[pending acceptance](../plans/WING_WALKER.md).
 
 ## Architecture
 
