@@ -88,7 +88,8 @@ reversible, and saved in its own scene record. Interiors are revealed globally w
 and exterior lighting remain to be checked in game. [Controls and limits](../kitchen-sink/README.md#capsule-glass-experiment).
 
 **Wing Walker:** place an External Seat or Standing Mount from the editor’s External Crew category.
-Assign crew in the part controls or board near its entry point; the portrait offers EVA. Supplies are
+Assign crew in the part controls or board near its entry point; the portrait offers EVA. A helmet
+and standing-pose fix awaits in-game visual retest. Supplies are
 finite, there is no shielding, and a surface mount does not create a habitat passage. KSA saves the
 part, crew and life support; no new sidecar is used. [Details](../wing-walker.lib/README.md) ·
 [pending acceptance](../plans/WING_WALKER.md).

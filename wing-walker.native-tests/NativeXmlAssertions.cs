@@ -23,6 +23,7 @@ internal static class NativeXmlAssertions
     {
         CheckPatchSignatures(ksa, context);
         CheckPartAndSubPartData(ksa, context, decoded);
+        BoneAnimRuntimeChecks.Run();
         CheckStrictDeserialization(ksa, tagTable);
         CheckInstanceSaveSerialization(ksa);
         Require(PartCollectionCount(ksa) == partCollectionCountBefore,
@@ -41,24 +42,67 @@ internal static class NativeXmlAssertions
         Type vehicle = RequiredType(ksa, "KSA.Vehicle");
         Type door = RequiredType(ksa, "KSA.EVADoor");
         Type crewSeatResult = RequiredType(ksa, "KSA.CrewSeatResult");
+        Type avatar = RequiredType(ksa, "KSA.CharacterAvatar");
+        Type catEar = RequiredType(ksa, "KSA.CatEarAnim");
+        Type catCondition = RequiredType(ksa, "KSA.CatConditionAnim");
+        Type animatedRenderable = RequiredType(ksa, "KSA.AnimatedRenderable");
+        Type staticMeshRenderable = RequiredType(ksa, "KSA.StaticMeshRenderable");
         Type keyHash = vehicle.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
             .Single(method => method.Name == "AddCrew" && method.GetParameters().Length == 3)
             .GetParameters()[0].ParameterType;
         Type float3 = RequiredType(numericsAssembly, "Brutal.Numerics.float3");
         Type double3 = RequiredType(numericsAssembly, "Brutal.Numerics.double3");
+        Type float4x4 = RequiredType(numericsAssembly, "Brutal.Numerics.float4x4");
         Type double4x4 = RequiredType(numericsAssembly, "Brutal.Numerics.double4x4");
+        Type locomotionState = RequiredType(ksa, "KSA.LocomotionState");
+        Type animInputs = RequiredType(ksa, "KSA.KittenAnimInputs");
+        Type animation = RequiredType(ksa, "KSA.IAnimation");
 
         RequireMethod(typeof(void), renderer, "ClearBuckets", viewport);
         MethodInfo updateSeat = RequireMethod(typeof(void), seat, "UpdateSeatedRenderable",
             viewport, typeof(int), typeof(double), double4x4.MakeByRefType());
         Require(updateSeat.GetParameters()[3].IsIn, "IVASeat.UpdateSeatedRenderable keeps its readonly matrix parameter");
-        RequireMethod(typeof(void), renderable, "UpdateSeatedAnimationState", typeof(double));
+        MethodInfo updateRenderData = RequirePublicMethod(typeof(void), renderable, "UpdateRenderData", viewport,
+            typeof(int), typeof(double), float4x4, double3, double3,
+            locomotionState.MakeByRefType(), animInputs.MakeByRefType());
+        Require(updateRenderData.GetParameters()[6].IsIn && updateRenderData.GetParameters()[7].IsIn,
+            "KittenRenderable.UpdateRenderData keeps both readonly state parameters");
         MethodInfo origin = RequireMethod(double3, seat, "GetSeatedModelPointAsmb", float3.MakeByRefType(), typeof(double));
         Require(origin.GetParameters()[0].IsIn, "IVASeat.GetSeatedModelPointAsmb keeps its readonly seat-offset parameter");
         RequireMethod(crewSeatResult, eva, "BoardVehicle", vehicle, door);
         RequireMethod(crewSeatResult, vehicle, "AddCrew", keyHash, typeof(string), typeof(string));
+        RequirePublicMethod(typeof(void), animatedRenderable, "PlayAnimation", animation, typeof(float));
+        RequirePublicMethod(typeof(void), animatedRenderable, "SetAnimation", animation, typeof(float));
         RequireField(renderable, "_seatedIdleAnim", RequiredType(ksa, "KSA.AnimationAssetRef"));
         RequireField(renderable, "_groundIdleAnim", RequiredType(ksa, "KSA.AnimationAssetRef"));
+        RequireField(renderable, "_characterAvatar", avatar);
+        RequireField(renderable, "_catEarAnim", catEar);
+        RequireField(renderable, "_catConditionAnim", catCondition);
+        CheckAppearanceSurfaces(avatar, catEar, catCondition, animatedRenderable, staticMeshRenderable);
+    }
+
+    private static void CheckAppearanceSurfaces(Type avatar, Type catEar, Type catCondition,
+        Type animatedRenderable, Type staticMeshRenderable)
+    {
+        Type attachments = RequiredType(avatar, "CharacterAttachments");
+        Type helmet = RequiredType(avatar, "Helmet");
+        Type avatarCore = RequiredType(avatar, "CharacterCore");
+        Type kittenRenderable = RequiredType(avatar.Assembly, "KSA.KittenRenderable");
+        RequirePublicField(avatar, "Core", avatarCore);
+        RequirePublicField(avatarCore, "CharacterModel", animatedRenderable);
+        RequirePublicField(avatar, "Attachments", attachments);
+        RequirePublicField(attachments, "Helmet", helmet);
+        RequirePublicField(helmet, "Enabled", typeof(bool));
+        RequirePublicField(helmet, "HelmetMesh", staticMeshRenderable);
+        RequirePublicField(helmet, "VisorMesh", staticMeshRenderable);
+        RequirePublicField(catEar, "ExpressionWeight", typeof(float));
+        RequirePublicField(catCondition, "PoseEars", typeof(bool));
+        RequirePublicField(animatedRenderable, "FreezeAnimation", typeof(bool));
+        RequirePublicField(kittenRenderable, "HideHead", typeof(bool));
+
+        PropertyInfo? visible = staticMeshRenderable.GetProperty("Visible", BindingFlags.Instance | BindingFlags.Public);
+        Require(visible?.PropertyType == typeof(bool) && visible.GetMethod?.IsPublic == true && visible.SetMethod?.IsPublic == true,
+            "StaticMeshRenderable.Visible remains a public read/write bool");
     }
 
     private static void CheckPartAndSubPartData(Assembly ksa, AssemblyLoadContext context,
@@ -274,10 +318,24 @@ internal static class NativeXmlAssertions
         return method!;
     }
 
+    private static MethodInfo RequirePublicMethod(Type returnType, Type declaringType, string name, params Type[] parameters)
+    {
+        MethodInfo method = RequireMethod(returnType, declaringType, name, parameters);
+        Require(method.IsPublic, $"native typed surface remains public: {declaringType.FullName}.{name}");
+        return method;
+    }
+
     private static void RequireField(Type declaringType, string name, Type expectedType)
     {
         FieldInfo? field = declaringType.GetField(name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
         Require(field?.FieldType == expectedType, $"native injected field exists with type: {declaringType.FullName}.{name}");
+    }
+
+    private static void RequirePublicField(Type declaringType, string name, Type expectedType)
+    {
+        FieldInfo? field = declaringType.GetField(name, BindingFlags.Instance | BindingFlags.Public);
+        Require(field?.IsPublic == true && field.FieldType == expectedType,
+            $"native public field exists with type: {declaringType.FullName}.{name}");
     }
 
     private static IEnumerable<object> Items(object? value) =>
@@ -328,6 +386,9 @@ internal static class NativeXmlAssertions
     private static bool Near(double left, double right) => Math.Abs(left - right) <= Tolerance;
 
     private static Type RequiredType(Assembly assembly, string name) => assembly.GetType(name, throwOnError: true)!;
+    private static Type RequiredType(Type declaringType, string nestedName) =>
+        declaringType.GetNestedType(nestedName, BindingFlags.Public | BindingFlags.NonPublic)
+        ?? throw new TypeLoadException($"{declaringType.FullName}+{nestedName}");
     private static Type RequiredType(AssemblyLoadContext context, string assemblyName, string typeName) =>
         RequiredType(context.LoadFromAssemblyName(new AssemblyName(assemblyName)), typeName);
 

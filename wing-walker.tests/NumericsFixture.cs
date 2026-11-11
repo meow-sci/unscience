@@ -5,6 +5,7 @@ public readonly struct double3(double x, double y, double z)
     public readonly double X = x;
     public readonly double Y = y;
     public readonly double Z = z;
+    public static double3 Zero => new(0, 0, 0);
     public static double3 Normalize(double3 value)
     {
         double length = System.Math.Sqrt(value.X * value.X + value.Y * value.Y + value.Z * value.Z);
@@ -33,4 +34,9 @@ public readonly struct float3(float x, float y, float z)
 public readonly struct double4x4
 {
     public static double4x4 Identity => new();
+}
+
+public readonly struct float4x4
+{
+    public static float4x4 Identity => new();
 }

@@ -2,16 +2,18 @@
 
 `SuperMeshRenderSystem.ClearBuckets(IViewport)` postfix submits noncontrolled and editor external
 seats; native controlled/portrait paths remain in charge. Exact Harmony targets also include
-`IVASeat.UpdateSeatedRenderable(IViewport, int, double, ref readonly double4x4)`, private
-`KittenRenderable.UpdateSeatedAnimationState(double)` and
+`IVASeat.UpdateSeatedRenderable(IViewport, int, double, ref readonly double4x4)`, public
+`KittenRenderable.UpdateRenderData(IViewport, int, double, float4x4, double3, double3, in LocomotionState, in KittenAnimInputs)` and
 `IVASeat.GetSeatedModelPointAsmb(in float3, double)`, `KittenEva.BoardVehicle(Vehicle, EVADoor)`
 and `Vehicle.AddCrew(KeyHash, string, string)`. Boarding scopes the exact aligned seat and uses
 native `Vehicle.SetSeatCrew` after duplicate, stale and occupied checks, avoiding ambiguity from
-repeated part runtime IDs; suit return and the remaining boarding path stay native. The private `AnimationAssetRef?` fields
-`_seatedIdleAnim` and `_groundIdleAnim` are name/type-checked watchlist entries; standing fallback
-is scoped and restored. Native part IDs, stock chair mesh/material dependencies, habitat, tanks,
-`CrewSeat` and `EVADoor` are inventoried in [Wing Walker](wing-walker.md). Solution build,
-managed fixtures, native XML checks and distribution checks passed; in-game acceptance remains pending.
+repeated part runtime IDs; suit return and the remaining boarding path stay native. The public render
+patch scopes helmet and ear pose for both external parts and an immediate ground idle for standing;
+five private appearance fields are name/type-checked and temporary changes restored. Native head
+masking, War Paint visor gating and seat-owned MMU remain intact. Native part IDs, stock chair mesh/material dependencies, habitat, tanks,
+`CrewSeat` and `EVADoor` are inventoried in [Wing Walker](wing-walker.md). Earlier solution, fixture, XML and distribution checks passed. The appearance fix passes the focused
+and full solution builds, distribution check and 5801 native signature/CPU animation probe; the
+updated production fixture passes, while in-game visual acceptance remains pending.
 
 ## You Didn't See Anything — F2 window retention (5801)
 
@@ -1276,7 +1278,7 @@ on every game update FIRST.
 | `ChuteRenderable._renderable` → `AnimatedRenderable.MaterialIndices` | free-fallin | private/protected field chain used immediately before `ChuteRenderable.Draw`; writes material slot zero and weakly tracks the renderable for restore | OK @5402 — new game surface and new consumer; both exact names are load-bearing |
 | `CharacterAvatar.Core.{CharacterModel,Fur,Attachments}…MaterialIndices` (AnimatedRenderable/CatFurRenderable/StaticMeshRenderable) | doh | private field-path + `protected int[]` | OK |
 | `CatExpressionAnim._expressionPose` | kitten-animations | private field by name (cache bust) | OK |
-| `KittenRenderable.UpdateSeatedAnimationState(double)` / `_seatedIdleAnim` / `_groundIdleAnim` | wing-walker | Exact private method and `AnimationAssetRef` fields checked at install; scoped null enables ground-idle fallback and finalizer restores the seated field | 5801 method and fields verified by native assembly probe; in-game animation acceptance pending. Missing ground idle logs and keeps native seated animation. |
+| `KittenRenderable.UpdateRenderData(IViewport, int, double, float4x4, double3, double3, in LocomotionState, in KittenAnimInputs)` / `_seatedIdleAnim`, `_groundIdleAnim`, `_characterAvatar`, `_catEarAnim`, `_catConditionAnim` | wing-walker | Exact public render target and five private fields validated by name/type at install; scoped helmet/ear appearance and standing clip; finalizer restores temporary fields and visibility | 5801 public signature, five fields and helmet surfaces pass native probe; production fixture passes; native visual acceptance pending. Missing ground idle logs and keeps native seated animation. |
 | `KittenRenderable._ground{Idle,Walk,Run}Anim`, `_ladderAnim`, `_jumpIntroAnim`, `_flailAnim`, `_jumpLandAnim`, `_moon{Walk,Run}Anim`, `_swimAnim`, `_swimIdleAnim`, `_seatedIdleAnim`, `_seatedIdleActionAnims`, `_walk/_run/_swimPairSampler`, `_blendSampler` | kitten-animations | 17 private fields by name — the only route to the ground animation set | OK — degrades per field into a UI warning, never a crash |
 | `KittenRenderable._catPersonalityExpressionAnim / _catExpressionAnim / _catEyeAnim / _catEarAnim` | kitten-animations | private fields by name; distinguishes the two same-typed expression processors | OK |
 | `AnimatedRenderable.UpdateAnimation` | kitten-animations | `AccessTools.Method` by name (Harmony prefix) | OK — loud `MissingMethodException` at `Apply` if renamed |

@@ -3,7 +3,8 @@
 ## Wing Walker
 
 Native parts, `IVASeatData`, roster, tanks and life support own all durable state; part template
-selects posture. No feature sidecar is required, and rendering scope/diagnostics are transient.
+selects posture. No feature sidecar is required, and appearance scope, weak animation markers and
+diagnostics are transient. The appearance fix adds no settings and leaves IDs, XML and save format unchanged.
 The native XML fixture round-trips two `IVASeatData` crew names and both part IDs within
 `PartInstance` data. It does not call `IVASeat.GetSaveData` or load a running scene. Repeated A–B–A
 in-game save/load and resource/crew acceptance remain pending; see [validation](WING_WALKER.md).

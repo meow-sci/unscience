@@ -51,6 +51,10 @@ internal static class Program
         Console.WriteLine($"KSA source build: {buildId}; reflected assembly identity: {ksa.GetName().FullName}; file version: {fileVersion}");
         Console.WriteLine($"KSA assembly loaded from: {ksa.Location}");
 
+        Assembly defaultKsa = LoadKsaIntoDefaultContext(loadPath, dllDirectory);
+        Require(defaultKsa.GetName().Version?.ToString() == buildId,
+            "the native BoneAnimRuntime fixture resolved a different default-context KSA build");
+
         string xmlPath = Path.Combine(repoRoot, "wing-walker", "WingWalker.xml");
         Require(File.Exists(xmlPath), $"Wing Walker asset is missing: {xmlPath}");
         List<XElement> rows = XDocument.Load(xmlPath).Root!.Elements().ToList();
@@ -162,6 +166,38 @@ internal static class Program
                 return checked((int)(rawOffset + rva - virtualAddress));
         }
         throw new InvalidOperationException("KSA.dll CLR header RVA is outside every PE section.");
+    }
+
+    private static Assembly LoadKsaIntoDefaultContext(string loadPath, string dllDirectory)
+    {
+        string[] searchDirectories = new[] { dllDirectory }
+            .Concat((Environment.GetEnvironmentVariable("KSA_EXTRA_DLL_DIRS") ?? string.Empty)
+                .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Select(Path.GetFullPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        AssemblyLoadContext.Default.Resolving += (context, name) => ResolveFromDirectories(context, name, searchDirectories);
+        return AssemblyLoadContext.Default.Assemblies.FirstOrDefault(assembly => assembly.GetName().Name == "KSA")
+            ?? AssemblyLoadContext.Default.LoadFromAssemblyPath(loadPath);
+    }
+
+    private static Assembly? ResolveFromDirectories(AssemblyLoadContext context, AssemblyName requested, string[] directories)
+    {
+        if (requested.Name == null || requested.Name.StartsWith("System.", StringComparison.Ordinal)
+            || requested.Name is "System" or "System.Private.CoreLib" or "netstandard")
+            return null;
+
+        foreach (string directory in directories)
+        {
+            string candidate = Path.Combine(directory, requested.Name + ".dll");
+            if (!File.Exists(candidate))
+                continue;
+            AssemblyName found = AssemblyName.GetAssemblyName(candidate);
+            if (requested.Version != null && found.Version != requested.Version)
+                continue;
+            return context.LoadFromAssemblyPath(candidate);
+        }
+        return null;
     }
 
     private static string FormatErrors(Type errorsType, object errors)

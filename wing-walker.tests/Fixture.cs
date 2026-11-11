@@ -6,20 +6,27 @@ using Brutal.Numerics;
 namespace KSA;
 
 public enum ViewportType { CharacterPortrait }
+public enum CameraMode { Exterior, IVA }
+public sealed class IvaController { public IVASeat? Seat; }
 
 public interface IViewport
 {
     bool Visible { get; }
     Camera GetCamera();
     bool Is(ViewportType type);
+    CameraMode Mode { get; }
 }
 
 public sealed class Camera { }
 
-public sealed class TestViewport(bool visible = true, bool portrait = false) : IViewport
+public interface IGameViewport : IViewport { IvaController IvaController { get; } }
+
+public sealed class TestViewport(bool visible = true, bool portrait = false, bool iva = false) : IGameViewport
 {
     public bool Visible { get; set; } = visible;
     public bool Portrait { get; set; } = portrait;
+    public CameraMode Mode { get; set; } = iva ? CameraMode.IVA : CameraMode.Exterior;
+    public IvaController IvaController { get; } = new();
     public Camera GetCamera() => new();
     public bool Is(ViewportType type) => type == ViewportType.CharacterPortrait && Portrait;
 }
@@ -30,34 +37,6 @@ public sealed class SuperMeshRenderSystem
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void ClearBuckets(IViewport viewport) => ClearCalls++;
-}
-
-public sealed class AnimationAssetRef(string name)
-{
-    public string Name { get; } = name;
-}
-
-public sealed class KittenRenderable(AnimationAssetRef? seated, AnimationAssetRef? ground)
-{
-    private AnimationAssetRef? _seatedIdleAnim = seated;
-    private AnimationAssetRef? _groundIdleAnim = ground;
-    public AnimationAssetRef? SeatedIdle => _seatedIdleAnim;
-    public AnimationAssetRef? GroundIdle => _groundIdleAnim;
-    public AnimationAssetRef? Selected { get; private set; }
-    public Action? BeforeSelect { get; set; }
-    public bool ThrowOnSelect { get; set; }
-    public int SelectCalls { get; private set; }
-
-    public void SelectAnimation(double dt) => UpdateSeatedAnimationState(dt);
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private void UpdateSeatedAnimationState(double dt)
-    {
-        SelectCalls++;
-        BeforeSelect?.Invoke();
-        if (ThrowOnSelect) throw new InvalidOperationException("fixture animation failure");
-        Selected = _seatedIdleAnim ?? _groundIdleAnim;
-    }
 }
 
 public sealed class Template { public string Id = string.Empty; }
@@ -85,10 +64,14 @@ public sealed class EVADoor(IVASeat? alignedSeat)
 
 public sealed class IVASeat(string partId, string templateId = "CrewSeat")
 {
+    private KeyHash _renderedKittenHash;
+    public static readonly AnimationAssetRef DefaultSeatedIdle = new("seated-idle");
+    public static readonly AnimationAssetRef DefaultGroundIdle = new("ground-idle");
     public string TemplateId { get; } = templateId;
     public Part Parent { get; } = new() { FullPart = new() { Template = new() { Id = partId } } };
     public KeyHash AssignedKittenHash { get; set; }
     public KittenRenderable? Renderable { get; set; }
+    public Func<KittenRenderable> RenderableFactory { get; set; } = () => new KittenRenderable(DefaultSeatedIdle, DefaultGroundIdle);
     public int RenderCalls { get; private set; }
     public bool ThrowOnRender { get; set; }
     public Action? DuringRender { get; set; }
@@ -101,7 +84,26 @@ public sealed class IVASeat(string partId, string templateId = "CrewSeat")
     {
         RenderCalls++;
         DuringRender?.Invoke();
-        Renderable?.SelectAnimation(dt);
+        if (AssignedKittenHash == KeyHash.Zero)
+        {
+            Renderable?.Dispose();
+            Renderable = null;
+            _renderedKittenHash = KeyHash.Zero;
+            if (ThrowOnRender) throw new InvalidOperationException("fixture seat failure");
+            return;
+        }
+        if (Renderable == null || _renderedKittenHash != AssignedKittenHash)
+        {
+            Renderable?.Dispose();
+            Renderable = RenderableFactory();
+            _renderedKittenHash = AssignedKittenHash;
+        }
+        Renderable.HideHead = viewport.Mode == CameraMode.IVA && viewport is IGameViewport gameViewport
+            && ReferenceEquals(gameViewport.IvaController.Seat, this);
+        LocomotionState locomotionState = default;
+        KittenAnimInputs animInputs = default;
+        Renderable.UpdateRenderData(viewport, inFrameIndex, dt, float4x4.Identity,
+            double3.Zero, double3.Zero, in locomotionState, in animInputs);
         if (ThrowOnRender) throw new InvalidOperationException("fixture seat failure");
     }
 
@@ -217,5 +219,6 @@ public static class Program
     public static VehicleEditor? Editor;
     public static Vehicle[] VehiclesInFrame = Array.Empty<Vehicle>();
     public static Vehicle? ControlledVehicle;
+    public static ulong FrameNumber;
     public static double GetPlayerDeltaTime() => 0.016;
 }

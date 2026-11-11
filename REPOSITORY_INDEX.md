@@ -435,7 +435,7 @@ Global ImGui theme manager. Provides a theme picker and a full style editor that
 ### [wing-walker](wing-walker) / [wing-walker.lib](wing-walker.lib)
 
 Native surface-mounted External Seat and Standing Mount parts, native crew assignment and EVA
-boarding, finite life support and scoped crew rendering. Posture derives from the part template;
+boarding, finite life support and scoped helmet/standing crew rendering (visual retest pending). Posture derives from the part template;
 KSA owns persistent part, crew and resource state, so no feature sidecar is added. The library owns
 the patches; the thin standalone host is for development, while only Unscience ships.
 [Integration](scope/wing-walker.md) · [validation](plans/WING_WALKER.md).

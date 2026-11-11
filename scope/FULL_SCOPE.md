@@ -104,8 +104,9 @@ rocky-mcrock-face, save-yourself, skittles, sphinx, wing-walker, the-tick, thug-
 
 ## Current status against 5801
 
-Wing Walker adds native crew parts, scoped boarding and rendering hooks; solution build, managed
-tests, native XML checks and distribution checks passed. In-game acceptance remains pending. [Integration and risks](wing-walker.md) · [validation](../plans/WING_WALKER.md).
+Wing Walker adds native crew parts, scoped boarding and rendering hooks. Prior checks passed; its
+helmet and standing-pose fix passes focused and full builds, packaging and the native CPU probe; the
+updated production fixture passes; the in-game visual retest remains pending. [Integration and risks](wing-walker.md) · [validation](../plans/WING_WALKER.md).
 
 DOH **Smite / Smite All** replace custom despawning with KSA's native kill input (Kill/Abandoned),
 which runs before the render-list refresh; the former physics handoff ran too late. Private War Paint

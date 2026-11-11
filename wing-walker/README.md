@@ -4,6 +4,9 @@ Wing Walker is bundled in **Unscience**, the only distributed release. This thin
 project is a development host; do not load it alongside Unscience. Both hosts load the same
 `WingWalker.xml` assets and shared library patches. The standalone information panel opens with F11.
 
+Both mounts are intended to show a helmeted occupant, with the Standing Mount standing upright.
+The appearance fix awaits a native visual retest.
+
 In the editor, place **External Seat** or **Standing Mount** from **Unscience External
 Crew**, then assign a kitten with the native Crew controls. In flight, a kitten can board near the
 entry point and leave using the crew portrait's EVA action. Supplies are finite, the mounts have no

@@ -4,7 +4,8 @@
 
 KSA saves the native part and template ID, `IVASeatData`, crew roster, tanks and life-support
 state. The template selects seated or standing posture; no Wing Walker sidecar or participant is
-needed. Render scope and diagnostics are transient, with no user feature flags. Repeated A–B–A
+needed. The helmet/standing appearance scope, weak animation markers and diagnostics are transient;
+the appearance fix adds no flags or settings and leaves IDs, XML and save format unchanged. Repeated A–B–A
 native load, crew, resources and unload acceptance remain pending; see [plan](../plans/WING_WALKER.md).
 
 ## You Didn't See Anything

@@ -2,7 +2,8 @@
 
 Wing Walker adds **External Seat** and **Standing Mount** as regular surface-mounted
 vehicle parts in the editor's **External Crew** category. Both use the stock chair's
-appearance; the stand displays its occupant upright. Assign a kitten through the part's native
+appearance; the stand is intended to display its occupant upright and both parts display helmets.
+Assign a kitten through the part's native
 Crew controls, or approach the entry point in flight (about one metre) and board; use the crew
 portrait's EVA action to leave. The panel is informational and has no feature toggles.
 
@@ -24,15 +25,24 @@ teardown and camera/control handoff still perform the actual boarding work.
 
 `WingWalkerPatches` submits external-seat occupants for noncontrolled vehicles and editor focused
 and unattached trees after `SuperMeshRenderSystem.ClearBuckets`; native code continues to render
-the controlled vehicle and character portraits. During a standing seat's animation update only,
-it temporarily clears the seated idle so native ground-idle fallback is used, restoring the field
-in a finalizer. If ground idle is unavailable it logs once and retains the seated animation. A
-standing model-origin correction uses KSA's 0.7552 m portrait eye height while retaining the seat
-position for IVA cameras. The patch set rolls back on install failure and is removed on unload.
+the controlled vehicle and character portraits. The scoped `KittenRenderable.UpdateRenderData`
+prefix enables the helmet and helmet-compatible ear
+pose for both parts; native seat ownership keeps the MMU disabled. In the occupant's own IVA view,
+`HideHead` temporarily hides helmet and visor meshes while preserving native head masking and War
+Paint's native visor gate. A finalizer restores appearance and ear/condition state.
+
+For a standing occupant with a ground idle, the same scope clears the seated clip throughout the
+public render body and temporarily unfreezes animation. The first renderable/model/clip sample uses
+`PlayAnimation` with zero blend; later samples use `SetAnimation` with zero blend. This avoids a
+paused timed blend retaining the seated pose and suppresses seated idle actions even if the selector
+is inlined. The finalizer restores the seated clip and freeze flag; weak initialization markers are
+cleared on unload. Missing ground idle logs once and retains the native seated animation. A standing
+origin correction uses KSA's 0.7552 m portrait eye height while retaining the seat position for IVA
+cameras. Patches roll back on installation failure and are removed on unload.
 
 The shared XML creates new external model definitions referencing stock chair meshes and material;
 it does not change the stock IVA props. Both the combined and standalone development host load the
 same asset and install the same library patches. Use only one host at a time. **Unscience is the only
 release**; the standalone host is for development. See the [integration inventory](../scope/wing-walker.md)
-and [validation plan](../plans/WING_WALKER.md). Managed and native XML checks pass; in-game
-graphics, physics and boarding acceptance remain pending.
+and [validation plan](../plans/WING_WALKER.md). Focused and full builds, packaging and the native
+CPU pose probe and updated production fixture pass; the in-game visual retest remains pending.
