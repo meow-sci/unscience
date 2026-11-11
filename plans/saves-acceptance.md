@@ -14,6 +14,8 @@ The new version-1 `you-didnt-see-anything` record stores enabled, detached-only 
 exclusion flags as detached booleans. Reset/missing records disable the feature; replay assigns
 the validated settings without serializing window pointers or F2 state. ImGui layout keeps its
 existing ownership, and native context/input/patch state is transient.
+Optional purr2d2 compatibility adds no saved fields. Its patch caches and mode markers are
+transient; HUD detachment/positions/visibility retain purr2d2's preference ownership.
 
 Managed feature persistence, production Harmony fixtures, shared `saves.tests`, upgrade checks,
 full solution build and package validation pass against 5801. Native acceptance below remains open.
@@ -24,6 +26,8 @@ full solution build and package validation pass against 5801. Native acceptance 
   input/visibility; no old native pointers or suppression may leak.
 - [ ] Exit/unload with F2 active and a filtered window focused. Confirm hook removal and input
   restoration before native ImGui teardown.
+- [ ] With purr2d2 panels detached, load enabled/disabled/vanilla scenes during F2. Confirm saved
+  retention flags apply, only detached panels survive, and old drags/capture do not leak across loads.
 
 [Feature checks and native acceptance](YOU_DIDNT_SEE_ANYTHING.md).
 

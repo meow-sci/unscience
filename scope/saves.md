@@ -20,6 +20,9 @@ context hooks, reflection caches, pointers, active input suppression and per-fra
 transient and must be removed/restored on disable/unload. No new state is written to global preset
 files. Missing legacy/vanilla records use reset defaults; malformed/unsupported records follow
 the coordinator's existing warning/retention policy.
+The optional purr2d2 adapter adds only transient reflection handles and F2/retention transition
+markers; it releases purr2d2's existing input capture on transitions/unload. Panel placement,
+detachment and visibility remain purr2d2 preference-owned; the existing v1 scene record is unchanged.
 [Feature integration](ui-customization.md#you-didnt-see-anything-5801) ·
 [managed and native acceptance](../plans/YOU_DIDNT_SEE_ANYTHING.md).
 

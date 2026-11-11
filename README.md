@@ -10,6 +10,7 @@ I describe it as a *supermod* that includes a suite of *submods*, each one has a
 
 **You Didn't See Anything** keeps ImGui windows visible when **F2** hides the game UI. Enable it
 in the toolbox, then optionally select **Detached OS windows only** and **Hide stock gauges**.
+It also retains purr2d2's detached Saber, Furce and Kittens controls while keeping its attached HUD hidden.
 It starts disabled; its flags travel with scene saves. Native viewport/input acceptance is pending.
 [Controls and implementation](you-didnt-see-anything.lib/README.md).
 

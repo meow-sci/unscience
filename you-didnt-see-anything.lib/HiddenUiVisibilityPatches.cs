@@ -23,6 +23,9 @@ public static class HiddenUiVisibilityPatches
         if (IsApplied) return;
         try
         {
+            // Patch purr2d2's postfix before rebuilding the game wrapper that calls it,
+            // so an already-installed postfix cannot retain an inlined F2 gate.
+            Purr2D2UiPatches.Apply(harmony);
             AddTranspiler(harmony, Required(typeof(Program), "OnFrame"), nameof(FrameTranspiler));
             AddTranspiler(harmony, Required(typeof(Program), "OnDrawUiThreadSafe"), nameof(ThreadSafeTranspiler));
             Add(harmony, Required(typeof(Program), "PrepareImGui"), nameof(PrepareImGuiPrefix), prefix: true, priority: Priority.First);
@@ -43,6 +46,7 @@ public static class HiddenUiVisibilityPatches
     public static void Remove(Harmony harmony)
     {
         IsApplied = false;
+        Purr2D2UiPatches.Remove(harmony);
         for (int i = Installed.Count - 1; i >= 0; --i)
         {
             try { harmony.Unpatch(Installed[i].Target, Installed[i].Patch); }
@@ -95,6 +99,7 @@ public static class HiddenUiVisibilityPatches
     }
 
     private static bool ShouldDrawUiAndMark() => Dispatch.BeginFrame(Program.DrawUI, VisibilitySettings.Enabled, Ready);
+    internal static bool RetainingWindows => !Program.DrawUI && VisibilitySettings.Enabled && Ready;
     private static bool ShouldDrawUi() => Dispatch.FrameDraw && (Program.DrawUI || Ready);
     private static bool MenuPrefix() => !IsHiddenPass;
     private static bool WorldOverlayPrefix() => !IsHiddenPass;

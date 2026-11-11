@@ -1,3 +1,5 @@
 # Hidden UI patch fixture
 
 Run `dotnet run --project you-didnt-see-anything.patch-tests`. This managed fixture executes the production Harmony patch installation, transpilers, fallback hook, and removal against fake KSA methods with the expected gate shape. It verifies callback counts, mid-frame disabling, stock-gauge and menu guards, the unchanged F2 flag, failure on a changed IL shape, and preservation of another Harmony owner's patches. The ImGui/native filter is stubbed; KSA.dll metadata checks live in the adjacent test project and in-game rendering/input still requires native acceptance.
+
+purr2d2 fixtures exercise its pre-existing Harmony overlay postfix, both additional F2 gates, all three panel visibility guards, detachment availability, custom main/secondary-window input, gesture release on mode changes/unload, and rollback of an incompatible optional integration. They preserve purr2d2's enable/readiness/disposal/editor checks. These are managed fixtures of the supplied source contracts, not a running purr2d2 renderer.

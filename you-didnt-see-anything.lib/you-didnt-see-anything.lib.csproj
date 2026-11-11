@@ -18,6 +18,7 @@
     <PackageReference Include="Lib.Harmony" Version="2.4.2" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="Brutal.Glfw" Condition="Exists('$(KSAFolder)Brutal.Glfw.dll')"><HintPath>$(KSAFolder)Brutal.Glfw.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Brutal.Core" Condition="Exists('$(KSAFolder)Brutal.Core.dll')"><HintPath>$(KSAFolder)Brutal.Core.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Brutal.Numerics" Condition="Exists('$(KSAFolder)Brutal.Numerics.dll')"><HintPath>$(KSAFolder)Brutal.Numerics.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Brutal.ImGui" Condition="Exists('$(KSAFolder)Brutal.ImGui.dll')"><HintPath>$(KSAFolder)Brutal.ImGui.dll</HintPath><Private>false</Private></Reference>

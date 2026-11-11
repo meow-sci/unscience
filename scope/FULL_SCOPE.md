@@ -1,7 +1,8 @@
 # Unscience — Full Game-Integration Scope
 
 **You Didn't See Anything** optionally retains ImGui windows during F2 hide UI, with detached
-platform-window selection and stock-gauge exclusion. Flags are scene-owned; native rendering/input
+platform-window selection and stock-gauge exclusion, including optional purr2d2 detached HUD
+submission/custom-input compatibility. Flags are scene-owned; native rendering/input
 acceptance remains pending. [UI integration](ui-customization.md#you-didnt-see-anything-5801) ·
 [implementation and acceptance](../plans/YOU_DIDNT_SEE_ANYTHING.md).
 

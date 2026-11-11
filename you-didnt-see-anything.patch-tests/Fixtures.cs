@@ -32,6 +32,8 @@ namespace KSA
     }
     public sealed class Program
     {
+        private static readonly Brutal.GlfwApi.GlfwWindow Window = new();
+        public static Brutal.GlfwApi.GlfwWindow GetWindow() => Window;
         private static bool _drawUi;
         public static int SetCount, MenuDraws, Before, After, ConsoleDraws;
         public static Action? BeforeCallback;

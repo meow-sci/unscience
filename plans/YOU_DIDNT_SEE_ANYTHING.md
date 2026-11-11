@@ -46,6 +46,38 @@ define the denylist. Native menu-bar, world-overlay and gauge-finalization hooks
 paths hidden. Hook delegates remain rooted, context shutdown clears pointer caches, and failure
 leaves ordinary F2 behavior active with a visible unavailable status.
 
+## purr2d2 detached HUD follow-up
+
+The supplied purr2d2 has two independent F2 gates: `GameHooks.Overlay` checks `Program.DrawUI`
+before calling `DrawSliceOverlay`, and `SaberRuntime.OverlayVisible` checks it again. Opening
+KSA's UI gates therefore does not submit purr2d2's detached panels. The detached host renders
+its custom controls through `ImGui.GetWindowDrawList()` (`SaberRuntime.Hud.cs`), which the existing
+native filter can already retain. Its attached controls use the main viewport background list.
+
+`Purr2D2UiPatches` discovers the optional loaded mod and replaces just those two gate reads.
+Successful panel visibility results are additionally restricted to `IsHudDetached` during F2,
+preserving the mod's readiness/editor/visibility guards and its multiple-window fallback.
+Main-window raw input routes and game-pointer capture are blocked while hidden; detached input
+routes still run. The existing `OverlayFocusLost` cleanup releases gestures once per mode change
+and on hidden-mode teardown. The adapter installs before the native UI wrapper is rebuilt, so an
+already-installed purr2d2 postfix cannot retain an inlined copy of its old F2 check. Missing optional
+targets/changed gate counts roll back only the adapter, preserving foreign Harmony patches.
+No purr2d2 source files or preferences change. Managed production-Harmony fixtures cover these
+contracts; actual desktop rendering, per-monitor DPI and custom native input remain unverified.
+
+Follow-up validation against CURRENT **2026.11.10.5801**:
+
+- Full solution build with the explicit CURRENT `KSAFolder` and
+  `UNSCIENCE_DIST_DIR=/private/tmp/unscience-purr2d2-ui-dist`: **0 warnings, 0 errors**.
+- `you-didnt-see-anything.patch-tests`: **pass**, including an already-installed purr2d2 postfix,
+  both retention selections, all panels, readiness guards, custom input and transition/unload cleanup.
+- `you-didnt-see-anything.tests`: **pass**, including unchanged scene-save adapter behavior.
+- `python3 scripts/check-dist.py /private/tmp/unscience-purr2d2-ui-dist`: **pass**.
+
+Build/test logs: `/private/tmp/unscience-purr2d2-ui-build.log` and
+`/private/tmp/unscience-purr2d2-ui-patch-tests.log`. Distribution:
+`/private/tmp/unscience-purr2d2-ui-dist/unscience/`. No live game install was changed.
+
 ## State ownership
 
 Enablement and selection flags are durable configuration stored through native-scene
@@ -105,3 +137,7 @@ Compilation and managed checks cannot establish native viewport rendering or int
   restoration before ImGui shuts down, including the existing pre-renderer shutdown path.
 - [ ] Repeat with the installed mod stack. Another mod may independently suppress its own UI
   or modify the same frame gates; record patch diagnostics and the complete stack if it conflicts.
+- [ ] Detach purr2d2's Saber, Furce and Kittens panels with mixed attached/detached/hidden settings.
+  Test F2 with both retention selections; detached panels and their picker/menus must remain usable,
+  attached controls/world markers must stay hidden, and the main game must receive normal input.
+  Exercise held drags, wheel/Shift-wheel, Escape, F2 toggles, disable/re-enable and unload mid-gesture.

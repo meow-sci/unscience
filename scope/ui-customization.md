@@ -27,6 +27,22 @@ Menu-bar and native world-overlay generation are excluded from the retained wind
 | Window input/navigation ownership and per-frame draw-list filtering | Hidden windows must not intercept input; restore only mod-owned suppression on disable/unload |
 | `ISaveParticipantSource` | `you-didnt-see-anything` v1: enabled, detached-only and gauge-exclusion flags; disabled defaults on missing records |
 
+Optional purr2d2 compatibility (`Purr2D2UiPatches.cs`, supplied purr2d2 checkout):
+
+| Reflection / host surface | Contract / update risk |
+|---|---|
+| `Purr2D2.Runtime.GameHooks.Overlay` (`GameHooks.cs:208`) | Its Harmony postfix has a separate `Program.DrawUI` gate; replace exactly one read before rebuilding the game's UI wrapper to avoid an already-inlined postfix |
+| `SaberRuntime.get_OverlayVisible` (`SaberRuntime.SaberOverlay.cs:49`) | Replace exactly one `DrawUI` read while preserving enable/readiness/disposal/editor/world guards; original F2 flag stays false |
+| `get_BFL9KUiVisible`, `get_ForceUiVisible`, `get_KittenListVisible`; `IsHudDetached(HudPanel)` | Filter successful original results through detachment during F2; enum names `Saber`, `Force`, `Kittens`; do not touch native ImGui before original readiness guards pass |
+| `SaberRuntime.Frame(double)`, `OverlayFocusLost()`; `GameHooks.Runtime` | Release original gesture/capture state once per F2/retention transition and before hidden-mode unload; reflection invocation only at teardown |
+| `FilterOverlayMouseButton`, `FilterOverlayCursor`, `FilterOverlayScroll`, `SuppressOverlayImGuiMouseButton`, `SuppressOverlayImGuiScroll`, `FilterSaberDropSpinKey`, `FilterForceKey` | First argument must be `GlfwWindow`, return `bool`; hidden main-window callbacks return unconsumed, detached callback routes retain original behavior |
+| `get_OverlayCapturesPointer`; `Program.GetWindow()` / `Brutal.GlfwApi.GlfwWindow` | Hidden HUD cannot claim main game picking; GLFW identifies the raw callback's OS window |
+
+Assemblies are discovered during StarMap's all-mods-loaded phase. purr2d2 is optional and never
+bundled or modified. Missing members/changed gate counts roll back this group with a diagnostic;
+the main window-retention feature stays available. Detached purr2d2 uses `GetWindowDrawList()`,
+so existing native viewport filtering retains it; attached background/world lists remain excluded.
+
 The exact stock canvas denylist is derived from CURRENT `Content/Core/Gauges.xml`:
 `RendezvousControl`, `BurnControl`, `Burn`, `EngineControl`, `KittenFlightControl`, `Telemetry`,
 `Radiation`, `AutopilotSettings`, `Altitude`, `Resources`, `GameTime`, `PitchYawRoll`, `Sequence`,

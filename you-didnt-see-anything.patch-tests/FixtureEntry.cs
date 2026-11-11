@@ -28,6 +28,8 @@ internal static class FixtureEntry
         var foreignPostfix = AccessTools.Method(typeof(FixtureEntry), nameof(ForeignPostfix));
         var extraGate = AccessTools.Method(typeof(FixtureEntry), nameof(AddExtraGate));
         foreign.Patch(menu, postfix: new HarmonyMethod(foreignPostfix));
+        foreign.Patch(AccessTools.Method(typeof(Game), nameof(Game.OnDrawUiThreadSafe)),
+            postfix: new HarmonyMethod(typeof(Purr2D2.Runtime.GameHooks), nameof(Purr2D2.Runtime.GameHooks.Overlay)));
         HiddenUiFrameHook.BeforeGui = _ => _fallbackBefore++;
         HiddenUiFrameHook.AfterGui = _ => _fallbackAfter++;
         HiddenUiFrameHook.Patch(harmony);
@@ -65,7 +67,11 @@ internal static class FixtureEntry
         Check(Game.Before == 3 && Game.After == 3 && Game.MenuDraws == 1 && KSA.GaugeCanvas.Drawn == 4 && KSA.Universe.Drawn == 1,
             "Normal UI remains intact");
 
+        Purr2D2Checks.Run();
+        Game.DrawUI = false;
+        Purr2D2.Runtime.GameHooks.Runtime.Held = true;
         HiddenUiVisibilityPatches.Remove(harmony);
+        Purr2D2Checks.CheckRemovalAndRollback(harmony, foreign);
         int beforeForeign = _foreign;
         game.DrawMenuBar();
         Check(_foreign == beforeForeign + 1, "Removing feature leaves foreign patches installed");

@@ -23,12 +23,17 @@ managed fixtures, native XML checks and distribution checks passed; in-game acce
 | `GaugeCanvas.AllCanvases`, `Id`, `DebugTitle` and `###` window identity | you-didnt-see-anything.lib | Resolve built-in gauges by stable canvas IDs rather than allocation-dependent ImGui window numbers |
 | ImGui context hooks / window flags, hierarchy, viewport IDs, draw lists and draw data | you-didnt-see-anything.lib | Native input/visibility filtering for detached-only selection; depends on game-shipped ImGui ABI; no managed Begin interception |
 | `HiddenUiFrameHook` fallback dispatch | ksa-abstractions.lib / Unscience | Avoid duplicate feature updates when normal StarMap callbacks run during hidden UI |
+| Optional `Purr2D2.Runtime.GameHooks` / `SaberRuntime`; `Program.GetWindow()` / `Brutal.GlfwApi.GlfwWindow` | you-didnt-see-anything.lib / Purr2D2UiPatches | Open the mod's two UI gates; retain detached panels, guard custom main-window input, release gestures on transitions/unload; exact reflection surface in UI map |
 | `ISubmod` / `ISaveParticipantSource` | you-didnt-see-anything.lib / YouDidntSeeAnythingSubmod | Scene record `you-didnt-see-anything` v1, disabled default and legacy/vanilla reset; no pointer persistence |
 
 Reflection/IL watchlist additions: exact private `Program.OnDrawUiThreadSafe`, protected
 `Program.OnFrame`, `Program.DrawMenuBar`, and `GaugeCanvas.OnDrawUiFinal` signatures plus expected
 `get_DrawUI` gate counts. Native ImGui layout/context hooks require re-verification after a Brutal
 update. No shaders or game assets are modified; `Content/Core/Gauges.xml` supplies denylist knowledge.
+Optional purr2d2 reflection watchlist: `GameHooks.Overlay`/`Runtime`, `SaberRuntime.OverlayVisible`,
+`BFL9KUiVisible`/`ForceUiVisible`/`KittenListVisible`, `IsHudDetached(HudPanel)` and enum names,
+`Frame`, `OverlayFocusLost`, `OverlayCapturesPointer`, and seven custom input methods. Changed
+gate counts or missing targets roll back only this compatibility patch group.
 Native rendering/input acceptance is pending. [Full UI map](ui-customization.md#you-didnt-see-anything-5801) ·
 [implementation record](../plans/YOU_DIDNT_SEE_ANYTHING.md).
 
