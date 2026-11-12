@@ -10,6 +10,8 @@ Feature implementation shared by Unscience and the standalone development host.
 See [Kitchen Sink controls](../kitchen-sink/README.md).
 
 - `KitchenSinkSubmod`: editor refresh, IVA visibility/camera switches, capsule-glass experiment and G-load protection UI.
+- IVA visibility follows the independent switch or capsule-glass requirement in both flight and
+  editor views. Entering the editor never forces interiors; the old shared editor render hook is removed.
 - `CapsuleGlassExperiment`: one shared `PartRenderFilter.RegisterStaticModel` owner hides only
   `CoreCommandA_Subpart_MediumCapsuleWindowA_Model` and `...WindowB_Model` while enabled.
   `IvaForceRender.SetRequired` reveals interiors globally without changing the user's independent
@@ -68,9 +70,9 @@ The removed Flexo diagnostics no longer own any part-transform or solver-resync 
 `dotnet run --project kitchen-sink.tests` links the production registry/transpiler into managed
 KSA 5638 decision fixtures and checks them against the real `KSA.dll` metadata. KSA 5638 changed
 `PhysicsBubble.DetectStructuralFailure` to `(VehicleUpdateState, SimStep)` and added the kitten
-hard-landing branch; the lookup and transpiler follow it. No saved-record migration is required. The shared IVA helper in
-`ksa-abstractions.lib` now reveals editor internals through `PartTreeRenderData.Compose`, because
-5482 raster composition bypasses the dent-aware `AddInstance` sink that 5438 used.
+hard-landing branch; the lookup and transpiler follow it. No saved-record migration is required.
+The shared IVA helper in `ksa-abstractions.lib` changes templates only for the two explicit
+visibility switches; native render composition handles editor and flight without an editor override.
 Full solution compilation checks typed game/UI references. Actual
 cart collision behavior and rendered controls require native acceptance; see the
 [test README](../kitchen-sink.tests/README.md).

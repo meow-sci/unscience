@@ -91,6 +91,10 @@ reversible, and saved in its own scene record. Interiors are revealed globally w
 **Always Render IVA Interiors** keeps its independent preference. Native glass alignment, tint
 and exterior lighting remain to be checked in game. [Controls and limits](../kitchen-sink/README.md#capsule-glass-experiment).
 
+In flight and the vehicle editor, forced interiors require one of those two switches. Opening
+the editor never forces interiors. Both switches off restores native visibility, including normal
+IVA and crew portrait rendering; existing scene-save records retain their ownership and format.
+
 **Wing Walker:** place an External Seat or Standing Mount from the editor’s External Crew category.
 Assign crew in the part controls or board near its entry point; the portrait offers EVA. A helmet
 and standing-pose fix awaits in-game visual retest. Supplies are

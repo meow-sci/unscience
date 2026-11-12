@@ -1,5 +1,18 @@
 # UI / Customization Mods — Game Integration Scope
 
+## IVA visibility switches (5801, 2026-11-11)
+
+Forced interiors require Kitchen Sink's **Always Render IVA Interiors** or **See Inside Capsule
+(Experimental)** in both editor and flight views. Entering the editor never forces interiors.
+The shared helper retains `PartModel` constructor patching and template mutation on effective
+switch changes; its unconditional `PartTreeRenderData.Compose` prefix/finalizer and editor cache
+are removed. Native IVA/inside-vehicle visibility and the capsule's window filter remain intact.
+The two existing boolean save records retain their IDs, payloads and reset/replay APIs.
+Thirty production render/ownership checks, Kitchen Sink adapter checks and the full build pass;
+native editor/flight/save-load acceptance remains pending. Historical editor-reveal descriptions
+below are superseded. [Current integration](00-architecture-and-abstractions.md#ivaforcerendercs)
+· [evidence](../plans/IVA_VISIBILITY_SWITCHES.md).
+
 ## You Didn't See Anything (5801)
 
 `you-didnt-see-anything.lib` adds optional ImGui window retention while native `Program.DrawUI`
@@ -272,7 +285,7 @@ opaque medium capsule windows, reveal native interiors, and retain existing nati
 |---|---|
 | `PartRenderFilter.RegisterStaticModel` → `PartTreeRenderData.Compose` shared prefix/postfix | OR a model-scoped predicate with existing full-part owners in the same range compaction. Static instance/dent lists compact together; cached batches and native meshes stay unchanged. No extra Harmony target or reflection lookup. |
 | `PartModel.Template.Id` (`TemplateDataBase.Id`) | Exact ordinal IDs `CoreCommandA_Subpart_MediumCapsuleWindowA_Model` and `CoreCommandA_Subpart_MediumCapsuleWindowB_Model`; never match a full-part/instance name or substring. Those are ordinary static models, with `RayTracing.Disabled` default, in `Content/Core/CoreCommandAAssets.xml:55-72` (model IDs at `:56`, `:68` @5638; rev 5542 only swapped the capsule box colliders for a host-only convex-hull collision atlas). Hull/crew doors are distinct model IDs and remain native. |
-| `IvaForceRender.SetRequired(owner, bool)` | Global interior requirement OR-ed with the existing user preference; changes loaded/new `PartModelModule.Template.Internal` flags through existing helper. Final release restores flags; unpatch clears all requirements. `ShadowProxy` templates remain untouched. Editor's per-compose reveal remains independent. |
+| `IvaForceRender.SetRequired(owner, bool)` | Global interior requirement OR-ed with the existing user preference; changes loaded/new `PartModelModule.Template.Internal` flags through existing helper. Final release restores flags; unpatch clears all requirements. `ShadowProxy` templates remain untouched. Editor visibility now follows the same effective switches; the independent per-compose reveal was removed on 5801. |
 | Existing `PartModelGlass` / `ComposeGlass` / main-view glass pass | `CoreIVASpaceA_Subpart_MediumCapsuleAWindowGlass_Model` in `CoreIVASpaceAAssets.xml:20-26` remains submitted natively. Cabin model is `Internal=true`, `RayTracing.Enabled`; native ray blocker is `ShadowProxy` (`:29-44`). No glass material/shader/opacity edits or ray tracing pipeline changes. |
 | Scene adapter | Separate boolean `kitchen-sink-capsule-glass` v1/order 20; reset releases requirement, replay uses normal toggle after reconstruction. Existing three Kitchen Sink records unchanged. See [saves](saves.md#kitchen-sink-capsule-glass-saves). |
 

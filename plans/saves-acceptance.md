@@ -301,6 +301,16 @@ below describes implemented behavior, not an assertion that native acceptance ha
 
 ## Capsule glass native acceptance (pending)
 
+5801 visibility follow-up removes the editor's automatic reveal. The existing `kitchen-sink` and
+`kitchen-sink-capsule-glass` v1/order20 records and their reset/replay ownership remain unchanged.
+Thirty production render/ownership checks and Kitchen Sink's adapter suite pass; full build is clean.
+See [evidence](IVA_VISIBILITY_SWITCHES.md).
+
+- Enter/leave the editor with both switches off: no forced cabin. Test each switch alone and both
+  together; release the final switch while editing and confirm native visibility is restored.
+- Repeat all four saved switch combinations across scene loads and editor entry; vanilla/legacy
+  scenes with neither enabled keep native visibility. Native IVA/crew portraits still show cabins.
+
 - Main exterior view of a stock medium/Gemini capsule: enable **See Inside Capsule (Experimental)**,
   inspect both windows/cabin from several angles; check depth/tint, culling, shadows, door/hull isolation.
 - Toggle **Always Render IVA Interiors** and the experiment in both orders, including changing

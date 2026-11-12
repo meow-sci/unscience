@@ -81,6 +81,10 @@ stock medium capsule's two opaque window surfaces and reveals its existing IVA c
 The switch is scene-saved and reversible; native visual acceptance is pending. See
 [the experiment](kitchen-sink/README.md#capsule-glass-experiment).
 
+Forced IVA visibility requires **Always Render IVA Interiors** or **See Inside Capsule
+(Experimental)** in both flight and the vehicle editor. Entering the editor never forces interiors;
+with both switches off, native visibility applies. Both switches retain their scene-save behavior.
+
 DOH's spawn controls include an editable vehicle name / batch prefix, initially `Kitten_doh_`.
 Available single names are used exactly; occupied names automatically advance above the highest
 existing suffix. Batches and blank-input automatic names also continue above native scene/roster

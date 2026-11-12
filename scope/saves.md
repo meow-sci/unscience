@@ -490,11 +490,16 @@ requirement. Replay calls the same API after native reconstruction; enabled repl
 the IVA patches and operational render filter or reports a retained failure. Missing legacy/vanilla
 records leave it off. Repeat/cross-scene loads do not compound ownership.
 
+5801 visibility follow-up: the independent preference and experiment now control editor views as
+well as flight. Editor entry owns no visibility state; the unconditional editor render hook/cache
+is removed. Reset/replay still uses the existing two switches and all payloads remain compatible.
+Both switches off leaves native interior gates in charge, including after vanilla/legacy loads.
+
 This scene toggle is sidecar-owned, not a global preference or native save field. Exact stock
 model IDs are integration constants, with no per-vehicle registrations to resolve. Template/native
 references, Harmony registrations and per-frame range lists are transient; the adapter never
 serializes them. `kitchen-sink.tests` adds 17 actual adapter/coordinator checks (including invalid,
-legacy, unavailable and retained-record recovery); `ksa-upgrade.tests` separately adds 20 checks
+legacy, unavailable and retained-record recovery); `ksa-upgrade.tests` separately runs 30 checks
 using the production filter, IVA helper and constructor/compose patches. Native visual/load
 acceptance remains pending; see [feature scope](ui-customization.md#kitchen-sink-capsule-glass-experiment-5541).
 

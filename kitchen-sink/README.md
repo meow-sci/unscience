@@ -38,12 +38,10 @@ at the next frame's flush, so the result appears one frame later.
 
 Enable **Always Render IVA Interiors** to show interiors outside IVA camera mode.
 `IvaForceRender` changes loaded model templates and catches newly created models with a
-constructor postfix. Disabling the switch or unloading restores the changed template flags.
-Internal meshes also stay visible in the vehicle editor preview. On KSA 5482 the editor path uses a
-prefix and finalizer on `PartTreeRenderData.Compose`. They reveal internal templates for that one
-call, so stock code appends matching instances and dents. KSA 5482's raster composition no longer
-calls the `PartModel.AddInstance` method that the 5438 postfix used. Editor part thumbnails no
-longer show internal meshes.
+constructor postfix. Disabling both visibility options or unloading restores the changed template flags.
+The vehicle editor follows the same switches as flight: interiors are forced only while
+**Always Render IVA Interiors** or **See Inside Capsule (Experimental)** is enabled. Opening
+the editor never forces them. With both switches off, KSA's native interior visibility applies.
 
 ## Capsule Glass Experiment
 
