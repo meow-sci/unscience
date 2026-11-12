@@ -40,8 +40,17 @@ public sealed class SuperMeshRenderSystem
 }
 
 public sealed class Template { public string Id = string.Empty; }
-public sealed class FullPart { public string Id => Template.Id; public Template Template = new(); }
-public sealed class Part { public FullPart FullPart = new(); }
+public sealed class FullPart : Part { }
+public class Part
+{
+    private Part? _fullPart;
+    public Part FullPart { get => _fullPart ?? this; set => _fullPart = value; }
+    public string Id => Template.Id;
+    public Template Template = new();
+    public Part? TreeParent;
+    public PartTree? Tree;
+    public bool Grabbed;
+}
 
 public readonly struct KeyHash(string value) : IEquatable<KeyHash>
 {
@@ -55,7 +64,7 @@ public readonly struct KeyHash(string value) : IEquatable<KeyHash>
     public static bool operator !=(KeyHash left, KeyHash right) => !left.Equals(right);
 }
 
-public enum CrewSeatResult { Seated, AlreadyAboard, NoSuchSeat, SeatTaken, NoFreeSeat }
+public enum CrewSeatResult { Seated, AlreadyAboard, NoSuchSeat, SeatTaken, NoFreeSeat, Emptied }
 
 public sealed class EVADoor(IVASeat? alignedSeat)
 {
@@ -172,6 +181,12 @@ public class Vehicle(PartTree? parts = null)
 
     public static CrewSeatResult SetSeatCrew(IVASeat targetSeat, KeyHash kittenHash, string vehicleId, bool hasLaunched)
     {
+        if (kittenHash == KeyHash.Zero)
+        {
+            EditorCrewTrace.Leave(targetSeat.AssignedKittenHash, vehicleId, hasLaunched);
+            targetSeat.AssignedKittenHash = KeyHash.Zero;
+            return CrewSeatResult.Emptied;
+        }
         if (targetSeat.AssignedKittenHash != KeyHash.Zero) return CrewSeatResult.SeatTaken;
         targetSeat.AssignedKittenHash = kittenHash;
         return CrewSeatResult.Seated;
@@ -200,7 +215,7 @@ public sealed class KittenEva(string id)
     }
 }
 
-public sealed class VehicleEditor
+public sealed partial class VehicleEditor
 {
     public Vehicle EditingSpace = new();
     public List<PartTree> UnattachedPartTrees = new();

@@ -14,6 +14,15 @@ completed native pose/motion save/load still requires in-game acceptance.
 
 ## Wing Walker
 
+Editor duplication follow-up: selecting/picking up an external mount, starting a gizmo move or
+copying a subtree releases its external crew through `Vehicle.SetSeatCrew` with a zero hash and
+the editor's native vehicle ID/launch status. Native history is synchronized before mutation and
+marked afterward. The resulting assignment and roster state remain native-owned; no sidecar,
+schema change or durable guard state is added. Selection state is local to each input callback,
+so reset/load/unload cannot retain a prior scene's targets. Restored native assignments encounter
+the same copy guard. Actual empty `IVASeat.GetSaveData` emits no stale crew record; occupied-seat
+save/load and native undo/redo/mission bookkeeping remain acceptance work.
+
 KSA saves the native part and template ID, `IVASeatData`, crew roster, tanks and life-support
 state. The template selects seated or standing posture; no Wing Walker sidecar or participant is
 needed. The helmet/standing appearance scope, weak animation markers and diagnostics are transient;

@@ -11,6 +11,15 @@ native appearance/load acceptance remains pending. [Current integration](00-arch
 
 ## Wing Walker (5801)
 
+Editor crew duplication is guarded by `VehicleEditor.OnMouseButton(GlfwWindow, GlfwMouseButton,
+GlfwButtonAction, GlfwModifier)` prefix/postfix and private static `PartCloner.Gather(Part,uint)`
+prefix. Selection/pickup/gizmo start unassign affected external seats; pre-copy capture also covers
+crew reassigned after selection. `Vehicle.SetSeatCrew` with zero hash plus native history APIs
+preserve roster/save ownership. Exact active-tree/subtree references exclude stock, unrelated,
+stale and disposed targets. Thirty-two production checks, actual 5801 signatures/empty-seat save
+behavior and the full build pass; native symmetry/undo/redo/load acceptance remains pending.
+[Evidence](../plans/WING_WALKER.md#editor-crew-duplication-follow-up).
+
 `SuperMeshRenderSystem.ClearBuckets(IViewport)` postfix submits noncontrolled and editor external
 seats; native controlled/portrait paths remain in charge. Exact Harmony targets also include
 `IVASeat.UpdateSeatedRenderable(IViewport, int, double, ref readonly double4x4)`, public
@@ -888,6 +897,12 @@ are recorded separately from native visual acceptance.
 | ~~`_matrixAsmb` / `_matrixAsmb2Parent` : private double4x4~~ | reflection-field (string) | `KSA/Part.cs:536,552` | *(none)* | — | ⚠️ **sentinel changed @5117 (rev 5112)** | uncached sentinel went `double4x4.Identity` → all-NaN `UncachedMatrix` |
 | `Tree : PartTree?` → `.ReinitializeDerivedValues/.RefillConsumables`; `CreateOwnTree()` | direct API | NEW `KSA/Part.cs:662,1456` | doh, iron-man, dont-stifle-me | `KittenSpawner.Catalog.cs:12-32`; `IronManConnectorUnload.cs:51,65`; `IronManRcsOrientationPatches.cs:53`; `PerAxisScaleDrag.cs:75` | **CHANGED @5482** | nullable; the ctor no longer creates a tree (rev 5456/5464). doh now calls `CreateOwnTree()` (mirrors `EVADoor.GetBackPackPart`); others null-guard |
 
+### KSA.PartCloner (Wing Walker editor guard, 5801)
+
+| Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 5801 | Notes |
+|---|---|---|---|---|---|---|
+| `Gather(Part source, uint firstLocalId): private static void` | Harmony prefix (exact name/types) | `KSA/PartCloner.cs:134-139` | wing-walker | `WingWalkerPatches.cs:51-52`; `WingWalkerPatches.Editor.cs:27-32` | NEW consumer | Clear affected external crew before GatherSaveData captures assignments for symmetry/Alt-copy/Copy Tree. Only active editor trees qualify. |
+
 ### KSA.PartModel (+ nested PerInstanceData, ViewportData)
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
@@ -1075,6 +1090,7 @@ stable, and both templates include the native `Capsules` editor tag. [Asset cont
 ### KSA.Vehicle
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
+| `SetSeatCrew(IVASeat,KeyHash,string,bool): static CrewSeatResult` | direct API | `KSA/Vehicle.cs:879-913` @5801 | wing-walker | `WingWalkerPatches.Editor.cs:49-50`; `WingWalkerPatches.Boarding.cs` | OK @5801 | Editor guard clears with zero hash through native roster/mission release; boarding retains exact-seat assignment. |
 | `Vehicle` (type) | direct API | `KSA/Vehicle.cs:28` | VehicleProvider (→ ~all) | `VehicleProvider.cs:11` | OK | `OfType<Vehicle>()` |
 | `Parts : PartTree` (field) | direct API | `KSA/Vehicle.cs:264` | PartHelpers (→ many), eternal-flame, blinky, its-so-shiny | `PartHelpers.cs:13`; `EternalFlameLib.cs:128`; `LcdGridBuilder.cs:37` | OK | get+set (blinky swaps tree) |
 | `Id` (inherited Astronomical.Id) | direct API | `KSA/Astronomical.cs:85` | (see KSA.Astronomical) | — | OK | |
@@ -1114,6 +1130,9 @@ stable, and both templates include the native `Capsules` editor tag. [Asset cont
 ### KSA.VehicleEditor
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
+| `OnMouseButton(GlfwWindow,GlfwMouseButton,GlfwButtonAction,GlfwModifier): bool` | Harmony prefix/postfix | `KSA/VehicleEditor.cs:3981` @5801 | wing-walker | `WingWalkerPatches.cs:48-50`; `WingWalkerPatches.Editor.cs:8-25` | NEW consumer @5801 | Compare actual selection/grab/gizmo transitions; hovered/ignored events keep crew. No retained selection state. |
+| `Selected`, `Highlighted`, `GizmoGrabbed`, `ExistingVehicle`, `EditingSpace`, `UnattachedPartTrees` | direct fields | `KSA/VehicleEditor.cs:654-662,692,806` @5801 | wing-walker (also existing editor consumers below) | `WingWalkerPatches.Editor.cs:10-24,38-50` | NEW consumer @5801 | Resolve exact subtree/tree ownership and existing vehicle ID/launch status; never use controlled vehicle fallback. |
+| `SyncHistoryBeforeEditFor(PartTree)` / `MarkHistoryStepFor(PartTree,EditorHistoryAction,LString?)` | direct static APIs | `KSA/VehicleEditor.cs:8001-8031` @5801 | wing-walker | `WingWalkerPatches.Editor.cs:48,53` | NEW consumer @5801 | Capture baseline before unassignment and mark PartSettings afterward. Native commits defer while grabbed. Compile-only Brutal.Localization label dependency. |
 | `EditingSpace : VehicleEditingSpace` (field) | direct API | `KSA/VehicleEditor.cs:407` (cited `:334` at the 4750 baseline) | kitchen-sink | `KitchenSinkLib.cs (editor refresh)` | OK | |
 | `ScaleBoundsFor(Part) : private static (double Min, double Max)` | Harmony postfix (by-name) | `KSA/VehicleEditor.cs:3877` | dont-stifle-me | `EditorScalePatches.cs:56,89` | OK (**new @5348**) | rewrites `__result` to `(1e-6, +inf)` when clamp removal is on; the only place the 0.5x–2x clamp is expressed |
 | `UpdateSelectedScale(ref readonly double4x4, Viewport) : private void` | Harmony prefix (by-name) | `KSA/VehicleEditor.cs:3841` | dont-stifle-me | `EditorScalePatches.cs:58,124` | OK (**new @5348**) | skipped (returns false) when per-axis scaling is on; prefix binds `matrixVehicleAsmb2Ego` by name |
@@ -1260,6 +1279,9 @@ stable, and both templates include the native `Capsules` editor tag. [Asset cont
 
 ## 4. String-based reflection watchlist (highest silent-break risk)
 
+Wing Walker adds the private exact-signature `PartCloner.Gather(Part,uint)` lookup. Native DLL
+signature checks pass; recheck that it still precedes module save-data capture on upgrades.
+
 IVA follow-up: the helper retains only the explicitly typed PartModel constructor lookup; the
 Compose lookup and editor/viewport reads are removed.
 
@@ -1370,6 +1392,11 @@ unconditional editor reveal hook is removed. Existing native glass and shadow-pr
 ---
 
 ## 6. Confirmed-broken / changed summary
+
+**5801 Wing Walker editor crew:** occupied external seats were cloned with the same kitten name.
+Selection/move and pre-copy guards now unassign affected seats through native crew/history APIs.
+Managed/native-DLL/build checks pass; real symmetry/roster/undo/load acceptance remains pending.
+[Evidence](../plans/WING_WALKER.md#editor-crew-duplication-follow-up).
 
 **5801 IVA follow-up:** removed unconditional editor reveal. Both editor and flight now require
 Kitchen Sink's independent IVA switch or capsule-glass experiment for forced interiors. Managed

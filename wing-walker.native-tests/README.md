@@ -22,7 +22,7 @@ KSA_EXTRA_DLL_DIRS=/path/to/matching-managed-dependencies \
 `../ksa-game-assemblies/current/dll/`. The runner reports the matching `current/version.json` build,
 reflected KSA assembly identity, and file version. It invokes native `GameContentTags.Build`,
 `ContentPrePass.Resolve`, and `ContentDeserializer.Deserialize`; checks inherited part rows, module
-values, enum values, connector normal via KSA math, and the six Harmony target methods plus five
+values, enum values, connector normal via KSA math, and the eight Harmony target methods plus five
 injected fields. It verifies the appearance patch's typed public surfaces, including animation
 selection, helmet visibility, avatar attachments, and ear state, then rejects an unknown XML
 attribute as a strictness check. A synthetic one-bone `Skeleton` and `IAnimation` run against the
@@ -30,5 +30,8 @@ native `BoneAnimRuntime` reproduces the constructor-selected seated clip's zero-
 confirms a zero-blend restart applies the standing pose immediately. The executable also exercises native `Habitat.ComputeFullLoad`
 and round-trips two distinct `IVASeatData` names inside actual `PartInstance` components through
 KSA's XML overrides. It does not initialize a renderer or need GPU access. The parser does not
-resolve asset references or load rows into the live Core library; `IVASeat.GetSaveData` is not
-called because it requires the game's initialized crew roster.
+resolve asset references or load rows into the live Core library. It calls the empty-seat branch of
+`IVASeat.GetSaveData` to verify an unassigned seat emits no stale crew name or module record.
+Occupied-seat `GetSaveData` and native unassignment require the game's initialized crew roster.
+The editor checks verify the exact `VehicleEditor.OnMouseButton` and private
+`PartCloner.Gather(Part,uint)` signatures, selection fields and native `Vehicle.SetSeatCrew` API.

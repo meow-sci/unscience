@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Brutal.GlfwApi;
 using Brutal.Numerics;
 using HarmonyLib;
 using KSA;
@@ -44,6 +45,11 @@ public static partial class WingWalkerPatches
                 prefix: nameof(BeginBoarding), finalizer: nameof(FinishBoarding));
             Add(harmony, Required(typeof(Vehicle), nameof(Vehicle.AddCrew), typeof(KeyHash), typeof(string), typeof(string)),
                 prefix: nameof(AddCrewToBoardingSeat));
+            Add(harmony, Required(typeof(VehicleEditor), nameof(VehicleEditor.OnMouseButton),
+                    typeof(GlfwWindow), typeof(GlfwMouseButton), typeof(GlfwButtonAction), typeof(GlfwModifier)),
+                prefix: nameof(BeginEditorInteraction), postfix: nameof(FinishEditorInteraction));
+            Add(harmony, Required(typeof(PartCloner), "Gather", typeof(Part), typeof(uint)),
+                prefix: nameof(BeforeEditorClone));
             IsApplied = true;
             Console.WriteLine("wing-walker: helmeted external crew and immediate standing posture ready");
         }

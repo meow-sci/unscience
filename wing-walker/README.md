@@ -19,5 +19,11 @@ radiation shielding or Control module, and their surface connections are not hab
 and scrubber supplies are local and isolated by default. There are no feature
 toggles. Native crew, part and life-support state are saved by KSA without a new sidecar.
 
+Place mounts and set symmetry before assigning crew. Selecting/picking up a mount or starting a
+gizmo move unassigns its kitten; selecting a parent includes external mounts below it. Symmetry
+and copying clear external-seat crew before cloning, so kitten names are never duplicated by
+those operations. Reassign each kitten after placement. Stock seats and unrelated mounts are
+unchanged; the native editor records the crew change for history and saves.
+
 See the [library README](../wing-walker.lib/README.md) for details and the
 [validation plan](../plans/WING_WALKER.md) for pending checks.

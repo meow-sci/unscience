@@ -49,6 +49,10 @@ foot straps; External Seat is a rainbow beach chair with a built-in gold foil fr
 white plastic armrests. Both parts also appear under the editor’s Capsules filter.
 [Usage and limits](wing-walker.lib/README.md) · [validation and pending in-game checks](plans/WING_WALKER.md).
 
+Wing Walker editor selection, pickup and gizmo moves unassign crew from affected external mounts.
+Symmetry/copying clears those assignments before cloning; place parts and set symmetry first,
+then assign each kitten. Native history and saves own the resulting crew state.
+
 # game compatibility
 
 The current checkout targets **KSA 2026.11.10.5801**, upgraded from 2026.10.25.5707.

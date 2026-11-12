@@ -96,6 +96,8 @@ the editor never forces interiors. Both switches off restores native visibility,
 IVA and crew portrait rendering; existing scene-save records retain their ownership and format.
 
 **Wing Walker:** place an External Seat or Standing Mount from the editor’s External Crew category.
+Selection, pickup and gizmo moves unassign affected external crew; symmetry/copying also clears
+assignments before cloning. Set placement and symmetry first, then assign each kitten.
 Assign crew in the part controls or board near its entry point; the portrait offers EVA. A helmet
 and standing-pose fix awaits in-game visual retest. Supplies are
 finite, there is no shielding, and a surface mount does not create a habitat passage. KSA saves the

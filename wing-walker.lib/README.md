@@ -9,6 +9,13 @@ Assign a kitten through the part's native
 Crew controls, or approach the entry point in flight (about one metre) and board; use the crew
 portrait's EVA action to leave. The panel is informational and has no feature toggles.
 
+Selecting or picking up an occupied mount in the editor unassigns its kitten through native crew
+controls; starting a gizmo move does the same. Selecting a parent also clears external mounts
+below it. Symmetry and part copying clear these assignments before capturing clone data, including
+crew assigned after selection. Place the parts and set symmetry first, then assign each kitten.
+Stock seats and unrelated mounts retain their occupants. Hovering and opening Crew controls do
+not clear assignments. Native editor history records the change; KSA owns the saved result.
+
 Each part has a native `IVASeat` and an aligned, invisible `EVADoor` helper. Its small habitat,
 oxygen and water tanks, food and LiOH are finite native life-support supplies. There is no radiation
 shielding. These are passenger parts with no Control module. Their food and scrubber supplies are
@@ -23,6 +30,13 @@ flags are temporary. The two IDs are `Unscience_WingWalker_Seated` and
 visual references, surface connector and collider. All five legacy subpart keys retain their
 original order: the Chair slot holds the straps, Headrest/Runners/Base use empty templates, and
 EvaDoor retains its native module. This preserves the positional layout used for saved modules.
+
+`WingWalkerPatches.Editor.cs` watches actual selection/grab/gizmo transitions in
+`VehicleEditor.OnMouseButton` and guards the private `PartCloner.Gather(Part,uint)` before module
+save data is captured. It uses exact subtree references, active focused/unattached editor trees,
+`Vehicle.SetSeatCrew(..., KeyHash.Zero, ...)` and native history APIs. No per-frame unassignment,
+new saved flags or selection caches are introduced. `Brutal.Localization` is a compile-only
+reference for the native history label's optional `LString` parameter.
 
 Boarding scopes the exact aligned door and seat, so multiple copies of the same part do not resolve
 to the wrong seat when native runtime IDs coincide. Native crew assignment, suit return, EVA

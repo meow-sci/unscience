@@ -23,6 +23,20 @@ production Harmony input and real-adapter cancellation checks pass alongside exi
 
 ## Wing Walker
 
+Editor crew duplication guard: 32 managed production-Harmony checks cover selection/pickup/gizmo
+start, copy capture after reassignment, subtree ownership, native-history call order and repeated/
+restored assignments. Real 5801 signature checks and empty-seat `IVASeat.GetSaveData` pass, as does
+the full solution build. Native records and schema are unchanged.
+
+- [ ] Assign distinct kittens, select/move a mount or its parent, change symmetry (2/4/8) and copy.
+  Affected external seats and copies are empty; kittens are available to reassign exactly once.
+  Stock seats and unrelated mounts retain their crew.
+- [ ] Assign after final placement, then save/load repeatedly and A → B → A. Retain exact distinct
+  crew names; edit after load and repeat symmetry/copy without duplicating occupants.
+- [ ] Undo/redo selection unassignment and placement/copy edits, including a previously launched
+  vehicle and unattached subtrees. Crew and roster restore together; redoing or copying again
+  cannot create duplicate names. Hover/right-click Crew controls alone retain assignments.
+
 Native parts, `IVASeatData`, roster, tanks and life support own all durable state; part template
 selects posture. No feature sidecar is required, and appearance scope, weak animation markers and
 diagnostics are transient. The appearance fix adds no settings. The beach chair and standing strap models change

@@ -110,6 +110,11 @@ rocky-mcrock-face, save-yourself, skittles, sphinx, wing-walker, the-tick, thug-
 
 ## Current status against 5801
 
+Wing Walker unassigns affected external crew on editor selection/pickup/gizmo start and before
+symmetry/copy capture, preventing duplicate kitten names. Native crew/history/save ownership stays
+intact. Managed checks, real-DLL signature/save checks and the full build pass; in-game acceptance
+is pending. [Evidence](../plans/WING_WALKER.md#editor-crew-duplication-follow-up).
+
 IVA forcing now follows Kitchen Sink's independent toggle or capsule-glass experiment in both
 flight and editor views. The unconditional editor hook is removed; save records are unchanged.
 Managed checks/build pass; native acceptance remains pending. [Evidence](../plans/IVA_VISIBILITY_SWITCHES.md).

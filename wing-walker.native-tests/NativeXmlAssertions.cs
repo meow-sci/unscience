@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Xml.Serialization;
 
@@ -26,6 +27,7 @@ internal static class NativeXmlAssertions
         BoneAnimRuntimeChecks.Run();
         CheckStrictDeserialization(ksa, tagTable);
         CheckInstanceSaveSerialization(ksa);
+        CheckEmptySeatSaveData(ksa);
         Require(PartCollectionCount(ksa) == partCollectionCountBefore,
             "parsing and deserializing the mod XML must not register or patch global Core rows");
         Console.WriteLine("PASS: native part schema, patch targets, connector math, and instance crew-save round trip");
@@ -71,6 +73,20 @@ internal static class NativeXmlAssertions
         Require(origin.GetParameters()[0].IsIn, "IVASeat.GetSeatedModelPointAsmb keeps its readonly seat-offset parameter");
         RequireMethod(crewSeatResult, eva, "BoardVehicle", vehicle, door);
         RequireMethod(crewSeatResult, vehicle, "AddCrew", keyHash, typeof(string), typeof(string));
+        Type editor = RequiredType(ksa, "KSA.VehicleEditor");
+        Type part = RequiredType(ksa, "KSA.Part");
+        Assembly glfw = context.LoadFromAssemblyName(new AssemblyName("Brutal.Glfw"));
+        RequirePublicMethod(typeof(bool), editor, "OnMouseButton", RequiredType(glfw, "Brutal.GlfwApi.GlfwWindow"),
+            RequiredType(glfw, "Brutal.GlfwApi.GlfwMouseButton"), RequiredType(glfw, "Brutal.GlfwApi.GlfwButtonAction"),
+            RequiredType(glfw, "Brutal.GlfwApi.GlfwModifier"));
+        MethodInfo gather = RequireMethod(typeof(void), RequiredType(ksa, "KSA.PartCloner"), "Gather", part, typeof(uint));
+        Require(gather.IsStatic && gather.IsPrivate, "PartCloner.Gather remains the private static pre-copy seam");
+        RequirePublicMethod(crewSeatResult, vehicle, "SetSeatCrew", seat, keyHash, typeof(string), typeof(bool));
+        RequirePublicField(editor, "Selected", part);
+        RequirePublicField(editor, "Highlighted", part);
+        RequirePublicField(editor, "GizmoGrabbed", typeof(bool));
+        RequirePublicField(editor, "ExistingVehicle", vehicle);
+        RequirePublicField(part, "TreeParent", part);
         RequirePublicMethod(typeof(void), animatedRenderable, "PlayAnimation", animation, typeof(float));
         RequirePublicMethod(typeof(void), animatedRenderable, "SetAnimation", animation, typeof(float));
         RequireField(renderable, "_seatedIdleAnim", RequiredType(ksa, "KSA.AnimationAssetRef"));
@@ -337,6 +353,18 @@ internal static class NativeXmlAssertions
 
     private static object[] ComponentsOf(object template, string fullTypeName) =>
         Items(GetMember(template, "Components")).Where(item => item.GetType().FullName == fullTypeName).ToArray();
+
+    private static void CheckEmptySeatSaveData(Assembly ksa)
+    {
+        Type seatType = RequiredType(ksa, "KSA.IVASeat");
+        object emptySeat = RuntimeHelpers.GetUninitializedObject(seatType);
+        object states = Activator.CreateInstance(RequiredType(ksa, "KSA.ModuleStateList"))!;
+        object[] args = [7u, states];
+        object? saved = seatType.GetMethod("GetSaveData")!.Invoke(emptySeat, args);
+        Require(saved == null && (uint)args[0] == 7u,
+            "an unassigned native seat emits no stale crew name or module save record for copies/saves");
+        Console.WriteLine("PASS: native empty IVASeat.GetSaveData omits crew without a roster or renderer");
+    }
 
     private static bool HasEnumFlag(object value, string flag)
     {

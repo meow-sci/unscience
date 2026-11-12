@@ -6,6 +6,27 @@ and full solution builds, distribution check and 5801 native signature/CPU anima
 updated production fixture passes, while in-game visual acceptance remains pending. The authoritative game sources are
 `repos/ksa-game-assemblies/current/decomp/KSA` and `current/Content` in the enclosing workspace.
 
+## Editor crew duplication guard (5801)
+
+Editor selection, pickup and gizmo start unassign occupied external mounts in the affected subtree.
+Symmetry/copy capture clears them before native module save data is gathered, including crew
+assigned after selection. Stock seats, siblings and non-editor/stale/disposed trees remain intact.
+Native `Vehicle.SetSeatCrew` releases the roster assignment; native history records the edit.
+No sidecar or long-lived selection cache is added. Managed checks (32), actual DLL signatures and
+empty-seat save behavior pass, along with the full build; native symmetry/undo/redo/load acceptance
+is pending. [Evidence](../plans/WING_WALKER.md#editor-crew-duplication-follow-up).
+
+| Integration | Mod code | CURRENT game evidence / upgrade risk |
+|---|---|---|
+| `VehicleEditor.OnMouseButton(GlfwWindow, GlfwMouseButton, GlfwButtonAction, GlfwModifier): bool` prefix/postfix | `WingWalkerPatches.cs:48-50`; `WingWalkerPatches.Editor.cs:8-25` | `KSA/VehicleEditor.cs:3981,4063-4106`; compare actual Selected, Highlighted.Grabbed and GizmoGrabbed transitions, not hover or persistent selection. GLFW types are game-shipped. |
+| Private static `PartCloner.Gather(Part,uint): void` prefix | `WingWalkerPatches.cs:51-52`; `WingWalkerPatches.Editor.cs:27-32` | `KSA/PartCloner.cs:134-139`; must run before GatherSaveData captures IVASeatData. Both batch symmetry and subtree copies reach it. Reverify name, signature and ordering on upgrades. |
+| `Program.Editor`, editor focused/unattached trees, `Part.FullPart/Tree/TreeParent`, `PartTree.IsDisposed/Modules.Get<IVASeat>()` | `WingWalkerPatches.Editor.cs:34-60` | Exact reference ownership limits the edit to external seats below the selected/copy root in active editor trees. No name/ID fallback or retained references. |
+| `Vehicle.SetSeatCrew(IVASeat,KeyHash,string,bool)` with `KeyHash.Zero` | `WingWalkerPatches.Editor.cs:49-50` | `KSA/Vehicle.cs:879-913`; calls roster LeaveVehicle, clears the seat and returns Emptied. Uses ExistingVehicle.Id/HasLaunched or draft EditingSpace.Id/false, matching native Crew controls at VehicleEditor.cs:7579-7580. |
+| `VehicleEditor.SyncHistoryBeforeEditFor(PartTree)` / `MarkHistoryStepFor(PartTree,EditorHistoryAction,LString?)` | `WingWalkerPatches.Editor.cs:48,53` | `KSA/VehicleEditor.cs:8001-8031`; native snapshots retain ownership; commits defer while grabbed. `Brutal.Localization` is compile-only for the optional label argument. |
+| Native empty seat save data | No new save hook | `KSA/IVASeat.cs:155-170`; zero assignment emits no module record/name. Actual DLL empty-seat call and existing native XML round-trip pass; real roster/undo/load acceptance is pending. |
+
+## Existing rendering, boarding and assets
+
 | Target / contract | Integration and risk |
 |---|---|
 | `SuperMeshRenderSystem.ClearBuckets(IViewport)` | Postfix in `wing-walker.lib/WingWalkerPatches.Rendering.cs`; only the active visible non-portrait viewport and main render system. Enumerates `Program.VehiclesInFrame`, skips disposed, culled and controlled vehicles, and submits their external seats. In the editor, traverses `VehicleEditor.EditingSpace.Parts` and `UnattachedPartTrees` once each. Native controlled-craft and portrait rendering remain responsible for their own submissions. `KSA/SuperMeshRenderSystem.cs:540`. |

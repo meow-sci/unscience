@@ -440,12 +440,17 @@ the standing model uses brown leather foot straps; the seated model is a rainbow
 a native gold foil frame and textured white armrests. Both have editable Blender art and bundled custom PBR textures, and appear in the Capsules filter.
 KSA owns persistent part, crew and resource state, so no feature sidecar is added. The library owns
 the patches; the thin standalone host is for development, while only Unscience ships.
+`WingWalkerPatches.Editor.cs` unassigns exact affected external seats on editor selection/pickup/
+gizmo start and before symmetry/copy capture, using native crew and history APIs. Descendant mounts
+are included; stock seats, unrelated parts and non-editor trees are untouched. Native seat saves
+remain authoritative. Brutal.Localization is compile-only for the history API's label parameter.
 [Integration](scope/wing-walker.md) · [validation](plans/WING_WALKER.md).
 
 ### [wing-walker.tests](wing-walker.tests)
 
 Native-free fixtures exercise the production Harmony patches: standing animation/origin, viewport
 and editor rendering, exact-seat boarding for repeated part IDs, exceptions and targeted unload.
+Also includes 32 editor crew selection/copy ownership and history checks against production patches.
 
 ### [wing-walker.native-tests](wing-walker.native-tests)
 
