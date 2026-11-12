@@ -103,6 +103,10 @@
     <None Include="../wing-walker/WingWalker.xml" Link="WingWalker.xml" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../wing-walker/Meshes/**/*.glb" Link="Meshes/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../wing-walker/Textures/**/*.png" Link="Textures/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../beverage-cooler/BeverageCooler.xml" Link="BeverageCooler.xml" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../beverage-cooler/Meshes/**/*.glb" Link="Meshes/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../beverage-cooler/Animations/**/*.glb" Link="Animations/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../beverage-cooler/Textures/**/*.png" Link="Textures/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="mod.toml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -113,6 +117,7 @@
     <ItemGroup>
       <FilesToCopy Include="$(OutputPath)mod.toml" />
       <FilesToCopy Include="$(OutputPath)WingWalker.xml" />
+      <FilesToCopy Include="$(OutputPath)BeverageCooler.xml" />
       <FilesToCopy Include="$(OutputPath)$(AssemblyName).dll" />
       <FilesToCopy Include="$(OutputPath)$(AssemblyName).pdb" />
       <FilesToCopy Include="$(OutputPath)$(AssemblyName).deps.json" />
@@ -120,10 +125,11 @@
     </ItemGroup>
     <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(DistDir)" />
     <ItemGroup>
-      <WingWalkerArt Include="$(TargetDir)Meshes/**/*.glb"><ArtDirectory>Meshes</ArtDirectory></WingWalkerArt>
-      <WingWalkerArt Include="$(TargetDir)Textures/**/*.png"><ArtDirectory>Textures</ArtDirectory></WingWalkerArt>
+      <BundledPartArt Include="$(TargetDir)Meshes/**/*.glb"><ArtDirectory>Meshes</ArtDirectory></BundledPartArt>
+      <BundledPartArt Include="$(TargetDir)Animations/**/*.glb"><ArtDirectory>Animations</ArtDirectory></BundledPartArt>
+      <BundledPartArt Include="$(TargetDir)Textures/**/*.png"><ArtDirectory>Textures</ArtDirectory></BundledPartArt>
     </ItemGroup>
-    <Copy SourceFiles="@(WingWalkerArt)" DestinationFiles="@(WingWalkerArt->'$(DistDir)%(ArtDirectory)/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(BundledPartArt)" DestinationFiles="@(BundledPartArt->'$(DistDir)%(ArtDirectory)/%(RecursiveDir)%(Filename)%(Extension)')" />
     <ItemGroup>
       <!-- Copy only resolved project dependencies, never stale DLLs left in bin by old builds. -->
       <MeowSciAssemblies Include="@(ReferenceCopyLocalPaths)"

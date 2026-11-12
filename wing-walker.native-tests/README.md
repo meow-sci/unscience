@@ -1,5 +1,7 @@
 # Wing Walker native XML validation
 
+This harness also validates the bundled [Beverage Cooler](../beverage-cooler/README.md) assets.
+
 Run from the unscience repository root on an x64 .NET host:
 
 ```sh
@@ -35,3 +37,11 @@ resolve asset references or load rows into the live Core library. It calls the e
 Occupied-seat `GetSaveData` and native unassignment require the game's initialized crew roster.
 The editor checks verify the exact `VehicleEditor.OnMouseButton` and private
 `PartCloner.Gather(Part,uint)` signatures, selection fields and native `Vehicle.SetSeatCrew` API.
+
+`CoolerNativeChecks` invokes the actual native cosmetic variant-family validator before strict
+deserialization. It checks inherited gameplay, stable Body/Lid/LidCollider slots, the shared
+mechanical lid, native Actuate module, the 30 L capacity (12 meals+2 CO₂ canisters), and negative
+variant metadata, mechanical-subpart and Habitat storage-capacity drift cases. The actual native GLB loader binds both lid slots
+and samples the closed, halfway and 100° open transforms, with a fixed hinge. Native PartInstance XML overrides round-trip both variant IDs,
+different depleted stocks, fractional consumption and partial opening/closing lid state. No live
+renderer, habitat-zone reconstruction, whole-world load or physics/contact acceptance is claimed.

@@ -1,5 +1,22 @@
 # Save/load lifecycle integration
 
+## Beverage Cooler
+
+The asset-only part creates no sidecar or save participant. KSA's `Part.GetSaveData` stores the
+selected `Unscience_Cooler_Red`/`Unscience_Cooler_StainlessSteel` template and native placement;
+`HabitatData` stores remaining meals/canisters, MealsOwed/WaterOwed and CanisterUsedKittenDays.
+`KeyframeAnimationData` stores `TimeCurrent`/`TimeGoal`, and native ApplySaveData reapplies the
+partial lid pose. Neither variant owns duplicated gameplay state. Stable root/module keys and
+ordered `Body`, `Lid`, `LidCollider` subparts preserve positional matching. Meshes/materials and
+native animation data are static asset dependencies; no mod-held world references or queued work
+exist to reset, clean up or replay on vanilla/new/repeated loads or unload.
+
+The actual 5801 native serializer round-trips both variant IDs, independently depleted supplies,
+fractional consumption and opening/closing animation times in PartInstance records. These are
+module-data/CPU checks; whole-world reconstruction, native blueprint policy, A→B→A/restart and
+physical lid/supply access remain [native acceptance](../plans/saves-acceptance.md#beverage-cooler).
+[Integration](beverage-cooler.md).
+
 ## DOH click-to-spawn
 
 Native KSA owns completed surface-spawned kitten poses, velocities and crew; DOH's existing

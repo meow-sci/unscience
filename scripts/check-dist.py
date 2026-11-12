@@ -9,15 +9,17 @@ package = root / "unscience"
 assert sorted(p.name for p in root.iterdir()) == ["unscience"], "Expected only unscience/ in dist"
 assert list(root.rglob("mod.toml")) == [package / "mod.toml"], "Expected one StarMap manifest"
 assert 'EntryAssembly = "MeowSci.Unscience"' in (package / "mod.toml").read_text()
-assert 'assets = [ "WingWalker.xml" ]' in (package / "mod.toml").read_text()
-for name in ("MeowSci.Unscience.dll", "MeowSci.Unscience.deps.json", "Tomlyn.dll", "LICENSE", "WingWalker.xml"):
+assert 'assets = [ "WingWalker.xml", "BeverageCooler.xml" ]' in (package / "mod.toml").read_text()
+for name in ("MeowSci.Unscience.dll", "MeowSci.Unscience.deps.json", "Tomlyn.dll", "LICENSE", "WingWalker.xml", "BeverageCooler.xml"):
     assert (package / name).is_file(), f"Missing runtime file: {name}"
-assert (package / "WingWalker.xml").read_bytes() == (repo / "wing-walker/WingWalker.xml").read_bytes(), "Seat asset differs from source"
-for asset in ET.parse(repo / "wing-walker/WingWalker.xml").getroot():
-    if "Path" in asset.attrib:
-        relative = asset.attrib["Path"]
-        assert (package / relative).is_file(), f"Missing Wing Walker art: {relative}"
-        assert (package / relative).read_bytes() == (repo / "wing-walker" / relative).read_bytes(), f"Stale Wing Walker art: {relative}"
+for folder, xml_name in (("wing-walker", "WingWalker.xml"), ("beverage-cooler", "BeverageCooler.xml")):
+    assert (package / xml_name).read_bytes() == (repo / folder / xml_name).read_bytes(), f"{xml_name} differs from source"
+    for asset in ET.parse(repo / folder / xml_name).getroot():
+        if "Path" in asset.attrib:
+            relative = asset.attrib["Path"]
+            assert (package / relative).is_file(), f"Missing {folder} art: {relative}"
+            assert (package / relative).read_bytes() == (repo / folder / relative).read_bytes(), f"Stale {folder} art: {relative}"
+assert not (package / "Art").exists(), "Editable Blender art must not be distributed"
 expected = set()
 pending = [repo / "unscience/unscience.csproj"]
 visited = set()

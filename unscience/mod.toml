@@ -2,7 +2,7 @@ name = "unscience"
 description = "unscience"
 version = "0.1.0"
 author = "meow sci"
-assets = [ "WingWalker.xml" ]
+assets = [ "WingWalker.xml", "BeverageCooler.xml" ]
 
 [StarMap]
 EntryAssembly = "MeowSci.Unscience"

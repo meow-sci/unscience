@@ -83,6 +83,7 @@ Scene-save adapters extend native saves; imported files remain external dependen
 | [`game-integration-surface.md`](game-integration-surface.md) | **Master cross-reference index** — every game type/member touched, merged across mods | Start here for "does the game still have X?"; includes the string-reflection watchlist + shader/asset table |
 | [`doh-placement.md`](doh-placement.md) | DOH click-to-spawn | Main-viewport mouse/key prefixes, physical part/static rays, accurate terrain, borrowed Bepu shape queries, capsule/COM/motion and scene cancellation; native acceptance pending |
 | [`wing-walker.md`](wing-walker.md) | wing-walker | Native surface-mounted crew parts, render submission, standing animation/origin hooks, custom chair/strap assets and native foil; native acceptance pending |
+| [`beverage-cooler.md`](beverage-cooler.md) | beverage-cooler native assets | Native cosmetic variants, GLB/PBR assets, shared moving lid collider/keyframe actuation, Habitat supplies and KSA-owned saves; native acceptance pending |
 | [`saves.md`](saves.md) | Native scene save/load extension across all bundled features; save-yourself timed auto saves | Ordered cleanup/replay, deferred world replacement, native save directory sidecars and stable part references; Save Yourself produces native saves via `GameSaveProvider` (`SaveName.TryAccept` → `UncompressedSave.Make`, no patches) |
 | [`00-architecture-and-abstractions.md`](00-architecture-and-abstractions.md) | unscience supermod shell (`Mod.cs`/`Patcher.cs`/`MenuBarPatch`/`UnscienceState`) + `ksa-abstractions.lib` | StarMap lifecycle map, consolidated-Harmony cross-ref, `HotkeyGuard`, `IvaForceRender`, providers |
 | [`vehicle-physics.md`](vehicle-physics.md) | dent-wizard, eternal-flame, garrys-torch, godzilla, i-feel-seen, the-tick | `Universe.ExecuteNextVehicleSolvers` (Eternal Flame fuel + electricity refills since 5482), `Battery.Refill`, `Vehicle.Teleport` (+ `PhysicsFrameHook.JoinOrbitReaders`), KittenEva reflection, Godzilla's `IsLargeEnoughToRender` cull redirect; **Godzilla separates visual, collider and nominal physics size; garrys-torch preserves actuator results; default-off source collisions use scoped Bepu shape suppression**; The Tick prefixes `Part.CrashTolerancePascals` and prefix/postfixes `PhysicsBubble.DetectStructuralFailure` for per-vessel indestructibility |
@@ -109,6 +110,11 @@ rocky-mcrock-face, save-yourself, skittles, sphinx, wing-walker, the-tick, thug-
 ---
 
 ## Current status against 5801
+
+Beverage Cooler adds asset-only Red/Stainless Steel variants, native lid actuation and a 30 L
+food/scrubber locker. Native parser/family/capacity/save-data checks cover the new schema; renderer,
+contacts, supply access and full save/load acceptance remain pending. No new submod or sidecar.
+[Integration](beverage-cooler.md) · [acceptance](../plans/saves-acceptance.md#beverage-cooler).
 
 Wing Walker unassigns affected external crew on editor selection/pickup/gizmo start and before
 symmetry/copy capture, preventing duplicate kitten names. Native crew/history/save ownership stays

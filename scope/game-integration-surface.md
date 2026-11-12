@@ -9,6 +9,19 @@ Thirty production render/ownership checks, Kitchen Sink save checks and the full
 native appearance/load acceptance remains pending. [Current integration](00-architecture-and-abstractions.md#ivaforcerendercs)
 · [evidence](../plans/IVA_VISIBILITY_SWITCHES.md).
 
+## Beverage Cooler native assets (5801)
+
+`unscience/mod.toml` loads `BeverageCooler.xml`. `PartTemplate.VariantRefs` and native
+`VariantFamilyCheck` constrain Red/Stainless Steel to cosmetic SubPart differences; all root
+mechanics are inherited. Stable `Body`, `Lid`, `LidCollider` slots use custom MeshAtlas/PartModel/
+MeshView/PbrMaterial content, with a shared identical mechanical lid Ref. `KeyframeAnimationModule`
+binds the first animation clip through an animated Hinge ancestor to unanimated Lid/LidCollider
+nodes; ShowDeployRetract=false exposes Actuate. Root `HabitatTemplate` stores 30 L (12 meals+2
+scrubbers), with native passage/access rules. KSA's PartInstance, HabitatData and
+KeyframeAnimationData own durable state. Native CPU checks cover parser/family/capacity/serialization;
+rendering, contacts and full-world acceptance remain pending. No patch, runtime reflection or sidecar.
+[Complete asset/type contracts](beverage-cooler.md).
+
 ## Wing Walker (5801)
 
 Editor crew duplication is guarded by `VehicleEditor.OnMouseButton(GlfwWindow, GlfwMouseButton,
@@ -1365,6 +1378,11 @@ on every game update FIRST.
 ---
 
 ## 5. Shaders & game assets subtable
+
+Beverage Cooler adds `BeverageCooler.xml`, `Meshes/BeverageCooler.glb`,
+`Animations/BeverageCooler_Lid.glb` and nine `BeverageCooler_{Red,Steel,Common}_{Diffuse,Normal,ORM}.png`
+maps. Its native schema/binding and fixed mesh/material IDs are inventoried in
+[beverage-cooler.md](beverage-cooler.md). No stock shader, material bytes or Core payload is modified.
 
 IVA switch follow-up changes no shaders, material bytes or capsule asset keys; only the
 unconditional editor reveal hook is removed. Existing native glass and shadow-proxy behavior stays intact.

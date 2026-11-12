@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Assets>
+  <EditorTagDef Id="Unscience Supplies" />
+  <MeshAtlas Id="Unscience_Cooler_Atlas" Path="Meshes/BeverageCooler.glb" />
+  <KeyframeAnimation Id="Unscience_Cooler_LidAnimation" Path="Animations/BeverageCooler_Lid.glb" />
+
+  <Texture Id="Unscience_Cooler_RedDiffuse" Path="Textures/BeverageCooler_Red_Diffuse.png" Category="Vessel" />
+  <Texture Id="Unscience_Cooler_RedNormal" Path="Textures/BeverageCooler_Red_Normal.png" Category="Vessel" />
+  <Texture Id="Unscience_Cooler_RedORM" Path="Textures/BeverageCooler_Red_ORM.png" Category="Vessel" />
+  <PbrMaterial Id="Unscience_Cooler_RedMaterial">
+    <Diffuse Ref="Unscience_Cooler_RedDiffuse" /><Normal Ref="Unscience_Cooler_RedNormal" />
+    <AoRoughMetal Ref="Unscience_Cooler_RedORM" />
+  </PbrMaterial>
+  <Texture Id="Unscience_Cooler_SteelDiffuse" Path="Textures/BeverageCooler_Steel_Diffuse.png" Category="Vessel" />
+  <Texture Id="Unscience_Cooler_SteelNormal" Path="Textures/BeverageCooler_Steel_Normal.png" Category="Vessel" />
+  <Texture Id="Unscience_Cooler_SteelORM" Path="Textures/BeverageCooler_Steel_ORM.png" Category="Vessel" />
+  <PbrMaterial Id="Unscience_Cooler_SteelMaterial">
+    <Diffuse Ref="Unscience_Cooler_SteelDiffuse" /><Normal Ref="Unscience_Cooler_SteelNormal" />
+    <AoRoughMetal Ref="Unscience_Cooler_SteelORM" />
+  </PbrMaterial>
+  <Texture Id="Unscience_Cooler_CommonDiffuse" Path="Textures/BeverageCooler_Common_Diffuse.png" Category="Vessel" />
+  <Texture Id="Unscience_Cooler_CommonNormal" Path="Textures/BeverageCooler_Common_Normal.png" Category="Vessel" />
+  <Texture Id="Unscience_Cooler_CommonORM" Path="Textures/BeverageCooler_Common_ORM.png" Category="Vessel" />
+  <PbrMaterial Id="Unscience_Cooler_CommonMaterial">
+    <Diffuse Ref="Unscience_Cooler_CommonDiffuse" /><Normal Ref="Unscience_Cooler_CommonNormal" />
+    <AoRoughMetal Ref="Unscience_Cooler_CommonORM" />
+  </PbrMaterial>
+
+  <!-- Cosmetic subparts contain only render/picking modules: gameplay belongs to the head. -->
+  <SubPart Id="Unscience_Cooler_RedBody">
+    <Components>
+      <PartModel Key="Shell"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_BodyShell" /><Material Ref="Unscience_Cooler_RedMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <PartModel Key="Trim"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_BodyTrim" /><Material Ref="Unscience_Cooler_CommonMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <MeshView><Mesh Ref="Unscience_Cooler_Body_VM" /></MeshView>
+    </Components>
+  </SubPart>
+  <SubPart Id="Unscience_Cooler_RedLid">
+    <Components>
+      <PartModel Key="Shell"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_LidShell" /><Material Ref="Unscience_Cooler_RedMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <PartModel Key="Trim"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_LidTrim" /><Material Ref="Unscience_Cooler_CommonMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <MeshView><Mesh Ref="Unscience_Cooler_Lid_VM" /></MeshView>
+    </Components>
+  </SubPart>
+  <SubPart Id="Unscience_Cooler_SteelBody" Parent="Unscience_Cooler_RedBody">
+    <Components Modify="Extend">
+      <PartModel Key="Shell" Modify="Patch"><Material Ref="Unscience_Cooler_SteelMaterial" /></PartModel>
+    </Components>
+  </SubPart>
+  <SubPart Id="Unscience_Cooler_SteelLid" Parent="Unscience_Cooler_RedLid">
+    <Components Modify="Extend">
+      <PartModel Key="Shell" Modify="Patch"><Material Ref="Unscience_Cooler_SteelMaterial" /></PartModel>
+    </Components>
+  </SubPart>
+  <!-- The identical mechanical slot is shared by every member, separately from cosmetic lids. -->
+  <SubPart Id="Unscience_Cooler_LidCollision">
+    <Components>
+      <Collider Key="LidCollider"><Colliders>
+        <Box Key="Lid"><LocationAsmb X="0.19" Z="-0.025" /><LengthX M="0.4" /><LengthY M="0.65" /><LengthZ M="0.058" /></Box>
+      </Colliders></Collider>
+    </Components>
+  </SubPart>
+
+  <Part Id="Unscience_Cooler_Red" DisplayName="Beverage Cooler">
+    <EditorTags><EditorTag Ref="Unscience Supplies" /><EditorTag Ref="Structural" /><EditorTag Ref="Life Support" /></EditorTags>
+    <Variants><Part Ref="Unscience_Cooler_Red" /><Part Ref="Unscience_Cooler_StainlessSteel" /></Variants>
+    <!-- These stable immediate-child keys are the animation binding and native save slots. -->
+    <SubParts>
+      <SubPart Key="Body" Ref="Unscience_Cooler_RedBody" />
+      <SubPart Key="Lid" Ref="Unscience_Cooler_RedLid"><Transform><Position X="-0.19" Z="-0.409" /></Transform></SubPart>
+      <SubPart Key="LidCollider" Ref="Unscience_Cooler_LidCollision"><Transform><Position X="-0.19" Z="-0.409" /></Transform></SubPart>
+    </SubParts>
+    <Connectors>
+      <Connector Key="SurfaceMount"><Transform><Rotation Y="-1.57079632679" /></Transform><Flags>ToSurface</Flags></Connector>
+    </Connectors>
+    <InertMasses>
+      <CustomMass><LocationAsmb Z="-0.22" /><Mass Kg="5.5" /><MassSpecificInertia Ixx="0.053073" Iyy="0.031198" Izz="0.048542" /></CustomMass>
+    </InertMasses>
+    <Components>
+      <!-- KSA names this slider Actuate. The first GLB clip is Actuation, 0..1.2 seconds. -->
+      <KeyframeAnimationModule Key="LidAnimation" ShowDeployRetract="false"><KeyframeAnimation Ref="Unscience_Cooler_LidAnimation" /></KeyframeAnimationModule>
+      <!-- This is a supplies locker, not a crew seat or beverage-specific simulation. -->
+      <Habitat Key="Supplies" PassesSurfaceAttachments="true"><StorageVolume M3="0.03" /><LocationAsmb Z="-0.22" /></Habitat>
+      <!-- Fixed hollow shell; the common LidCollider subpart follows the animated hinge. -->
+      <Collider Key="BodyCollider">
+        <Colliders>
+          <Box Key="Floor"><LocationAsmb Z="-0.056" /><LengthX M="0.4" /><LengthY M="0.65" /><LengthZ M="0.112" /></Box>
+          <Box Key="Front"><LocationAsmb X="0.1825" Z="-0.22" /><LengthX M="0.035" /><LengthY M="0.65" /><LengthZ M="0.37" /></Box>
+          <Box Key="Back"><LocationAsmb X="-0.1825" Z="-0.22" /><LengthX M="0.035" /><LengthY M="0.65" /><LengthZ M="0.37" /></Box>
+          <Box Key="Left"><LocationAsmb Y="-0.3075" Z="-0.22" /><LengthX M="0.33" /><LengthY M="0.035" /><LengthZ M="0.37" /></Box>
+          <Box Key="Right"><LocationAsmb Y="0.3075" Z="-0.22" /><LengthX M="0.33" /><LengthY M="0.035" /><LengthZ M="0.37" /></Box>
+        </Colliders>
+      </Collider>
+    </Components>
+  </Part>
+  <Part Id="Unscience_Cooler_StainlessSteel" Parent="Unscience_Cooler_Red">
+    <SubParts Modify="Extend">
+      <SubPart Key="Body" Ref="Unscience_Cooler_SteelBody" Modify="Patch" />
+      <SubPart Key="Lid" Ref="Unscience_Cooler_SteelLid" Modify="Patch" />
+    </SubParts>
+  </Part>
+</Assets>

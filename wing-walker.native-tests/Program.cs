@@ -106,6 +106,7 @@ internal static class Program
         Require(partCount == 2, $"expected two deserialized final parts; found {partCount}");
         NativeXmlAssertions.Verify(ksa, loadContext, tagTable, decoded, partCollectionCountBefore);
         Console.WriteLine($"PASS: native XML pre-pass flattened {decoded.Count} rows and deserialized {partCount} Part rows with zero content errors");
+        CoolerNativeChecks.Run(ksa, tagTable, repoRoot);
     }
 
     private static string ReadBuildId(string versionFile)

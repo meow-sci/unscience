@@ -432,6 +432,16 @@ Global ImGui theme manager. Provides a theme picker and a full style editor that
 
 ## Kitten Spawning & Customization Mods
 
+### [beverage-cooler](beverage-cooler) — bundled native assets
+
+Asset-only Beverage Cooler part with Red/Stainless Steel cosmetic variants, custom GLB/PBR art,
+native Actuate lid animation and a shared moving lid collider. A 30 L native Habitat locker holds
+12 meals+2 CO₂ scrubber canisters; editor tags are Unscience Supplies, Life Support and Structural.
+Native passage rules determine crew access. KSA owns the selected
+variant, consumables, fractional consumption and lid current/goal in normal saves; no C# host,
+ISubmod or sidecar. Unscience packages XML, mesh, animation and textures; editable Art stays in source.
+[Integration](scope/beverage-cooler.md) · [save acceptance](plans/saves-acceptance.md#beverage-cooler).
+
 ### [wing-walker](wing-walker) / [wing-walker.lib](wing-walker.lib)
 
 Native surface-mounted External Seat and Standing Mount parts, native crew assignment and EVA
@@ -457,6 +467,8 @@ Also includes 32 editor crew selection/copy ownership and history checks against
 Runs the supplied KSA XML prepass/deserializer and checks native crew/part save data without a
 renderer. The documented ARM64 test option uses a temporary IL-only assembly header retarget;
 original game binaries and distributed files remain unchanged.
+Also validates Beverage Cooler native variant-family rules, inherited mechanics/stable animation
+slots, supply capacities and native PartInstance module-state serialization for both variants.
 
 ### [doh](doh) / [doh.lib](doh.lib)
 Programmatic kitten spawning, preferred single names or numbered batch prefixes, character selection,

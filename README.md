@@ -53,6 +53,13 @@ Wing Walker editor selection, pickup and gizmo moves unassign crew from affected
 Symmetry/copying clears those assignments before cloning; place parts and set symmetry first,
 then assign each kitten. Native history and saves own the resulting crew state.
 
+**[Beverage Cooler](beverage-cooler/README.md)** adds a surface-mounted supplies cooler with Red and
+Stainless Steel variants and a native **Actuate** lid control. Its 30 L native locker holds 12 meals
+and 2 CO₂ scrubber canisters; find it under **Unscience Supplies**, **Life Support** or **Structural**.
+Crew access follows native habitat passage rules. KSA saves the variant,
+supplies and lid state. The asset-only feature has editable Blender art and no separate toolbox panel.
+Native visual, collision and save/load acceptance remain pending.
+
 # game compatibility
 
 The current checkout targets **KSA 2026.11.10.5801**, upgraded from 2026.10.25.5707.

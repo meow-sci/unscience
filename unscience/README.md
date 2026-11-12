@@ -23,6 +23,10 @@ Unscience is the only distributed mod. `dotnet build` deploys one `unscience/` f
 feature libraries remain separate projects with explicit references. Former standalone hosts are
 retained for development and are not deployed or published. See [distribution](../README.md#distribution).
 
+The release also loads [Beverage Cooler](../beverage-cooler/README.md), asset-only native content:
+Red/Stainless Steel variants, an Actuate lid and a 30 L supplies locker. KSA owns its saved state;
+it adds no toolbox submod or feature assembly. XML, meshes, animation and textures ship together.
+
 A unified supermod that consolidates KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
 
 ## Included Submods

@@ -1,5 +1,34 @@
 # Scene save implementation coverage and native acceptance
 
+## Beverage Cooler
+
+All durable state is native: selected part variant/placement, Habitat meals/canisters and
+fractional consumption, and KeyframeAnimation current/target times. No sidecar ID/version or
+participant is added. Native 5801 prepass/deserializer/family validation and PartInstance XML
+round trips cover both variants with different depleted stocks and partially opening/closing lids.
+They do not replace a running-game acceptance pass. [Contracts](../scope/beverage-cooler.md).
+
+- [ ] In the editor find Beverage Cooler under Unscience Supplies/Life Support/Structural. Cycle Red/Stainless
+  Steel before placement, while grabbed and on a placed part; mass/supplies/connectors remain equal,
+  appearance changes, and no VariantDrift or missing asset warning occurs. Copy/symmetry/undo/redo
+  preserve native state without duplicated resources.
+- [ ] Open/close and stop the native Actuate slider midway. Inspect lid picking/contact debug
+  geometry: shell and shared collider rotate together about the rear hinge, the front rises, the
+  body/cavity stay fixed, and open/closed/midway thumbnails and shadows remain sensible.
+- [ ] Verify full storage is 12 meals+2 CO₂ scrubbers; consume or transfer different amounts from
+  two coolers and observe native mass changes. Check a compatible habitat passage and a blocked
+  surface attachment independently; blocked cabins must not gain access. No water/oxygen tank or
+  occupied crew habitat is expected from this supplies-only part.
+- [ ] With life support enabled, use a healthy EVA kitten with cargo space to retrieve/return
+  supplies inside 2 m; repeat outside range and without cargo space. In-zone transfers require an
+  able crew carrier. Verify native availability checks and remaining supplies/mass.
+- [ ] Save A with both variants, unequal depleted stock and one partly opening/one partly closing
+  lid. Reload twice, A→B→A, restart and reload: exact variants, placement, supplies/debts, current
+  lid pose and continuation restore without refill, duplication or compounding transforms.
+- [ ] Save/reopen blueprints with both variants and partial lids; record native blueprint resource
+  policy. Load a vanilla save/new system and return to A; no previous scene state remains. Test a
+  throwaway save with cooler assets missing, then reinstall and load the untouched original.
+
 ## DOH click-to-spawn
 
 **Spawn at...** beside **Spawn Kitten(s)** creates one native-owned EVA at a validated surface.
