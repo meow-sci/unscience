@@ -31,6 +31,9 @@ animation and PNG textures ship. Both visual variants share the same collider-on
 their differing body/lid subparts contain only rendering and picking modules, as KSA's cosmetic
 variant validator requires. [Integration details](../scope/beverage-cooler.md).
 
+Restart KSA after installing the lid/finish fix to clear its process-wide model cache. The update
+keeps existing cooler part IDs, supplies and saved lid state. In-game retesting remains pending.
+
 The [native XML test harness](../wing-walker.native-tests/README.md) checks inheritance, the native
 variant validator, supplies capacities and native module-data serialization. Renderer, physical
 contacts and a complete in-game save/load still need native acceptance.

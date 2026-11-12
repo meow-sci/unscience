@@ -8,6 +8,13 @@ participant is added. Native 5801 prepass/deserializer/family validation and Par
 round trips cover both variants with different depleted stocks and partially opening/closing lids.
 They do not replace a running-game acceptance pass. [Contracts](../scope/beverage-cooler.md).
 
+The initial in-game report confirms actuation plays, but exposed a body mesh used as the lid and
+both finishes red. Native PartModel cache aliasing caused both defects. The fix uses unique render
+keys without changing saved part/module identities; restart KSA before retesting the update.
+
+- [ ] Load a craft saved with the first cooler build. Confirm one body plus an actual thin lid,
+  matching lid/body finish in both variants, retained supply depletion and partial lid state. Repeat
+  variant switching after other coolers have rendered to exercise the populated global model cache.
 - [ ] In the editor find Beverage Cooler under Unscience Supplies/Life Support/Structural. Cycle Red/Stainless
   Steel before placement, while grabbed and on a placed part; mass/supplies/connectors remain equal,
   appearance changes, and no VariantDrift or missing asset warning occurs. Copy/symmetry/undo/redo

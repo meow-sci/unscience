@@ -112,7 +112,9 @@ rocky-mcrock-face, save-yourself, skittles, sphinx, wing-walker, the-tick, thug-
 ## Current status against 5801
 
 Beverage Cooler adds asset-only Red/Stainless Steel variants, native lid actuation and a 30 L
-food/scrubber locker. Native parser/family/capacity/save-data checks cover the new schema; renderer,
+food/scrubber locker. Globally unique PartModel keys correct the duplicate-body lid/all-red variant
+cache collision; native cache regression passes and the in-game retest remains pending. Native
+parser/family/capacity/save-data checks cover the schema; renderer,
 contacts, supply access and full save/load acceptance remain pending. No new submod or sidecar.
 [Integration](beverage-cooler.md) · [acceptance](../plans/saves-acceptance.md#beverage-cooler).
 

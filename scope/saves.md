@@ -11,6 +11,11 @@ ordered `Body`, `Lid`, `LidCollider` subparts preserve positional matching. Mesh
 native animation data are static asset dependencies; no mod-held world references or queued work
 exist to reset, clean up or replay on vanilla/new/repeated loads or unload.
 
+The lid/finish correction renames only stateless PartModel component keys and explicitly authors
+the stainless render subparts. These render modules emit no native save data. Existing part/subpart
+template IDs, ordered placements, Supplies/LidAnimation keys and native serialized state remain
+compatible; no sidecar or migration is added. Restart KSA to clear its process-wide PartModel cache.
+
 The actual 5801 native serializer round-trips both variant IDs, independently depleted supplies,
 fractional consumption and opening/closing animation times in PartInstance records. These are
 module-data/CPU checks; whole-world reconstruction, native blueprint policy, A→B→A/restart and

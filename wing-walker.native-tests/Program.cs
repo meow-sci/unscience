@@ -184,7 +184,7 @@ internal static class Program
 
     private static Assembly? ResolveFromDirectories(AssemblyLoadContext context, AssemblyName requested, string[] directories)
     {
-        if (requested.Name == null || requested.Name.StartsWith("System.", StringComparison.Ordinal)
+        if (requested.Name == null || (requested.Name.StartsWith("System.", StringComparison.Ordinal) && requested.Name != "System.IO.Hashing")
             || requested.Name is "System" or "System.Private.CoreLib" or "netstandard")
             return null;
 
@@ -250,7 +250,7 @@ internal static class Program
 
         protected override Assembly? Load(AssemblyName assemblyName)
         {
-            if (assemblyName.Name == null || assemblyName.Name.StartsWith("System.", StringComparison.Ordinal)
+            if (assemblyName.Name == null || (assemblyName.Name.StartsWith("System.", StringComparison.Ordinal) && assemblyName.Name != "System.IO.Hashing")
                 || assemblyName.Name is "System" or "System.Private.CoreLib" or "netstandard")
                 return null;
 

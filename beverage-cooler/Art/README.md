@@ -29,6 +29,11 @@ in R/G/B. The script exports four visible one-primitive meshes with normals, UVs
 and separate combined body/lid picking meshes. GLB materials are omitted; native XML binds the
 external maps. Only runtime GLB/PNG/XML files ship; the source and previews stay in the repository.
 
+Native XML PartModel keys must be globally unique per render definition: KSA's process-wide model
+cache uses that Key alone. Reusing generic Shell/Trim keys aliases body/lid meshes and exterior
+finishes even when this GLB's mesh names and XML references are correct. The eight cooler render
+components use distinct namespaced keys; placement keys retain their separate animation/save role.
+
 Authoring coordinates are metres, +Z up, −Y front. Export bakes `(x,y,z)` to KSA `(-y,-x,-z)`
 without exporter Y-up conversion and leaves node transforms at identity. Body vertices use the
 base origin. Lid vertices are relative to the authoring hinge `(0,.19,.409)`, which becomes

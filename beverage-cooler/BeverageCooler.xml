@@ -26,29 +26,34 @@
     <AoRoughMetal Ref="Unscience_Cooler_CommonORM" />
   </PbrMaterial>
 
+  <!-- PartModel keys are globally cached by KSA: every mesh/material pair needs its own key. -->
   <!-- Cosmetic subparts contain only render/picking modules: gameplay belongs to the head. -->
   <SubPart Id="Unscience_Cooler_RedBody">
     <Components>
-      <PartModel Key="Shell"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_BodyShell" /><Material Ref="Unscience_Cooler_RedMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
-      <PartModel Key="Trim"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_BodyTrim" /><Material Ref="Unscience_Cooler_CommonMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <PartModel Key="Unscience_Cooler_RedBodyShell"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_BodyShell" /><Material Ref="Unscience_Cooler_RedMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <PartModel Key="Unscience_Cooler_RedBodyTrim"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_BodyTrim" /><Material Ref="Unscience_Cooler_CommonMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
       <MeshView><Mesh Ref="Unscience_Cooler_Body_VM" /></MeshView>
     </Components>
   </SubPart>
   <SubPart Id="Unscience_Cooler_RedLid">
     <Components>
-      <PartModel Key="Shell"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_LidShell" /><Material Ref="Unscience_Cooler_RedMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
-      <PartModel Key="Trim"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_LidTrim" /><Material Ref="Unscience_Cooler_CommonMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <PartModel Key="Unscience_Cooler_RedLidShell"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_LidShell" /><Material Ref="Unscience_Cooler_RedMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <PartModel Key="Unscience_Cooler_RedLidTrim"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_LidTrim" /><Material Ref="Unscience_Cooler_CommonMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
       <MeshView><Mesh Ref="Unscience_Cooler_Lid_VM" /></MeshView>
     </Components>
   </SubPart>
-  <SubPart Id="Unscience_Cooler_SteelBody" Parent="Unscience_Cooler_RedBody">
-    <Components Modify="Extend">
-      <PartModel Key="Shell" Modify="Patch"><Material Ref="Unscience_Cooler_SteelMaterial" /></PartModel>
+  <SubPart Id="Unscience_Cooler_SteelBody">
+    <Components>
+      <PartModel Key="Unscience_Cooler_SteelBodyShell"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_BodyShell" /><Material Ref="Unscience_Cooler_SteelMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <PartModel Key="Unscience_Cooler_SteelBodyTrim"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_BodyTrim" /><Material Ref="Unscience_Cooler_CommonMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <MeshView><Mesh Ref="Unscience_Cooler_Body_VM" /></MeshView>
     </Components>
   </SubPart>
-  <SubPart Id="Unscience_Cooler_SteelLid" Parent="Unscience_Cooler_RedLid">
-    <Components Modify="Extend">
-      <PartModel Key="Shell" Modify="Patch"><Material Ref="Unscience_Cooler_SteelMaterial" /></PartModel>
+  <SubPart Id="Unscience_Cooler_SteelLid">
+    <Components>
+      <PartModel Key="Unscience_Cooler_SteelLidShell"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_LidShell" /><Material Ref="Unscience_Cooler_SteelMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <PartModel Key="Unscience_Cooler_SteelLidTrim"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_LidTrim" /><Material Ref="Unscience_Cooler_CommonMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <MeshView><Mesh Ref="Unscience_Cooler_Lid_VM" /></MeshView>
     </Components>
   </SubPart>
   <!-- The identical mechanical slot is shared by every member, separately from cosmetic lids. -->

@@ -26,6 +26,8 @@ retained for development and are not deployed or published. See [distribution](.
 The release also loads [Beverage Cooler](../beverage-cooler/README.md), asset-only native content:
 Red/Stainless Steel variants, an Actuate lid and a 30 L supplies locker. KSA owns its saved state;
 it adds no toolbox submod or feature assembly. XML, meshes, animation and textures ship together.
+The lid/finish rendering fix needs a KSA restart to clear cached models; existing cooler saves
+retain their template IDs, supplies and actuation state. In-game retesting remains pending.
 
 A unified supermod that consolidates KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
 

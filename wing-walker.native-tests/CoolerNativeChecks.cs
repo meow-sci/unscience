@@ -71,6 +71,7 @@ internal static class CoolerNativeChecks
         CheckDriftRejection(ksa, path);
         CheckSaveRoundTrip(ksa);
         CheckImportedAnimation(ksa, repoRoot);
+        CoolerRenderCacheChecks.Run(ksa, decoded);
         Console.WriteLine("PASS: cooler native XML, cosmetic variant family, inherited mechanics, Actuate module, 30 L supplies, and native save-data round trip");
     }
 

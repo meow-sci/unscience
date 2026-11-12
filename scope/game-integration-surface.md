@@ -19,7 +19,10 @@ binds the first animation clip through an animated Hinge ancestor to unanimated 
 nodes; ShowDeployRetract=false exposes Actuate. Root `HabitatTemplate` stores 30 L (12 meals+2
 scrubbers), with native passage/access rules. KSA's PartInstance, HabitatData and
 KeyframeAnimationData own durable state. Native CPU checks cover parser/family/capacity/serialization;
-rendering, contacts and full-world acceptance remain pending. No patch, runtime reflection or sidecar.
+rendering, contacts and full-world acceptance remain pending. `PartModel.Get` globally caches by
+component Key alone, so all eight render keys are namespaced and unique, including both finishes.
+The former Shell/Trim collisions caused duplicate-body lids and red-only variants; native cache
+regression checks exact returned templates. No patch, runtime reflection or sidecar.
 [Complete asset/type contracts](beverage-cooler.md).
 
 ## Wing Walker (5801)

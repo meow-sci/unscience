@@ -11,12 +11,23 @@ there is no new C# project, Harmony patch, ISubmod, participant or runtime refle
 | `EditorTagDef` / `EditorTags` | Native tags `Life Support`, `Structural`; custom `Unscience Supplies` | Both variants inherit all three editor filters from the head. |
 | `SubParts` placement keys/order | `BeverageCooler.xml`: `Body`, `Lid`, `LidCollider` | Stable immediate-child slots bind native animation and saved module matching. Both variants share exactly the same collider-only `Unscience_Cooler_LidCollision` Ref; unique cosmetic subparts contain PartModel/MeshView only. |
 | `MeshAtlas`, `PartModel`, `MeshView`, `PbrMaterial` | `Meshes/BeverageCooler.glb`; `Unscience_Cooler_{BodyShell,BodyTrim,LidShell,LidTrim,Body_VM,Lid_VM}`; `BeverageCooler_{Red,Steel,Common}_{Diffuse,Normal,ORM}.png` | Authored PBR assets; KSA +X forward/−Z up. Body origin at base, lid geometry relative to hinge. Picking follows animated render subparts. |
+| `PartModel.Get`, `ModuleBase.TemplateDataBase.Hash` | `KSA/PartModel.cs:413–445`; `KSA/ModuleBase.cs:12–26` | Process-wide render-model cache uses component Key/hash alone, ignoring owning row, mesh and material. All eight models use globally unique `Unscience_Cooler_{Red,Steel}{Body,Lid}{Shell,Trim}` keys. Steel subparts explicitly define their render components rather than inherit red keys. |
 | `KeyframeAnimationModule.Template` / `KeyframeAnimationData.Template` | `KSA/KeyframeAnimationModule.cs`; `KSA/KeyframeAnimationData.cs`; `Animations/BeverageCooler_Lid.glb` | Head module `LidAnimation`; ShowDeployRetract=false exposes native Actuate slider. Loader selects the first GLB clip (`Actuation`), not by name. Animated Hinge ancestor at (−.19,0,−.409), unanimated Lid and LidCollider children; directly animated named child would fail binding. +100°Y over 1.2s raises the front. |
 | `HabitatTemplate`, `Habitat.ComputeFullLoad`, habitat passages | `KSA/HabitatTemplate.cs`; `KSA/Habitat.cs`; `KSA/HabitatZone.Build.cs` | Head module `Supplies`: 0.03m³ storage, zero habitable volume; native 12 meals +2 scrubbers, 7.8kg full consumables. PassesSurfaceAttachments=true permits this side, but both ends/intervening parts must pass. No custom resource, beverage simulation, water or oxygen tank. |
 | `ColliderModule.Template`, `Box`, `CustomMass`, surface connector | `KSA/ColliderModule.cs`; `KSA/BoxColliderTemplate.cs`; `KSA/Part.cs` | Root hollow body: base+four walls. Shared lid box moves with animation, same mechanics across variants. SurfaceMount rotates local +X to model +Z. Empty mass 5.5kg; loaded consumable mass native. No pressure/crew passage implied by collider geometry. |
 | `Part.GetSaveData`, native module saves | `KSA/Part.cs`; `KSA/KeyframeAnimationModule.cs:383–427`; `KSA/Habitat.cs:383–417` | KSA owns selected template ID, placement, supplies/debts and animation current/goal. No sidecar/state duplication. Blueprint contents follow native blueprint policy. |
 
 ## Validation and remaining native checks
+
+The first in-game test confirmed actuation, but exposed an entire body rendered as the lid and
+both variants red. Reused Shell/Trim keys made `PartModel.Get` return the first red body's cached
+mesh/material templates for the other render definitions. The corrected XML uses eight globally
+unique render keys. A real-DLL regression reproduces the old cache alias, then checks exact returned
+templates, model identity and expected body/lid mesh plus red/steel/common material refs for all
+eight corrected components. The earlier parser/GLB/serialization checks did not exercise this cache.
+Restart KSA after updating; in-game visual retest remains pending. Static render-key changes add no
+saved state or migration: existing template IDs, placement slots, supplies and animation keys stay
+stable, and PartModelModule has no native save payload.
 
 The full solution builds against CURRENT 5801 DLLs with **0 warnings and 0 errors**; the fresh
 Unscience distribution passes `scripts/check-dist.py`, including byte-identical XML, GLB and PNG

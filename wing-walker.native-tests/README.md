@@ -20,6 +20,10 @@ KSA_EXTRA_DLL_DIRS=/path/to/matching-managed-dependencies \
   dotnet run --no-restore --project wing-walker.native-tests -- --allow-il-header-retarget
 ```
 
+The `PartModel.Get` regression also needs the game's matching `System.IO.Hashing` package assembly
+through `KSA_EXTRA_DLL_DIRS`. Both test load contexts allow that explicit package name while keeping
+framework `System.*` assemblies on normal runtime resolution; exact package-version checks remain.
+
 `KSA_DLL_DIR` can select a different assembly directory; by default it loads
 `../ksa-game-assemblies/current/dll/`. The runner reports the matching `current/version.json` build,
 reflected KSA assembly identity, and file version. It invokes native `GameContentTags.Build`,
@@ -45,3 +49,11 @@ variant metadata, mechanical-subpart and Habitat storage-capacity drift cases. T
 and samples the closed, halfway and 100° open transforms, with a fixed hinge. Native PartInstance XML overrides round-trip both variant IDs,
 different depleted stocks, fractional consumption and partial opening/closing lid state. No live
 renderer, habitat-zone reconstruction, whole-world load or physics/contact acceptance is claimed.
+
+`CoolerRenderCacheChecks` calls the real `PartModel.Get` without GPU initialization. A negative
+fixture reproduces the old repeated `Shell`/`Trim` keys: the native global cache returns red-body
+geometry for the lid and steel variant. The decoded fixed XML must produce eight distinct models,
+each retaining its exact requested template and expected body/lid mesh and red/steel/common
+material. Repeated lookups must return the same correct model. The fixture snapshots and restores
+the native first-model dictionary and both instance lists in `finally`, disposes only its own
+models, and verifies that no test entries remain. GPU rendering still requires an in-game retest.

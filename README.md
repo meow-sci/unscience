@@ -58,7 +58,8 @@ Stainless Steel variants and a native **Actuate** lid control. Its 30 L native l
 and 2 CO₂ scrubber canisters; find it under **Unscience Supplies**, **Life Support** or **Structural**.
 Crew access follows native habitat passage rules. KSA saves the variant,
 supplies and lid state. The asset-only feature has editable Blender art and no separate toolbox panel.
-Native visual, collision and save/load acceptance remain pending.
+The lid mesh and finish mapping have been corrected; an in-game retest, collision and save/load
+acceptance remain pending.
 
 # game compatibility
 

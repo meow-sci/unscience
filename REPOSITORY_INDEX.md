@@ -441,6 +441,8 @@ Native passage rules determine crew access. KSA owns the selected
 variant, consumables, fractional consumption and lid current/goal in normal saves; no C# host,
 ISubmod or sidecar. Unscience packages XML, mesh, animation and textures; editable Art stays in source.
 [Integration](scope/beverage-cooler.md) · [save acceptance](plans/saves-acceptance.md#beverage-cooler).
+Globally unique native PartModel keys prevent body/lid and Red/Stainless mesh/material aliasing;
+the native cache regression covers model identity and exact render-template bindings.
 
 ### [wing-walker](wing-walker) / [wing-walker.lib](wing-walker.lib)
 
