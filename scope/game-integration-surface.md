@@ -1,4 +1,24 @@
+## IVA visibility follows explicit switches (5801, 2026-11-11)
+
+`IvaForceRender` now patches only `PartModel..ctor(PartModelModule.Template)`
+(`ksa-abstractions.lib/IvaForceRender.cs:58-60,97-104`). Kitchen Sink's independent toggle and
+capsule-glass requirement control `Template.Internal` in both editor and flight. The unconditional
+`PartTreeRenderData.Compose` prefix/finalizer, editor cache and viewport/editor reads are retired.
+Both-off views keep native IVA/inside-vehicle gates. Save IDs, payloads and ownership are unchanged.
+Thirty production render/ownership checks, Kitchen Sink save checks and the full build pass;
+native appearance/load acceptance remains pending. [Current integration](00-architecture-and-abstractions.md#ivaforcerendercs)
+· [evidence](../plans/IVA_VISIBILITY_SWITCHES.md).
+
 ## Wing Walker (5801)
+
+Editor crew duplication is guarded by `VehicleEditor.OnMouseButton(GlfwWindow, GlfwMouseButton,
+GlfwButtonAction, GlfwModifier)` prefix/postfix and private static `PartCloner.Gather(Part,uint)`
+prefix. Selection/pickup/gizmo start unassign affected external seats; pre-copy capture also covers
+crew reassigned after selection. `Vehicle.SetSeatCrew` with zero hash plus native history APIs
+preserve roster/save ownership. Exact active-tree/subtree references exclude stock, unrelated,
+stale and disposed targets. Thirty-two production checks, actual 5801 signatures/empty-seat save
+behavior and the full build pass; native symmetry/undo/redo/load acceptance remains pending.
+[Evidence](../plans/WING_WALKER.md#editor-crew-duplication-follow-up).
 
 `SuperMeshRenderSystem.ClearBuckets(IViewport)` postfix submits noncontrolled and editor external
 seats; native controlled/portrait paths remain in charge. Exact Harmony targets also include
@@ -204,7 +224,7 @@ files. Use it on every KSA update to find which mods a changed game member puts 
 
 **Verification baseline:** KSA **2026.11.10.5801**, compared with **2026.10.25.5707**
 (the supplied PREVIOUS tree and prior recorded baseline). Revisions 5708–5800 are logged; 5801 is not.
-Current evidence and acceptance: [KSA_5801_UPGRADE](../plans/KSA_5801_UPGRADE.md).
+Current evidence and acceptance: [KSA_5801_UPGRADE](../plans/KSA_5801_UPGRADE.md); [IVA switch follow-up](../plans/IVA_VISIBILITY_SWITCHES.md) removes the unconditional editor render hook.
 Prior span: [KSA_5707_UPGRADE](../plans/KSA_5707_UPGRADE.md).
 Native game acceptance remains pending. Dated historical rows retain their original line citations;
 the current summary and owning area updates below supersede their compatibility status.
@@ -503,7 +523,7 @@ are recorded separately from native visual acceptance.
 ### KSA.CameraMode
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `CameraMode.IVA` (enum) | enum | `KSA/CameraMode.cs:14` | IvaForceRender (kitchen-sink) | `ksa-abstractions.lib/IvaForceRender.cs:102` | OK | compared vs `Viewport.Mode` |
+| `CameraMode.IVA` (enum) | Retired helper read | `KSA/CameraMode.cs:14` | — (was IvaForceRender) | Removed | RETIRED @5801 | Helper no longer checks camera mode; stock interior visibility is preserved. |
 
 ### KSA.CatExpressionAnim
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -877,16 +897,22 @@ are recorded separately from native visual acceptance.
 | ~~`_matrixAsmb` / `_matrixAsmb2Parent` : private double4x4~~ | reflection-field (string) | `KSA/Part.cs:536,552` | *(none)* | — | ⚠️ **sentinel changed @5117 (rev 5112)** | uncached sentinel went `double4x4.Identity` → all-NaN `UncachedMatrix` |
 | `Tree : PartTree?` → `.ReinitializeDerivedValues/.RefillConsumables`; `CreateOwnTree()` | direct API | NEW `KSA/Part.cs:662,1456` | doh, iron-man, dont-stifle-me | `KittenSpawner.Catalog.cs:12-32`; `IronManConnectorUnload.cs:51,65`; `IronManRcsOrientationPatches.cs:53`; `PerAxisScaleDrag.cs:75` | **CHANGED @5482** | nullable; the ctor no longer creates a tree (rev 5456/5464). doh now calls `CreateOwnTree()` (mirrors `EVADoor.GetBackPackPart`); others null-guard |
 
+### KSA.PartCloner (Wing Walker editor guard, 5801)
+
+| Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 5801 | Notes |
+|---|---|---|---|---|---|---|
+| `Gather(Part source, uint firstLocalId): private static void` | Harmony prefix (exact name/types) | `KSA/PartCloner.cs:134-139` | wing-walker | `WingWalkerPatches.cs:51-52`; `WingWalkerPatches.Editor.cs:27-32` | NEW consumer | Clear affected external crew before GatherSaveData captures assignments for symmetry/Alt-copy/Copy Tree. Only active editor trees qualify. |
+
 ### KSA.PartModel (+ nested PerInstanceData, ViewportData)
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
 | `AddInstance(PerInstanceData, PerInstanceDent, IViewport, int) : private void` | ~~Harmony pre + post~~ | `KSA/PartModel.cs:470` | — (was humble-arteest VehiclePaint, IvaForceRender) | — | **RETIRED @5482** | Static raster parts no longer reach this sink: `PartTreeRenderData.Compose` bulk-appends (NEW `PartTreeRenderData.cs:1300-1319`); only raytraced IVA and thumbnails call it. Paint moved to `WriteState`, IVA reveal to a `Compose` prefix/finalizer. |
-| `..ctor(PartModelModule.Template) : protected` | Harmony post (ctor, `AccessTools.Constructor`) | `KSA/PartModel.cs:351` | IvaForceRender (kitchen-sink) | `IvaForceRender.cs:42` | OK | explicit param-type array |
-| `PerInstanceData` (struct: `ModelMatrix`@0 · `StateBitFlag`@64 · `EmissiveColor`@68 · `packing1`@72 · `Wetness`@76; 80 B) | direct API | `KSA/PartModel.cs:299-310` | IvaForceRender, humble-arteest (VehiclePaint) | `IvaForceRender.cs:98`; `VehiclePaintPatches.cs` (`AddInstancePrefix`) | OK | 5801: humble writes **only `StateBitFlag` bits 13..30** (no struct reinterpret and no game field clobbering) |
+| `..ctor(PartModelModule.Template) : protected` | Harmony post (ctor, `AccessTools.Constructor`) | `KSA/PartModel.cs:438` @5801 | IvaForceRender (kitchen-sink, capsule glass) | `IvaForceRender.cs:58-60,97-104` | OK @5801 | Explicit parameter types; new models reveal only while EffectiveEnabled. |
+| `PerInstanceData` (struct: `ModelMatrix`@0 · `StateBitFlag`@64 · `EmissiveColor`@68 · `packing1`@72 · `Wetness`@76; 80 B) | direct API | `KSA/PartModel.cs:299-310` | humble-arteest (VehiclePaint) | `VehiclePaintPatches.cs` (`AddInstancePrefix`) | OK | 5801: humble writes **only `StateBitFlag` bits 13..30** (no struct reinterpret and no game field clobbering) |
 | `PerInstanceData.StateBitFlag` **bits 13..30** (5801) | free-bit reuse (per-instance mod payload) | writers NEW `KSA/PartTreeRenderData.cs` `WriteState` :1210 / `WriteDynamicState` :1088 / `WriteGlassState` :877 (+ shared 0x10/0x20 in `Compose*`); stock bits `StateBit` :196-219; readers `MeshIndirect.frag:308-353` | humble-arteest (VehiclePaint) | `VehiclePaint.cs` (`EncodeBits`, `PaintBitShift`) | OK | 🔶 **audit every game update.** Game uses bits 0..10 only; 21 free bits carry a 7:7:7 sRGB paint color. `RayTraceInstance.StateFlags` is `int`, so the bits survive the RT path |
 | `ViewportData.Get(PartModel, IViewport)` → `InstanceList` + `DentInstanceList` | direct API (read/compact) | `KSA/PartModel.cs:356-379` | PartRenderFilter (blinky, its-so-shiny) | `ksa-abstractions.lib/PartRenderFilter.Batches.cs` | **CHANGED @5482** | IvaForceRender no longer appends. The filter compacts only the range a `Compose` call appended, both lists together; lists are now cleared in `PartModelRenderer.ClearFrameData` and re-read by shadow culling — never mutate between `WriteInstancesToGpu` and `ClearFrameData`. |
-| `Instances : static List<PartModel>` | direct API | `KSA/PartModel.cs:325` | IvaForceRender (kitchen-sink) | `IvaForceRender.cs:111` | OK | enumerated by `Enabled` setter |
-| `Template : PartModelModule.Template` (field) | direct API | `KSA/PartModel.cs:329` | IvaForceRender (kitchen-sink) | `IvaForceRender.cs:87,89,113` | OK | |
+| `Instances : static List<PartModel>` | direct API | `KSA/PartModel.cs:409` @5801 | IvaForceRender (kitchen-sink, capsule glass) | `IvaForceRender.cs:110` | OK @5801 | Enumerated on effective visibility enable. |
+| `Template : PartModelModule.Template` (field) | direct API | `KSA/PartModel.cs:415` @5801 | IvaForceRender (kitchen-sink, capsule glass) | `IvaForceRender.cs:100-104,112-115` | OK @5801 | Only explicit switches change visibility. |
 
 ### KSA.PartModelDynamic (+ nested PerInstanceData)
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -909,9 +935,9 @@ are recorded separately from native visual acceptance.
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
 | ~~`UpdateRenderData(in double4x4, bool, Viewport, int)`~~ | ~~Harmony pre~~ | OLD `KSA/PartModelModule.cs` | — (was blinky, its-so-shiny, humble-arteest VehiclePaint) | — | **REMOVED @5482** | Render data moved into cached `KSA.PartTreeRenderData` (rev 5456). Replaced by `PartRenderFilter` (`Compose*`) and paint `WriteState`/`WriteDynamicState` seams — see `KSA.PartTreeRenderData`. |
-| `Template.Internal : bool` (field) | direct API (write) | `KSA/PartModelModule.cs:39`; readers only NEW `PartTreeRenderData.cs:1300`, `PartModel.cs:486` (main-thread render) | IvaForceRender (kitchen-sink) | `IvaForceRender.cs:114-148` | **CHANGED @5482** | flipped false permanently by `Enabled`; in the editor also flipped false only for the duration of each `PartTreeRenderData.Compose` call (prefix/finalizer) |
-| `Template.RayTracing : RaytracingMode` (field) | direct API | `KSA/PartModelModule.cs:30` | IvaForceRender | `IvaForceRender.cs:103` | OK | |
-| `RaytracingMode.ShadowProxy` (enum) | enum | `KSA/PartModelModule.cs:14` | IvaForceRender | `IvaForceRender.cs:103` | OK | shadow-proxy templates excluded from the editor reveal |
+| `Template.Internal : bool` (field) | direct API (write) | `KSA/PartModelModule.cs:39`; native readers `PartTreeRenderData.cs:1386`, `PartModel.cs:490` @5801 | IvaForceRender (kitchen-sink, capsule glass) | `IvaForceRender.cs:100-104,112-115,123-124` | CHANGED @5801 | Cleared only while the independent toggle or an owner requires interiors; restored on final release. Editor entry never reveals. |
+| `Template.RayTracing : RaytracingMode` (field) | direct API | `KSA/PartModelModule.cs:31` @5801 | IvaForceRender | `IvaForceRender.cs:101,112` | OK @5801 | Excludes shadow proxies. |
+| `RaytracingMode.ShadowProxy` (enum) | enum | `KSA/PartModelModule.cs:14` | IvaForceRender | `IvaForceRender.cs:101,112` | OK @5801 | Never revealed by either switch. |
 
 ### KSA.PartModelRenderer (+ nested ColorData)
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -927,7 +953,7 @@ are recorded separately from native visual acceptance.
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 5482 | Notes |
 |---|---|---|---|---|---|---|
 | `Compose` / `ComposeDynamic` / `ComposeGlass(ref readonly double4x4, bool, IViewport inViewport, int)` | Harmony prefix + postfix (shared) | NEW `KSA/PartTreeRenderData.cs:1258,1152,899` | blinky, its-so-shiny via `PartRenderFilter` | `ksa-abstractions.lib/PartRenderFilter.cs:65-105`; `PartRenderFilter.Batches.cs` | NEW | Replaces the removed per-module render-skip prefixes. Static raster path appends one contiguous slot-ordered range per model without `AddInstance`; dynamic/glass call `AddInstance` per slot. The postfix compacts hidden slots only when exactly `Count` entries were appended (fails open otherwise). One shared patch set for all owners. Raytraced IVA not filtered. |
-| `Compose(...)` | Harmony prefix + finalizer | NEW `KSA/PartTreeRenderData.cs:1258,1300` | IvaForceRender (kitchen-sink, unscience) | `IvaForceRender.cs:53-57,114-148` | NEW | Editor-only reveal of internal meshes: temporarily clears `Template.Internal` for the call (stock gate `(!Internal || IVA)` at `:1300`). |
+| `Compose(...)` | Retired Harmony prefix + finalizer | `KSA/PartTreeRenderData.cs:1386` @5801 (native gate) | — (was IvaForceRender) | Removed | RETIRED @5801 | Removed unconditional editor reveal; explicit switches already mutate templates before native composition. PartRenderFilter retains its separate patches. |
 | `EnsureBuilt(PartTree, ulong)`; `InvalidateStates()` | Harmony prefix; direct API | NEW `KSA/PartTreeRenderData.cs:444,323` | humble-arteest (VehiclePaint) | `VehiclePaintPatches.cs:57-59,197-210` | NEW | Cached states rewrite only when dirty; paint changes bump `VehiclePaint.RenderStateVersion` and the prefix invalidates each tree once. |
 | private `WriteState(Batch, int, Part)` / `WriteDynamicState(DynamicBatch, int, PartModelDynamicModule)` | **Harmony postfix (string names, private nested param types bound as `object`)** | NEW `KSA/PartTreeRenderData.cs:1210,1088` | humble-arteest (VehiclePaint) | `VehiclePaintPatches.cs:52-56,114-124,179-189` | NEW | Only writers of cached static/dynamic `StateBitFlags`; 5801 postfix ORs paint bits 13..30. Covers raster and raytraced IVA. Glass is not painted (as before). |
 | private `_batches` / `_dynamicBatches` / `_glassBatches`; nested private `Batch`/`DynamicBatch`/`GlassBatch` `.Model/.Parts/.Count/.StateBitFlags` | **reflection (string, FieldRefAccess)** | NEW `KSA/PartTreeRenderData.cs:23-190,237-243` | PartRenderFilter; VehiclePaint (`StateBitFlags`) | `PartRenderFilter.Batches.cs:35-52`; `VehiclePaintPatches.cs:114-124` | NEW | Resolved once at install and fail loudly; see §4. |
@@ -942,7 +968,7 @@ are recorded separately from native visual acceptance.
 | `Modules.Get<Battery>()` (ModuleList) | direct API | `KSA/PartTree.cs` | its-so-shiny | `ShinyGridBuilder.cs:205` | OK | |
 | `CreateFromNewPartTree(Part rootPart)` | direct API | NEW `KSA/PartTree.cs:291` | blinky, its-so-shiny | `LcdGridBuilder.cs:148,242`; `ShinyGridBuilder.cs:94,147` | OK | core build path; **5482: derived data (resource groups/managers) is lazy** — blinky calls `EnsureDerived(DerivedData.ResourceGroups)` before its feed check (`LcdGridBuilder.cs:170`) |
 | `UpdateRenderData(ref readonly double4x4, bool isEditedVehicle, Viewport, int)` | direct API | `KSA/PartTree.cs:435` | i-feel-seen | `IFeelSeenPatches.cs:70` | OK | mod passes `in` → `ref readonly` |
-| `RenderData : PartTreeRenderData` (field) → `EnsureBuilt` + `Compose`/`ComposeDynamic`/`ComposeGlass` | behavior (render order) | NEW `KSA/PartTree.cs:30,1158-1193` | PartRenderFilter, VehiclePaint, IvaForceRender, godzilla (prefix/finalizer on `UpdateRenderData`) | see `KSA.PartTreeRenderData` | **NEW @5482** | `UpdateRenderData` signature unchanged; ego matrix still applied per frame inside `Compose*` |
+| `RenderData : PartTreeRenderData` (field) → `EnsureBuilt` + `Compose`/`ComposeDynamic`/`ComposeGlass` | behavior (render order) | NEW `KSA/PartTree.cs:30,1158-1193` | PartRenderFilter, VehiclePaint, godzilla (prefix/finalizer on `UpdateRenderData`) | see `KSA.PartTreeRenderData` | **NEW @5482** | `UpdateRenderData` signature unchanged; ego matrix still applied per frame inside `Compose*` |
 | `EnsureDerived(DerivedData)`; `RecomputeAllDerivedData()` (now only marks dirty); static `FlushDirtyDerived/FlushDirtyResourceManagers` | direct API / behavior | NEW `KSA/PartTree.cs:475,499,521,816`; flushed at `Program.cs:2209-2210` just before `ExecuteNextVehicleSolvers` | blinky, iron-man, godzilla, kitchen-sink | `LcdGridBuilder.cs:170`; see area files | **CHANGED @5482** (rev 5464) | edits made at the physics handoff flush the same frame; edits made inside an `ExecuteNextVehicleSolvers` prefix flush lazily (possibly on the worker) |
 | `States : ModuleStateList` (field) | direct API | `KSA/PartTree.cs:25` | kitchen-sink | `KitchenSinkLib.cs (editor refresh)` | OK | passed as `oldStates` |
 | `ReinitializeDerivedValues(ModuleStateList oldStates) : void` | direct API | `KSA/PartTree.cs:189` | kitchen-sink, doh | `KitchenSinkLib.cs (editor refresh)`; `KittenSpawner.Catalog.cs:20` | OK | also a 0-arg overload |
@@ -976,11 +1002,11 @@ stable, and both templates include the native `Capsules` editor tag. [Asset cont
 | `DrawProgramMenusHook() : void` (empty modding hook) | Harmony post | `KSA/Program.cs:3736` (cited `:3391` earlier) | unscience (MenuBarPatch), dont-stifle-me standalone (MenuBarPatch) | `unscience/MenuBarPatch.cs:8`; `dont-stifle-me/MenuBarPatch.cs:15` | OK | game ships as deliberate no-op; dont-stifle-me draws a `BeginMenu("Don't Stifle Me")` here |
 | `ControlledVehicle : static Vehicle?` (field) | direct API | `KSA/Program.cs:254` | VehicleProvider (→ many), kitten-animations | `VehicleProvider.cs:11`; `kitten-animations.lib/KittenAvatarAccessor.cs` | OK | kitten-animations uses it only for the default automatic target mode; an explicit kitten id ignores later control changes |
 | `ConsoleWindow : static ConsoleWindow` (field) | direct API | `KSA/Program.cs:246` | HotkeyGuard (→ all mods) | `HotkeyGuard.cs:38` | OK | `.IsOpen` guard (Brutal type — see section 3 Brutal) |
-| `Editor : static VehicleEditor?` (field) | direct API | `KSA/Program.cs:202` | IvaForceRender, kitchen-sink, humble-arteest (VehiclePaint) | `IvaForceRender.cs:100`; `KitchenSinkLib.cs (editor refresh)`; `PaintTargets.cs` | OK | editor-only branch; humble uses it to pick flight vs editor paint targets. Disposed+nulled in `Program.PrepareFrame` |
+| `Editor : static VehicleEditor?` (field) | direct API | `KSA/Program.cs:202` | kitchen-sink, humble-arteest (VehiclePaint) | `KitchenSinkLib.cs (editor refresh)`; `PaintTargets.cs` | OK | editor-only branch; humble uses it to pick flight vs editor paint targets. Disposed+nulled in `Program.PrepareFrame` |
 | `BindlessTextures : BindlessTextureLibrary` (public field) | direct API | `KSA/Program.cs:88,850` | graffiti | `graffiti.lib/DecalRenderer.cs`, `DecalTextures.cs` | OK | graffiti allocates/frees decal slots and binds the table as set 2. Constructed with `maxTextures = 1024` |
 | `{EditorFlag : static bool, OffscreenTarget : static RenderTarget, RenderedViewport : static IViewport / MainViewport : static IGameViewport (`.ShaderSlot` selects `GlobalShaderBindings.DescriptorSet(int)` @5541), SetViewport(CommandBuffer) : static, PointClampedSampler : static VkSampler, Instance.ResourceFrameIndex : int, Instance.ColorFormat : readonly VkFormat}` | direct API (render seam gates + pass state) | `KSA/Program.cs:224,457,491,485,4293,469,218,222` | graffiti | `graffiti.lib/GraffitiPatches.cs`, `DecalRenderer.cs` | OK @5348 | the decal pass's editor/main-viewport identity checks + GridPass-style pass state (viewport, depth sampler, frame-ring slot, colour format). See `scope/decals.md` #2 |
 | `RendererRebuildNeeded : static bool` (field) | direct API | `KSA/Program.cs:431` (consumed `PrepareFrame` :2096) | humble-arteest (VehiclePaint), free-fallin (Full Canopy) | `VehiclePaintShaders.cs`; `CanopyProjectionShaders.cs` | OK | game's **deferred** full-renderer rebuild flag — the safe way for a mod to force shader/pipeline recompilation (same path a graphics-setting change takes) |
-| `MainViewport : static IGameViewport { get; }` (= `ViewportRegistry.MainViewport`) | direct API | `KSA/Program.cs:485` | IvaForceRender, kitchen-sink, graffiti, hot-pursuit | `IvaForceRender.cs`; `DecalPicker.cs`; `DecalRenderer.cs`; `hot-pursuit.lib/HotPursuitPicker.cs`, `HotPursuitPose.cs` | OK @5402 | Hot Pursuit uses it only as the reference ego frame/picking viewport, never as the output target. |
+| `MainViewport : static IGameViewport { get; }` (= `ViewportRegistry.MainViewport`) | direct API | `KSA/Program.cs:485` | kitchen-sink, graffiti, hot-pursuit | `DecalPicker.cs`; `DecalRenderer.cs`; `hot-pursuit.lib/HotPursuitPicker.cs`, `HotPursuitPose.cs` | OK @5402 | Hot Pursuit uses it only as the reference ego frame/picking viewport, never as the output target. |
 | `FindNearbyCelestial(Camera) : static Celestial?` | direct API | `KSA/Program.cs:5037` | hot-pursuit | `hot-pursuit.lib/HotPursuitCelestialState.cs` | OK @5402 | equivalent nearby-body lookup used after the mounted secondary camera writes `PositionEcl`; KSA's private `OnFrameCelestials` does not run for this camera. |
 | `RenderViewport(CommandBuffer,IViewport,int) : private` | render-pass behavior | `KSA/Program.cs:4313` | hot-pursuit | stock secondary viewport path | **LIMITATION @5402** | Secondary rendering runs stars, distant spheres, vehicle/part passes, and the stock translucent path, but omits `ParticleSystem`, `VolumetricExhaustRenderer`, the main planet/ocean/cloud pipeline, part-glass, and overall-bloom passes. Engine plumes and generic particles cannot be enabled by Hot Pursuit; those game-owned passes bind main-camera targets/resources. |
 | `GetMainCamera() : static Camera` | direct API | `KSA/Program.cs:632` | glass | `glass.lib/FovController.cs` | OK @5402 | Glass is explicitly main-camera scoped so it does not overwrite Hot Pursuit's independent FOVs. |
@@ -1064,6 +1090,7 @@ stable, and both templates include the native `Capsules` editor tag. [Asset cont
 ### KSA.Vehicle
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
+| `SetSeatCrew(IVASeat,KeyHash,string,bool): static CrewSeatResult` | direct API | `KSA/Vehicle.cs:879-913` @5801 | wing-walker | `WingWalkerPatches.Editor.cs:49-50`; `WingWalkerPatches.Boarding.cs` | OK @5801 | Editor guard clears with zero hash through native roster/mission release; boarding retains exact-seat assignment. |
 | `Vehicle` (type) | direct API | `KSA/Vehicle.cs:28` | VehicleProvider (→ ~all) | `VehicleProvider.cs:11` | OK | `OfType<Vehicle>()` |
 | `Parts : PartTree` (field) | direct API | `KSA/Vehicle.cs:264` | PartHelpers (→ many), eternal-flame, blinky, its-so-shiny | `PartHelpers.cs:13`; `EternalFlameLib.cs:128`; `LcdGridBuilder.cs:37` | OK | get+set (blinky swaps tree) |
 | `Id` (inherited Astronomical.Id) | direct API | `KSA/Astronomical.cs:85` | (see KSA.Astronomical) | — | OK | |
@@ -1103,6 +1130,9 @@ stable, and both templates include the native `Capsules` editor tag. [Asset cont
 ### KSA.VehicleEditor
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
+| `OnMouseButton(GlfwWindow,GlfwMouseButton,GlfwButtonAction,GlfwModifier): bool` | Harmony prefix/postfix | `KSA/VehicleEditor.cs:3981` @5801 | wing-walker | `WingWalkerPatches.cs:48-50`; `WingWalkerPatches.Editor.cs:8-25` | NEW consumer @5801 | Compare actual selection/grab/gizmo transitions; hovered/ignored events keep crew. No retained selection state. |
+| `Selected`, `Highlighted`, `GizmoGrabbed`, `ExistingVehicle`, `EditingSpace`, `UnattachedPartTrees` | direct fields | `KSA/VehicleEditor.cs:654-662,692,806` @5801 | wing-walker (also existing editor consumers below) | `WingWalkerPatches.Editor.cs:10-24,38-50` | NEW consumer @5801 | Resolve exact subtree/tree ownership and existing vehicle ID/launch status; never use controlled vehicle fallback. |
+| `SyncHistoryBeforeEditFor(PartTree)` / `MarkHistoryStepFor(PartTree,EditorHistoryAction,LString?)` | direct static APIs | `KSA/VehicleEditor.cs:8001-8031` @5801 | wing-walker | `WingWalkerPatches.Editor.cs:48,53` | NEW consumer @5801 | Capture baseline before unassignment and mark PartSettings afterward. Native commits defer while grabbed. Compile-only Brutal.Localization label dependency. |
 | `EditingSpace : VehicleEditingSpace` (field) | direct API | `KSA/VehicleEditor.cs:407` (cited `:334` at the 4750 baseline) | kitchen-sink | `KitchenSinkLib.cs (editor refresh)` | OK | |
 | `ScaleBoundsFor(Part) : private static (double Min, double Max)` | Harmony postfix (by-name) | `KSA/VehicleEditor.cs:3877` | dont-stifle-me | `EditorScalePatches.cs:56,89` | OK (**new @5348**) | rewrites `__result` to `(1e-6, +inf)` when clamp removal is on; the only place the 0.5x–2x clamp is expressed |
 | `UpdateSelectedScale(ref readonly double4x4, Viewport) : private void` | Harmony prefix (by-name) | `KSA/VehicleEditor.cs:3841` | dont-stifle-me | `EditorScalePatches.cs:58,124` | OK (**new @5348**) | skipped (returns false) when per-axis scaling is on; prefix binds `matrixVehicleAsmb2Ego` by name |
@@ -1126,11 +1156,11 @@ stable, and both templates include the native `Capsules` editor tag. [Asset cont
 ### KSA.IViewport / KSA.IGameViewport (replaced `KSA.Viewport` @5402)
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 5402 | Notes |
 |---|---|---|---|---|---|---|
-| `Mode : CameraMode { get; }` (property) | direct API | `KSA/IViewport.cs:29` | IvaForceRender (kitchen-sink) | `IvaForceRender.cs:102` | OK (retyped) | vs `CameraMode.IVA`. Was a field on the old `Viewport` class |
+| `Mode : CameraMode { get; }` (property) | Retired helper read | `KSA/IViewport.cs:29` | — (was IvaForceRender) | Removed | RETIRED @5801 | The helper no longer has an editor/viewport branch. |
 | `GetCamera() : Camera` | direct API | `KSA/IViewport.cs:51` | i-feel-seen, dont-stifle-me, hot-pursuit | `IFeelSeenPatches.cs`; `PerAxisScaleDrag.cs`; `hot-pursuit.lib/HotPursuitPose.cs` | OK @5402 | Hot Pursuit uses main as its reference camera. |
 | `Size : int2 { get; }` · `ShaderSlot : int { get; }` (was `Viewport.Index`) | direct API | `KSA/IViewport.cs:41,13` | graffiti | `DecalRenderer.cs:402` | OK (retyped) | slots come from `ViewportRegistry`'s pool (max 8); the per-viewport UBOs are now sized for 8 slots (rev 5401 stride fix, `GlobalShaderBindings.cs:94,217`) |
-| `IViewport` (param of `UpdateRenderData`/`AddInstance`/`OnFrame`/`UpdateSelectedScale`/render prefixes) | Harmony arg type | `KSA/IViewport.cs:9` | blinky, its-so-shiny, i-feel-seen, humble-arteest, IvaForceRender, dont-stifle-me, camera-controller-override, pyro | (render/editor prefixes) | **CHANGED @5402** (fixed) | every game method that took `Viewport` now takes `IViewport`; all remain single overloads, so by-name `AccessTools.Method` still resolves. Prefixes that name the param declare `IViewport` |
-| `ViewportOptionFlags.RenderPartModels` / `UseRaytracing` gates | new gating | `KSA/ViewportOptionFlags.cs`; `PartModel.cs:410-415` | IvaForceRender, humble-arteest | `IvaForceRender.cs:98-106` | ADDITIVE | `AddInstance` early-returns for viewports without `RenderPartModels`; every game-created viewport has it (`ViewportPresets.cs`), so dormant |
+| `IViewport` (param of `UpdateRenderData`/`AddInstance`/`OnFrame`/`UpdateSelectedScale`/render prefixes) | Harmony arg type | `KSA/IViewport.cs:9` | blinky, its-so-shiny, i-feel-seen, humble-arteest, dont-stifle-me, camera-controller-override, pyro | (render/editor prefixes) | **CHANGED @5402** (fixed) | every game method that took `Viewport` now takes `IViewport`; all remain single overloads, so by-name `AccessTools.Method` still resolves. Prefixes that name the param declare `IViewport` |
+| `ViewportOptionFlags.RenderPartModels` / `UseRaytracing` gates | new gating | `KSA/ViewportOptionFlags.cs`; `PartModel.cs:410-415` | humble-arteest | `VehiclePaintPatches.cs` | ADDITIVE | `AddInstance` early-returns for viewports without `RenderPartModels`; every game-created viewport has it (`ViewportPresets.cs`), so dormant |
 
 ### KSA.ViewportRegistry / KSA.IGameViewport / KSA.IViewportOwner
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 5402 | Notes |
@@ -1249,6 +1279,12 @@ stable, and both templates include the native `Capsules` editor tag. [Asset cont
 
 ## 4. String-based reflection watchlist (highest silent-break risk)
 
+Wing Walker adds the private exact-signature `PartCloner.Gather(Part,uint)` lookup. Native DLL
+signature checks pass; recheck that it still precedes module save-data capture on upgrades.
+
+IVA follow-up: the helper retains only the explicitly typed PartModel constructor lookup; the
+Compose lookup and editor/viewport reads are removed.
+
 **5482 additions (render data, rev 5456/5457):** `PartTreeRenderData` private fields `_batches`,
 `_dynamicBatches`, `_glassBatches`; private nested types `Batch`, `DynamicBatch`, `GlassBatch` and their
 `Model`, `Parts`, `Count` (PartRenderFilter) and `StateBitFlags` (VehiclePaint) fields; private methods
@@ -1330,6 +1366,9 @@ on every game update FIRST.
 
 ## 5. Shaders & game assets subtable
 
+IVA switch follow-up changes no shaders, material bytes or capsule asset keys; only the
+unconditional editor reveal hook is removed. Existing native glass and shadow-proxy behavior stays intact.
+
 | Asset / shader | Kind | Referenced as | Content path (NEW) | Consumer | 5348 |
 |---|---|---|---|---|---|
 | `CoreSurfacesB_Material` and its diffuse/normal/PBR texture atlas | native gold foil | beach chair frame only in `WingWalker.xml`; GLB UV U=0.495–0.605/V=0.39–0.49 samples the wrinkled `TrussFFoilA` island | `Content/Core/CoreSurfacesBAssets.xml`; `CoreStructuralA_Prefab_StrutOcto2HB` | wing-walker | Custom chair/strap GLBs and custom webbing/plastic/leather maps ship; Core payload is referenced only. Both parts retain IDs/subpart order and include `Capsules`. Native visual acceptance pending. |
@@ -1353,6 +1392,16 @@ on every game update FIRST.
 ---
 
 ## 6. Confirmed-broken / changed summary
+
+**5801 Wing Walker editor crew:** occupied external seats were cloned with the same kitten name.
+Selection/move and pre-copy guards now unassign affected seats through native crew/history APIs.
+Managed/native-DLL/build checks pass; real symmetry/roster/undo/load acceptance remains pending.
+[Evidence](../plans/WING_WALKER.md#editor-crew-duplication-follow-up).
+
+**5801 IVA follow-up:** removed unconditional editor reveal. Both editor and flight now require
+Kitchen Sink's independent IVA switch or capsule-glass experiment for forced interiors. Managed
+render/ownership and adapter checks plus the full build pass; native acceptance remains pending.
+[Evidence](../plans/IVA_VISIBILITY_SWITCHES.md).
 
 Current 5482 → 5638 findings and completed migrations are in the [5638 summary](#5638-verification-summary)
 and [upgrade report](../plans/KSA_5638_UPGRADE.md). Earlier: [5482](#5482-verification-summary),

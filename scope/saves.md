@@ -14,6 +14,15 @@ completed native pose/motion save/load still requires in-game acceptance.
 
 ## Wing Walker
 
+Editor duplication follow-up: selecting/picking up an external mount, starting a gizmo move or
+copying a subtree releases its external crew through `Vehicle.SetSeatCrew` with a zero hash and
+the editor's native vehicle ID/launch status. Native history is synchronized before mutation and
+marked afterward. The resulting assignment and roster state remain native-owned; no sidecar,
+schema change or durable guard state is added. Selection state is local to each input callback,
+so reset/load/unload cannot retain a prior scene's targets. Restored native assignments encounter
+the same copy guard. Actual empty `IVASeat.GetSaveData` emits no stale crew record; occupied-seat
+save/load and native undo/redo/mission bookkeeping remain acceptance work.
+
 KSA saves the native part and template ID, `IVASeatData`, crew roster, tanks and life-support
 state. The template selects seated or standing posture; no Wing Walker sidecar or participant is
 needed. The helmet/standing appearance scope, weak animation markers and diagnostics are transient;
@@ -490,11 +499,16 @@ requirement. Replay calls the same API after native reconstruction; enabled repl
 the IVA patches and operational render filter or reports a retained failure. Missing legacy/vanilla
 records leave it off. Repeat/cross-scene loads do not compound ownership.
 
+5801 visibility follow-up: the independent preference and experiment now control editor views as
+well as flight. Editor entry owns no visibility state; the unconditional editor render hook/cache
+is removed. Reset/replay still uses the existing two switches and all payloads remain compatible.
+Both switches off leaves native interior gates in charge, including after vanilla/legacy loads.
+
 This scene toggle is sidecar-owned, not a global preference or native save field. Exact stock
 model IDs are integration constants, with no per-vehicle registrations to resolve. Template/native
 references, Harmony registrations and per-frame range lists are transient; the adapter never
 serializes them. `kitchen-sink.tests` adds 17 actual adapter/coordinator checks (including invalid,
-legacy, unavailable and retained-record recovery); `ksa-upgrade.tests` separately adds 20 checks
+legacy, unavailable and retained-record recovery); `ksa-upgrade.tests` separately runs 30 checks
 using the production filter, IVA helper and constructor/compose patches. Native visual/load
 acceptance remains pending; see [feature scope](ui-customization.md#kitchen-sink-capsule-glass-experiment-5541).
 

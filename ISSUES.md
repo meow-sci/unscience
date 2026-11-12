@@ -1,5 +1,15 @@
 ## Current triage — KSA 2026.11.10.5801
 
+**Wing Walker editor symmetry duplicated crew names:** fixed in code. Selection/pickup/gizmo start
+unassigns affected external crew; the pre-copy guard also catches reassignment after selection.
+32 managed checks, real-DLL signatures/empty-seat save checks and the full build pass; native
+symmetry, roster and undo/redo/save-load acceptance remain pending. [Evidence](plans/WING_WALKER.md#editor-crew-duplication-follow-up).
+
+**Unconditional editor IVA reveal:** removed. Editor/flight forcing now requires Kitchen Sink's
+IVA toggle or capsule-glass experiment; both-off views use native visibility. Render ownership,
+existing scene adapters and the full build pass; native visual/load acceptance is pending.
+[Evidence](plans/IVA_VISIBILITY_SWITCHES.md).
+
 **Humble Arteest part painting:** Whole vessels glow bright white immediately on Enable, before
 applying a color. Still unresolved. Three source audits plus 64 actual shader compilations found
 no exterior cause; native stock-source A/B and loaded-assembly/patch diagnostics are available.

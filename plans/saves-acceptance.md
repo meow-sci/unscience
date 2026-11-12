@@ -23,6 +23,20 @@ production Harmony input and real-adapter cancellation checks pass alongside exi
 
 ## Wing Walker
 
+Editor crew duplication guard: 32 managed production-Harmony checks cover selection/pickup/gizmo
+start, copy capture after reassignment, subtree ownership, native-history call order and repeated/
+restored assignments. Real 5801 signature checks and empty-seat `IVASeat.GetSaveData` pass, as does
+the full solution build. Native records and schema are unchanged.
+
+- [ ] Assign distinct kittens, select/move a mount or its parent, change symmetry (2/4/8) and copy.
+  Affected external seats and copies are empty; kittens are available to reassign exactly once.
+  Stock seats and unrelated mounts retain their crew.
+- [ ] Assign after final placement, then save/load repeatedly and A → B → A. Retain exact distinct
+  crew names; edit after load and repeat symmetry/copy without duplicating occupants.
+- [ ] Undo/redo selection unassignment and placement/copy edits, including a previously launched
+  vehicle and unattached subtrees. Crew and roster restore together; redoing or copying again
+  cannot create duplicate names. Hover/right-click Crew controls alone retain assignments.
+
 Native parts, `IVASeatData`, roster, tanks and life support own all durable state; part template
 selects posture. No feature sidecar is required, and appearance scope, weak animation markers and
 diagnostics are transient. The appearance fix adds no settings. The beach chair and standing strap models change
@@ -300,6 +314,16 @@ below describes implemented behavior, not an assertion that native acceptance ha
 | [Zippo](../zippo.lib/ZippoSubmod.Persistence.cs) | Edited shared light component originals/current values; per-part default color baselines; Disco draft and active recipes, paused state, phase/seed, switch and actuator originals; active/queued light transitions. | Disco and queued transitions continue from saved phase/elapsed values. Restores actuator ownership using current module ordinals; conflicts/layout changes warn. Shared-template edits retain their original shared scope. GPU light/material objects and live queue keys are never serialized. |
 
 ## Capsule glass native acceptance (pending)
+
+5801 visibility follow-up removes the editor's automatic reveal. The existing `kitchen-sink` and
+`kitchen-sink-capsule-glass` v1/order20 records and their reset/replay ownership remain unchanged.
+Thirty production render/ownership checks and Kitchen Sink's adapter suite pass; full build is clean.
+See [evidence](IVA_VISIBILITY_SWITCHES.md).
+
+- Enter/leave the editor with both switches off: no forced cabin. Test each switch alone and both
+  together; release the final switch while editing and confirm native visibility is restored.
+- Repeat all four saved switch combinations across scene loads and editor entry; vanilla/legacy
+  scenes with neither enabled keep native visibility. Native IVA/crew portraits still show cabins.
 
 - Main exterior view of a stock medium/Gemini capsule: enable **See Inside Capsule (Experimental)**,
   inspect both windows/cabin from several angles; check depth/tint, culling, shadows, door/hull isolation.

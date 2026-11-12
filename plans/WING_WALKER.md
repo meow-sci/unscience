@@ -3,6 +3,50 @@
 Implementation adds native External Seat and Standing Mount parts to Unscience. The
 standalone host is for development; only the combined package is released. [Surface inventory](../scope/wing-walker.md).
 
+## Editor crew duplication follow-up
+
+User reproduction: assign a kitten to an external mount in the editor, pick/select that part and
+enable symmetry. Native `PartCloner.Gather` captures `IVASeat.GetSaveData` for every copy, carrying
+the same crew name into multiple seats. This is native seat-data copying, not a new kitten ID.
+
+Implemented on 5801: `WingWalkerPatches.Editor.cs` records selection/grab/gizmo state around the
+native mouse handler and releases affected external crew on actual transitions. Selecting a parent
+includes external mounts below it. A separate pre-Gather guard handles symmetry/copy and crew
+reassigned after selection. The guard clears source assignments before capture; no duplicate crew
+can be emitted by those external seats. Place/set symmetry first, then assign individual kittens.
+
+Unassignment uses `Vehicle.SetSeatCrew(..., KeyHash.Zero, vehicleId, hasLaunched)`, matching native
+Crew controls, so roster ownership and mission exit follow KSA. Native history synchronizes before
+the first changed seat and records PartSettings afterward. Only active focused/unattached editor
+trees and exact subtree references qualify; stock seats and unrelated mounts retain occupants.
+Hover/context Crew controls and merely remaining selected do not repeatedly clear crew.
+
+All durable assignment/roster/part state remains native-owned. No sidecar, schema migration,
+per-frame unassignment or persistent selection cache is introduced. Restored assignments encounter
+the same guard on a later copy. Both hosts install/remove all eight targets with existing rollback.
+`Brutal.Localization` is a compile-only dependency for the native history label's optional LString.
+
+Validation:
+
+- `wing-walker.tests` passes existing rendering/appearance/boarding checks and **32** new production
+  Harmony editor checks. The unpatched fixture captures an occupied crew hash; patched capture
+  clears it. Cases include both mount types, selection/pickup/gizmo start, nested mounts, stock/
+  sibling/similar-ID isolation, reassignment before copying, repeat/restored assignments, existing
+  vehicle launch status, foreign/stale/disposed trees, history ordering and unload/reapply.
+- `wing-walker.native-tests` passes actual 5801 DLL signatures for both new targets and native
+  assignment fields/API. Actual empty `IVASeat.GetSaveData` emits no crew record/name. Existing
+  native XML/crew-save serialization and CPU animation checks pass. On this ARM64 host, use the
+  documented scratch-only IL header retarget and matching dependencies from `KSA_EXTRA_DLL_DIRS`;
+  source game binaries are unchanged. This test initializes no game world, roster or renderer.
+- Full solution `dotnet build --no-restore -m:1 -p:UseSharedCompilation=false` passes with zero
+  warnings/errors against CURRENT `dll/`. Output is redirected to
+  `/private/tmp/unscience-wing-walker-editor-dist`; `git diff --check` passes.
+
+Native acceptance remains: reproduce 2/4/8-fold symmetry with each mount and a selected parent,
+reassign after placement, Alt-copy/Copy Tree, gizmo moves, undo/redo and save/load across scenes
+and an existing launched vehicle. Affected seats/copies should be empty and the kitten available
+exactly once; stock/unrelated crew remain assigned. See [save acceptance](saves-acceptance.md#wing-walker).
+
 ## Seated beach chair and editor tags
 
 External Seat uses a custom rainbow woven beach chair with rounded folding-leg tubes and

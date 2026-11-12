@@ -514,31 +514,32 @@ Re-verified @5402 with the same shape: `OnFrame` (`:2164`) → `if (DrawUI) {…
 
 ### IvaForceRender.cs
 
-5541 capsule experiment addition: `Enabled` remains the legacy user preference; owner-scoped
-`SetRequired` requests are OR-ed as `EffectiveEnabled`. Effective visibility changes loaded and
-new non-`ShadowProxy` internal templates. Last-owner release restores flags; `Unpatch` now also
-clears all ownership and restores baselines explicitly. `IsInstalled` becomes true only after both
-existing patches attach. Kitchen Sink owns/persists its requirement, while cached template
-references and patch state are transient. No new game member or Harmony target is added here.
+Current behavior (5801, 2026-11-11): `Enabled` remains the independent user preference;
+owner-scoped `SetRequired` requests are OR-ed as `EffectiveEnabled`. Kitchen Sink's capsule-glass
+experiment is the only requirement caller. Both editor and flight views follow these switches.
+Entering the editor never forces visibility. Last-owner release restores internal template flags;
+`Unpatch` clears ownership and restores baselines. `IsInstalled` now reports the constructor patch.
+Kitchen Sink's existing two boolean scene records own the desired state; template references and
+patch state remain transient. No save IDs, versions or payloads change.
 
-Rows re-verified @5482 (mod lines are the current `ksa-abstractions.lib/IvaForceRender.cs`).
-
-| # | Kind | Mod code (file:line) | Game target (Type.Member + signature) | Decomp path (NEW) | In NEW? | Δ vs OLD | Risk/notes |
+| # | Kind | Mod code (file:line) | Game target + signature | Decomp path (5801) | In NEW? | Change | Risk/notes |
 |---|---|---|---|---|---|---|---|
-| 1 | Harmony postfix (ctor) | `IvaForceRender.cs:47` (lookup), `:49` (patch), `:98-106` (postfix) | `PartModel..ctor(PartModelModule.Template)` — `protected PartModel(PartModelModule.Template template)` | `KSA/PartModel.cs:435` | Yes | None (body identical, still the only ctor) | `AccessTools.Constructor` finds the **protected** ctor; explicit param-type array. Since 5482 the postfix also marks the editor internal-template cache dirty. |
-| 2 | Harmony prefix + finalizer | `:53-57` (name-only lookup, patch), `:114-125` `ComposePrefix(IViewport inViewport)`, `:127-133` `ComposeFinalizer(Exception? __exception)`, `:135-146` cache rebuild | `PartTreeRenderData.Compose(ref readonly double4x4, bool, IViewport inViewport, int)` — public instance | `KSA/PartTreeRenderData.cs:1258` (raster gate `(!Template.Internal \|\| IVA)` at `:1300`) | Yes | **NEW @5482** — replaces the 5438 postfix on the private `PartModel.AddInstance(PerInstanceData, PerInstanceDent, IViewport, int)` sink (`KSA/PartModel.cs:470`), which static raster parts no longer reach | Resolved by name only (single overload today; an added overload would make the lookup ambiguous). In the editor (`Program.Editor != null`), outside IVA, for viewports with `RenderPartModels`, the prefix sets `Template.Internal = false` on every cached internal non-`ShadowProxy` template that is still internal and records it; the finalizer restores exactly those, even when `Compose` throws. Stock code then appends instance, `DentInstanceList` entry and dent data consistently. The only readers of `Template.Internal` are main-thread render code (`PartTreeRenderData.cs:1300`, `PartModel.cs:486`), so nothing else observes the temporary flip. Coexists with `PartRenderFilter` on the same method. |
-| 3 | Direct API (static field) | `:138` (cache rebuild), `:151` (`Enabled` mutation) | `PartModel.Instances` — `public static List<PartModel> Instances` | `KSA/PartModel.cs:409` | Yes | None | Source of the editor internal-template cache (rebuilt after the ctor postfix or `RestoreInternalHidden` marks it dirty) and of the `Enabled` mutation. |
-| 4 | Direct API (field) | `:102-104,121-122,130,141,153-156,165` | `PartModelModule.Template.Internal` — `public bool Internal = false;` | `KSA/PartModelModule.cs:39` | Yes | None | Cleared permanently by `Enabled`; cleared per `Compose` call and restored in the editor. |
-| 5 | Direct API (field) | `:141` | `PartModelModule.Template.RayTracing` — `public RaytracingMode RayTracing` | `KSA/PartModelModule.cs:31` | Yes | None | |
-| 6 | Direct API (enum) | `:141` | `PartModelModule.RaytracingMode.ShadowProxy` | `KSA/PartModelModule.cs:14` | Yes | None | Never revealed (the raster branch skips shadow proxies too). |
-| 7 | Direct API (field) | `:116` | `Program.Editor` — `public static VehicleEditor? Editor;` | `KSA/Program.cs:227` | Yes | None | editor-only branch. |
-| 8 | Direct API (prop/enum) | `:116` | `IViewport.Mode` of the composed viewport (`CameraMode Mode { get; }`) vs `CameraMode.IVA` | `KSA/IViewport.cs:29`, `KSA/CameraMode.cs:14` | Yes | None | Per-viewport IVA test. (`Program.MainViewport` is no longer read by this helper.) |
-| 9 | Direct API (extension) | `:117` | `IViewport.HasAny(ViewportOptionFlags.RenderPartModels)` | `KSA/ViewportEx.cs:60`; `KSA/ViewportOptionFlags.cs:20` | Yes | None | Mirrors `Compose`'s own early return. |
-| ~~10~~ | ~~Harmony postfix~~ + ~~`PartModel.ViewportData.Get(...).InstanceList` / `DentInstanceList.Add`~~ + ~~`PartModel.PerInstanceData`~~ | — | private `PartModel.AddInstance` sink | `KSA/PartModel.cs:470` | — | **RETIRED @5482** | Replaced by #2. The old postfix's side effect of adding internal meshes to editor thumbnails (`ThumbnailPart` calls `AddInstance` directly) is gone. |
+| 1 | Harmony constructor postfix | `IvaForceRender.cs:58-60,97-104` | `PartModel..ctor(PartModelModule.Template)` — protected | `KSA/PartModel.cs:438` | Yes | Retained | Reveals new non-shadow-proxy models only while `EffectiveEnabled`. |
+| 2 | Direct static field | `IvaForceRender.cs:110` | `PartModel.Instances : List<PartModel>` | `KSA/PartModel.cs:409` | Yes | Retained | Enumerated when effective visibility turns on. |
+| 3 | Direct field | `IvaForceRender.cs:100-104,112-115,123-124` | `PartModel.Template` / `PartModelModule.Template.Internal : bool` | `KSA/PartModel.cs:415`; `PartModelModule.cs:39` | Yes | Retained | Clears Internal for the active switches; restores on final release. |
+| 4 | Direct field / enum | `IvaForceRender.cs:101,112` | `Template.RayTracing` / `RaytracingMode.ShadowProxy` | `KSA/PartModelModule.cs:31,14` | Yes | Retained | Shadow proxies are never revealed. |
+| 5 | Retired Harmony prefix/finalizer | Removed | `PartTreeRenderData.Compose(ref readonly double4x4, bool, IViewport, int)` | `KSA/PartTreeRenderData.cs:1386` (native interior gate) | Yes | Removed 2026-11-11 | The unconditional editor reveal and its cache are gone. Native composition already reads the template changed by the switches. PartRenderFilter keeps its separate Compose patches. |
+| 6 | Retired editor/viewport reads | Removed | `Program.Editor`, `IViewport.RendersInterior`, `HasAny(RenderPartModels)` | No longer referenced by this helper | n/a | Removed with #5 | Stock IVA and inside-vehicle viewport visibility remains native. |
 
-Update-risk findings (5438 → 5482): the editor reveal was silently dead until this fix, because the
-postfix target was no longer called for raster parts (see the 5482 section at the top). Live check:
-internal meshes (with dents) visible in the editor, no duplicates in IVA, `Enabled` toggle in flight.
+Update-risk findings (5707 → 5801; visibility follow-up): the legacy editor reveal bypassed both
+Kitchen Sink switches. This is a requested behavior correction, not new game drift. The managed
+regression first fails with both switches off in the editor against the old hook, then passes with
+only the constructor patch. Thirty render/ownership checks cover all editor switch combinations,
+restoration, late-created models, native IVA/portraits, filtering and flight ownership. Kitchen Sink
+save-adapter checks and the full build pass; native appearance/replay acceptance remains pending.
+See [implementation and acceptance](../plans/IVA_VISIBILITY_SWITCHES.md).
+
+Historical findings below describe prior mechanisms and are superseded by the current table.
 
 Update-risk findings (4680→4750):
 - **No breaking deltas detected.** Every IvaForceRender target is byte-for-byte unchanged

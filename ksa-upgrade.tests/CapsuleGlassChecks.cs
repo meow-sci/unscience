@@ -44,7 +44,33 @@ internal static class CapsuleGlassChecks
             try
             {
                 Frame();
-                Require(Count(interior) == 1 && interior.Template.Internal, "editor reveals the cabin for one compose and restores its template");
+                Require(Count(interior) == 0 && interior.Template.Internal,
+                    "entering the editor with both switches off keeps the cabin hidden");
+                var editorCabin = Model("editor-cabin", true);
+                Require(editorCabin.Template.Internal, "new editor models stay hidden with both switches off");
+
+                IvaForceRender.Enabled = true;
+                Frame();
+                Require(Count(interior) == 1 && !editorCabin.Template.Internal,
+                    "independent force toggle reveals existing editor cabins");
+                CapsuleGlassExperiment.SetEnabled(true);
+                Frame();
+                Require(Count(interior) == 1 && Count(windowA) == 0,
+                    "both editor switches reveal the cabin and hide the opaque windows");
+                IvaForceRender.Enabled = false;
+                Frame();
+                Require(Count(interior) == 1 && !IvaForceRender.Enabled && IvaForceRender.EffectiveEnabled,
+                    "capsule glass alone keeps editor interiors visible");
+                CapsuleGlassExperiment.SetEnabled(false);
+                Frame();
+                Require(Count(interior) == 0 && interior.Template.Internal && editorCabin.Template.Internal,
+                    "turning both switches off restores hidden cabins while still in the editor");
+
+                view.Mode = CameraMode.IVA;
+                Frame();
+                Require(Count(interior) == 1 && interior.Template.Internal,
+                    "native IVA views retain interiors with both switches off");
+                view.Mode = CameraMode.Orbit;
                 view.State = ViewportStateFlags.InsideVehicle;
                 Frame();
                 Require(Count(interior) == 1 && interior.Template.Internal, "editor inside-vehicle views keep the native interior gate");
@@ -52,6 +78,7 @@ internal static class CapsuleGlassChecks
             finally
             {
                 KSA.Program.Editor = null;
+                view.Mode = CameraMode.Orbit;
                 view.State = ViewportStateFlags.None;
             }
 
@@ -116,6 +143,7 @@ internal static class CapsuleGlassChecks
         }
         finally
         {
+            KSA.Program.Editor = null;
             CapsuleGlassExperiment.Remove(harmony);
             PartRenderFilter.Unregister(harmony, "other-owner");
             IvaForceRender.Unpatch(harmony);

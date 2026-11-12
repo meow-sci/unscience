@@ -42,6 +42,10 @@
       <HintPath>$(KSAFolder)Brutal.Strings.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Brutal.Localization" Condition="Exists('$(KSAFolder)Brutal.Localization.dll')">
+      <HintPath>$(KSAFolder)Brutal.Localization.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="KSA" Condition="Exists('$(KSAFolder)KSA.dll')">
       <HintPath>$(KSAFolder)KSA.dll</HintPath>
       <Private>false</Private>

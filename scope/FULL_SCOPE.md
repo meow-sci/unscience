@@ -53,6 +53,7 @@ including after loads; no counter or additional scene state is saved.
 - **Verification:** whole solution builds with 0 warnings/errors; all 19 managed suites, real-DLL
   reflection/constructor/layout checks, live-source paint/canopy transforms, 19 isolated bootstrap
   cases and distribution validation. **Static/managed only; native acceptance pending.**
+- **IVA follow-up:** explicit switch ownership in flight/editor; constructor-only helper. [Checks and acceptance](../plans/IVA_VISIBILITY_SWITCHES.md).
 - **Evidence:** [5801 impact and remediation](../plans/KSA_5801_UPGRADE.md). Dated area tables retain
   historical citations; current dated sections supersede their compatibility status. Previous reports:
   [5707](../plans/KSA_5707_UPGRADE.md), [5638](../plans/KSA_5638_UPGRADE.md),
@@ -108,6 +109,15 @@ rocky-mcrock-face, save-yourself, skittles, sphinx, wing-walker, the-tick, thug-
 ---
 
 ## Current status against 5801
+
+Wing Walker unassigns affected external crew on editor selection/pickup/gizmo start and before
+symmetry/copy capture, preventing duplicate kitten names. Native crew/history/save ownership stays
+intact. Managed checks, real-DLL signature/save checks and the full build pass; in-game acceptance
+is pending. [Evidence](../plans/WING_WALKER.md#editor-crew-duplication-follow-up).
+
+IVA forcing now follows Kitchen Sink's independent toggle or capsule-glass experiment in both
+flight and editor views. The unconditional editor hook is removed; save records are unchanged.
+Managed checks/build pass; native acceptance remains pending. [Evidence](../plans/IVA_VISIBILITY_SWITCHES.md).
 
 Wing Walker adds native crew parts, scoped boarding and rendering hooks. Prior checks passed; its
 helmet and standing-pose fix passes focused and full builds, packaging and the native CPU probe; the

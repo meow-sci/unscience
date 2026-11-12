@@ -124,14 +124,16 @@ in-game pass on 5482.
 ## Capsule glass experiment checks (5541)
 
 `CapsuleGlassChecks` links production `CapsuleGlassExperiment`, `IvaForceRender` and
-`PartRenderFilter`. Twenty-four checks apply actual Harmony constructor/compose patches against
+`PartRenderFilter`. Thirty checks apply actual Harmony constructor/compose patches against
 managed fixtures: exact model IDs despite renamed part instances, both windows on multiple
 capsules, sibling hull/similar ID isolation, native glass retained, instance/dent alignment,
 independent IVA owner orders and preference changes, late-model capture, shadow-proxy isolation,
-coexistence with full-part filter owners and actual unpatch restoration. Since 5638 they also cover
-the editor reveal/restore (including an inside-vehicle editor view that keeps the native gate) and a
-crew-portrait (`InsideVehicle`) view matching the IVA result, plus the native cabin there with the
-experiment off. The fixture models native interior raster gates but has no Vulkan or ray tracing
+coexistence with full-part filter owners and actual unpatch restoration. Current checks also cover
+editor visibility with both switches off, newly constructed editor models, all four switch
+combinations, restoration while still editing, and native IVA/inside-vehicle views with both off.
+The off-in-editor assertion reproduces the removed unconditional editor hook's failure. A
+crew-portrait (`InsideVehicle`) view still matches the IVA result with the experiment on and
+renders its native cabin with it off. The fixture models native interior raster gates but has no Vulkan or ray tracing
 renderer. Native window
 alignment, depth, tint, exterior lighting and live save/load acceptance remain pending.
 

@@ -94,10 +94,14 @@ Shared implementation of Kitchen Sink's **Always Render IVA Interiors**. Hosts c
   interiors without changing that preference; `EffectiveEnabled` ORs all owners. Effective visibility
   clears `Template.Internal` on loaded and newly constructed non-`ShadowProxy` models. The final
   owner releasing visibility restores the changed flags; unpatch clears all ownership and restores
-  templates. `IsInstalled` reports whether both patches attached. Kitchen Sink's capsule experiment
+  templates. `IsInstalled` reports whether the constructor patch attached. Kitchen Sink's capsule experiment
   uses this requirement, and its own scene-save adapter persists that requirement's desired state.
-- **Editor preview:** internal meshes stay visible in the vehicle editor outside IVA while the patch is installed, whether or not `Enabled` is set. KSA 5482 raster-composes static models in `PartTreeRenderData.Compose` and applies the internal/IVA gate there, without calling `PartModel.AddInstance`. The helper therefore uses a prefix on `Compose` for editor viewports that render part models but not interiors. Since KSA 5638 it skips on the stock `RendersInterior()` gate (IVA mode or an inside-vehicle crew portrait) rather than `Mode == IVA`. The prefix temporarily clears `Template.Internal` on internal, non-`ShadowProxy` templates, and a finalizer restores them even when `Compose` throws. Stock code then appends instances and dents consistently. The template list is rebuilt from `PartModel.Instances` after model creation or restoration.
-- Change from 5438: internal meshes no longer appear in editor part thumbnails. The old `AddInstance` postfix also reached thumbnails.
+- **Editor preview:** follows the same effective visibility as flight. Opening the editor never
+  forces interiors. With both Kitchen Sink switches off, native interior gates apply; native IVA
+  and inside-vehicle views still render interiors normally. The former unconditional `Compose`
+  prefix/finalizer and editor template cache were removed on 5801. Enabled template mutations
+  already reach native composition, so no extra render hook is needed.
+- Managed editor/flight ownership coverage: [ksa-upgrade.tests](../ksa-upgrade.tests/README.md#capsule-glass-experiment-checks-5541).
 
 ### HiddenUiFrameHook
 Keeps per-frame mod work alive while the game HUD is hidden (**F2** / `InputAction.ToggleUi`).
@@ -314,7 +318,7 @@ See [save integration](../scope/saves.md), [plan](../plans/SAVES.md) and
 Verified against KSA `2026.9.22.5482` by build and managed checks only. There has been no native run.
 
 - New `PartRenderFilter` replaces the removed per-module `*Module.UpdateRenderData` render-skip targets.
-- `IvaForceRender` reveals editor internals through `PartTreeRenderData.Compose` instead of the `AddInstance` sink.
+- Historical: `IvaForceRender` moved editor reveal to `PartTreeRenderData.Compose`; that unconditional override was removed on 5801. Editor visibility now follows the two Kitchen Sink switches.
 - `PhysicsFrameHook.JoinOrbitReaders` joins the nearest-orbit job before vessel moves at the handoff.
 - `NativeSaveHooks` reports failed native writes (`WriteFailed`) and unreadable saves (`LoadFailed`), and joins the renamed `NearestOrbitAndPerformanceWorker`.
 

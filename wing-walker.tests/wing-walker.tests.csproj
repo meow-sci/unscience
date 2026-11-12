@@ -10,5 +10,6 @@
     <Compile Include="../wing-walker.lib/WingWalkerPatches.Appearance.cs" Link="WingWalkerPatches.Appearance.cs" />
     <Compile Include="../wing-walker.lib/WingWalkerPatches.Rendering.cs" Link="WingWalkerPatches.Rendering.cs" />
     <Compile Include="../wing-walker.lib/WingWalkerPatches.Boarding.cs" Link="WingWalkerPatches.Boarding.cs" />
+    <Compile Include="../wing-walker.lib/WingWalkerPatches.Editor.cs" Link="WingWalkerPatches.Editor.cs" />
   </ItemGroup>
 </Project>
