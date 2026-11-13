@@ -6,6 +6,56 @@ and full solution builds, distribution check and 5801 native signature/CPU anima
 updated production fixture passes, while in-game visual acceptance remains pending. The authoritative game sources are
 `repos/ksa-game-assemblies/current/decomp/KSA` and `current/Content` in the enclosing workspace.
 
+## Chair geometry and texture budget
+
+The chair's earlier export used **12,100 visible triangles** (9,864 webbing/plastic +2,236 frame),
+duplicated all 12,100 triangles for picking, and occupied **2,063,596 GLB bytes**. It embedded three
+custom images/materials despite the authoritative external XML maps. Its visible and picking
+meshes each had 12,669 exported vertices, and the external maps were three 512px PNGs.
+
+| Exported workload | Original | Square-frame/worn-cloth replacement |
+|---|---:|---:|
+| Webbing/plastic triangles | 9,864 | 872 |
+| Frame triangles | 2,236 | 156 |
+| Total visible triangles | 12,100 | 1,028 |
+| Visible vertices | 12,669 | 1,456 |
+| Picking triangles / vertices | 12,100 / 12,669 | 96 / 192 |
+| GLB bytes | 2,063,596 | 84,200 |
+| External maps | 3 × 512px | 3 × 256px |
+| Embedded materials/images | Present | None |
+
+The replacement uses four-sided mitered frame beams with flat normals, simplified woven geometry,
+coarse seat/back/arm picking panels and frame envelopes, and three external 256px maps with cloth
+wear. The geometry-only GLB retains `Unscience_WingWalker_BeachChair`, `_Frame` and `_VM`; the Core
+foil patch remains U=0.495–0.605/V=0.39–0.49. No Core texture payload is embedded or shipped.
+Aspect-correct narrow strips target 0.171 UV/metre rather than stretching the entire patch over
+each beam face; four offsets vary the sampled wrinkle region. The checker permits ±25% edge-density
+variation around that target for mitered corners, while rejecting stretched full-patch mapping.
+All XML, native model keys/material refs, part/subpart IDs, five placement slots, colliders, mass,
+crew/life-support behavior and save ownership remain unchanged. Standing strap art is unaffected.
+
+`scripts/check-chair-assets.py` uses the shared standard-library GLB reader to validate actual
+index/vertex streams, three stable meshes with one primitive each, identity nodes, visible normals/
+UVs/tangents, picking normals, flat frame normals aligned with planar faces, the foil UV rectangle/density,
+proxy bounds enclosing visible bounds, external XML bindings and no embedded materials/images.
+Budgets are **≤1,200 visible triangles / 3,000 exported vertices**, **≤150 picking triangles / 256
+vertices**, and exactly three stable PNG maps with edges **≤256px**. Distribution validation runs
+the checker against packaged art after byte equality checks.
+
+The square-frame/worn-cloth export passes source and packaged checks, the full solution build
+(zero warnings/errors), the real 5801 native harness and the managed Wing Walker suite, including
+all 32 editor crew selection/copy checks. Existing cooler budgets and distribution validation also
+pass. Blender verifies the square rails, native-foil preview and worn cloth; in-game acceptance
+below remains pending.
+
+Native `Part.RayCastEgoSubPart` (`KSA/Part.cs:2816–2849`) passes MeshView `PositionCompare` triangles
+to `Ray.RaycastWatertight` (`KSA/Ray.cs:207–281`), which scans every triangle. Coarse proxies reduce
+that CPU work; the source does not establish a measured FPS result. Native bounds also derive from
+MeshView data (`Part.cs:1701–1765`), so the checker protects visible-geometry enclosure. The 256px
+maps have one quarter of the former 512px source texels; native texture allocation does not upscale
+them to a minimum bucket. In-game foil/cloth appearance, coarse picking and frame-time effects
+still require [native acceptance](../plans/WING_WALKER.md#native-acceptance-pending).
+
 ## Editor crew duplication guard (5801)
 
 Editor selection, pickup and gizmo start unassign occupied external mounts in the affected subtree.
@@ -39,7 +89,7 @@ is pending. [Evidence](../plans/WING_WALKER.md#editor-crew-duplication-follow-up
 | `IVASeat.TemplateId`, `Parent.FullPart.Template.Id`, `Renderable`, `ForwardAxisAsmb`, `UpAxisAsmb`; `PartTree.Modules.Get<IVASeat>()` | Exact `CrewSeat` key plus part template IDs select only these parts; renderable identity limits the animation override. `ExternalCrewParts.cs`; `KSA/IVASeat.cs`, `Part.cs`, `PartTree.cs`. |
 | `Program.Instance.SuperMeshRenderSystem`, `RenderedViewport`, `ResourceFrameIndex`, `GetPlayerDeltaTime()`, `ControlledVehicle`, `VehiclesInFrame`, `Editor`; `IViewport.Visible/Is/GetCamera`; `Vehicle.IsDisposed/Parts/IsLargeEnoughToRender/GetMatrixAsmb2Ego`; `PartTree.IsDisposed`; `EditingSpace.GetMatrixAsmb2Ego` | Frame/view ownership, culling and transforms; changes can cause missing or duplicate crew without a compile error. `WingWalkerPatches.Rendering.cs`. |
 | `WingWalker.xml` | `Unscience_WingWalker_Seated`, `Unscience_WingWalker_Standing` (inherits seated); native `IVASeat` key `CrewSeat`, helper `EVADoor` key `Door` with `SeatId="CrewSeat"`, habitat, oxygen/water tanks, collider and `ToSurface` connector. Both parts have `External Crew` and native `Capsules` editor tags (the standing template inherits the tag list). No habitat passage is implied by the mount; fluid connections are separate. KSA owns food/LiOH in habitat storage and the life-support state. Food and scrubber supplies are local and isolated by default; there is no shielding or Control module. |
-| Beach chair assets | `Meshes/WingWalker_BeachChair.glb` declares `Unscience_WingWalker_BeachChair` (rainbow webbing/white plastic), `_Frame` (gold foil) and combined `_VM` picking mesh. Two external `PartModel`s share the Chair subpart. Own diffuse/normal/ORM maps supply webbing/plastic; only the frame references native `CoreSurfacesB_Material`. UV U=0.495–0.605/V=0.39–0.49 selects wrinkled foil from `CoreSurfacesB_Subpart_TrussFFoilA`, used by `CoreStructuralA_Prefab_StrutOcto2HB`. Recheck material/texture IDs and atlas island on game updates. Core payload is not distributed. Seated eye/ground connector and five legacy IDs/keys/order remain; Headrest/Runners/Base are empty aliases. Six collider boxes approximate the seat/back, leg envelopes and armrests. [Editable art](../wing-walker/Art/README.md). |
+| Beach chair assets | `Meshes/WingWalker_BeachChair.glb` declares `Unscience_WingWalker_BeachChair` (worn rainbow webbing/white plastic), `_Frame` (square gold-foil frame) and coarse `_VM` picking panels/envelopes. Two external `PartModel`s share the Chair subpart. Three external 256px diffuse/normal/ORM maps supply webbing/plastic; only the frame references native `CoreSurfacesB_Material`. The GLB embeds no materials/images. UV U=0.495–0.605/V=0.39–0.49 selects wrinkled foil from `CoreSurfacesB_Subpart_TrussFFoilA`, used by `CoreStructuralA_Prefab_StrutOcto2HB`. Recheck material/texture IDs and atlas island on game updates. Core payload is not distributed. Seated eye/ground connector and five legacy IDs/keys/order remain; Headrest/Runners/Base are empty aliases. Six collider boxes approximate the seat/back, leg envelopes and armrests. [Editable art](../wing-walker/Art/README.md). |
 | Standing strap art | `WingWalker.xml` registers `Meshes/WingWalker_StandingMount.glb` via `MeshAtlas`, visible mesh `Unscience_WingWalker_FootStraps` and its `_VM` picking twin, plus `Unscience_WingWalker_Leather` and three diffuse/normal/ORM PNG textures. KSA 5801 `MeshAtlasFileReference` reads mesh names and vertices, ignoring node transforms; export bakes +X-forward/-Z-up part space. Boot origin and surface connector are X=0.01404/Y=0.00495/Z=0.2901232; collider bounds are 0.082 × 0.524 × 0.11 m. Standing patches Chair to the straps and Headrest/Runners/Base to an empty template, preserving all five legacy slots in order and the EvaDoor module. Seated art uses its own beach chair atlas. Blender fit used installed 5707.1 boots; native 5801 visual acceptance is pending. [Editable art](../wing-walker/Art/README.md). |
 | Host wiring | `unscience/Mod.cs`, `Patcher.cs`, `unscience.csproj`, `mod.toml` instantiate/install and package shared asset; `wing-walker/Mod.cs`, `Patcher.cs`, project and manifest provide a standalone development host. One host at a time. `WingWalkerPatches.Apply/Remove` own rollback and unpatching. |
 

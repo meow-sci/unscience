@@ -455,8 +455,8 @@ all durable identities and mechanics are unchanged.
 
 Native surface-mounted External Seat and Standing Mount parts, native crew assignment and EVA
 boarding, finite life support and scoped helmet/standing crew rendering (visual retest pending). Posture derives from the part template;
-the standing model uses brown leather foot straps; the seated model is a rainbow beach chair with
-a native gold foil frame and textured white armrests. Both have editable Blender art and bundled custom PBR textures, and appear in the Capsules filter.
+the standing model uses brown leather foot straps; the seated model is a worn rainbow beach chair
+with a square native gold-foil frame and textured white armrests. Both have editable Blender art and bundled custom PBR textures, and appear in the Capsules filter.
 KSA owns persistent part, crew and resource state, so no feature sidecar is added. The library owns
 the patches; the thin standalone host is for development, while only Unscience ships.
 `WingWalkerPatches.Editor.cs` unassigns exact affected external seats on editor selection/pickup/
@@ -464,6 +464,13 @@ gizmo start and before symmetry/copy capture, using native crew and history APIs
 are included; stock seats, unrelated parts and non-editor trees are untouched. Native seat saves
 remain authoritative. Brutal.Localization is compile-only for the history API's label parameter.
 [Integration](scope/wing-walker.md) · [validation](plans/WING_WALKER.md).
+Chair art has 1,028 visible triangles/1,456 vertices and 96 picking triangles/192 vertices, with
+simplified woven strips, square frame beams, coarse picking panels/frame envelopes and three external
+256px maps. [`check-chair-assets.py`](scripts/check-chair-assets.py) validates actual GLB triangle/
+vertex budgets, three stable single-primitive meshes, identity nodes, native attributes, flat frame
+normals, the Core foil UV patch/native-scale density, proxy bounds and no embedded materials/images. `check-dist.py` runs
+it on packaged assets. IDs, native mechanics, crew behavior and save ownership remain unchanged.
+The GLB is 84,200 bytes, down from 2,063,596; native frame-time comparison remains pending.
 
 ### [wing-walker.tests](wing-walker.tests)
 

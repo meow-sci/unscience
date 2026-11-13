@@ -134,7 +134,9 @@ helmet and standing-pose fix passes focused and full builds, packaging and the n
 updated production fixture passes; the in-game visual retest remains pending. [Integration and risks](wing-walker.md) · [validation](../plans/WING_WALKER.md).
 Standing Mount now uses custom brown leather foot straps with a GLB/picking atlas and PBR textures;
 all legacy subpart slots retain their order for native saved-state matching. External Seat uses
-rainbow webbing, textured white armrests and a native gold foil frame; both parts have the Capsules tag.
+worn rainbow webbing, textured white armrests and a square native gold-foil frame; both parts have
+the Capsules tag. Chair geometry is reduced to 1,028 visible/96 picking triangles; external 256px maps have export
+budgets and foil-UV/flat-normal checks; in-game visual and frame-time acceptance remain pending.
 
 DOH **Smite / Smite All** replace custom despawning with KSA's native kill input (Kill/Abandoned),
 which runs before the render-list refresh; the former physics handoff ran too late. Private War Paint

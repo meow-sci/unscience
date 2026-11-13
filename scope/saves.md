@@ -59,6 +59,13 @@ visual references and collider data, retaining both part IDs and all five subpar
 same order (including the EvaDoor module). The Capsules tag is static template metadata; native positional module matching and save format remain intact. Repeated A–B–A
 native load, crew, resources and unload acceptance remain pending; see [plan](../plans/WING_WALKER.md).
 
+The chair cost/appearance update changes only GLB geometry, coarse picking proxies and the three
+fabric/PBR PNG contents/dimensions. The square foil frame retains the native material/UV patch;
+all part/subpart/mesh/material IDs, native render/module keys, five placement slots, XML mechanics
+and native save records remain stable. No sidecar, reset/replay state or migration is added.
+Old craft resolve the simpler art through the same asset references; native crew, resources and
+history retain ownership. Repeated native scene load remains an acceptance item.
+
 ## You Didn't See Anything
 
 `YouDidntSeeAnythingSubmod` exposes a version-1 `you-didnt-see-anything` participant through the

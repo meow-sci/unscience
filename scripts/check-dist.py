@@ -22,6 +22,7 @@ for folder, xml_name in (("wing-walker", "WingWalker.xml"), ("beverage-cooler", 
             assert (package / relative).read_bytes() == (repo / folder / relative).read_bytes(), f"Stale {folder} art: {relative}"
 assert not (package / "Art").exists(), "Editable Blender art must not be distributed"
 subprocess.run([sys.executable, str(repo / "scripts/check-cooler-assets.py"), str(package)], check=True)
+subprocess.run([sys.executable, str(repo / "scripts/check-chair-assets.py"), str(package)], check=True)
 expected = set()
 pending = [repo / "unscience/unscience.csproj"]
 visited = set()

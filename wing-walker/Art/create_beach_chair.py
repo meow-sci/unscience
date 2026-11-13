@@ -18,58 +18,8 @@ COLLECTION = 'WingWalker_BeachChair'
 GROUND = 0.3821768
 FOIL_U = (.495, .605)
 FOIL_V = (.39, .49)
-# Share the existing PNG writer, including its color-space handling.
-image = runpy.run_path(str(ROOT / 'Art/create_standing_mount.py'))['image']
-
-
-def material():
-    size = 512
-    y, x = np.mgrid[0:size, 0:size] / size
-    rng = np.random.default_rng(9081)
-    fibers = 0.04 * np.sin(x * math.tau * 160) * np.sin(y * math.tau * 192)
-    fibers += rng.normal(0, .009, (size, size))
-    colors = np.array([[.91, .065, .105], [1, .36, .035], [1, .84, .055],
-                       [.08, .69, .20], [.025, .43, .91]])
-    stripe = np.clip(((x - .015) / .75 * 5).astype(int), 0, 4)
-    diffuse = np.ones((size, size, 4))
-    diffuse[:, :, :3] = colors[stripe] * (1 + fibers[:, :, None])
-    selvedge = (x < .026) | ((x > .754) & (x < .80))
-    diffuse[selvedge, :3] = [.91, .91, .84]
-    plastic = x > .80
-    stipple = rng.normal(0, .012, (size, size))
-    diffuse[plastic, :3] = np.repeat((.89 + stipple[plastic])[:, None], 3, axis=1)
-    normal = np.ones((size, size, 4))
-    normal[:, :, 0] = .5 + .055 * np.sin(x * math.tau * 160)
-    normal[:, :, 1] = .5 + .055 * np.sin(y * math.tau * 192)
-    normal[:, :, 2] = 1
-    normal[plastic, 0] = .5 + stipple[plastic]
-    normal[plastic, 1] = .5 + np.roll(stipple,1,axis=0)[plastic]
-    orm = np.ones((size, size, 4))
-    orm[:, :, 1] = .84 + fibers * .2; orm[:, :, 2] = 0
-    orm[plastic, 1] = .57 + stipple[plastic]; orm[plastic, 2] = 0
-    textures = [image('WingWalker_BeachChair_' + suffix, data, linear)
-                for suffix, data, linear in [('Diffuse', diffuse, False),
-                    ('Normal', normal, True), ('ORM', orm, True)]]
-    mat = bpy.data.materials.get(NAME) or bpy.data.materials.new(NAME)
-    mat.use_nodes = True
-    nodes = mat.node_tree.nodes; nodes.clear(); links = mat.node_tree.links
-    shader = nodes.new('ShaderNodeBsdfPrincipled')
-    output = nodes.new('ShaderNodeOutputMaterial')
-    links.new(shader.outputs['BSDF'], output.inputs['Surface'])
-    for index, img in enumerate(textures):
-        tex = nodes.new('ShaderNodeTexImage'); tex.image = img
-        if index == 0:
-            links.new(tex.outputs['Color'], shader.inputs['Base Color'])
-        elif index == 1:
-            node = nodes.new('ShaderNodeNormalMap')
-            links.new(tex.outputs['Color'], node.inputs['Color'])
-            links.new(node.outputs['Normal'], shader.inputs['Normal'])
-        else:
-            node = nodes.new('ShaderNodeSeparateColor')
-            links.new(tex.outputs['Color'], node.inputs['Color'])
-            links.new(node.outputs['Green'], shader.inputs['Roughness'])
-            links.new(node.outputs['Blue'], shader.inputs['Metallic'])
-    return mat
+FOIL_DENSITY = .171  # Native foil atlas scale, UV units per metre.
+material = runpy.run_path(str(ROOT / 'Art/chair_material.py'))['material']
 
 
 def gold_preview():
@@ -95,7 +45,7 @@ def rounded(points, radius=.035, closed=False):
         cut = min(radius, (p - before).length * .4, (after - p).length * .4)
         a = p + (before - p).normalized() * cut
         b = p + (after - p).normalized() * cut
-        result.extend((1-t)**2*a + 2*(1-t)*t*p + t*t*b for t in map(float,np.linspace(0, 1, 7)))
+        result.extend((a,b))
     return result
 
 
@@ -103,6 +53,7 @@ class Geometry:
     def __init__(self):
         self.vertices, self.faces, self.uvs, self.smooth, self.materials = [], [], [], [], []
         self.surface = 0
+        self.ribbon_index = 0
 
     def face(self, corners, uv, smooth=False):
         start = len(self.vertices)
@@ -111,44 +62,50 @@ class Geometry:
         self.uvs.append(uv); self.smooth.append(smooth)
         self.materials.append(self.surface)
 
-    def tube(self, points, radius=.014, closed=False):
+    def square_rail(self, points, radius=.014, closed=False):
         self.surface = 1
-        path = rounded(points, closed=closed); rings = []
+        path = [Vector(p) for p in points]; rings = []
+        tangents=[(path[(i+1)%len(path)]-p).normalized()
+                  for i,p in enumerate(path) if closed or i<len(path)-1]
+        normal=next(tangents[0].cross(t).normalized() for t in tangents[1:]
+                    if tangents[0].cross(t).length>.001)
         for i, point in enumerate(path):
-            prev = path[(i-1) % len(path)] if closed or i else path[0]
-            nxt = path[(i+1) % len(path)] if closed or i < len(path)-1 else path[-1]
-            tangent = (nxt - prev).normalized()
-            guide = Vector((1, 0, 0)) if abs(tangent.x) < .8 else Vector((0, 0, 1))
-            a = tangent.cross(guide).normalized(); b = tangent.cross(a).normalized()
-            rings.append([point + radius*(math.cos(t)*a + math.sin(t)*b)
-                          for t in np.linspace(0, math.tau, 12, endpoint=False)])
+            before=tangents[(i-1)%len(tangents)] if closed or i else tangents[0]
+            after=tangents[i%len(tangents)] if closed or i<len(path)-1 else tangents[-1]
+            across_before=normal.cross(before); across_after=normal.cross(after)
+            across=(across_before+across_after).normalized()
+            miter=across/max(.5,across.dot(across_before))
+            rings.append([point+radius*(u*normal+v*miter) for u,v in [(1,1),(1,-1),(-1,-1),(-1,1)]])
         count = len(path) if closed else len(path)-1
         for i in range(count):
             nxt = (i+1) % len(path)
-            for j in range(12):
-                k = (j+1) % 12
-                # Wrinkled octagonal foil on StrutOcto2HB / TrussFFoilA, away from seams.
-                uv = [(FOIL_U[0]+(FOIL_U[1]-FOIL_U[0])*u/12,
-                       1-FOIL_V[1]+(FOIL_V[1]-FOIL_V[0])*v) for u, v in [(j,i/len(path)),
-                       (j+1,i/len(path)), (j+1,(i+1)/len(path)), (j,(i+1)/len(path))]]
-                self.face([rings[i][j], rings[i][k], rings[nxt][k], rings[nxt][j]], uv, True)
+            for j in range(4):
+                k = (j+1) % 4
+                corners=[rings[i][j],rings[nxt][j],rings[nxt][k],rings[i][k]]
+                length=((corners[1]-corners[0]).length+(corners[2]-corners[3]).length)*.5
+                width=((corners[3]-corners[0]).length+(corners[2]-corners[1]).length)*.5
+                du,dv=length*FOIL_DENSITY,width*FOIL_DENSITY
+                u=.55-du*.5;v=.408+j*.021-dv*.5
+                self.face(corners,[(u,1-v),(u+du,1-v),(u+du,1-v-dv),(u,1-v-dv)])
         if not closed:
-            for ring in (rings[0], rings[-1]):
-                self.face(ring, [(.55+.052*math.cos(t),.56+.047*math.sin(t))
-                                for t in np.linspace(0,math.tau,len(ring),endpoint=False)])
+            for ring in (rings[0],rings[-1]):
+                self.face(ring,[(.5476,.5576),(.5524,.5576),(.5524,.5624),(.5476,.5624)])
 
-    def ribbon(self, point, count=100, normal=Vector((0,0,1))):
+    def ribbon(self, point, count=8, normal=Vector((0,0,1))):
         # Closed, thin webbing solid; actual alternating over/under geometry.
         self.surface = 0
+        offset_v=.025*(self.ribbon_index%10)
+        self.ribbon_index+=1
+        uv_v=lambda t: offset_v+.7*t
         thickness = normal * .0022
         for i in range(count):
             t0, t1 = i/count, (i+1)/count
             for offset in (Vector((0,0,0)), -thickness):
                 corners = [point(t,w) + offset for t,w in [(t0,-.5),(t1,-.5),(t1,.5),(t0,.5)]]
-                self.face(corners,[(.015,t0),(.015,t1),(.765,t1),(.765,t0)], True)
+                self.face(corners,[(.015,uv_v(t0)),(.015,uv_v(t1)),(.765,uv_v(t1)),(.765,uv_v(t0))], True)
             for w in (-.5, .5):
                 a, b = point(t0,w), point(t1,w)
-                self.face([a,b,b-thickness,a-thickness],[(.02,t0),(.02,t1),(.024,t1),(.024,t0)])
+                self.face([a,b,b-thickness,a-thickness],[(.02,uv_v(t0)),(.02,uv_v(t1)),(.024,uv_v(t1)),(.024,uv_v(t0))])
         for t in (0,1):
             a,b=point(t,-.5),point(t,.5)
             self.face([a,b,b-thickness,a-thickness],[(.02,.5),(.76,.5),(.76,.51),(.02,.51)])
@@ -189,12 +146,12 @@ def build():
         if mesh.name.startswith(NAME) and mesh.users == 0: bpy.data.meshes.remove(mesh)
     collection = bpy.data.collections.new(COLLECTION); bpy.context.scene.collection.children.link(collection)
     geo = Geometry(); z = .30
-    geo.tube([(-.274,-.255,z),(.274,-.255,z),(.274,.145,z),(-.274,.145,z)], closed=True)
-    geo.tube([(-.274,.145,z),(-.274,.285,.82),(.274,.285,.82),(.274,.145,z)])
-    geo.tube([(-.274,-.20,z),(-.274,-.30,.014),(.274,-.30,.014),(.274,-.20,z)])
-    geo.tube([(-.274,.19,.49),(-.274,.29,.014),(.274,.29,.014),(.274,.19,.49)])
+    geo.square_rail([(-.274,-.255,z),(.274,-.255,z),(.274,.145,z),(-.274,.145,z)], closed=True)
+    geo.square_rail([(-.274,.145,z),(-.274,.285,.82),(.274,.285,.82),(.274,.145,z)])
+    geo.square_rail([(-.274,-.20,z),(-.274,-.30,.018),(.274,-.30,.018),(.274,-.20,z)])
+    geo.square_rail([(-.274,.19,.49),(-.274,.29,.018),(.274,.29,.018),(.274,.19,.49)])
     for side in (-1,1):
-        geo.tube([(side*.274,-.20,z),(side*.306,-.20,.49),(side*.306,.185,.49)])
+        geo.square_rail([(side*.274,-.20,z),(side*.306,-.20,.49),(side*.306,.185,.49)])
         # Broad rounded white plastic arm pad, like the reference folding chairs.
         geo.arm_pad(side*.306)
     wave = lambda v: math.tanh(3*math.cos(math.pi*v))/math.tanh(3)
@@ -219,7 +176,7 @@ def build():
             geo.ribbon(transverse,normal=normal)
     panel(False); panel(True)
     obj = geo.object(material(), collection)
-    obj['description'] = 'Rainbow webbed beach chair, Core gold foil frame, white plastic armrests'
+    obj['description'] = 'Worn rainbow webbing, square Core gold foil rails, aged white armrests'
     print('Created',len(obj.data.vertices),'vertices;',len(obj.data.polygons),'faces')
     return obj
 
@@ -231,7 +188,7 @@ def export(obj):
     binary = next(item[0] for item in formats if '.glb' in item[1].lower())
     frame = Matrix(((0,-1,0,.01404),(-1,0,0,.00495),(0,0,-1,GROUND),(0,0,0,1)))
     obj.name=NAME+'_authoring'; obj.data.name=obj.name; clones=[]
-    for suffix, material_index in [('',0),('_Frame',1),('_VM',None)]:
+    for suffix, material_index in [('',0),('_Frame',1)]:
         mesh=obj.data.copy(); mesh.name=NAME+suffix
         if material_index is not None:
             bm=bmesh.new(); bm.from_mesh(mesh)
@@ -243,11 +200,13 @@ def export(obj):
         for polygon in mesh.polygons: polygon.material_index=0
         mesh.transform(frame)
         clone=bpy.data.objects.new(mesh.name,mesh); bpy.context.scene.collection.objects.link(clone); clones.append(clone)
+    proxy=runpy.run_path(str(ROOT/'Art/chair_picking.py'))['proxy']
+    clones.append(proxy(NAME+'_VM',frame))
     bpy.ops.object.select_all(action='DESELECT')
     for clone in clones: clone.select_set(True)
     bpy.ops.export_scene.gltf(filepath=str(ROOT/'Meshes/WingWalker_BeachChair.glb'),export_format=binary,
         use_selection=True,export_yup=False,export_animations=False,export_skins=False,export_morph=False,
-        export_tangents=True,export_materials='EXPORT')
+        export_tangents=True,export_materials='NONE')
     for clone in clones:
         mesh=clone.data; bpy.data.objects.remove(clone,do_unlink=True); bpy.data.meshes.remove(mesh)
     obj.name=NAME; obj.data.name=NAME

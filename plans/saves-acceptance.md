@@ -74,6 +74,19 @@ production Harmony input and real-adapter cancellation checks pass alongside exi
 
 ## Wing Walker
 
+The chair art update uses a square foil frame, simplified worn webbing, coarse picking proxies and
+three external 256px maps, with no embedded GLB images/materials. XML mechanics, all native part/
+subpart/mesh/material IDs, render/module keys and five placement slots remain unchanged. No saved
+state or migration is added. Export checks protect budgets, foil UVs and proxy bounds; visual and
+frame-time behavior still need native acceptance.
+
+- [ ] Load an existing seated craft with distinct crew and depleted resources, then repeat A→B→A,
+  native undo/redo and copy/symmetry. The new square-frame/worn-cloth appearance replaces the old art
+  while crew/history/resources and duplicate-crew protection retain their existing behavior.
+- [ ] Check native foil/cloth rendering, thumbnails, culling and coarse seat/back/arm/frame picking
+  at several distances. Physical contacts keep the existing collider envelopes; Standing Mount is
+  unchanged. Profile the same scene/settings with zero, one and many chairs before/after the update.
+
 Editor crew duplication guard: 32 managed production-Harmony checks cover selection/pickup/gizmo
 start, copy capture after reassignment, subtree ownership, native-history call order and repeated/
 restored assignments. Real 5801 signature checks and empty-seat `IVASeat.GetSaveData` pass, as does

@@ -55,6 +55,12 @@ masking, War Paint visor gating and seat-owned MMU remain intact. Native part ID
 `CrewSeat` and `EVADoor` are inventoried in [Wing Walker](wing-walker.md). Earlier solution, fixture, XML and distribution checks passed. The appearance fix passes the focused
 and full solution builds, distribution check and 5801 native signature/CPU animation probe; the
 updated production fixture passes, while in-game visual acceptance remains pending.
+The chair art uses four-sided foil-frame beams, simplified worn webbing and a separate coarse
+MeshView proxy: 1,028 visible/96 picking triangles, with an 84,200-byte geometry-only GLB.
+`check-chair-assets.py` enforces geometry/vertex/texture budgets, three stable mesh
+IDs, one primitive each, identity nodes, native streams, planar frame normals, native-scale UVs inside the Core
+foil patch and proxy bounds. Three 256px maps remain external; no images/materials are embedded in
+the chair GLB. Native XML, crew/life support, collider and save identities are unchanged.
 
 ## You Didn't See Anything — F2 window retention (5801)
 
@@ -999,10 +1005,12 @@ are recorded separately from native visual acceptance.
 
 Wing Walker declares GLB atlases and diffuse/normal/ORM `Texture` rows for both mounts in
 `WingWalker.xml`. The beach chair has separate webbing/plastic and native `CoreSurfacesB_Material`
-foil-frame meshes with a combined picking twin; the frame uses a wrinkled UV region from
+foil-frame meshes with a coarse picking proxy; the frame uses a wrinkled UV region from
 `CoreStructuralA_Prefab_StrutOcto2HB`. Both hosts package custom GLB/PNG art; Core foil is referenced
 without shipping its textures. Vertices bake KSA part space. Legacy subpart IDs/keys/order remain
 stable, and both templates include the native `Capsules` editor tag. [Asset contracts and risks](wing-walker.md).
+The optimized chair uses square frame sections and worn cloth maps at 256px; geometry-only export
+keeps the native foil material/UV island and custom material references authoritative in XML.
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
 | `{DiffuseReference, NormalReference, PBRMap, EmissiveMap} : DataReference<TextureReference>`; `Id` on the direct material | resolved-data/reflection | CURRENT `KSA/PbrMaterialReference.cs:12-21` | doh, free-fallin, rings, pebbles | `GameDataReference.cs`; feature material controllers | Migrated @5801 | Get() removed; follow Value, keeping unresolved links null. TexturePowerReference retired |

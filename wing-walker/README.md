@@ -7,10 +7,22 @@ project is a development host; do not load it alongside Unscience. Both hosts lo
 Both mounts are intended to show a helmeted occupant, with the Standing Mount standing upright.
 The appearance fix awaits a native visual retest.
 Standing Mount uses two simple brown leather straps over the boots, with subtle stitching;
-External Seat is a rainbow webbed beach chair with a built-in gold foil frame and textured white
+External Seat is a worn rainbow webbed beach chair with a square gold-foil frame and textured white
 plastic armrests. Editable Blender art, previews and the rebuild scripts are in
 [`Art/`](Art/README.md). Development and release builds include both GLBs and the custom texture
 sets; gold foil is referenced from Core.
+
+The chair has **1,028 visible triangles** (872 webbing/plastic +156 frame) and **96 picking triangles**,
+down from 12,100 each. It uses simplified woven strips and four-sided frame beams with flat faces. Three external
+256px maps add faded color, abrasion and fabric detail; the frame still samples the native wrinkled
+foil atlas. Picking uses coarse seat/back/arm panels and frame envelopes rather than duplicating
+every visible strand. Physical colliders, crew fit points, life support and saved identities are
+unchanged. Visual and frame-time effects still need native acceptance.
+The geometry-only GLB is 84,200 bytes, down from 2,063,596; its three mesh IDs and native XML bindings
+are preserved, with no embedded images/materials duplicating the external maps.
+
+From the repository root, run `python3 scripts/check-chair-assets.py` after rebuilding the art;
+`--json` reports actual mesh/texture measurements. Release-package validation runs the same check.
 
 In the editor, find **External Seat** or **Standing Mount** under **Unscience External Crew** or
 **Capsules**, then assign a kitten with the native Crew controls. In flight, a kitten can board near the

@@ -112,6 +112,9 @@ and standing-pose fix awaits in-game visual retest. Supplies are
 finite, there is no shielding, and a surface mount does not create a habitat passage. KSA saves the
 part, crew and life support; no new sidecar is used. [Details](../wing-walker.lib/README.md) ·
 [pending acceptance](../plans/WING_WALKER.md).
+External Seat now has worn rainbow cloth, a square gold-foil frame, 1,028 visible triangles and 96 coarse
+picking proxies. Its three 256px maps stay external to the geometry-only GLB. Distribution checks
+enforce chair budgets and native foil UV bounds; crew, supplies, physics and save identities are unchanged.
 
 ## Architecture
 

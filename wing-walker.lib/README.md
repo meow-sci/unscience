@@ -2,7 +2,7 @@
 
 Wing Walker adds **External Seat** and **Standing Mount** as regular surface-mounted
 vehicle parts in the editor's **External Crew** category and **Capsules** filter. External Seat is a
-rainbow webbed beach chair with a gold foil frame and textured white plastic armrests.
+worn rainbow webbed beach chair with a square gold-foil frame and textured white plastic armrests.
 Standing Mount uses two simple stitched brown leather straps over the boots. The stand is
 intended to display its occupant upright and both parts display helmets.
 Assign a kitten through the part's native
@@ -60,7 +60,7 @@ origin correction uses KSA's 0.7552 m portrait eye height while retaining the se
 cameras. Patches roll back on installation failure and are removed on unload.
 
 The shared XML loads custom GLB atlases and diffuse/normal/ORM textures for both mounts. The
-seated chair has separate models for webbing/plastic and frame, plus one combined picking mesh.
+seated chair has separate models for webbing/plastic and frame, plus one coarse picking mesh.
 Only the frame references `CoreSurfacesB_Material`, reusing the wrinkled foil region from
 `CoreStructuralA_Prefab_StrutOcto2HB` / `CoreSurfacesB_Subpart_TrussFFoilA` at GLB UV
 U=0.495–0.605, V=0.39–0.49. No Core texture payload is shipped. The original seated part ID,
@@ -69,6 +69,12 @@ The seat eye point and ground connector remain, with collider envelopes fitted t
 The strap tabs and boot soles align with the surface connector at Z=0.2901232; a small bounding
 box replaces the chair collider. The inherited simulation mass and life support are retained.
 Editable art and the Blender rebuild script live in [`wing-walker/Art`](../wing-walker/Art/README.md).
+The chair's low-poly update uses 1,028 visible/96 picking triangles, four-sided frame beams,
+simplified woven strips and three external
+256px maps with cloth wear. Its coarse picking panels/envelopes replace the duplicated detailed
+mesh; physics, native crew hooks, all part/model IDs and saved-state ownership remain unchanged.
+`scripts/check-chair-assets.py` verifies exported budgets, foil UV bounds, flat frame normals,
+native-visible streams, external maps, native-scale UV density and picking coverage during distribution validation.
 Both the combined and standalone development host load the
 same asset and install the same library patches. Use only one host at a time. **Unscience is the only
 release**; the standalone host is for development. See the [integration inventory](../scope/wing-walker.md)

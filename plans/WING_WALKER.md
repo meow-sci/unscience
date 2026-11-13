@@ -49,15 +49,15 @@ exactly once; stock/unrelated crew remain assigned. See [save acceptance](saves-
 
 ## Seated beach chair and editor tags
 
-External Seat uses a custom rainbow woven beach chair with rounded folding-leg tubes and
+The original External Seat art used a custom rainbow woven beach chair with rounded folding-leg tubes and
 textured white plastic armrests. The frame alone references `CoreSurfacesB_Material`, with GLB
 UV U=0.495–0.605/V=0.39–0.49 selecting wrinkled foil from `CoreSurfacesB_Subpart_TrussFFoilA`,
 used by `CoreStructuralA_Prefab_StrutOcto2HB`. The built-in atlas was decoded temporarily for
 UV inspection and the preview render; no Core texture or geometry payload is included in the
 editable source, GLB or distribution. The portable Blender source has a procedural gold proxy.
 
-The visible webbing/plastic mesh, foil-frame mesh and combined picking twin share one GLB.
-Custom diffuse/normal/ORM textures are 512px; runtime visible geometry is 12,100 triangles.
+The original visible webbing/plastic mesh, foil-frame mesh and combined picking twin shared one GLB.
+Its custom diffuse/normal/ORM maps were 512px; runtime visible geometry was 12,100 triangles.
 The model was fitted in Blender against the installed kitten and seated idle, including the
 native -0.63 m seated offset. The original seated eye point and ground connector are retained,
 with six collision envelopes for the seat/back, legs and armrest pads. All original seated
@@ -65,11 +65,11 @@ subpart IDs/keys/order and both part IDs remain; Headrest/Runners/Base are empty
 Both templates carry `External Crew` and the built-in `Capsules` tag, inherited by Standing Mount.
 No new save participant or scene-owned settings are introduced.
 
-The final full solution build passes with zero warnings/errors. Native 5801 XML checks pass:
+The original chair build passed with zero warnings/errors. Native 5801 XML checks passed:
 20 rows, zero content errors, two parts with both editor tags, preserved subpart references/order,
 separate foil material, original eye points, connector math and crew-save serialization.
 The production Harmony fixture and the fresh `/private/tmp/unscience-wing-walker-beach-dist`
-distribution check pass. Offline GLB checks verify mesh names, normal/tangent streams, identity
+distribution check passed. The original offline GLB checks verified mesh names, normal/tangent streams, identity
 nodes, finite bounds, exact picking union, ground plane, the foil UV region, native material
 provenance and absence of Core images. [Editable art and preview](../wing-walker/Art/README.md).
 
@@ -77,6 +77,35 @@ Native acceptance remains: both parts appear in the Capsules filter; seated kitt
 fit, foil wrinkles, plastic grain, woven overlap, picking/thumbnails, surface placement, contacts
 and loading older seated craft/scenes with all original subpart slots. Repeated native scene
 save/load and the broader appearance/boarding checks below remain pending.
+
+## Low-poly square-frame chair and worn cloth
+
+The original chair duplicated 12,100 visible triangles for picking and embedded three custom images
+in a 2,063,596-byte GLB despite using external XML maps. The update replaces rounded frame tubes
+with four-sided mitered beams, simplifies woven strips, gives the rainbow fabric visible wear,
+uses coarse seat/back/arm picking panels plus frame envelopes, and reduces the three external maps
+to 256px. The model GLB now contains geometry only. The native Core gold-foil material and its UV
+rectangle remain unchanged; XML, mesh/model IDs, five subpart slots, colliders, crew fit points,
+life support and native save behavior are unchanged. Standing Mount art is not part of this update.
+
+The exported result is **1,028 visible triangles** (872 webbing/plastic +156 frame), **1,456 visible
+vertices**, **96 picking triangles / 192 vertices**, and an **84,200-byte GLB**. All three maps are
+256px. The source checker passes, including flat frame normals, coarse proxy enclosure and the
+native foil patch. Aspect-correct strips target 0.171 UV/metre; a ±25% edge-density guard accommodates
+miter corners and rejects the earlier full-patch stretch. Native visual and frame-time acceptance
+remain pending.
+
+`python3 scripts/check-chair-assets.py` validates actual exported streams and budgets (≤1,200
+visible triangles/3,000 vertices, ≤150 picking triangles/256 vertices, three PNG maps ≤256px),
+three stable meshes, one primitive each, identity nodes, native attributes, planar frame normals,
+foil UVs, proxy bounds, native XML bindings and absence of embedded materials/images. The package
+checker runs it too. These exported reductions do not establish a particular FPS improvement;
+native appearance, selection and frame-time comparison remain pending.
+
+Validation for this replacement passes: full solution build with zero warnings/errors, source and
+packaged chair/cooler budget checks, distribution validation, the actual 5801 native harness and
+the managed Wing Walker suite including 32 editor crew selection/copy checks. The Blender source
+contains only the three original chair maps; native foil maps were used transiently for its preview.
 
 ## Standing Mount leather art
 
@@ -151,6 +180,17 @@ using cached matching third-party dependencies. See [native test instructions](.
 Graphics, physics, boarding and scene save/load still require the in-game acceptance below.
 
 ## Native acceptance (pending)
+
+- Square-frame chair: inspect Core gold foil on planar beams and the faded/worn rainbow cloth in
+  editor/flight lighting, thumbnails and several viewing distances. Check straps/hand/helmet fit,
+  surface placement and existing collision envelopes. Coarse picking follows seat/back/arm panels
+  and frame envelopes rather than every strand gap. Confirm bounds/culling include the visible frame.
+- Load an older seated craft with assigned crew and depleted supplies after installing the new art;
+  repeat A→B→A and undo/redo/copy. Part/subpart identities, crew/resource state and duplicate-crew
+  guards must retain existing behavior; Standing Mount must remain unchanged.
+- Compare identical scenes, camera/settings and mod stack before/after, with no chair, one chair
+  and many chairs. Record CPU/GPU frame times and memory where available. Geometry/texture savings
+  are measured offline; an FPS cause or improvement requires the native comparison.
 
 - Place both parts, assign crew in the editor, and check seated/standing alignment, IVA camera eye,
   portraits and animation, with helmets and ears in external views, including a paused frame (dt=0).

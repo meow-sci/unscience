@@ -45,13 +45,16 @@ from the working kitten coloring path. [Investigation](plans/HUMBLE_ARTEEST_5801
 **Wing Walker** adds the surface-mounted **External Seat** and **Standing Mount** for native
 crew assignment and EVA boarding. A helmet and standing-pose fix awaits in-game retest. Supplies
 are finite and the mounts have no radiation shielding. Standing Mount has simple brown leather
-foot straps; External Seat is a rainbow beach chair with a built-in gold foil frame and textured
+foot straps; External Seat is a worn rainbow beach chair with a square gold-foil frame and textured
 white plastic armrests. Both parts also appear under the editor’s Capsules filter.
 [Usage and limits](wing-walker.lib/README.md) · [validation and pending in-game checks](plans/WING_WALKER.md).
 
 Wing Walker editor selection, pickup and gizmo moves unassign crew from affected external mounts.
 Symmetry/copying clears those assignments before cloning; place parts and set symmetry first,
 then assign each kitten. Native history and saves own the resulting crew state.
+The chair now uses **1,028 visible triangles**, **96 picking triangles** and external 256px fabric/PBR
+maps. Export checks protect its geometry budgets and native foil UV patch; in-game visual and
+frame-time acceptance remain pending.
 
 **[Beverage Cooler](beverage-cooler/README.md)** adds a surface-mounted supplies cooler with Red and
 Stainless Steel variants and a native **Actuate** lid control. Its 30 L native locker holds 12 meals
