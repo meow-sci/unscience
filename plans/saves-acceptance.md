@@ -12,6 +12,21 @@ The initial in-game report confirms actuation plays, but exposed a body mesh use
 both finishes red. Native PartModel cache aliasing caused both defects. The fix uses unique render
 keys without changing saved part/module identities; restart KSA before retesting the update.
 
+The low-poly update retains XML mechanics, six mesh IDs, eight corrected render keys and durable
+save/module identities. Runtime art has 710 visible/112 picking triangles and nine 128px maps.
+Coarse open-tub/lid proxies omit exact microhardware/bevel geometry while preserving outer bounds.
+`scripts/check-cooler-assets.py` enforces export budgets and bounds, also through package validation.
+This measured workload reduction does not establish the cause of the reported FPS issue; native
+frame-time profiling remains pending.
+
+- [ ] Restart KSA and compare the same scene/camera, resolution, lighting and mod stack before/after
+  the art change, with no cooler, one cooler and many coolers. Record CPU/GPU frame times and
+  renderer memory where available; distinguish a measured improvement from an unproven cause.
+- [ ] Load an existing craft with depleted supplies and a partial lid. Confirm stable native
+  stock/state, animation and physical contacts. Select body/lid/cavity in both finishes; picking
+  follows coarse proxies rather than every hardware/bevel detail. Check thumbnails, shadows and
+  native bounds/culling at several distances and lid positions.
+
 - [ ] Load a craft saved with the first cooler build. Confirm one body plus an actual thin lid,
   matching lid/body finish in both variants, retained supply depletion and partial lid state. Repeat
   variant switching after other coolers have rendered to exercise the populated global model cache.

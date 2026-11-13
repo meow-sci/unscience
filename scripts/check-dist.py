@@ -1,5 +1,6 @@
 """Validate a freshly built distribution before release packaging."""
 from pathlib import Path
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
@@ -20,6 +21,7 @@ for folder, xml_name in (("wing-walker", "WingWalker.xml"), ("beverage-cooler", 
             assert (package / relative).is_file(), f"Missing {folder} art: {relative}"
             assert (package / relative).read_bytes() == (repo / folder / relative).read_bytes(), f"Stale {folder} art: {relative}"
 assert not (package / "Art").exists(), "Editable Blender art must not be distributed"
+subprocess.run([sys.executable, str(repo / "scripts/check-cooler-assets.py"), str(package)], check=True)
 expected = set()
 pending = [repo / "unscience/unscience.csproj"]
 visited = set()

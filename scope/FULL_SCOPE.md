@@ -116,6 +116,8 @@ food/scrubber locker. Globally unique PartModel keys correct the duplicate-body 
 cache collision; native cache regression passes and the in-game retest remains pending. Native
 parser/family/capacity/save-data checks cover the schema; renderer,
 contacts, supply access and full save/load acceptance remain pending. No new submod or sidecar.
+Runtime art is reduced to 710 visible/112 picking triangles and nine 128px maps, with enforced export
+budgets and coarse proxies preserving native bounds. The reported FPS cause remains unprofiled.
 [Integration](beverage-cooler.md) · [acceptance](../plans/saves-acceptance.md#beverage-cooler).
 
 Wing Walker unassigns affected external crew on editor selection/pickup/gizmo start and before

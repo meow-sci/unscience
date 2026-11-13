@@ -1,4 +1,4 @@
-"""Original, deterministic 512px PBR maps for the beverage cooler (Blender)."""
+"""Original, deterministic 128px PBR maps for the beverage cooler (Blender)."""
 import math
 from pathlib import Path
 
@@ -29,11 +29,11 @@ def image(name, pixels, data=False):
 
 
 def materials():
-    size = 512
+    size = 128
     y, x = np.mgrid[0:size, 0:size] / size
     rng = np.random.default_rng(20261111)
     grain = rng.normal(0, .004, (size, size))
-    brush = rng.normal(0, .012, size)[None, :] + .004 * np.sin(x * math.tau * 181)
+    brush = rng.normal(0, .012, size)[None, :] + .004 * np.sin(x * math.tau * 53)
     result = {}
     for name in ('Red', 'Steel', 'Common'):
         color = np.ones((size, size, 4))

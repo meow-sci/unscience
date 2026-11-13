@@ -16,6 +16,12 @@ the stainless render subparts. These render modules emit no native save data. Ex
 template IDs, ordered placements, Supplies/LidAnimation keys and native serialized state remain
 compatible; no sidecar or migration is added. Restart KSA to clear its process-wide PartModel cache.
 
+The low-poly optimization changes only geometry, coarse MeshView picking proxies and PNG pixels/
+dimensions. All part/mesh/material IDs, eight corrected render keys, placement order and saved
+module keys remain stable; native colliders, capacity and actuation are unchanged. Existing saves
+resolve the smaller art through the same references, with no new record, reset or migration.
+The exported-budget checker does not rewrite native or sidecar saves.
+
 The actual 5801 native serializer round-trips both variant IDs, independently depleted supplies,
 fractional consumption and opening/closing animation times in PartInstance records. These are
 module-data/CPU checks; whole-world reconstruction, native blueprint policy, A→B→A/restart and

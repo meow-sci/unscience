@@ -23,6 +23,11 @@ rendering, contacts and full-world acceptance remain pending. `PartModel.Get` gl
 component Key alone, so all eight render keys are namespaced and unique, including both finishes.
 The former Shell/Trim collisions caused duplicate-body lids and red-only variants; native cache
 regression checks exact returned templates. No patch, runtime reflection or sidecar.
+Low-poly geometry and coarse MeshView proxies retain six mesh IDs, eight render cache keys and all
+XML mechanics/save slots. `check-cooler-assets.py` enforces exported triangle/vertex budgets,
+one primitive per mesh, identity nodes, visible attributes, proxy coverage of visible bounds and
+nine <=128px PNGs before packaging. Native texture allocation retains source dimensions;
+`BucketType` groups statistics rather than upscaling maps. The reported FPS cause remains unprofiled.
 [Complete asset/type contracts](beverage-cooler.md).
 
 ## Wing Walker (5801)
@@ -1386,6 +1391,8 @@ Beverage Cooler adds `BeverageCooler.xml`, `Meshes/BeverageCooler.glb`,
 `Animations/BeverageCooler_Lid.glb` and nine `BeverageCooler_{Red,Steel,Common}_{Diffuse,Normal,ORM}.png`
 maps. Its native schema/binding and fixed mesh/material IDs are inventoried in
 [beverage-cooler.md](beverage-cooler.md). No stock shader, material bytes or Core payload is modified.
+The maps are 128px; visible geometry has 710 triangles and independent MeshView proxies have 112.
+`scripts/check-cooler-assets.py` enforces their budgets and bounds; proxies approximate hardware/bevels.
 
 IVA switch follow-up changes no shaders, material bytes or capsule asset keys; only the
 unconditional editor reveal hook is removed. Existing native glass and shadow-proxy behavior stays intact.

@@ -28,6 +28,9 @@ Red/Stainless Steel variants, an Actuate lid and a 30 L supplies locker. KSA own
 it adds no toolbox submod or feature assembly. XML, meshes, animation and textures ship together.
 The lid/finish rendering fix needs a KSA restart to clear cached models; existing cooler saves
 retain their template IDs, supplies and actuation state. In-game retesting remains pending.
+The cooler now uses 710 visible triangles, 112 coarse picking triangles and nine 128px maps.
+`scripts/check-cooler-assets.py` enforces exported budgets and proxy bounds during distribution
+validation. Saved state and native mechanics are unchanged; frame-time effects still need profiling.
 
 A unified supermod that consolidates KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
 

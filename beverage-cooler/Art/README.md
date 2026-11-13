@@ -8,8 +8,30 @@ hardware; no pixels or meshes from those photographs are included.
 
 The cooler has a rounded enamel or stainless shell, black protective base, hollow insulated
 white tub, recessed lid panel, two metal side handles with black grips, front grip and latch,
-bottle opener, rear hinges and a captive drain plug. Nominal body dimensions are 65 × 40 cm;
+bottle opener, rear hinges and a drain plug. Nominal body dimensions are 65 × 40 cm;
 the closed lid reaches 46.3 cm above its mounting base. Hardware slightly exceeds the body bounds.
+
+The game export is deliberately low polygon. Rounded body corners use two segments per quadrant;
+hardware uses six-sided cylinders, four-sided tubes and one-segment bevels only on the front grip.
+Tiny screws, chain links and hidden duplicate insulated walls are omitted. Smooth shading and
+small PBR maps carry surface detail. The lid, hollow white tub and recognizable handles remain.
+
+| Asset cost | Original | Optimized |
+|---|---:|---:|
+| Visible triangles per cooler | 9,260 | 710 |
+| Picking triangles per cooler | 9,260 | 112 |
+| Texture dimensions (nine shared maps) | 512 × 512 | 128 × 128 |
+
+The four visible meshes contain 24/438/82/166 triangles (BodyShell/BodyTrim/LidShell/LidTrim).
+Their exported vertices total 1,296, including UV/normal splits. The picking meshes use 76/36
+triangles and 192 exported vertices combined. Native picking tests candidate triangles linearly;
+these proxies avoid copying hardware tessellation into the mouse-picking path. Small double-sided
+extent planes include protruding handles, opener and hinges in native picking-derived bounds.
+They are separate from the unchanged five-box body and one-box animated lid physics colliders.
+
+The original frame-drop report is not a measured attribution. KSA shares textures across cooler
+instances and batches render instances by model. Compare the original and optimized builds in game
+with the same craft, camera and hover state; Blender inspection cannot establish an FPS gain.
 
 Rebuild in Blender's Python Console or through Blender MCP, supplying the actual script path:
 
@@ -22,12 +44,16 @@ for name in ('create_cooler', 'create_animation', 'preview_cooler'):
 ```
 
 `create_cooler.py` rebuilds only its named collection, preserving unrelated Blender content.
-`cooler_textures.py` produces deterministic 512px diffuse/normal/ORM maps: red enamel, brushed
+`cooler_textures.py` produces deterministic 128px diffuse/normal/ORM maps: red enamel, brushed
 stainless and a shared trim atlas. The trim atlas uses four U strips for liner, rubber, chrome
 and dark hardware. Color maps are sRGB; normal and ORM maps are linear, with AO/Roughness/Metallic
 in R/G/B. The script exports four visible one-primitive meshes with normals, UVs and tangents,
-and separate combined body/lid picking meshes. GLB materials are omitted; native XML binds the
+and separate simple body/lid picking proxies from `cooler_picking.py`. GLB materials are omitted; native XML binds the
 external maps. Only runtime GLB/PNG/XML files ship; the source and previews stay in the repository.
+
+Run `python3 scripts/check-cooler-assets.py` from the repository root after rebuilding. It reads
+the actual GLB indices/attributes and PNG dimensions, enforcing at most 1,000 visible and 120 picking
+triangles and 128px texture edges. Distribution validation runs the same check against the package.
 
 Native XML PartModel keys must be globally unique per render definition: KSA's process-wide model
 cache uses that Key alone. Reusing generic Shell/Trim keys aliases body/lid meshes and exterior

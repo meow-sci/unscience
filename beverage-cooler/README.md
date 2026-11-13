@@ -31,9 +31,19 @@ animation and PNG textures ship. Both visual variants share the same collider-on
 their differing body/lid subparts contain only rendering and picking modules, as KSA's cosmetic
 variant validator requires. [Integration details](../scope/beverage-cooler.md).
 
+Runtime art now has **710 visible triangles** instead of 9,260, with simplified hardware and nine
+**128px** texture maps. Coarse open-tub/lid picking proxies use **112 triangles** instead of another
+9,260; they retain the exterior bounds but omit exact small hardware and smooth bevel geometry.
+Physical colliders, mass, supplies, variants and lid motion are unchanged. The exported workload
+reduction is verified; an in-game frame-time comparison is still needed to establish its effect
+on the reported FPS problem.
+
 Restart KSA after installing the lid/finish fix to clear its process-wide model cache. The update
 keeps existing cooler part IDs, supplies and saved lid state. In-game retesting remains pending.
 
 The [native XML test harness](../wing-walker.native-tests/README.md) checks inheritance, the native
 variant validator, supplies capacities and native module-data serialization. Renderer, physical
 contacts and a complete in-game save/load still need native acceptance.
+
+Run `python3 scripts/check-cooler-assets.py` from the repository root to check exported geometry,
+proxy bounds and texture budgets; add `--json` for per-mesh counts. Release packages run the same check.

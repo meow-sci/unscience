@@ -60,6 +60,9 @@ Crew access follows native habitat passage rules. KSA saves the variant,
 supplies and lid state. The asset-only feature has editable Blender art and no separate toolbox panel.
 The lid mesh and finish mapping have been corrected; an in-game retest, collision and save/load
 acceptance remain pending.
+Runtime art now has **710 visible triangles**, **112 picking triangles** and nine **128px** maps.
+Coarse body/lid picking proxies replace duplicated detailed geometry. These exported reductions
+are verified; their effect on the reported FPS problem still needs an in-game frame-time comparison.
 
 # game compatibility
 

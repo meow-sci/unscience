@@ -443,6 +443,13 @@ ISubmod or sidecar. Unscience packages XML, mesh, animation and textures; editab
 [Integration](scope/beverage-cooler.md) · [save acceptance](plans/saves-acceptance.md#beverage-cooler).
 Globally unique native PartModel keys prevent body/lid and Red/Stainless mesh/material aliasing;
 the native cache regression covers model identity and exact render-template bindings.
+Runtime art uses 710 visible triangles/1,296 exported vertices, 112 picking triangles/192 vertices
+and nine 128px maps. The standard-library [`check-cooler-assets.py`](scripts/check-cooler-assets.py)
+validates actual GLB index/vertex data, six stable single-primitive meshes, identity nodes, visible
+attributes, proxy coverage of visible bounds, eight cache keys and PNG dimensions. Budgets:
+1,000 visible triangles/2,000 vertices, 120 picking triangles/192 vertices and 128px texture edges;
+`check-dist.py` runs it on packaged assets. Native frame-time effects still require profiling;
+all durable identities and mechanics are unchanged.
 
 ### [wing-walker](wing-walker) / [wing-walker.lib](wing-walker.lib)
 

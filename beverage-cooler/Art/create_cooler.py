@@ -18,14 +18,14 @@ HINGE = Vector((0, .19, .409))
 FRAME = Matrix(((0, -1, 0, 0), (-1, 0, 0, 0), (0, 0, -1, 0), (0, 0, 0, 1)))
 
 
-def ring(width, depth, radius, z):
+def ring(width, depth, radius, z, segments=2):
     points = []
     for cx, cy, start in [(width/2-radius, depth/2-radius, 0),
             (-width/2+radius, depth/2-radius, 90),
             (-width/2+radius, -depth/2+radius, 180),
             (width/2-radius, -depth/2+radius, 270)]:
-        for i in range(13):
-            angle = math.radians(start + i * 90 / 12)
+        for i in range(segments + 1):
+            angle = math.radians(start + i * 90 / segments)
             points.append((cx + radius*math.cos(angle), cy + radius*math.sin(angle), z))
     return points
 
@@ -90,14 +90,14 @@ class Builder:
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
         if bevel:
             modifier = obj.modifiers.new('Soft manufactured edges', 'BEVEL')
-            modifier.width, modifier.segments = bevel, 3
+            modifier.width, modifier.segments = bevel, 1
             modifier = obj.modifiers.new('Corner normals', 'WEIGHTED_NORMAL')
         return self.add(obj, group, band)
 
     def tube(self, name, points, radius, group, band, closed=False):
         curve = bpy.data.curves.new(name, 'CURVE')
         curve.dimensions, curve.resolution_u = '3D', 2
-        curve.bevel_depth, curve.bevel_resolution = radius, 2
+        curve.bevel_depth, curve.bevel_resolution = radius, 0
         spline = curve.splines.new('POLY')
         spline.points.add(len(points)-1)
         for p, value in zip(spline.points, points):
@@ -108,12 +108,10 @@ class Builder:
         return self.add(obj, group, band)
 
     def cylinder(self, name, center, radius, depth, axis, group, band):
-        bpy.ops.mesh.primitive_cylinder_add(vertices=20, radius=radius, depth=depth, location=center)
+        bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=radius, depth=depth, location=center)
         obj = bpy.context.object
         obj.name = name
         obj.rotation_euler = Vector((0, 0, 1)).rotation_difference(Vector(axis)).to_euler()
-        bevel = obj.modifiers.new('Rounded metal edge', 'BEVEL')
-        bevel.width, bevel.segments = min(radius*.15, .0015), 2
         return self.add(obj, group, band)
 
     def finish(self):
@@ -150,55 +148,44 @@ def build():
     bpy.context.scene.collection.children.link(coll)
     mats = runpy.run_path(str(ROOT / 'Art/cooler_textures.py'))['materials']()
     b = Builder(coll, mats)
-    b.profile('Powder coated insulated shell', [(.634,.384,.038,.073),
-        (.65,.40,.045,.088),(.65,.40,.045,.397),(.64,.39,.041,.405),
-        (.586,.336,.034,.405),(.586,.336,.034,.10)], 'BodyShell')
+    # Hidden duplicate walls are omitted; the liner and base close the visible shell.
+    b.profile('Powder coated insulated shell', [(.65,.40,.045,.083),
+        (.65,.40,.045,.400)], 'BodyShell', caps=False)
     b.profile('Rubber protective plinth', [(.614,.364,.035,.0),(.642,.392,.042,.014),
         (.65,.40,.045,.068),(.65,.40,.045,.083)], 'BodyTrim', 1)
-    b.profile('White insulated tub', [(.582,.332,.032,.102),(.582,.332,.032,.389),
-        (.602,.352,.036,.397),(.645,.395,.042,.398),(.645,.395,.042,.407),
-        (.576,.326,.030,.407),(.55,.30,.028,.112)], 'BodyTrim', 0)
+    b.profile('White insulated tub', [(.645,.395,.042,.398),(.645,.395,.042,.407),
+        (.576,.326,.030,.407),(.55,.30,.028,.112)], 'BodyTrim', 0, (False, True))
     # Lid is a separate rigid piece, including its interior and front hand grip.
-    b.profile('Rounded lid shell', [(.645,.395,.042,.412),(.66,.41,.046,.422),
-        (.66,.41,.046,.452),(.648,.398,.042,.463),(.602,.352,.029,.463),
+    b.profile('Rounded lid shell', [(.66,.41,.046,.412),
+        (.66,.41,.046,.463),(.602,.352,.029,.463),
         (.591,.341,.025,.456)], 'LidShell', caps=(False, True))
-    b.profile('Molded white lid underside', [(.625,.375,.039,.413),
-        (.625,.375,.039,.409),(.565,.315,.030,.409),(.545,.295,.027,.423)], 'LidTrim', 0, (False, True))
-    b.profile('Lid gasket', [(.624,.374,.039,.408),(.624,.374,.039,.412),
-        (.608,.358,.035,.412),(.608,.358,.035,.408)], 'LidTrim', 1, False)
-    b.box('Front grip', (0,-.208,.439), (.143,.031,.027), .010, 'LidTrim', 1)
-    for x in (-.060,.060):
-        b.cylinder('Grip screw', (x,-.225,.44), .0035,.002,(0,-1,0),'LidTrim',2)
-    b.box('Latch backing', (0,-.203,.382),(.054,.009,.031),.005,'BodyTrim',2)
-    b.box('Latch black keeper', (0,-.210,.394),(.026,.006,.009),.002,'BodyTrim',3)
+    b.profile('Molded white lid underside', [(.625,.375,.039,.409),
+        (.565,.315,.030,.409),(.545,.295,.027,.423)], 'LidTrim', 0, (False, True))
+    b.profile('Lid gasket', [(.624,.374,.039,.408),
+        (.608,.358,.035,.408)], 'LidTrim', 1, False)
+    b.box('Front grip', (0,-.208,.439), (.143,.031,.027), .004, 'LidTrim', 1)
+    b.box('Latch backing', (0,-.203,.382),(.054,.009,.031),0,'BodyTrim',2)
+    b.box('Latch black keeper', (0,-.210,.394),(.026,.006,.009),0,'BodyTrim',3)
     b.cylinder('Latch catch', (0,-.212,.381),.011,.005,(0,-1,0),'BodyTrim',2)
     b.tube('Latch toggle', [(0,-.218,.382),(.025,-.225,.386)],.003,'BodyTrim',2)
     for side in (-1,1):
         x = side*.328
-        b.box('Handle mounting plate',(x,0,.303),(.006,.15,.056),.004,'BodyTrim',2)
+        b.box('Handle mounting plate',(x,0,.303),(.006,.15,.056),0,'BodyTrim',2)
         points = [(side*.337,-.057,.314),(side*.351,-.066,.299),
                   (side*.351,-.058,.239),(side*.351,.058,.239),
                   (side*.351,.066,.299),(side*.337,.057,.314)]
         b.tube('Folding side handle', points,.006,'BodyTrim',2)
         b.tube('Black handle grip',[(side*.351,-.047,.239),(side*.351,.047,.239)],.010,'BodyTrim',1)
-        for y in (-.061,.061):
-            b.cylinder('Handle fastener',(side*.333,y,.314),.004,.003,(side,0,0),'BodyTrim',3)
     # Front bottle opener: silver backing, dark throat, overhanging fulcrum.
-    b.box('Opener backplate',(.224,-.204,.328),(.026,.008,.065),.010,'BodyTrim',2)
-    b.box('Opener throat',(.224,-.211,.333),(.021,.006,.015),.003,'BodyTrim',3)
-    b.box('Opener hook',(.224,-.221,.342),(.039,.025,.009),.003,'BodyTrim',2)
-    for z in (.305,.352):
-        b.cylinder('Opener screw',(.224,-.210,z),.003,.002,(0,-1,0),'BodyTrim',3)
-    # Two rear hinge barrels, and a drain with its short captive chain.
+    b.box('Opener backplate',(.224,-.204,.328),(.026,.008,.065),0,'BodyTrim',2)
+    b.box('Opener throat',(.224,-.211,.333),(.021,.006,.015),0,'BodyTrim',3)
+    b.box('Opener hook',(.224,-.221,.342),(.039,.025,.009),0,'BodyTrim',2)
+    # Recognizable hardware only: millimetre screws and individual chain links are omitted.
     for x in (-.19,.19):
-        b.box('Rear hinge plate',(x,.202,.390),(.061,.008,.035),.003,'BodyTrim',2)
+        b.box('Rear hinge plate',(x,.202,.390),(.061,.008,.035),0,'BodyTrim',2)
         b.cylinder('Hinge barrel',(x,.204,.410),.009,.072,(1,0,0),'LidTrim',2)
-    b.box('Drain recess',(-.324,-.105,.042),(.008,.056,.052),.009,'BodyTrim',3)
+    b.box('Drain recess',(-.324,-.105,.042),(.008,.056,.052),0,'BodyTrim',3)
     b.cylinder('Drain plug',(-.333,-.105,.043),.012,.014,(-1,0,0),'BodyTrim',2)
-    for i in range(6):
-        points = [(-.342 + .002*math.cos(t),-.106+.005*math.sin(t),.029-i*.004+.003*math.cos(t))
-                  for t in [j*math.tau/12 for j in range(12)]]
-        b.tube('Captive drain chain',points,.0008,'BodyTrim',2,True)
     result = b.finish()
     hinge = bpy.data.objects.new('Cooler_Hinge_authoring',None)
     coll.objects.link(hinge)
@@ -239,19 +226,8 @@ def export(result):
         mesh.name = PREFIX + key
         bpy.context.scene.collection.objects.link(obj)
         clones.append(obj)
-    for part in ('Body','Lid'):
-        vertices, faces = [], []
-        for obj in clones:
-            if not obj.data.name.startswith(PREFIX+part):
-                continue
-            start = len(vertices)
-            vertices.extend(tuple(v.co) for v in obj.data.vertices)
-            faces.extend(tuple(start+i for i in p.vertices) for p in obj.data.polygons)
-        mesh = bpy.data.meshes.new(PREFIX+part+'_VM')
-        mesh.from_pydata(vertices,[],faces)
-        obj = bpy.data.objects.new(mesh.name,mesh)
-        bpy.context.scene.collection.objects.link(obj)
-        clones.append(obj)
+    proxies = runpy.run_path(str(ROOT / 'Art/cooler_picking.py'))['proxies']
+    clones.extend(proxies(FRAME, HINGE, PREFIX, ring))
     bpy.ops.object.select_all(action='DESELECT')
     for obj in clones:
         obj.select_set(True)
