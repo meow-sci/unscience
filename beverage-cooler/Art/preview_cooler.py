@@ -1,5 +1,7 @@
 """Isolated studio previews and a portable source .blend; preserve other scenes."""
 from pathlib import Path
+import os
+import runpy
 
 import bpy
 from mathutils import Vector
@@ -45,29 +47,50 @@ def studio():
     return scene
 
 
-def previews():
+def previews(native_maps=None):
     scene = studio()
     shell = [bpy.data.objects['Unscience_Cooler_'+p+'Shell'] for p in ('Body','Lid')]
-    for name, material, frame in [('Red-closed','Red',1),('Red-open','Red',37),
-                                  ('Stainless-closed','Steel',1)]:
-        scene.frame_set(frame)
-        target = Vector((0,.04,.43)) if frame == 37 else Vector((0,0,.25))
-        scene.camera.rotation_euler = (target-scene.camera.location).to_track_quat('-Z','Y').to_euler()
-        scene.camera.data.ortho_scale = 1.08 if frame == 37 else .94
-        for obj in shell:
-            obj.data.materials[0] = bpy.data.materials['Cooler_'+material]
-        scene.render.filepath = str(ROOT / 'Art' / (name+'.png'))
-        bpy.ops.render.render(write_still=True)
+    foil = [bpy.data.objects['Unscience_Cooler_'+p+'Foil'] for p in ('Body','Lid')]
     scene.frame_set(1)
     for obj in shell:
         obj.data.materials[0] = bpy.data.materials['Cooler_Red']
     for img in bpy.data.images:
         if img.name.startswith('BeverageCooler_') and img.source == 'FILE':
             img.pack()
-    bpy.data.libraries.write(str(ROOT / 'Art/BeverageCooler.blend'), {scene},
+    bpy.data.libraries.write(str(ROOT / 'Art/BeverageCooler.blend'),
+                             {scene, bpy.data.materials['Cooler_Steel']},
                              fake_user=True, compress=True)
-    print('Saved portable source and three cooler previews')
+    original = [obj.data.materials[0] for obj in foil]
+    temporary, images = None, []
+    try:
+        if native_maps:
+            native = runpy.run_path(str(ROOT / '../wing-walker/Art/preview_beach_chair.py'))['native_preview']
+            temporary, images = native(native_maps)
+            temporary.use_backface_culling = True
+            for obj in foil:
+                obj.data.materials[0] = temporary
+        for name, material, frame in [('Red-closed','Red',1),('Red-open','Red',37),
+                                      ('Stainless-closed','Steel',1),('Stainless-open','Steel',37)]:
+            scene.frame_set(frame)
+            target = Vector((0,.04,.43)) if frame == 37 else Vector((0,0,.25))
+            scene.camera.rotation_euler = (target-scene.camera.location).to_track_quat('-Z','Y').to_euler()
+            scene.camera.data.ortho_scale = 1.08 if frame == 37 else .94
+            for obj in shell:
+                obj.data.materials[0] = bpy.data.materials['Cooler_'+material]
+            scene.render.filepath = str(ROOT / 'Art' / (name+'.png'))
+            bpy.ops.render.render(write_still=True)
+    finally:
+        scene.frame_set(1)
+        for obj in shell:
+            obj.data.materials[0] = bpy.data.materials['Cooler_Red']
+        for obj, mat in zip(foil, original):
+            obj.data.materials[0] = mat
+        if temporary:
+            bpy.data.materials.remove(temporary)
+        for img in images:
+            bpy.data.images.remove(img)
+    print('Saved portable source and four one-sided cooler previews; native maps not retained')
 
 
 if __name__ == '__main__':
-    previews()
+    previews(os.environ.get('KSA_CHAIR_PREVIEW_TEXTURES'))

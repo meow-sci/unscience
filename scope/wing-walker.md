@@ -20,7 +20,7 @@ meshes each had 12,669 exported vertices, and the external maps were three 512px
 | Total visible triangles | 12,100 | 1,028 |
 | Visible vertices | 12,669 | 1,456 |
 | Picking triangles / vertices | 12,100 / 12,669 | 96 / 192 |
-| GLB bytes | 2,063,596 | 84,200 |
+| GLB bytes | 2,063,596 | 84,160 |
 | External maps | 3 × 512px | 3 × 256px |
 | Embedded materials/images | Present | None |
 
@@ -55,6 +55,9 @@ MeshView data (`Part.cs:1701–1765`), so the checker protects visible-geometry 
 maps have one quarter of the former 512px source texels; native texture allocation does not upscale
 them to a minimum bucket. In-game foil/cloth appearance, coarse picking and frame-time effects
 still require [native acceptance](../plans/WING_WALKER.md#native-acceptance-pending).
+The later appearance pass strengthens grey/brown grime, mottled fading, dirty edges and pale fiber
+streaks in the same 256px maps. Geometry, square-frame UVs, native references and save ownership
+remain unchanged; active-scene-only export removes stray scene/node metadata.
 
 ## Editor crew duplication guard (5801)
 

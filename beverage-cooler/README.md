@@ -25,11 +25,17 @@ feature host is needed. Keep the part IDs, module keys and ordered `Body`, `Lid`
 placements stable for existing craft. Removing the assets makes their craft dependency unavailable.
 Native save/load and blueprint acceptance are listed in [the save plan](../plans/saves-acceptance.md#beverage-cooler).
 
-The shell and lid use custom GLB meshes and three diffuse/normal/ORM material sets; editable Blender
+The exterior and trim use custom GLB meshes and three diffuse/normal/ORM material sets. The inner
+tub and lid underside have separate meshes referencing native `CoreSurfacesB_Material` gold foil;
+no Core texture payload is copied. Correct winding makes those surfaces visible from inside/below.
+Editable Blender
 source, previews and rebuild instructions live in [Art](Art/README.md). Only XML, runtime meshes,
 animation and PNG textures ship. Both visual variants share the same collider-only lid subpart;
 their differing body/lid subparts contain only rendering and picking modules, as KSA's cosmetic
 variant validator requires. [Integration details](../scope/beverage-cooler.md).
+There are six visible meshes and two picking proxies. All twelve render-model keys are globally
+unique; the original eight remain, with four new stateless foil-model keys. Durable gameplay keys
+and native save slots are unchanged.
 
 Runtime art now has **710 visible triangles** instead of 9,260, with simplified hardware and nine
 **128px** texture maps. Coarse open-tub/lid picking proxies use **112 triangles** instead of another
@@ -46,4 +52,5 @@ variant validator, supplies capacities and native module-data serialization. Ren
 contacts and a complete in-game save/load still need native acceptance.
 
 Run `python3 scripts/check-cooler-assets.py` from the repository root to check exported geometry,
-proxy bounds and texture budgets; add `--json` for per-mesh counts. Release packages run the same check.
+proxy bounds, texture budgets and one-sided surface coverage; add `--json` for measured counts and
+ray hits. The checker also verifies the closed lid shell/foil seam. Release packages run the same check.

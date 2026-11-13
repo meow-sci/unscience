@@ -18,6 +18,13 @@ HINGE = Vector((0, .19, .409))
 FRAME = Matrix(((0, -1, 0, 0), (-1, 0, 0, 0), (0, 0, -1, 0), (0, 0, 0, 1)))
 
 
+def deselect_all():
+    bpy.context.view_layer.update()
+    for candidate in bpy.context.view_layer.objects:
+        if candidate is not None:
+            candidate.select_set(False)
+
+
 def ring(width, depth, radius, z, segments=2):
     points = []
     for cx, cy, start in [(width/2-radius, depth/2-radius, 0),
@@ -33,9 +40,10 @@ def ring(width, depth, radius, z, segments=2):
 class Builder:
     def __init__(self, collection, mats):
         self.collection, self.mats = collection, mats
-        self.groups = {key: [] for key in ('BodyShell', 'BodyTrim', 'LidShell', 'LidTrim')}
+        self.groups = {key: [] for key in ('BodyShell', 'BodyTrim', 'BodyFoil', 'LidShell', 'LidTrim', 'LidFoil')}
 
     def add(self, obj, group, band=None):
+        deselect_all()
         bpy.context.view_layer.objects.active = obj
         obj.select_set(True)
         if obj.type != 'MESH':
@@ -47,22 +55,28 @@ class Builder:
         for coll in list(obj.users_collection):
             coll.objects.unlink(obj)
         self.collection.objects.link(obj)
-        mat = self.mats['Common' if band is not None else 'Red']
+        mat = self.mats['Foil' if group.endswith('Foil') else 'Common' if band is not None else 'Red']
         obj.data.materials.clear()
         obj.data.materials.append(mat)
         uv = obj.data.uv_layers.new(name='UVMap') if not obj.data.uv_layers else obj.data.uv_layers[0]
         for poly in obj.data.polygons:
             # Planar UV per dominant normal; common surfaces use a dedicated atlas strip.
             axes = sorted(range(3), key=lambda i: abs(poly.normal[i]))[:2]
+            center = poly.center.copy()
             for loop in poly.loop_indices:
                 p = obj.data.vertices[obj.data.loops[loop].vertex_index].co
+                if group.endswith('Foil'):
+                    # Native atlas patch, with near-native isotropic UV scale on each planar face.
+                    uv.data[loop].uv = (.55+(p[axes[0]]-center[axes[0]])*.16,
+                                       1-(.44+(p[axes[1]]-center[axes[1]])*.16))
+                    continue
                 u, v = (p[axes[0]] * 1.3 + .5) % 1, (p[axes[1]] * 1.3 + .5) % 1
                 uv.data[loop].uv = ((band + .05 + .9*u)/4 if band is not None else u, v)
         self.groups[group].append(obj)
         obj.select_set(False)
         return obj
 
-    def profile(self, name, profiles, group, band=None, caps=True):
+    def profile(self, name, profiles, group, band=None, caps=True, reverse=False):
         loops = [ring(*p) for p in profiles]
         n = len(loops[0])
         vertices = [p for loop in loops for p in loop]
@@ -73,6 +87,8 @@ class Builder:
             faces.append(tuple(reversed(range(n))))
         if cap_end:
             faces.append(tuple(range((len(loops)-1)*n, len(loops)*n)))
+        if reverse:
+            faces = [tuple(reversed(face)) for face in faces]
         mesh = bpy.data.meshes.new(name)
         mesh.from_pydata(vertices, [], faces)
         mesh.update()
@@ -117,7 +133,7 @@ class Builder:
     def finish(self):
         result = {}
         for key, objects in self.groups.items():
-            bpy.ops.object.select_all(action='DESELECT')
+            deselect_all()
             for obj in objects:
                 obj.select_set(True)
             bpy.context.view_layer.objects.active = objects[0]
@@ -127,7 +143,8 @@ class Builder:
             obj.name = obj.data.name = PREFIX + key
             bm = bmesh.new()
             bm.from_mesh(obj.data)
-            bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+            # Profiles carry explicit semantic winding. Recalculating open sheets can face
+            # an underside away from the viewer; Blender's two-sided default hides that error.
             bmesh.ops.triangulate(bm, faces=list(bm.faces))
             bm.to_mesh(obj.data)
             bm.free()
@@ -147,22 +164,25 @@ def build():
     coll = bpy.data.collections.new(COLLECTION)
     bpy.context.scene.collection.children.link(coll)
     mats = runpy.run_path(str(ROOT / 'Art/cooler_textures.py'))['materials']()
+    mats['Foil'] = runpy.run_path(str(ROOT / '../wing-walker/Art/create_beach_chair.py'))['gold_preview']()
+    for mat in mats.values():
+        mat.use_backface_culling = True
     b = Builder(coll, mats)
     # Hidden duplicate walls are omitted; the liner and base close the visible shell.
     b.profile('Powder coated insulated shell', [(.65,.40,.045,.083),
         (.65,.40,.045,.400)], 'BodyShell', caps=False)
     b.profile('Rubber protective plinth', [(.614,.364,.035,.0),(.642,.392,.042,.014),
         (.65,.40,.045,.068),(.65,.40,.045,.083)], 'BodyTrim', 1)
-    b.profile('White insulated tub', [(.645,.395,.042,.398),(.645,.395,.042,.407),
-        (.576,.326,.030,.407),(.55,.30,.028,.112)], 'BodyTrim', 0, (False, True))
+    b.profile('Foil-lined insulated tub', [(.65,.40,.045,.400),(.65,.40,.045,.407),
+        (.576,.326,.030,.407),(.55,.30,.028,.112)], 'BodyFoil', caps=(False, True))
     # Lid is a separate rigid piece, including its interior and front hand grip.
     b.profile('Rounded lid shell', [(.66,.41,.046,.412),
         (.66,.41,.046,.463),(.602,.352,.029,.463),
         (.591,.341,.025,.456)], 'LidShell', caps=(False, True))
-    b.profile('Molded white lid underside', [(.625,.375,.039,.409),
-        (.565,.315,.030,.409),(.545,.295,.027,.423)], 'LidTrim', 0, (False, True))
+    b.profile('Foil lid underside', [(.66,.41,.046,.412),
+        (.565,.315,.030,.412),(.545,.295,.027,.423)], 'LidFoil', caps=(False, True), reverse=True)
     b.profile('Lid gasket', [(.624,.374,.039,.408),
-        (.608,.358,.035,.408)], 'LidTrim', 1, False)
+        (.608,.358,.035,.408)], 'LidTrim', 1, False, reverse=True)
     b.box('Front grip', (0,-.208,.439), (.143,.031,.027), .004, 'LidTrim', 1)
     b.box('Latch backing', (0,-.203,.382),(.054,.009,.031),0,'BodyTrim',2)
     b.box('Latch black keeper', (0,-.210,.394),(.026,.006,.009),0,'BodyTrim',3)
@@ -228,11 +248,11 @@ def export(result):
         clones.append(obj)
     proxies = runpy.run_path(str(ROOT / 'Art/cooler_picking.py'))['proxies']
     clones.extend(proxies(FRAME, HINGE, PREFIX, ring))
-    bpy.ops.object.select_all(action='DESELECT')
+    deselect_all()
     for obj in clones:
         obj.select_set(True)
     bpy.ops.export_scene.gltf(filepath=str(ROOT/'Meshes/BeverageCooler.glb'),export_format=binary,
-        use_selection=True,export_yup=False,export_animations=False,export_skins=False,
+        use_selection=True,use_active_scene=True,export_yup=False,export_animations=False,export_skins=False,
         export_morph=False,export_tangents=True,export_materials='NONE')
     for obj in clones:
         mesh=obj.data

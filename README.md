@@ -45,7 +45,7 @@ from the working kitten coloring path. [Investigation](plans/HUMBLE_ARTEEST_5801
 **Wing Walker** adds the surface-mounted **External Seat** and **Standing Mount** for native
 crew assignment and EVA boarding. A helmet and standing-pose fix awaits in-game retest. Supplies
 are finite and the mounts have no radiation shielding. Standing Mount has simple brown leather
-foot straps; External Seat is a worn rainbow beach chair with a square gold-foil frame and textured
+foot straps; External Seat is a dingy, heavily weathered rainbow beach chair with a square gold-foil frame and textured
 white plastic armrests. Both parts also appear under the editor’s Capsules filter.
 [Usage and limits](wing-walker.lib/README.md) · [validation and pending in-game checks](plans/WING_WALKER.md).
 
@@ -66,6 +66,8 @@ acceptance remain pending.
 Runtime art now has **710 visible triangles**, **112 picking triangles** and nine **128px** maps.
 Coarse body/lid picking proxies replace duplicated detailed geometry. These exported reductions
 are verified; their effect on the reported FPS problem still needs an in-game frame-time comparison.
+The cooler's tub and lid underside now use native Core gold foil. Corrected triangle winding and
+closed lid edges address see-through surfaces; culling-aware ray tests protect the interior and underside.
 
 # game compatibility
 

@@ -32,6 +32,7 @@
     <Components>
       <PartModel Key="Unscience_Cooler_RedBodyShell"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_BodyShell" /><Material Ref="Unscience_Cooler_RedMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
       <PartModel Key="Unscience_Cooler_RedBodyTrim"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_BodyTrim" /><Material Ref="Unscience_Cooler_CommonMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <PartModel Key="Unscience_Cooler_RedBodyFoil"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_BodyFoil" /><Material Ref="CoreSurfacesB_Material" /><RayTracing>Enabled</RayTracing></PartModel>
       <MeshView><Mesh Ref="Unscience_Cooler_Body_VM" /></MeshView>
     </Components>
   </SubPart>
@@ -39,6 +40,7 @@
     <Components>
       <PartModel Key="Unscience_Cooler_RedLidShell"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_LidShell" /><Material Ref="Unscience_Cooler_RedMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
       <PartModel Key="Unscience_Cooler_RedLidTrim"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_LidTrim" /><Material Ref="Unscience_Cooler_CommonMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <PartModel Key="Unscience_Cooler_RedLidFoil"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_LidFoil" /><Material Ref="CoreSurfacesB_Material" /><RayTracing>Enabled</RayTracing></PartModel>
       <MeshView><Mesh Ref="Unscience_Cooler_Lid_VM" /></MeshView>
     </Components>
   </SubPart>
@@ -46,6 +48,7 @@
     <Components>
       <PartModel Key="Unscience_Cooler_SteelBodyShell"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_BodyShell" /><Material Ref="Unscience_Cooler_SteelMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
       <PartModel Key="Unscience_Cooler_SteelBodyTrim"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_BodyTrim" /><Material Ref="Unscience_Cooler_CommonMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <PartModel Key="Unscience_Cooler_SteelBodyFoil"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_BodyFoil" /><Material Ref="CoreSurfacesB_Material" /><RayTracing>Enabled</RayTracing></PartModel>
       <MeshView><Mesh Ref="Unscience_Cooler_Body_VM" /></MeshView>
     </Components>
   </SubPart>
@@ -53,6 +56,7 @@
     <Components>
       <PartModel Key="Unscience_Cooler_SteelLidShell"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_LidShell" /><Material Ref="Unscience_Cooler_SteelMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
       <PartModel Key="Unscience_Cooler_SteelLidTrim"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_LidTrim" /><Material Ref="Unscience_Cooler_CommonMaterial" /><RayTracing>Enabled</RayTracing></PartModel>
+      <PartModel Key="Unscience_Cooler_SteelLidFoil"><Internal>false</Internal><Mesh Ref="Unscience_Cooler_LidFoil" /><Material Ref="CoreSurfacesB_Material" /><RayTracing>Enabled</RayTracing></PartModel>
       <MeshView><Mesh Ref="Unscience_Cooler_Lid_VM" /></MeshView>
     </Components>
   </SubPart>

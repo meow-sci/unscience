@@ -443,19 +443,23 @@ ISubmod or sidecar. Unscience packages XML, mesh, animation and textures; editab
 [Integration](scope/beverage-cooler.md) · [save acceptance](plans/saves-acceptance.md#beverage-cooler).
 Globally unique native PartModel keys prevent body/lid and Red/Stainless mesh/material aliasing;
 the native cache regression covers model identity and exact render-template bindings.
-Runtime art uses 710 visible triangles/1,296 exported vertices, 112 picking triangles/192 vertices
+Runtime art uses 710 visible triangles/1,360 exported vertices, 112 picking triangles/192 vertices
 and nine 128px maps. The standard-library [`check-cooler-assets.py`](scripts/check-cooler-assets.py)
-validates actual GLB index/vertex data, six stable single-primitive meshes, identity nodes, visible
-attributes, proxy coverage of visible bounds, eight cache keys and PNG dimensions. Budgets:
+validates actual GLB index/vertex data, eight single-primitive meshes, identity nodes, visible
+attributes, proxy bounds, twelve cache keys, PNG dimensions and native Core foil bindings. Its
+surface helper checks actual front-facing ray coverage and the closed lid seam. Budgets:
 1,000 visible triangles/2,000 vertices, 120 picking triangles/192 vertices and 128px texture edges;
 `check-dist.py` runs it on packaged assets. Native frame-time effects still require profiling;
 all durable identities and mechanics are unchanged.
+Tub and lid-underside foil use two new mesh IDs/four stateless render keys while preserving every
+existing identity. The 82,236-byte GLB fixes reversed/missing underside coverage without increasing
+the visible triangle count; no Core textures are copied.
 
 ### [wing-walker](wing-walker) / [wing-walker.lib](wing-walker.lib)
 
 Native surface-mounted External Seat and Standing Mount parts, native crew assignment and EVA
 boarding, finite life support and scoped helmet/standing crew rendering (visual retest pending). Posture derives from the part template;
-the standing model uses brown leather foot straps; the seated model is a worn rainbow beach chair
+the standing model uses brown leather foot straps; the seated model is a dingy, heavily weathered rainbow beach chair
 with a square native gold-foil frame and textured white armrests. Both have editable Blender art and bundled custom PBR textures, and appear in the Capsules filter.
 KSA owns persistent part, crew and resource state, so no feature sidecar is added. The library owns
 the patches; the thin standalone host is for development, while only Unscience ships.
@@ -470,7 +474,7 @@ simplified woven strips, square frame beams, coarse picking panels/frame envelop
 vertex budgets, three stable single-primitive meshes, identity nodes, native attributes, flat frame
 normals, the Core foil UV patch/native-scale density, proxy bounds and no embedded materials/images. `check-dist.py` runs
 it on packaged assets. IDs, native mechanics, crew behavior and save ownership remain unchanged.
-The GLB is 84,200 bytes, down from 2,063,596; native frame-time comparison remains pending.
+The GLB is 84,160 bytes, down from 2,063,596; native frame-time comparison remains pending.
 
 ### [wing-walker.tests](wing-walker.tests)
 

@@ -12,12 +12,24 @@ The initial in-game report confirms actuation plays, but exposed a body mesh use
 both finishes red. Native PartModel cache aliasing caused both defects. The fix uses unique render
 keys without changing saved part/module identities; restart KSA before retesting the update.
 
-The low-poly update retains XML mechanics, six mesh IDs, eight corrected render keys and durable
+The low-poly update retains XML mechanics, the earlier six mesh IDs/eight render keys and durable
 save/module identities. Runtime art has 710 visible/112 picking triangles and nine 128px maps.
 Coarse open-tub/lid proxies omit exact microhardware/bevel geometry while preserving outer bounds.
 `scripts/check-cooler-assets.py` enforces export budgets and bounds, also through package validation.
 This measured workload reduction does not establish the cause of the reported FPS issue; native
 frame-time profiling remains pending.
+
+The underside correction adds two foil meshes/four stateless model keys, for eight meshes/twelve
+render keys overall. All older IDs, Body/Lid/LidCollider slots and native gameplay/save keys remain.
+The native Core material is referenced without copied textures. Front-facing ray coverage and a
+closed visual lid seam are export-checked; native colliders/pressure behavior are unchanged.
+Focused temporary fixtures reject flipped cap winding even with matching flipped normals, a
+removed annular rim triangle and an incorrect native foil material binding. The twelve-model
+native cache fixture preserves exact template/mesh/material identity and restores its test caches.
+
+- [ ] Restart and load an older cooler scene. Look into the tub and below the open lid/bottom in
+  both finishes: foil surfaces must be solid with no sky through the center or edge annulus. Check
+  partial/closed lids, lighting/shadows and retained supplies/current/target after repeated A→B→A.
 
 - [ ] Restart KSA and compare the same scene/camera, resolution, lighting and mod stack before/after
   the art change, with no cooler, one cooler and many coolers. Record CPU/GPU frame times and
@@ -79,6 +91,8 @@ three external 256px maps, with no embedded GLB images/materials. XML mechanics,
 subpart/mesh/material IDs, render/module keys and five placement slots remain unchanged. No saved
 state or migration is added. Export checks protect budgets, foil UVs and proxy bounds; visual and
 frame-time behavior still need native acceptance.
+The later stronger dingy/faded cloth pass changes existing PNG pixels only; verify its appearance
+in native lighting while crew, resources, picking and physics retain the same behavior.
 
 - [ ] Load an existing seated craft with distinct crew and depleted resources, then repeat A→B→A,
   native undo/redo and copy/symmetry. The new square-frame/worn-cloth appearance replaces the old art

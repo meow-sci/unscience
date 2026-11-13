@@ -31,6 +31,8 @@ retain their template IDs, supplies and actuation state. In-game retesting remai
 The cooler now uses 710 visible triangles, 112 coarse picking triangles and nine 128px maps.
 `scripts/check-cooler-assets.py` enforces exported budgets and proxy bounds during distribution
 validation. Saved state and native mechanics are unchanged; frame-time effects still need profiling.
+The tub and lid underside use native Core foil, with corrected one-sided winding and a closed
+shell/foil seam. All twelve model bindings are cache-tested; existing craft/state remain compatible.
 
 A unified supermod that consolidates KSA feature libraries into a single ImGui window with collapsible headers. Each submod's content appears under its own header, and a gear icon context menu lets you toggle individual submod visibility.
 
@@ -112,7 +114,7 @@ and standing-pose fix awaits in-game visual retest. Supplies are
 finite, there is no shielding, and a surface mount does not create a habitat passage. KSA saves the
 part, crew and life support; no new sidecar is used. [Details](../wing-walker.lib/README.md) ·
 [pending acceptance](../plans/WING_WALKER.md).
-External Seat now has worn rainbow cloth, a square gold-foil frame, 1,028 visible triangles and 96 coarse
+External Seat now has dingier, heavily weathered rainbow cloth, a square gold-foil frame, 1,028 visible triangles and 96 coarse
 picking proxies. Its three 256px maps stay external to the geometry-only GLB. Distribution checks
 enforce chair budgets and native foil UV bounds; crew, supplies, physics and save identities are unchanged.
 

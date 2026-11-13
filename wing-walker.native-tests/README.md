@@ -51,9 +51,10 @@ different depleted stocks, fractional consumption and partial opening/closing li
 renderer, habitat-zone reconstruction, whole-world load or physics/contact acceptance is claimed.
 
 `CoolerRenderCacheChecks` calls the real `PartModel.Get` without GPU initialization. A negative
-fixture reproduces the old repeated `Shell`/`Trim` keys: the native global cache returns red-body
-geometry for the lid and steel variant. The decoded fixed XML must produce eight distinct models,
-each retaining its exact requested template and expected body/lid mesh and red/steel/common
+fixture reproduces repeated `Shell`/`Trim`/`Foil` keys: the native global cache returns red-body
+geometry for the lid and steel variant, and aliases the body/lid foil meshes. The decoded XML must
+produce twelve distinct models, each retaining its exact requested template and expected body/lid
+mesh plus red/steel/common or native `CoreSurfacesB_Material` foil
 material. Repeated lookups must return the same correct model. The fixture snapshots and restores
 the native first-model dictionary and both instance lists in `finally`, disposes only its own
 models, and verifies that no test entries remain. GPU rendering still requires an in-game retest.

@@ -5,6 +5,9 @@ square gold foil rails with mitered joints, two U-shaped folding legs and aged w
 The fabric has uneven sun bleaching, dusty rub marks, pale broken fibers and darkened selvedges;
 slightly shifted strip UVs vary the wear between ribbons. Roughness and shallow woven normals carry
 the detail without modeled fibers. The cloth uses eight length segments per ribbon instead of 100.
+The stronger dingy pass adds broad grey-brown ingrained soil, markedly darker worn edges, heavier
+desaturation and more abrasion streaks. Its contrast is designed to read at gameplay distance rather
+than relying on fine weave noise; geometry and 256px map dimensions stay the same.
 
 | Exported chair cost | Original | Square-frame replacement |
 |---|---:|---:|

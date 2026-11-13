@@ -118,6 +118,8 @@ parser/family/capacity/save-data checks cover the schema; renderer,
 contacts, supply access and full save/load acceptance remain pending. No new submod or sidecar.
 Runtime art is reduced to 710 visible/112 picking triangles and nine 128px maps, with enforced export
 budgets and coarse proxies preserving native bounds. The reported FPS cause remains unprofiled.
+Native Core foil now lines the tub/lid underside. Eight meshes/twelve render keys retain all earlier
+IDs and gameplay/save slots; one-sided ray coverage and a closed lid seam guard the see-through fix.
 [Integration](beverage-cooler.md) · [acceptance](../plans/saves-acceptance.md#beverage-cooler).
 
 Wing Walker unassigns affected external crew on editor selection/pickup/gizmo start and before
@@ -134,7 +136,7 @@ helmet and standing-pose fix passes focused and full builds, packaging and the n
 updated production fixture passes; the in-game visual retest remains pending. [Integration and risks](wing-walker.md) · [validation](../plans/WING_WALKER.md).
 Standing Mount now uses custom brown leather foot straps with a GLB/picking atlas and PBR textures;
 all legacy subpart slots retain their order for native saved-state matching. External Seat uses
-worn rainbow webbing, textured white armrests and a square native gold-foil frame; both parts have
+dingier, heavily weathered rainbow webbing, textured white armrests and a square native gold-foil frame; both parts have
 the Capsules tag. Chair geometry is reduced to 1,028 visible/96 picking triangles; external 256px maps have export
 budgets and foil-UV/flat-normal checks; in-game visual and frame-time acceptance remain pending.
 

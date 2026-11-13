@@ -3,6 +3,7 @@ import argparse
 import json
 import math
 from pathlib import Path
+import runpy
 import struct
 import sys
 import xml.etree.ElementTree as ET
@@ -12,10 +13,10 @@ VISIBLE_VERTICES_MAX = 2000
 PICKING_TRIANGLES_MAX = 120
 PICKING_VERTICES_MAX = 192
 TEXTURE_EDGE_MAX = 128
-VISIBLE_NAMES = {f"Unscience_Cooler_{part}{surface}" for part in ("Body", "Lid") for surface in ("Shell", "Trim")}
+VISIBLE_NAMES = {f"Unscience_Cooler_{part}{surface}" for part in ("Body", "Lid") for surface in ("Shell", "Trim", "Foil")}
 PICKING_NAMES = {"Unscience_Cooler_Body_VM", "Unscience_Cooler_Lid_VM"}
 MODEL_KEYS = {f"Unscience_Cooler_{finish}{part}{surface}" for finish in ("Red", "Steel")
-              for part in ("Body", "Lid") for surface in ("Shell", "Trim")}
+              for part in ("Body", "Lid") for surface in ("Shell", "Trim", "Foil")}
 TEXTURE_NAMES = {f"BeverageCooler_{finish}_{kind}.png" for finish in ("Red", "Steel", "Common")
                  for kind in ("Diffuse", "Normal", "ORM")}
 COMPONENTS = {5121: ("B", 1), 5123: ("H", 2), 5125: ("I", 4), 5126: ("f", 4)}
@@ -79,19 +80,20 @@ def identity_node(node):
 def check_geometry(path):
     document, binary, byte_count = read_glb(path)
     meshes = document.get("meshes", [])
-    require(len(meshes) == 6 and {mesh.get("name") for mesh in meshes} == VISIBLE_NAMES | PICKING_NAMES,
-            "Expected the four stable visible mesh names and two stable picking mesh names")
+    require(len(meshes) == 8 and {mesh.get("name") for mesh in meshes} == VISIBLE_NAMES | PICKING_NAMES,
+            "Expected six stable visible mesh names and two stable picking mesh names")
     require(not any(document.get(key) for key in ("animations", "skins", "materials", "images", "textures")),
             "The model GLB must contain geometry only; XML owns materials and animation is separate")
     nodes = document.get("nodes", [])
-    require(len(nodes) == 6 and sorted(node.get("mesh", -1) for node in nodes) == list(range(6)),
-            "Each of the six meshes must have one node")
+    require(len(nodes) == 8 and sorted(node.get("mesh", -1) for node in nodes) == list(range(8)),
+            "Each of the eight meshes must have one node")
     require(all(identity_node(node) and not node.get("children") for node in nodes), "Mesh nodes must have baked identity transforms")
     scene = document["scenes"][document.get("scene", 0)]
-    require(sorted(scene.get("nodes", [])) == list(range(6)), "Default scene must expose all six mesh nodes once")
+    require(sorted(scene.get("nodes", [])) == list(range(8)), "Default scene must expose all eight mesh nodes once")
     result = {"file_bytes": byte_count, "meshes": {}, "visible_triangles": 0, "visible_vertices": 0,
               "picking_triangles": 0, "picking_vertices": 0}
     used_accessors = set()
+    geometry = {}
     for mesh in meshes:
         name = mesh["name"]
         require(len(mesh["primitives"]) == 1, f"{name}: expected one primitive")
@@ -119,6 +121,13 @@ def check_geometry(path):
         bounds = {"min": [min(position[axis] for position in positions) for axis in range(3)],
                   "max": [max(position[axis] for position in positions) for axis in range(3)]}
         result["meshes"][name] = {"triangles": triangles, "vertices": vertices, "bounds": bounds}
+        if visible:
+            geometry[name] = {"positions": positions, "indices": indices,
+                              "normals": accessor_values(document, binary, attributes["NORMAL"])}
+        if name.endswith("Foil"):
+            uvs = accessor_values(document, binary, attributes["TEXCOORD_0"])
+            require(all(0.495 - 1e-5 <= u <= 0.605 + 1e-5 and 0.39 - 1e-5 <= v <= 0.49 + 1e-5 for u, v in uvs),
+                    f"{name}: UVs left the native wrinkled-foil patch")
         group = "visible" if visible else "picking"
         result[group + "_triangles"] += triangles
         result[group + "_vertices"] += vertices
@@ -127,11 +136,13 @@ def check_geometry(path):
     require(used_accessors == set(range(len(document["accessors"]))), "Model GLB retains unreferenced accessor payloads")
     for part in ("Body", "Lid"):
         proxy = result["meshes"][f"Unscience_Cooler_{part}_VM"]["bounds"]
-        visible = [result["meshes"][f"Unscience_Cooler_{part}{surface}"]["bounds"] for surface in ("Shell", "Trim")]
+        visible = [result["meshes"][f"Unscience_Cooler_{part}{surface}"]["bounds"] for surface in ("Shell", "Trim", "Foil")]
         for axis in range(3):
             require(proxy["min"][axis] <= min(bounds["min"][axis] for bounds in visible) + 1e-5
                     and proxy["max"][axis] >= max(bounds["max"][axis] for bounds in visible) - 1e-5,
                     f"{part}: picking proxy bounds do not enclose visible geometry on local axis {axis}")
+    coverage = runpy.run_path(str(Path(__file__).with_name("check-cooler-surfaces.py")))
+    result["surface_coverage"] = coverage["check_surfaces"](geometry)
     return result
 
 
@@ -139,7 +150,11 @@ def check_assets(root):
     root = Path(root)
     xml = ET.parse(root / "BeverageCooler.xml").getroot()
     model_keys = [model.attrib.get("Key") for model in xml.findall(".//PartModel")]
-    require(len(model_keys) == 8 and set(model_keys) == MODEL_KEYS, "The eight native PartModel cache keys must remain unique and stable")
+    require(len(model_keys) == 12 and set(model_keys) == MODEL_KEYS, "The twelve native PartModel cache keys must remain unique and stable")
+    for model in xml.findall(".//PartModel"):
+        if model.attrib["Key"].endswith("Foil"):
+            require(model.find("Material").attrib["Ref"] == "CoreSurfacesB_Material",
+                    "Cooler lining must reference the native foil material without a copied payload")
     referenced_textures = {Path(texture.attrib["Path"]).name for texture in xml.findall("Texture")}
     require(referenced_textures == TEXTURE_NAMES, "XML must reference the nine stable cooler PNG names")
     require({path.name for path in (root / "Textures").glob("BeverageCooler_*.png")} == TEXTURE_NAMES, "Missing or extra cooler textures")
@@ -175,7 +190,7 @@ def main():
     else:
         print(f"PASS: cooler assets: {result['visible_triangles']} visible triangles/{result['visible_vertices']} vertices, "
               f"{result['picking_triangles']} picking triangles/{result['picking_vertices']} vertices, "
-              f"six single-primitive meshes, nine PNGs <= {TEXTURE_EDGE_MAX}px")
+              f"eight single-primitive meshes, one-sided surface coverage, nine PNGs <= {TEXTURE_EDGE_MAX}px")
     return 0
 
 

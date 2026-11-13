@@ -2,7 +2,7 @@
 
 Wing Walker adds **External Seat** and **Standing Mount** as regular surface-mounted
 vehicle parts in the editor's **External Crew** category and **Capsules** filter. External Seat is a
-worn rainbow webbed beach chair with a square gold-foil frame and textured white plastic armrests.
+dingy, heavily weathered rainbow webbed beach chair with a square gold-foil frame and textured white plastic armrests.
 Standing Mount uses two simple stitched brown leather straps over the boots. The stand is
 intended to display its occupant upright and both parts display helmets.
 Assign a kitten through the part's native
@@ -71,7 +71,7 @@ box replaces the chair collider. The inherited simulation mass and life support 
 Editable art and the Blender rebuild script live in [`wing-walker/Art`](../wing-walker/Art/README.md).
 The chair's low-poly update uses 1,028 visible/96 picking triangles, four-sided frame beams,
 simplified woven strips and three external
-256px maps with cloth wear. Its coarse picking panels/envelopes replace the duplicated detailed
+256px maps with stronger grey/brown soil, fading and worn edges. Its coarse picking panels/envelopes replace the duplicated detailed
 mesh; physics, native crew hooks, all part/model IDs and saved-state ownership remain unchanged.
 `scripts/check-chair-assets.py` verifies exported budgets, foil UV bounds, flat frame normals,
 native-visible streams, external maps, native-scale UV density and picking coverage during distribution validation.

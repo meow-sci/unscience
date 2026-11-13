@@ -24,23 +24,28 @@ def material():
     stripe = np.clip(((x-.015)/.75*5).astype(int), 0, 4)
     color = np.ones((size,size,4))
     color[:,:,:3] = colors[stripe]
-    wear = .16 + .11 * np.sin(y*math.tau*1.3 + x*8)**2
-    dirt = np.zeros_like(x)
+    wear = .30 + .16 * np.sin(y*math.tau*1.3 + x*8)**2
+    dirt = .10 + .07*np.sin(y*9+x*11)**2
     for cx,cy,sx,sy in [(.18,.46,.09,.12),(.58,.64,.13,.16),(.37,.16,.06,.06),
                        (.08,.82,.07,.09),(.70,.31,.04,.11)]:
-        wear += .24*np.exp(-((x-cx)/sx)**2-((y-cy)/sy)**2)
-        dirt += .12*np.exp(-((x-cx+.025)/(sx*.55))**2-((y-cy-.03)/(sy*.7))**2)
-    color[:,:,:3] = color[:,:,:3]*(1-wear[:,:,None]) + np.array([.70,.64,.49])*wear[:,:,None]
+        wear += .30*np.exp(-((x-cx)/sx)**2-((y-cy)/sy)**2)
+        dirt += .42*np.exp(-((x-cx+.025)/(sx*.85))**2-((y-cy-.03)/(sy*.9))**2)
+    wear=np.clip(wear,0,.85)
+    dirt=np.clip(dirt,0,.75)
+    color[:,:,:3] = color[:,:,:3]*(1-wear[:,:,None]) + np.array([.51,.46,.34])*wear[:,:,None]
     color[:,:,:3] *= (1+weave-dirt)[:,:,None]
+    # Broad ingrained brown/grey soil must read at gameplay distance, not only as fine noise.
+    grime=.18+.26*np.exp(-((y-.51)/.31)**2)*(np.sin(x*29+y*8)**2)
+    color[:,:,:3] = color[:,:,:3]*(1-grime[:,:,None])+np.array([.24,.21,.15])*grime[:,:,None]
     # Broken pale fibers and rubbed patches; no extra mesh fibers or modeled tears.
-    for _ in range(85):
+    for _ in range(150):
         cx,cy = rng.uniform(.02,.77),rng.uniform(0,1)
         scratch = (abs(x-cx)<rng.uniform(.001,.003)) & (abs(y-cy)<rng.uniform(.004,.022))
         scratch &= rng.random(x.shape)>.32
-        color[scratch,:3] = color[scratch,:3]*.55 + np.array([.72,.67,.53])*.45
+        color[scratch,:3] = color[scratch,:3]*.45 + np.array([.59,.54,.40])*.55
     selvedge = (x < .029) | ((x > .751) & (x < .80))
     edge_fuzz = .07*np.sin(y*157)**2 + grain
-    color[selvedge,:3] = (np.array([.66,.62,.50])[None,:]
+    color[selvedge,:3] = (np.array([.47,.42,.30])[None,:]
                           * (1+edge_fuzz[selvedge]-dirt[selvedge])[:,None])
     plastic = x>.80
     plastic_soil = .055*np.sin(y*13+x*23)**2 + .02*np.cos(y*37)**2
@@ -52,7 +57,7 @@ def material():
     normal[plastic,0] = .5+grain[plastic]*.1
     normal[plastic,1] = .5+grain[plastic]*.1
     orm = np.ones_like(color)
-    orm[:,:,1] = np.clip(.84+wear*.15+grain,0,1)
+    orm[:,:,1] = np.clip(.88+wear*.12+grain,0,1)
     orm[:,:,2] = 0
     orm[plastic,1] = .62+plastic_soil[plastic]
     maps = [image('WingWalker_BeachChair_'+suffix,np.clip(data,0,1),linear)

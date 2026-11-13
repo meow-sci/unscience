@@ -202,10 +202,13 @@ def export(obj):
         clone=bpy.data.objects.new(mesh.name,mesh); bpy.context.scene.collection.objects.link(clone); clones.append(clone)
     proxy=runpy.run_path(str(ROOT/'Art/chair_picking.py'))['proxy']
     clones.append(proxy(NAME+'_VM',frame))
-    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.view_layer.update()
+    for candidate in bpy.context.view_layer.objects:
+        if candidate is not None:
+            candidate.select_set(False)
     for clone in clones: clone.select_set(True)
     bpy.ops.export_scene.gltf(filepath=str(ROOT/'Meshes/WingWalker_BeachChair.glb'),export_format=binary,
-        use_selection=True,export_yup=False,export_animations=False,export_skins=False,export_morph=False,
+        use_selection=True,use_active_scene=True,export_yup=False,export_animations=False,export_skins=False,export_morph=False,
         export_tangents=True,export_materials='NONE')
     for clone in clones:
         mesh=clone.data; bpy.data.objects.remove(clone,do_unlink=True); bpy.data.meshes.remove(mesh)

@@ -89,11 +89,14 @@ rectangle remain unchanged; XML, mesh/model IDs, five subpart slots, colliders, 
 life support and native save behavior are unchanged. Standing Mount art is not part of this update.
 
 The exported result is **1,028 visible triangles** (872 webbing/plastic +156 frame), **1,456 visible
-vertices**, **96 picking triangles / 192 vertices**, and an **84,200-byte GLB**. All three maps are
+vertices**, **96 picking triangles / 192 vertices**, and an **84,160-byte GLB**. All three maps are
 256px. The source checker passes, including flat frame normals, coarse proxy enclosure and the
 native foil patch. Aspect-correct strips target 0.171 UV/metre; a ±25% edge-density guard accommodates
 miter corners and rejects the earlier full-patch stretch. Native visual and frame-time acceptance
 remain pending.
+The later dirt pass adds broader grey/brown soil, darker dirty edges, stronger fading and pale
+fiber streaks using the same texture names/resolution. Square-frame geometry and foil UVs retain
+their validated counts; no crew, collider, gameplay or save state changes.
 
 `python3 scripts/check-chair-assets.py` validates actual exported streams and budgets (≤1,200
 visible triangles/3,000 vertices, ≤150 picking triangles/256 vertices, three PNG maps ≤256px),

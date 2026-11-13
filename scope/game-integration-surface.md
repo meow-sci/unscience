@@ -20,13 +20,14 @@ nodes; ShowDeployRetract=false exposes Actuate. Root `HabitatTemplate` stores 30
 scrubbers), with native passage/access rules. KSA's PartInstance, HabitatData and
 KeyframeAnimationData own durable state. Native CPU checks cover parser/family/capacity/serialization;
 rendering, contacts and full-world acceptance remain pending. `PartModel.Get` globally caches by
-component Key alone, so all eight render keys are namespaced and unique, including both finishes.
+component Key alone, so all twelve render keys are namespaced and unique, including both finishes and foil.
 The former Shell/Trim collisions caused duplicate-body lids and red-only variants; native cache
 regression checks exact returned templates. No patch, runtime reflection or sidecar.
-Low-poly geometry and coarse MeshView proxies retain six mesh IDs, eight render cache keys and all
-XML mechanics/save slots. `check-cooler-assets.py` enforces exported triangle/vertex budgets,
+Low-poly geometry retains the earlier six mesh IDs/eight keys and adds two foil mesh IDs/four
+stateless model keys, with all XML mechanics/save slots unchanged. `check-cooler-assets.py` enforces exported triangle/vertex budgets,
 one primitive per mesh, identity nodes, visible attributes, proxy coverage of visible bounds and
-nine <=128px PNGs before packaging. Native texture allocation retains source dimensions;
+nine <=128px PNGs before packaging. Core foil lines the tub/lid underside; geometric winding/ray
+coverage and a closed shell/foil seam protect against backface-culling holes. Native texture allocation retains source dimensions;
 `BucketType` groups statistics rather than upscaling maps. The reported FPS cause remains unprofiled.
 [Complete asset/type contracts](beverage-cooler.md).
 
@@ -55,8 +56,8 @@ masking, War Paint visor gating and seat-owned MMU remain intact. Native part ID
 `CrewSeat` and `EVADoor` are inventoried in [Wing Walker](wing-walker.md). Earlier solution, fixture, XML and distribution checks passed. The appearance fix passes the focused
 and full solution builds, distribution check and 5801 native signature/CPU animation probe; the
 updated production fixture passes, while in-game visual acceptance remains pending.
-The chair art uses four-sided foil-frame beams, simplified worn webbing and a separate coarse
-MeshView proxy: 1,028 visible/96 picking triangles, with an 84,200-byte geometry-only GLB.
+The chair art uses four-sided foil-frame beams, dingier heavily weathered webbing and a separate coarse
+MeshView proxy: 1,028 visible/96 picking triangles, with an 84,160-byte geometry-only GLB.
 `check-chair-assets.py` enforces geometry/vertex/texture budgets, three stable mesh
 IDs, one primitive each, identity nodes, native streams, planar frame normals, native-scale UVs inside the Core
 foil patch and proxy bounds. Three 256px maps remain external; no images/materials are embedded in
@@ -1399,7 +1400,7 @@ Beverage Cooler adds `BeverageCooler.xml`, `Meshes/BeverageCooler.glb`,
 `Animations/BeverageCooler_Lid.glb` and nine `BeverageCooler_{Red,Steel,Common}_{Diffuse,Normal,ORM}.png`
 maps. Its native schema/binding and fixed mesh/material IDs are inventoried in
 [beverage-cooler.md](beverage-cooler.md). No stock shader, material bytes or Core payload is modified.
-The maps are 128px; visible geometry has 710 triangles and independent MeshView proxies have 112.
+The maps are 128px; six visible meshes have 710 triangles and independent MeshView proxies have 112.
 `scripts/check-cooler-assets.py` enforces their budgets and bounds; proxies approximate hardware/bevels.
 
 IVA switch follow-up changes no shaders, material bytes or capsule asset keys; only the
@@ -1407,7 +1408,7 @@ unconditional editor reveal hook is removed. Existing native glass and shadow-pr
 
 | Asset / shader | Kind | Referenced as | Content path (NEW) | Consumer | 5348 |
 |---|---|---|---|---|---|
-| `CoreSurfacesB_Material` and its diffuse/normal/PBR texture atlas | native gold foil | beach chair frame only in `WingWalker.xml`; GLB UV U=0.495–0.605/V=0.39–0.49 samples the wrinkled `TrussFFoilA` island | `Content/Core/CoreSurfacesBAssets.xml`; `CoreStructuralA_Prefab_StrutOcto2HB` | wing-walker | Custom chair/strap GLBs and custom webbing/plastic/leather maps ship; Core payload is referenced only. Both parts retain IDs/subpart order and include `Capsules`. Native visual acceptance pending. |
+| `CoreSurfacesB_Material` and its diffuse/normal/PBR texture atlas | native gold foil | beach chair frame in `WingWalker.xml`; cooler tub/lid underside in `BeverageCooler.xml`; GLB UV U=0.495–0.605/V=0.39–0.49 samples the wrinkled `TrussFFoilA` island | `Content/Core/CoreSurfacesBAssets.xml`; `CoreStructuralA_Prefab_StrutOcto2HB` | wing-walker, beverage-cooler | Only custom GLB/PNG payloads ship; Core foil is referenced. Cooler winding/ray/seam checks protect underside coverage; chair cloth is more dingy. Gameplay/save identities remain stable. Native visual acceptance pending. |
 | `UnlitMesh.vert` / `UnlitMesh.frag` | shader | `ModLibrary.Get<ShaderReference>("UnlitMeshVert"/"UnlitMeshFrag")` | `Core/DefaultAssets.xml:66,67` → `Core/Shaders/Mesh/UnlitMesh.*` | thug-life | OK (**byte-identical 4750→5018**; also untouched by 4693/4745) |
 | `GridFrag` (path anchor only) + `Common/Camera.glsl` / `Common/TextureSet.glsl` (headers, `#include`d) | shader include root + headers | `ModLibrary.Get<ShaderReference>("GridFrag").ModPath` → its **directory** is the `#include` root for graffiti's two runtime-compiled decal shaders | `Content/Core/DefaultAssets.xml:373` → `Core/Shaders/Grid.frag`; `Core/Shaders/Common/*.glsl` | graffiti | OK @5348 — a `global.camera`/`global.lighting` struct or `SAMPLE_TEXTURE`/`SET_TEXTURE` macro change fails at shaderc compile (loud console line; decals self-disable) |
 | `MeshIndirect.frag` + `MeshIndirectRaytraced.frag` (paint injection) | shader text-edit (in memory, via the `FromFile` prefix) | matched by **file name**; anchor = first `vec3 sampledColor …;` line; requires `inStateFlags` varying and `gammaToLinear` (`Common/Shared.glsl:203`) | `Content/Core/Shaders/Mesh/MeshIndirect.frag:114`; `MeshIndirectRaytraced.frag:156` | humble-arteest (VehiclePaint) | OK (rebuilt for 5018) — if the anchor moves, `Enable` fails with a UI message and rendering stays stock |

@@ -38,18 +38,25 @@ internal static class CoolerRenderCacheChecks
                 templateType.GetField("Material")!.SetValue(genericTemplate, Get(templates[index], "Material"));
                 brokenModels.Add(getModel.Invoke(null, [genericTemplate])!);
             }
-            Require(brokenModels.Distinct(ReferenceEqualityComparer.Instance).Count() == 2,
-                "old Shell/Trim keys alias all eight authored templates to two native models");
-            Require(ReferenceEquals(brokenModels[0], brokenModels[2]) && ReferenceEquals(brokenModels[0], brokenModels[4]),
+            object Broken(string part, string channel) => brokenModels[Array.FindIndex(expected,
+                item => item.Part == "Unscience_Cooler_" + part && item.OldKey == channel)];
+            Require(brokenModels.Distinct(ReferenceEqualityComparer.Instance).Count() == 3,
+                "generic Shell/Trim/Foil keys alias all twelve authored templates to three native models");
+            Require(ReferenceEquals(Broken("RedBody", "Shell"), Broken("RedLid", "Shell"))
+                && ReferenceEquals(Broken("RedBody", "Shell"), Broken("SteelBody", "Shell")),
                 "native PartModel.Get reproduces red-body/lid and red/steel shell aliasing");
-            CheckReferences(Get(brokenModels[2], "Template")!, "Unscience_Cooler_BodyShell", "Unscience_Cooler_RedMaterial",
+            CheckReferences(Get(Broken("RedLid", "Shell"), "Template")!, "Unscience_Cooler_BodyShell", "Unscience_Cooler_RedMaterial",
                 "old red lid incorrectly receives the red body");
-            CheckReferences(Get(brokenModels[6], "Template")!, "Unscience_Cooler_BodyShell", "Unscience_Cooler_RedMaterial",
+            CheckReferences(Get(Broken("SteelLid", "Shell"), "Template")!, "Unscience_Cooler_BodyShell", "Unscience_Cooler_RedMaterial",
                 "old steel lid incorrectly receives the red body/material");
+            Require(ReferenceEquals(Broken("RedBody", "Foil"), Broken("RedLid", "Foil")),
+                "a generic Foil key also aliases distinct body and lid lining meshes");
+            CheckReferences(Get(Broken("SteelLid", "Foil"), "Template")!, "Unscience_Cooler_BodyFoil", "CoreSurfacesB_Material",
+                "generic foil incorrectly returns body lining for the lid while retaining the shared Core material");
             ClearProbeModels(instances, rayTraceInstances, firstByHash);
 
-            Require(templates.Select(template => (string)Get(template, "Key")!).Distinct(StringComparer.Ordinal).Count() == 8,
-                "all eight decoded cooler render templates have globally distinct keys");
+            Require(templates.Select(template => (string)Get(template, "Key")!).Distinct(StringComparer.Ordinal).Count() == 12,
+                "all twelve decoded cooler render templates have globally distinct keys");
             var correctedModels = new List<object>();
             for (int index = 0; index < expected.Length; index++)
             {
@@ -63,8 +70,8 @@ internal static class CoolerRenderCacheChecks
                 Require(ReferenceEquals(model, getModel.Invoke(null, [templates[index]])),
                     "repeat lookup of the same template retains native cache identity");
             }
-            Require(correctedModels.Distinct(ReferenceEqualityComparer.Instance).Count() == 8 && instances.Count == 8,
-                "fixed body/lid and red/steel templates resolve to eight distinct native PartModels");
+            Require(correctedModels.Distinct(ReferenceEqualityComparer.Instance).Count() == 12 && instances.Count == 12,
+                "body/lid shell, trim and foil templates resolve to twelve distinct native PartModels");
         }
         finally
         {
@@ -78,26 +85,30 @@ internal static class CoolerRenderCacheChecks
             && firstByHash.Count == originalCache.Length
             && originalCache.All(entry => ReferenceEquals(firstByHash[entry.Key], entry.Value)),
             "native model caches are restored without leaving test-created entries");
-        Console.WriteLine("PASS: native PartModel.Get reproduces old generic-key aliasing; all eight fixed render templates retain distinct mesh/material identities; caches restored");
+        Console.WriteLine("PASS: native PartModel.Get reproduces generic-key aliasing; all twelve render templates retain distinct mesh/material identities including Core foil; caches restored");
     }
 
     private static ExpectedModel[] ExpectedModels() =>
     [
         new("Unscience_Cooler_RedBody", "Unscience_Cooler_BodyShell", "Unscience_Cooler_RedMaterial", "Shell"),
         new("Unscience_Cooler_RedBody", "Unscience_Cooler_BodyTrim", "Unscience_Cooler_CommonMaterial", "Trim"),
+        new("Unscience_Cooler_RedBody", "Unscience_Cooler_BodyFoil", "CoreSurfacesB_Material", "Foil"),
         new("Unscience_Cooler_RedLid", "Unscience_Cooler_LidShell", "Unscience_Cooler_RedMaterial", "Shell"),
         new("Unscience_Cooler_RedLid", "Unscience_Cooler_LidTrim", "Unscience_Cooler_CommonMaterial", "Trim"),
+        new("Unscience_Cooler_RedLid", "Unscience_Cooler_LidFoil", "CoreSurfacesB_Material", "Foil"),
         new("Unscience_Cooler_SteelBody", "Unscience_Cooler_BodyShell", "Unscience_Cooler_SteelMaterial", "Shell"),
         new("Unscience_Cooler_SteelBody", "Unscience_Cooler_BodyTrim", "Unscience_Cooler_CommonMaterial", "Trim"),
+        new("Unscience_Cooler_SteelBody", "Unscience_Cooler_BodyFoil", "CoreSurfacesB_Material", "Foil"),
         new("Unscience_Cooler_SteelLid", "Unscience_Cooler_LidShell", "Unscience_Cooler_SteelMaterial", "Shell"),
-        new("Unscience_Cooler_SteelLid", "Unscience_Cooler_LidTrim", "Unscience_Cooler_CommonMaterial", "Trim")
+        new("Unscience_Cooler_SteelLid", "Unscience_Cooler_LidTrim", "Unscience_Cooler_CommonMaterial", "Trim"),
+        new("Unscience_Cooler_SteelLid", "Unscience_Cooler_LidFoil", "CoreSurfacesB_Material", "Foil")
     ];
 
     private static object FindTemplate(object part, string mesh)
     {
         object[] templates = ((IEnumerable)Get(part, "Components")!).Cast<object>()
             .Where(component => component.GetType().FullName == "KSA.PartModelModule+Template").ToArray();
-        Require(templates.Length == 2, "each cosmetic cooler subpart has exactly shell and trim render templates");
+        Require(templates.Length == 3, "each cosmetic cooler subpart has exactly shell, trim and foil render templates");
         return templates.Single(template => (string)Get(Get(template, "Mesh")!, "Ref")! == mesh);
     }
 

@@ -17,10 +17,16 @@ template IDs, ordered placements, Supplies/LidAnimation keys and native serializ
 compatible; no sidecar or migration is added. Restart KSA to clear its process-wide PartModel cache.
 
 The low-poly optimization changes only geometry, coarse MeshView picking proxies and PNG pixels/
-dimensions. All part/mesh/material IDs, eight corrected render keys, placement order and saved
+dimensions. All earlier part/mesh/material IDs, eight corrected render keys, placement order and saved
 module keys remain stable; native colliders, capacity and actuation are unchanged. Existing saves
 resolve the smaller art through the same references, with no new record, reset or migration.
 The exported-budget checker does not rewrite native or sidecar saves.
+
+The foil/underside correction adds BodyFoil/LidFoil meshes and four stateless PartModel keys, while
+retaining every earlier key and all three placement slots. PartModel modules emit no native save
+data. Native Core foil references, corrected winding and closed visual lid edges add no participant,
+payload, pressure behavior or replay state. Reconstructed old craft gain the art through their
+existing part templates; supplies, lid current/goal and collider ownership remain native.
 
 The actual 5801 native serializer round-trips both variant IDs, independently depleted supplies,
 fractional consumption and opening/closing animation times in PartInstance records. These are
@@ -65,6 +71,8 @@ all part/subpart/mesh/material IDs, native render/module keys, five placement sl
 and native save records remain stable. No sidecar, reset/replay state or migration is added.
 Old craft resolve the simpler art through the same asset references; native crew, resources and
 history retain ownership. Repeated native scene load remains an acceptance item.
+The stronger dingy chair-fabric pass changes only the existing three PNG pixels; no state, settings,
+native references or migration is introduced.
 
 ## You Didn't See Anything
 
