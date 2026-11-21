@@ -247,6 +247,12 @@ internal static unsafe class NativeWindowFilter
             ImGuiWindowPtr window = ImGui.Internal.FindWindowByName($"###{canvas.DebugTitle}");
             if (window.Ptr != null) StockGaugeWindows.Add((nint)window.Ptr);
         }
+        foreach ((string name, string gauge) in UiGatePolicy.GaugeAttachedWindows)
+        {
+            if (UiGatePolicy.DrawGauge(true, true, gauge)) continue;
+            ImGuiWindowPtr attached = ImGui.Internal.FindWindowByName(name);
+            if (attached.Ptr != null) StockGaugeWindows.Add((nint)attached.Ptr);
+        }
     }
 
     private static bool IsStockGauge(ImGuiWindow* window) => StockGaugeWindows.Contains((nint)window);

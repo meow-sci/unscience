@@ -1,5 +1,11 @@
 # Iron Man flight, flight computer and render checks
 
+## KSA 5901 compatibility
+
+The RCS cache fixture models KSA 5807's derived-data flush, which resets the thruster global state to Zero; `RcsCacheChecks` follows the real Disable order (mark dirty, invalidate, flush, step) and requires EVA authority. `ThrusterController.RecomputeDynamicData` now takes `ReadOnlySpan<RocketState>` (5889).
+
+See [upgrade evidence and native acceptance](../plans/KSA_5901_UPGRADE.md).
+
 Managed Harmony checks linking the production flight, native flight-computer HUD, settings and
 render patch files against small fixtures of KSA's dispatch and lifecycle seams. Run:
 

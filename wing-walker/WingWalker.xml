@@ -103,6 +103,8 @@
       <Habitat Key="OpenSeat">
         <HabitableVolume M3="0.1" /><StorageVolume M3="0.0105" />
       </Habitat>
+      <!-- KSA 5823+: an able kitten controls the vessel only from a Control part's own habitat zone. -->
+      <Control />
       <Tank Key="OxygenBottle">
         <SphericalTank>
           <Material Ref="Aluminum.2014" Phase="Solid" />

@@ -703,16 +703,34 @@ public sealed partial class BlinkySubmod : ISubmod
     /// <summary>True when any tank-fed (PlumbedCore) core of this controller resolved a tank to draw from.</summary>
     private static bool ReachesPropellant(EngineController controller)
     {
-        var cores = controller.Cores;
-        if (cores == null) return false;
-
-        for (int i = 0; i < cores.Length; i++)
+        var cores = ControllerCores(controller);
+        for (int i = 0; i < cores.Count; i++)
         {
             if (cores[i] is not PlumbedCore plumbed) continue;
             if (PropellantFeedDiagnostics.CountTanks(plumbed.ResourceManager) > 0)
                 return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// Every core driven by this controller. KSA 5889 replaced <c>EngineController.Cores</c> with
+    /// <c>Rockets</c>; each <see cref="Rocket"/> exposes its core(s) through <c>Rocket.Cores</c>.
+    /// </summary>
+    private static List<RocketCore> ControllerCores(EngineController controller)
+    {
+        var result = new List<RocketCore>();
+        var rockets = controller.Rockets;
+        if (rockets == null) return result;
+
+        for (int i = 0; i < rockets.Length; i++)
+        {
+            if (rockets[i] == null) continue;
+            var cores = rockets[i].Cores;
+            for (int j = 0; j < cores.Length; j++)
+                if (cores[j] != null) result.Add(cores[j]);
+        }
+        return result;
     }
 
     private static void DiagnoseController(EngineController ctrl, int index)
@@ -725,14 +743,14 @@ public sealed partial class BlinkySubmod : ISubmod
         Console.WriteLine($"blinky:     Part.Stage         = {part.Stage}");
         Console.WriteLine($"blinky:     MinimumThrottle    = {ctrl.MinimumThrottle:F4}");
 
-        var cores = ctrl.Cores;
-        if (cores == null || cores.Length == 0)
+        var cores = ControllerCores(ctrl);
+        if (cores.Count == 0)
         {
-            Console.WriteLine("blinky:     Cores is null or empty");
+            Console.WriteLine("blinky:     Rockets have no cores");
         }
         else
         {
-            for (int i = 0; i < cores.Length; i++)
+            for (int i = 0; i < cores.Count; i++)
             {
                 // The ResourceManager lives on PlumbedCore (KSA 5487), the tank-fed base of
                 // Combustor, ThermalCore and AntimatterRamCore; SolidMotor cores legitimately have none.

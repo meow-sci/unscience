@@ -1,5 +1,11 @@
 # Iron Man managed checks
 
+## KSA 5901 compatibility
+
+`StaleConnectorChecks` runs the production `IronManStaleConnectorGuard` through real Harmony against a fixture of KSA 5866 `PartInstance.DropStaleConnectors()`: owned anchors kept in saved order with identities, stale indices dropped, child recursion, unmarked kittens unchanged, malformed records and unknown templates never throw, and removal restores native behavior.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5901_UPGRADE.md).
+
 ## KSA 5801 compatibility
 
 Fixtures now model the 11-argument Part constructor, keyed connector templates and native Components. Production serializers/modules are linked: tests exercise legacy Id migration, both patched world/blueprint serializer getters, repeat reconstruction and empty/duplicate/invalid records in addition to connected indices, copy and unload checks.

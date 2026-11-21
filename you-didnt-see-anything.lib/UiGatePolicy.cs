@@ -13,6 +13,14 @@ public static class UiGatePolicy
         "PitchYawRoll", "Sequence", "CrewPortraits", "Navball"
     };
 
+    /// <summary>
+    /// Native windows drawn outside <c>GaugeCanvas</c> but anchored to a stock gauge, keyed by ImGui
+    /// window name. KSA 5863's Crew Clock (<c>CrewClock.Draw</c> from <c>Program.OnDrawUiFrame</c>)
+    /// sits under GameTime and would otherwise float at the top centre while gauges are hidden.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> GaugeAttachedWindows =
+        new Dictionary<string, string>(StringComparer.Ordinal) { ["##crewClock"] = "GameTime" };
+
     public static bool DrawUi(bool gameUi, bool enabled, bool patchReady) => gameUi || (enabled && patchReady);
     public static bool HiddenPass(bool gameUi, bool enabled, bool patchReady) => !gameUi && enabled && patchReady;
     public static bool DrawGauge(bool hiddenPass, bool hideGauges, string id) =>

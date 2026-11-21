@@ -44,20 +44,21 @@ including after loads; no counter or additional scene state is saved.
 
 ## Version baseline
 
-- **Cataloged against:** KSA **2026.11.10.5801**, metadata date **2026-11-07**.
-- **Diffed from:** **2026.10.25.5707**, matching PREVIOUS and the prior recorded baseline.
+- **Cataloged against:** KSA **2026.11.16.5901**, metadata date **2026-11-17**.
+- **Diffed from:** **2026.11.10.5801**, matching PREVIOUS and the prior recorded baseline.
   Supplied source/Content trees are authoritative; in-repo `decomp/ksa` remains historical.
-- **Build references:** explicit CURRENT `dll/`; output redirected to a temporary distribution.
-  No native game installation is available on this macOS ARM64 host.
-- **Changelog coverage:** all 93 revisions **5708–5800** logged; **5801 unlogged**.
-- **Verification:** whole solution builds with 0 warnings/errors; all 19 managed suites, real-DLL
-  reflection/constructor/layout checks, live-source paint/canopy transforms, 19 isolated bootstrap
-  cases and distribution validation. **Static/managed only; native acceptance pending.**
+- **Build references:** plain `dotnet build`; `KSAFolder` defaults to the adjacent
+  `../ksa-game-assemblies/current/dll/`. No 5901 game installation was used on this macOS ARM64 host.
+- **Changelog coverage:** all 98 revisions **5802–5899** logged; **5900–5901 unlogged**.
+- **Verification:** whole solution builds with 0 warnings/errors; all 23 managed suites, real-DLL
+  5901 seam checks (negative-controlled against 5801), 19 isolated bootstrap cases and distribution
+  validation. **Static/managed only; native acceptance pending.**
 - **IVA follow-up:** explicit switch ownership in flight/editor; constructor-only helper. [Checks and acceptance](../plans/IVA_VISIBILITY_SWITCHES.md).
-- **Evidence:** [5801 impact and remediation](../plans/KSA_5801_UPGRADE.md). Dated area tables retain
+- **Evidence:** [5901 impact and remediation](../plans/KSA_5901_UPGRADE.md). Dated area tables retain
   historical citations; current dated sections supersede their compatibility status. Previous reports:
-  [5707](../plans/KSA_5707_UPGRADE.md), [5638](../plans/KSA_5638_UPGRADE.md),
-  [5482](../plans/KSA_5482_UPGRADE.md), [5438](../plans/KSA_5438_UPGRADE.md).
+  [5801](../plans/KSA_5801_UPGRADE.md), [5707](../plans/KSA_5707_UPGRADE.md),
+  [5638](../plans/KSA_5638_UPGRADE.md), [5482](../plans/KSA_5482_UPGRADE.md),
+  [5438](../plans/KSA_5438_UPGRADE.md).
 
 ## How to use on a game update
 
@@ -109,7 +110,13 @@ rocky-mcrock-face, save-yourself, skittles, sphinx, wing-walker, the-tick, thug-
 
 ---
 
-## Current status against 5801
+## Current status against 5901
+
+KSA 5901 fixes: Blinky diagnostics follow `EngineController.Rockets`; Pebbles releases only clutter
+viewports (5875 slot compaction had broken every Apply); Iron Man keeps connected anchors through the
+new native stale-connector load pass and survives the 5807 RCS-cache reset; You Didn't See Anything
+hides the new Crew Clock with GameTime; Wing Walker mounts gain a native Control module so riders keep
+5823 crew control. Iron Man Auto modes on an incapacitated kitten await a decision. [5901 evidence and acceptance](../plans/KSA_5901_UPGRADE.md).
 
 Beverage Cooler adds asset-only Red/Stainless Steel variants, native lid actuation and a 30 L
 food/scrubber locker. Globally unique PartModel keys correct the duplicate-body lid/all-red variant

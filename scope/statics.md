@@ -1,5 +1,15 @@
 # Sphinx — body-fixed imported GLB statics
 
+## KSA 5801 → 5901 verification (2026-11-20)
+
+Rev 5879 removed the cloud-shadow set from `StaticObjectRenderer.PipelineLayout` (10 → 9 sets; planet
+uniforms moved from set 9 to 8, `StaticObjectRenderer.cs:99-108,357-363`). Sphinx binds only sets 2/3,
+which are unchanged, and borrows the native pipeline and other bindings, so no code change was needed;
+the `SphinxPatches` comment is corrected. `StaticObject.frag` now samples SSAO and screen-space cloud
+shadows, so imported statics shade like stock statics. Terrain edits (5849–5857, 5874) can leave
+previously saved absolute positions slightly off the ground; Sphinx does not re-snap on load.
+Native visual acceptance remains pending. [5901 review](../plans/KSA_5901_UPGRADE.md).
+
 ## KSA 5707 verification (5638 → 5707, 2026-10-29)
 
 Verified statically against `2026.10.25.5707` (revs 5639–5703) from `2026.10.19.5638`. This is
@@ -210,8 +220,8 @@ Shaders: `Core/Shaders/Mesh/StaticObject.vert`, `StaticObject.frag`,
   `ShaderSlot × MaxFramesInFlight`. Alignment comes from `KSA.Rendering.Utils.MinStorageBufferOffsetAlignment`.
   The prepared `Renderer.FrameCount` stamp prevents a newly created or stale slice from being drawn.
 - Stock color command binds pipeline, viewport, global camera (set0), shared textures (set1),
-  CSM (set4), terrain shadows (set5), viewport lights (set6), AO (set7), cloud shadows (set8),
-  optional planet uniforms (set9), and PBR push constants. Sphinx borrows all that state, replacing
+  CSM (set4), terrain shadows (set5), viewport lights (set6), AO (set7), optional planet uniforms
+  (set8; set9 before 5879 removed the cloud-shadow set8), and PBR push constants. Sphinx borrows all that state, replacing
   only sets2/3 and vertex/index buffers. Recheck these **method bodies**, not just signatures.
   From 5640 on, a pipeline that fails to build is null and stock skips all binding, so the Sphinx
   colour postfix must skip as well. See the 5707 section.

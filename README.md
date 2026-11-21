@@ -71,14 +71,19 @@ closed lid edges address see-through surfaces; culling-aware ray tests protect t
 
 # game compatibility
 
-The current checkout targets **KSA 2026.11.10.5801**, upgraded from 2026.10.25.5707.
-The whole solution and all 19 managed suites pass; native game acceptance remains pending.
-This upgrade migrates the data-reference/key schema, preserves Iron Man anchors with legacy-save
-migration, fixes DOH material resolution and Vehicle Paint/native-highlight collisions, preserves
-Pebbles curvature/terrain blending, and updates Pyro for runtime SI atmospheres. Native pipeline
-allocations are explicitly disposed. Existing sidecar IDs/versions stay compatible.
-See [KSA_5801_UPGRADE](plans/KSA_5801_UPGRADE.md), [player compatibility](unscience/README.md#ksa-compatibility)
-and [ISSUES.md](ISSUES.md). Prior upgrade evidence: [5707](plans/KSA_5707_UPGRADE.md).
+The current checkout targets **KSA 2026.11.16.5901**, upgraded from 2026.11.10.5801.
+The whole solution and all 23 managed suites pass; native game acceptance remains pending.
+This upgrade fixes Blinky's diagnostics for the engine/rocket rework, Pebbles Apply and save replay
+under the new clutter viewport slots, Iron Man anchors that native load would have dropped and its
+RCS authority after mode toggles, and the new Crew Clock during F2 hidden gauges. Sidecar IDs and
+versions are unchanged. See [KSA_5901_UPGRADE](plans/KSA_5901_UPGRADE.md) and
+[player compatibility](unscience/README.md#ksa-compatibility).
+
+The previous (5801) upgrade migrated the data-reference/key schema, preserved Iron Man anchors with
+legacy-save migration, fixed DOH material resolution and Vehicle Paint/native-highlight collisions,
+preserved Pebbles curvature/terrain blending and updated Pyro for runtime SI atmospheres.
+See [ISSUES.md](ISSUES.md) for known gaps. Prior upgrade evidence: [5801](plans/KSA_5801_UPGRADE.md),
+[5707](plans/KSA_5707_UPGRADE.md).
 
 The October 25 startup follow-up fixes Full Canopy parsing of Windows shader line endings,
 orders the shared physics handoff before existing call-wrapping transpilers, and reports complete

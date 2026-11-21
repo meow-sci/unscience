@@ -36,6 +36,7 @@ public static class IronManConnectorPatches
         try
         {
             IronManAnchorSerializers.Apply(harmony);
+            IronManStaleConnectorGuard.Apply(harmony);
             harmony.Patch(_serialize, postfix: new HarmonyMethod(typeof(IronManConnectorPatches), nameof(SerializePostfix)));
             harmony.Patch(_construct,
                 prefix: new HarmonyMethod(typeof(IronManConnectorPatches), nameof(ConstructPrefix)),
@@ -53,6 +54,7 @@ public static class IronManConnectorPatches
     public static void Remove(Harmony harmony)
     {
         IronManAnchorSerializers.Remove(harmony);
+        IronManStaleConnectorGuard.Remove(harmony);
         if (_serialize != null) harmony.Unpatch(_serialize, AccessTools.Method(typeof(IronManConnectorPatches), nameof(SerializePostfix)));
         if (_construct != null)
         {

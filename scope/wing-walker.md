@@ -59,6 +59,27 @@ The later appearance pass strengthens grey/brown grime, mottled fading, dirty ed
 streaks in the same 256px maps. Geometry, square-frame UVs, native references and save ownership
 remain unchanged; active-scene-only export removes stray scene/node metadata.
 
+## KSA 5801 → 5901 verification (2026-11-20)
+
+Patch targets, injected `KittenRenderable` fields, seat/boarding/AddCrew and editor seams are unchanged;
+`PartCloner.Gather` still precedes module save capture on both clone paths. 5810 appended `bool loop =
+true` to `AnimatedRenderable.PlayAnimation/SetAnimation`; the appearance patch's typed calls keep
+looping idles, and the native harness now asserts the three-argument public surface and its default.
+That harness loads the real KSA.dll but cannot complete against `current/dll/` alone (Tomlet,
+MemoryPack.Core and Microsoft.Extensions.Logging.Console are not copied there).
+
+**Control (5823): both mounts are now command points.** A vessel is controllable only with an able
+kitten in a Control part's own habitat zone (`Vehicle.cs:704-718,3813-3830`); the `OpenSeat` habitat joins
+no other zone, so rider-only craft had lost control. `Unscience_WingWalker_Seated` now declares a native
+`<Control />` (inherited by the standing mount). `ScanControls` resolves it to the seat's own zone
+(`HabitatZone.FindZone`, every non-carried habitat forms a zone): an able seated rider gives
+`CommandPodCrew.Able`, an empty or incapacitated seat reports NoCrew/CrewIncapacitated, never the
+probe-core "Powered" fallback. Native side effects of a Control part: "Control from here" in the part
+menu, split/breakup vessel naming and selection (`Control.FindWinning`, `PartFailureEvent`), zone labels,
+and armed solid rockets that fire on command rather than automatically on Control-less craft. The
+optional `ControlData VehicleName` record is native-saved. The native harness asserts one Control on each
+final part. [5901 review](../plans/KSA_5901_UPGRADE.md).
+
 ## Editor crew duplication guard (5801)
 
 Editor selection, pickup and gizmo start unassign occupied external mounts in the affected subtree.
@@ -91,7 +112,7 @@ is pending. [Evidence](../plans/WING_WALKER.md#editor-crew-duplication-follow-up
 | `IVASeat.GetSeatedModelPointAsmb(in float3, double): double3` | Postfix corrects standing origin along seat up by `0.7552 + seatedOffset.Z`, leaving `PositionAsmb` as the camera eye. Native bone/portrait queries also use this path. `KSA/IVASeat.cs:56`; inspect seat axes and native portrait height on upgrades. |
 | `IVASeat.TemplateId`, `Parent.FullPart.Template.Id`, `Renderable`, `ForwardAxisAsmb`, `UpAxisAsmb`; `PartTree.Modules.Get<IVASeat>()` | Exact `CrewSeat` key plus part template IDs select only these parts; renderable identity limits the animation override. `ExternalCrewParts.cs`; `KSA/IVASeat.cs`, `Part.cs`, `PartTree.cs`. |
 | `Program.Instance.SuperMeshRenderSystem`, `RenderedViewport`, `ResourceFrameIndex`, `GetPlayerDeltaTime()`, `ControlledVehicle`, `VehiclesInFrame`, `Editor`; `IViewport.Visible/Is/GetCamera`; `Vehicle.IsDisposed/Parts/IsLargeEnoughToRender/GetMatrixAsmb2Ego`; `PartTree.IsDisposed`; `EditingSpace.GetMatrixAsmb2Ego` | Frame/view ownership, culling and transforms; changes can cause missing or duplicate crew without a compile error. `WingWalkerPatches.Rendering.cs`. |
-| `WingWalker.xml` | `Unscience_WingWalker_Seated`, `Unscience_WingWalker_Standing` (inherits seated); native `IVASeat` key `CrewSeat`, helper `EVADoor` key `Door` with `SeatId="CrewSeat"`, habitat, oxygen/water tanks, collider and `ToSurface` connector. Both parts have `External Crew` and native `Capsules` editor tags (the standing template inherits the tag list). No habitat passage is implied by the mount; fluid connections are separate. KSA owns food/LiOH in habitat storage and the life-support state. Food and scrubber supplies are local and isolated by default; there is no shielding or Control module. |
+| `WingWalker.xml` | `Unscience_WingWalker_Seated`, `Unscience_WingWalker_Standing` (inherits seated); native `IVASeat` key `CrewSeat`, helper `EVADoor` key `Door` with `SeatId="CrewSeat"`, habitat, oxygen/water tanks, collider and `ToSurface` connector. Both parts have `External Crew` and native `Capsules` editor tags (the standing template inherits the tag list). No habitat passage is implied by the mount; fluid connections are separate. KSA owns food/LiOH in habitat storage and the life-support state. Food and scrubber supplies are local and isolated by default; there is no shielding. A native `Control` module (5901) makes an able rider a command point for the vessel. |
 | Beach chair assets | `Meshes/WingWalker_BeachChair.glb` declares `Unscience_WingWalker_BeachChair` (worn rainbow webbing/white plastic), `_Frame` (square gold-foil frame) and coarse `_VM` picking panels/envelopes. Two external `PartModel`s share the Chair subpart. Three external 256px diffuse/normal/ORM maps supply webbing/plastic; only the frame references native `CoreSurfacesB_Material`. The GLB embeds no materials/images. UV U=0.495–0.605/V=0.39–0.49 selects wrinkled foil from `CoreSurfacesB_Subpart_TrussFFoilA`, used by `CoreStructuralA_Prefab_StrutOcto2HB`. Recheck material/texture IDs and atlas island on game updates. Core payload is not distributed. Seated eye/ground connector and five legacy IDs/keys/order remain; Headrest/Runners/Base are empty aliases. Six collider boxes approximate the seat/back, leg envelopes and armrests. [Editable art](../wing-walker/Art/README.md). |
 | Standing strap art | `WingWalker.xml` registers `Meshes/WingWalker_StandingMount.glb` via `MeshAtlas`, visible mesh `Unscience_WingWalker_FootStraps` and its `_VM` picking twin, plus `Unscience_WingWalker_Leather` and three diffuse/normal/ORM PNG textures. KSA 5801 `MeshAtlasFileReference` reads mesh names and vertices, ignoring node transforms; export bakes +X-forward/-Z-up part space. Boot origin and surface connector are X=0.01404/Y=0.00495/Z=0.2901232; collider bounds are 0.082 × 0.524 × 0.11 m. Standing patches Chair to the straps and Headrest/Runners/Base to an empty template, preserving all five legacy slots in order and the EvaDoor module. Seated art uses its own beach chair atlas. Blender fit used installed 5707.1 boots; native 5801 visual acceptance is pending. [Editable art](../wing-walker/Art/README.md). |
 | Host wiring | `unscience/Mod.cs`, `Patcher.cs`, `unscience.csproj`, `mod.toml` instantiate/install and package shared asset; `wing-walker/Mod.cs`, `Patcher.cs`, project and manifest provide a standalone development host. One host at a time. `WingWalkerPatches.Apply/Remove` own rollback and unpatching. |

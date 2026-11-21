@@ -6,13 +6,16 @@ using Brutal.Numerics;
 namespace KSA;
 
 // Mirrors of the KSA 2026.10.19.5638 RCS authority cache; line numbers are under decomp/KSA/.
+// KSA 5889 (5901) moved per-core state to RocketState; RecomputeDynamicData now takes rocket states
+// (ThrusterController.cs:84) and the derived-data flush resets the global state to Zero
+// (PartTree.cs:1352-1355, modelled in OrientationFixture.cs).
 // Engines, rocket cores, moles and gimbals are omitted: they stay idle in these fixtures, so only
 // the thruster terms of the native update gate remain.
 
 [Flags]
 public enum ThrusterMapFlags { None = 0, PitchUp = 1, RollRight = 2, TranslateForward = 4 }
 public struct EmptyStruct { }
-public struct RocketCoreState { }
+public struct RocketState { }
 
 /// <summary>ThrusterAuthority.cs:6-32, reduced to the torque total the flight computer reads.</summary>
 public struct ThrusterAuthority
@@ -74,7 +77,7 @@ public class ThrusterController(Part root)
     /// <summary>Signature of ThrusterController.cs:84; the nullable-map seam (:124-133) is verbatim.</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void RecomputeDynamicData(ref ThrusterControllerState state, ref ThrusterAuthority negativeAuthority,
-        ref ThrusterAuthority positiveAuthority, ReadOnlySpan<RocketCoreState> coreStates, float3 centerMassAsmb,
+        ref ThrusterAuthority positiveAuthority, ReadOnlySpan<RocketState> rocketStates, float3 centerMassAsmb,
         float ambientPressure, floatQuat ctrl2Body)
     {
         RecomputeCalls++;
@@ -98,7 +101,7 @@ public class ThrusterController(Part root)
     {
         var negative = ThrusterAuthority.Zero;
         var positive = ThrusterAuthority.Zero;
-        RecomputeDynamicData(ref State, ref negative, ref positive, ReadOnlySpan<RocketCoreState>.Empty,
+        RecomputeDynamicData(ref State, ref negative, ref positive, ReadOnlySpan<RocketState>.Empty,
             float3.Zero, 0f, floatQuat.Identity);
         return State.ControlMap;
     }
@@ -145,7 +148,7 @@ public static class Rocket
         var positive = ThrusterAuthority.Zero;
         foreach (var thruster in thrusters)
             thruster.RecomputeDynamicData(ref thruster.State, ref negative, ref positive,
-                ReadOnlySpan<RocketCoreState>.Empty, float3.Zero, 0f, ctrl2Body);
+                ReadOnlySpan<RocketState>.Empty, float3.Zero, 0f, ctrl2Body);
         // Stands in for negativeAuthority.ConservativeWith(positiveAuthority) (:213).
         global.Authority = positive;
     }

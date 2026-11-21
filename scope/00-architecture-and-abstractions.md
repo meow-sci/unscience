@@ -1,5 +1,15 @@
 # 00 — Unscience supermod shell + `ksa-abstractions.lib` game-integration scope
 
+## KSA 5801 → 5901 verification (2026-11-20)
+
+Shell entry points (`Program.OnDrawUiFrame`/`OnFrame`/`OnDrawUiConsole`/`Dispose`, `DrawProgramMenusHook`),
+`GameSettings.OnKeyAll` (still first in `Program.OnKey`) and the `PrepareFrame` handoff order are
+unchanged; 5888 only adds an inactive kFS `BeforeInputEvents` call. The one new native binding is Ctrl+F6
+(Crew Clock); no Unscience hotkey uses F6 or Ctrl. `PartRenderFilter`/`IvaForceRender` seams are
+unchanged. New HM-2/HM-3 placeholder interiors (5883) are `Internal` PartModels built from inverted
+meshes; IvaForceRender would draw them in exterior views, where back-face culling should hide them
+(in-game check). [5901 review](../plans/KSA_5901_UPGRADE.md).
+
 ## Optional F2 window retention (5801)
 
 Unscience registers `YouDidntSeeAnythingSubmod` and its scene participant alongside existing

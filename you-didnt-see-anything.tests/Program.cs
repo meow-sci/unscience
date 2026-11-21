@@ -19,6 +19,9 @@ foreach (bool patched in new[] { false, true })
 Check(!UiGatePolicy.DrawGauge(true, true, "Navball"), "Stock gauge hidden");
 Check(UiGatePolicy.DrawGauge(true, true, "custom-gauge"), "Custom gauge retained");
 Check(UiGatePolicy.DrawGauge(false, true, "Navball"), "Normal UI retains gauges");
+Check(UiGatePolicy.GaugeAttachedWindows.TryGetValue("##crewClock", out string? clockGauge) && clockGauge == "GameTime"
+    && !UiGatePolicy.DrawGauge(true, true, clockGauge) && UiGatePolicy.DrawGauge(true, false, clockGauge),
+    "KSA 5863 Crew Clock hides and shows with the GameTime gauge it is anchored to");
 
 foreach (bool detached in new[] { false, true })
 foreach (bool hideGauges in new[] { false, true })

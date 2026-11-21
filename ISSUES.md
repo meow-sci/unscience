@@ -1,4 +1,24 @@
-## Current triage — KSA 2026.11.10.5801
+## Current triage — KSA 2026.11.16.5901
+
+Code upgrade and managed validation: [5901 review](plans/KSA_5901_UPGRADE.md). No native game run
+was possible; every earlier native acceptance item remains open.
+
+Fixed new regressions: Blinky's compile against `EngineController.Rockets`; Pebbles Apply/replay
+throwing on part-thumbnail/portrait viewports (5875 clutter slots); Iron Man connected anchors dropped
+by native `DropStaleConnectors` on world/blueprint load (5866) and RCS authority lost when the new
+rocket-control Zero reset overwrote its invalidation (5807); You Didn't See Anything retaining the new
+Crew Clock while gauges are hidden (5863).
+
+Wing Walker mounts now carry a native Control module, so an able rider keeps a vessel controllable
+under 5823's per-zone rule (native acceptance pending).
+
+Open decision: Iron Man rocket-mode kittens keep Auto attitude/burn after incapacitation, while
+player input is locked (native release does not run for kittens).
+
+Not attributed to 5901: Humble Arteest's immediate-white report (paint bits and anchors intact),
+the Wing Walker editor crew and IVA items below, and the 5801 despawn/shutdown follow-up.
+
+## Previous triage — KSA 2026.11.10.5801
 
 **Wing Walker editor symmetry duplicated crew names:** fixed in code. Selection/pickup/gizmo start
 unassigns affected external crew; the pre-copy guard also catches reassignment after selection.

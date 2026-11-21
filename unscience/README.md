@@ -257,9 +257,21 @@ the vehicle editor is open.
 
 ## KSA compatibility
 
-The current checkout targets **KSA 2026.11.10.5801**, diffed from 5707.
-The build, 18 managed suites, metadata/source checks and bootstrap harness pass; native acceptance
-is pending. See [5801 upgrade report](../plans/KSA_5801_UPGRADE.md).
+The current checkout targets **KSA 2026.11.16.5901**, diffed from 5801.
+The build, 23 managed suites, metadata/source checks and bootstrap harness pass; native acceptance
+is pending. See [5901 upgrade report](../plans/KSA_5901_UPGRADE.md).
+
+- **Iron Man** equipment stays on its custom anchors when a world or blueprint loads (5901's new
+  load-time connector cleanup would otherwise detach it and show a yellow alert), and RCS keeps
+  working right after switching between EVA and rocket mode. Anchor links already lost by loading
+  and re-saving on 5901 without this fix cannot be recovered.
+- **Pebbles** Apply, Restore and save-load replay work again on 5901.
+- **You Didn't See Anything** hides the new Crew Clock along with the stock gauges.
+- **Wing Walker** seats and standing mounts are command points: an able rider can fly the vessel
+  (5901 only counts crew in a control part's own compartment), with "Control from here" in the part menu.
+- An incapacitated Iron Man kitten keeps any Auto attitude/burn running and cannot cancel it.
+
+Earlier (5801) changes:
 
 - Existing Iron Man anchor payloads migrate from legacy native Id attributes; new world/blueprint
   saves use an anchor module record. Native connected-anchor and undo/redo acceptance remains open.

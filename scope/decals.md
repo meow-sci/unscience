@@ -1,5 +1,14 @@
 # Decals (graffiti) — Game Integration Scope
 
+## KSA 5801 → 5901 verification (2026-11-20)
+
+`Program.ColorFormat` remains `B10G11R11UfloatPack32` (since 5801; `Program.cs:229`) and the offscreen
+target, resolve → GridPass order and `RenderTarget` are unchanged; 5816's dynamic rendering touches no
+Graffiti seam (it uses `VkRenderPass.NullHandle`). `Global.glsl`'s `GlobalLighting` grew by eight ints and
+`TextureSet.glsl` gained macros; Graffiti compiles against these live headers, so its runtime shader
+compile needs a native check. Decal lighting ignores cloud shadows and the new 5876 cloud ambient tint,
+so decals may read brighter than the hull under overcast skies. [5901 review](../plans/KSA_5901_UPGRADE.md).
+
 ## 5801 native playtest: despawn and shutdown
 
 `GraffitiSubmod.Lifetime.cs` owns Dispose/FreeGpu/WaitIdle. The resource test includes pipeline,

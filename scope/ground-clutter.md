@@ -1,5 +1,25 @@
 # Ground clutter: Pebbles
 
+## KSA 5801 → 5901 verification (2026-11-20)
+
+Rev 5875 compacts per-viewport clutter state from eight `ShaderSlot` entries to five clutter slots
+owned only by Main/Secondary viewports. `ClutterEcotypeRenderData.ReleaseViewport`/`ReleaseCell`
+now call `GroundClutterRenderer.ResolveViewportSlot`, which throws for any other registered viewport
+(`GroundClutterRenderer.cs:401-446`); `ViewportRegistry.Views` always includes the part-thumbnail and
+two portrait viewports. `ClutterResidency.ReleaseDetached` released every registered viewport, so
+**every Apply and save-load replay failed** after the first ecotype. **Fixed:** release only viewports
+for which `GroundClutterRenderer.HasViewportSlot` is true, mirroring native `OnViewportUnregistered`.
+The residency fixture models the compacted slot (unmapped viewports throw) and registers thumbnail and
+portrait viewports; removing the guard reproduces the native exception.
+
+Checked unchanged: Pebbles' reflected fields/methods, `BuildMaterialIndirection(string)`, material
+buffer, push constants and instance layout; `Solid.frag` marker (once) with cloud shadows removed and
+sets renumbered by native code; 5885 host-memory buffers are planet BVH only; the 8 → 5 arrays are
+covered by generic retirement walking. Native Apply/Restore/replay with secondary viewports, thumbnails
+and portraits remains pending. Saved displaced-object positions can sit off the 5849–5857/5874 terrain.
+
+See [KSA 5901 upgrade review](../plans/KSA_5901_UPGRADE.md).
+
 ## KSA 5707 → 5801 verification (2026-11-08)
 
 `ClutterEcotypeReference.Key`, biome/collider keys and resolved material/mesh/texture lists replace
@@ -267,7 +287,7 @@ Targets:
 - `StagingPool._submitted`, `_commandBufferIndex`: discard the outer transaction's unsubmitted command buffers after preparation failure before pool disposal.
 - `ClutterEcotypePhysicalData._compoundShapes`, `_primitiveShapes`: reachable partial-shape retirement; `ConstraintSim.UnlockShapes`, Bepu shape ownership/removal.
 - Partial retirement inspects direct public/nonpublic instance fields only on the six captured native ownership classes. It recognizes `BufferEx`, `BufferPartitionInfo`, mapped memories, descriptor pools/layouts, samplers/image views, `SimpleVkTexture`, `SimpleComputePipeline`, `SimpleGraphicsPipeline`, and their collections. Fields holding `MappedMemory` at any nesting (`FieldShapes.Holds`; 5638 `MappedMemory[][]`) are unmapped before any other field is released. Physical `MeshAtlas`/`PlacementData` references are borrowed and skipped. Resource field layout changes require re-audit. The 5707 re-audit found only the new `_opaqueDepthNormalPrePassRenderers` pipeline list, which the collection rule covers.
-- KSA 5629+ residency surface (public, no reflection): `ViewportRegistry.Views`, `IViewport.ShaderSlot`, `ClutterEcotypeRenderData.ReleaseViewport(IViewport)`, `ResolvePendingReleases()`, `GenerationViewport`. The release sequence must keep mirroring `GroundClutterRenderer.OnViewportUnregistered`; if residency moves to the renderer or gains other per-viewport state, `ClutterResidency` needs review.
+- KSA 5629+ residency surface (public, no reflection): `ViewportRegistry.Views`, `ClutterEcotypeRenderData.ReleaseViewport(IViewport)`, `ResolvePendingReleases()`, `GenerationViewport`, and (5875) `GroundClutterRenderer.HasViewportSlot`/`ResolveViewportSlot` — residency is indexed by a clutter slot only Main/Secondary viewports own, not `IViewport.ShaderSlot`. The release sequence must keep mirroring `GroundClutterRenderer.OnViewportUnregistered`, including its `HasViewportSlot` guard; if residency moves to the renderer or gains other per-viewport state, `ClutterResidency` needs review.
 - `GroundClutterGpuMaterial` native layout, texture bindless IDs, flags bits 31/30 reserved by Pebbles, and the shader's `materialData.flags`, `diffuseTextureId`, `globalTextures`, `textureSampler`, `inUv`, diffuse conversion and terrain modulation statement.
 - Native 256 candidates/cell, 16 physical scale buckets, five LODs, uint object/material indirection and transformed position/normal/UV layout; `CubeCellGrid.GetCellWidth` call convention follows the renderer's actual MeanRadius argument.
 

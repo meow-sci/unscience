@@ -1,5 +1,11 @@
 # Pebbles
 
+## KSA 5901 compatibility
+
+KSA 5875 indexes clutter residency by a compacted slot that only Main and Secondary viewports own; releasing a part-thumbnail or portrait viewport throws. Detached arrays now release only viewports with `GroundClutterRenderer.HasViewportSlot`, matching the renderer. This restores Apply, Restore and save-load replay, which failed on 5901 before the fix. Recipes are unchanged; native acceptance with secondary viewports, thumbnails and portraits is pending.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5901_UPGRADE.md).
+
 ## KSA 5801 compatibility
 
 Native keys and resolved mesh/material/texture lists replace the old Name/Alias/Id/Get seams. Capture/replay preserves optional curvature/domain/spacing and terrain blend settings; older recipes inherit current stock values. Native stride buffers and preview input are explicitly owned; interrupted-build retirement includes terrain and curvature LUT resources. Recipe IDs/versions stay unchanged. Curvature/GPU/collision parity still needs native acceptance.

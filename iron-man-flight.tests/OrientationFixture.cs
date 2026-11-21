@@ -42,7 +42,25 @@ public partial class PartTree
     public Vehicle? OwningVehicle;
     public ModuleStateful<ThrusterController, ThrusterControllerState,
         ThrusterControllerGlobalState, EmptyStruct>.StateList States = new();
+    private DerivedData _derivedDirty;
+
+    // KSA 5901 PartTree.cs:628-700: RecomputeAllDerivedData only marks data dirty; FlushDirtyDerived
+    // (Program.PrepareFrame, before vehicle solvers) or EnsureDerived runs it, and
+    // RecomputeRocketControls (:1340-1356) now ends by resetting the thruster global state to Zero.
+    public void RecomputeAllDerivedData() => _derivedDirty = DerivedData.All;
+    public void FlushDirtyDerived() => EnsureDerived(DerivedData.All);
+    public void EnsureDerived(DerivedData needed)
+    {
+        DerivedData run = needed & _derivedDirty;
+        if (run == DerivedData.None) return;
+        _derivedDirty &= ~run;
+        if ((run & DerivedData.RocketControls) != 0)
+            States.GetMutableGlobalStateForInitialization() = ThrusterControllerGlobalState.Zero;
+    }
 }
+
+[Flags]
+public enum DerivedData { None = 0, StaticMass = 2, RocketControls = 8, All = StaticMass | RocketControls }
 
 public class VehicleEditingSpace : IFollowable
 {

@@ -49,12 +49,33 @@ public sealed class PartTemplate
     public List<Part.Connector.TemplateBase> Connectors = new();
 }
 
+public sealed class PartConnectorInstance
+{
+    [XmlAttribute] public int Index;
+    [XmlAttribute] public ulong ConnectedLocalInstanceId;
+}
+
 public sealed class PartInstance
 {
     public List<ModuleBase.SaveDataBase> Components = new();
     [XmlAttribute] public string InstanceOf { get; set; } = "";
     public List<int> ConnectedIndices = new();
+    public List<PartConnectorInstance>? Connectors;
+    public List<PartInstance>? Children;
     public PartTemplate GetTemplate() => PartTemplate.Library[InstanceOf];
+
+    // KSA 5866 semantics (world and blueprint load, before construction): drop saved connector
+    // references whose index is at or beyond the template's connector count, then recurse.
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public int DropStaleConnectors()
+    {
+        int dropped = 0;
+        if (Connectors != null && PartTemplate.Library.TryGetValue(InstanceOf, out var template))
+            for (int i = Connectors.Count - 1; i >= 0; i--)
+                if ((uint)Connectors[i].Index >= (uint)template.Connectors.Count) { Connectors.RemoveAt(i); dropped++; }
+        for (int i = 0; i < (Children?.Count ?? 0); i++) dropped += Children![i].DropStaleConnectors();
+        return dropped;
+    }
 }
 
 public sealed class Part : Part.Connection.IConnector

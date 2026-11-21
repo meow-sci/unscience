@@ -172,7 +172,9 @@ internal static class FreeFallinShaderChecks
 
     private static string? FindMeshShaders()
     {
-        string? root = Environment.GetEnvironmentVariable("KSAFolder");
+        // Same resolution as the real-DLL probes: run-time KSA_DLL_DIR/KSAFolder, else the KSAFolder
+        // baked in at build time, so a plain build-and-run still checks the adjacent Content tree.
+        string? root = Path.GetDirectoryName(KsaAssemblyProbe.KsaDllPath());
         if (string.IsNullOrWhiteSpace(root)) return null;
         foreach (string content in new[] { Path.Combine(root, "Content"), Path.Combine(root, "..", "Content") })
         {

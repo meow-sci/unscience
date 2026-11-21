@@ -37,6 +37,11 @@ public static class IronManRcsOrientationPatches
     /// <summary>Call only at the joined physics handoff when activation membership changes.</summary>
     public static void InvalidateCache(KittenEva kitten)
     {
+        // KSA 5807+ ends RecomputeRocketControls by resetting this state to Zero. Enable/Disable
+        // first mark derived data dirty (StopEngines/Configure), and PartTree.FlushDirtyDerived runs
+        // before the next vehicle solve, so a pending recompute would overwrite the invalidation
+        // below with Zero. Run it now; that clears its dirty bit so the later flush leaves it alone.
+        kitten.Parts.EnsureDerived(DerivedData.RocketControls);
         var states = ModuleStateful<ThrusterController, ThrusterControllerState,
             ThrusterControllerGlobalState, EmptyStruct>.InitializeHotPathList(kitten.Parts.States);
         // Changing eligibility can change the mapping even when the control frame is unchanged

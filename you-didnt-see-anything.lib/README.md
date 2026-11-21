@@ -1,5 +1,11 @@
 # You Didn't See Anything library
 
+## KSA 5901 compatibility
+
+KSA 5863 adds the Crew Clock as a separate `##crewClock` window anchored under the GameTime gauge. With Hide Gauges on it is now hidden together with GameTime (`UiGatePolicy.GaugeAttachedWindows`); previously it floated at the top centre during F2. Native acceptance with Life Support hazards is pending.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5901_UPGRADE.md).
+
 This library provides the optional Unscience toolbox control for keeping ImGui windows visible while KSA's F2 UI hide is active. The feature starts off. The options restrict retained windows to detached OS viewports and independently suppress the stock flight gauges. F2 retains its normal behavior while the feature is off. The game menu bar and world selection overlays stay hidden during F2.
 
 The toolbox's native-save sidecar records the three scene options. Loading a vanilla save or starting a new scene resets them to off; no ImGui pointers or temporary rendering state are saved. A malformed or newer record is retained by the sidecar coordinator. Window visibility and layout are still owned by ImGui or the respective mod.

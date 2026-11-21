@@ -45,7 +45,8 @@ public static class SphinxPatches
         // Opaque and blended calls always bind complete game lighting state when a nearby body
         // exists. The terrain variant has a different shader and must never submit these meshes.
         // KSA 5640+ leaves a bucket's pipeline null (and binds nothing) when the device cannot
-        // build its 10-set layout; drawing then would use whatever pipeline was bound last.
+        // build its 9-set layout (10 before KSA 5879 moved cloud shadows off-screen); drawing then would use
+        // whatever pipeline was bound last.
         if (pipeline.IsNull() || viewport.GetCamera().NearbyCelestial == null || bucket == StaticObjectModel.DrawBucket.OpaqueTerrain) return;
         SphinxSubmod.Instance?.Record(commandBuffer, viewport, frameIndex, false, bucket == StaticObjectModel.DrawBucket.Blended);
     }

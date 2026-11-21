@@ -1,5 +1,23 @@
 # Iron Man — EVA editor, connectors and vessel physics
 
+## KSA 5801 → 5901 verification (2026-11-20)
+
+| Integration | 5801 → 5901 and current owner |
+|---|---|
+| `PartInstance.DropStaleConnectors()` (**new**, `PartInstance.cs:113-139`) | World load (`CelestialSystem.DeserializeSave`, `:764`) and blueprint load (`UncompressedVehicleSave.Load`, `:121`) now delete saved connections whose `Index` ≥ template connector count before construction. Owned anchors are that suffix, so connected anchors loaded free with a yellow alert. **Fixed:** `IronManStaleConnectorGuard` (prefix/postfix, installed and removed with `IronManConnectorPatches`) hides only a marked backpack's validated owned range, restores it in saved order and never throws; native recursion, unmarked parts and genuinely stale indices are unchanged |
+| `PartTree.RecomputeRocketControls` → `ThrusterControllerGlobalState.Zero` (**new reset**, `PartTree.cs:1352-1355`) | Enable/Disable mark derived data dirty before `InvalidateCache`; `PartTree.FlushDirtyDerived` (`Program.cs:2468`, before vehicle solvers) then replaced the invalidation with Zero, reviving the 5638 dead-RCS bug on Identity frames. **Fixed:** `InvalidateCache` first runs `kitten.Parts.EnsureDerived(DerivedData.RocketControls)` |
+| `ThrusterController.RecomputeDynamicData(..., ReadOnlySpan<RocketState> rocketStates, ...)` | Parameter type changed with 5889; the transpiler resolves by name and still finds one `ManualControlMap` read. Fixture signature updated |
+| `KittenEva.IsControllable => !_incapacitated` (5804) with 5823 Auto release | `Vehicle.UpdateControl` samples control before `UpdateIncapacitated`, so native `ReleaseFlightComputer` never fires for kittens. An incapacitated rocket-mode kitten keeps Auto attitude/burn while player input and gauge buttons are locked out. **Decision pending**; base gauge-button policy greys out as natively intended |
+| Private 11-argument `Part` ctor, `PartCloner.Construct` | Signature unchanged; the new module append in `Construct` runs after the copy postfix |
+
+Sidecar mode IDs/versions and the v1 anchor envelope are unchanged. Anchor connections already lost by
+an unfixed 5901 load-and-save cannot be recovered. Managed checks run the production guard through real
+Harmony (kept/dropped/ordered/unmarked/malformed/missing-template/unpatched cases) and model the dirty
+flush; real-DLL `Ksa5901Checks` pin both load callers and the Zero reset. Native connected-anchor load,
+blueprint load and RCS toggling remain acceptance work.
+
+See [KSA 5901 upgrade review](../plans/KSA_5901_UPGRADE.md).
+
 ## KSA 5707 → 5801 verification (2026-11-08)
 
 | Integration | 5707 → 5801 and current owner |
@@ -277,6 +295,8 @@ signature/overload changes; private string names must be re-grepped on every gam
 | `VehicleSaveData.Create(string,PartTree)` | metadata postfix | Preserve Character for a live KittenEva with this exact authored root, including after disabling; no character guessed for unrelated trees. |
 | internal `Part.GetReferenceWithChildren(ref uint,PartInstance,bool)` | connector serialization postfix | Set marked instance Id only for owned nodes, preserving original Id, stock prefix count and ordered owned suffix. |
 | private `Part(string?,PartTemplate,PartInstance?,TransformDataReference<SubPartTemplate>?,Part?,TransformReference?,int,int,int,Part?,bool)` (**@5801**, `Part.cs:1601`) | constructor prefix/postfix | Every construction chains here. `__0` name, `__1` template and `__2` instance retain their positions; decode the native anchor module/legacy migrated payload and restore nodes once before index reconstruction. `IronManConnectorPatches.cs:14-19,76-87`; world/blueprint serializers and passive module are documented in the 5801 section above. |
+| `PartInstance.DropStaleConnectors()` (**new @5901**, `PartInstance.cs:113`) | stale-connector prefix/postfix (`IronManStaleConnectorGuard`) | Exact empty-parameter lookup. Must keep running before construction on world and blueprint load and keep deleting by `Index >= template.Connectors.Count`. Keep only `[StockConnectorCount, +Anchors.Count)` of a decodable marked instance; never throw (world-load call site is outside KSA's per-vehicle guard). |
+| `PartTree.EnsureDerived(DerivedData)`; `RecomputeRocketControls` Zero reset (**@5901**) | direct API from `InvalidateCache` | Run the pending rocket-control recompute before writing the invalidated state, or the next `FlushDirtyDerived` overwrites it with Zero. |
 | `Part(Part source, Part? parent)` (**new @5707**, `Part.cs:1556`) | copy-constructor postfix | Used by `PartCloner` (duplicate, Copy Tree, symmetry/radial, clusters). Connectors are rebuilt from the template, then reconnected by source index (`PartCloner.cs:162-185,258-280`), so `CopyOwned` must re-add the source's anchors in order before `Connect`. Unmodified kittens and stock parts gain nothing. |
 
 One private field (`Vehicle._navBallMarkerData`, type-checked before patching) is reached through Harmony's
@@ -367,6 +387,10 @@ outside the transaction). It preserves the other endpoint; if bulk flow
 would be lost or a reconnect fails, it retains original links and passive hooks, logging the reason.
 Existing equipment is never silently deleted. Native behavior after completely removing rendering
 support follows the game's original EVA limitations.
+
+Since 5901 native load runs `PartInstance.DropStaleConnectors()` before construction; the stale-
+connector guard keeps the owned suffix of decodable marked backpacks. Without Iron Man loaded, native
+load drops those references (equipment falls back to surface attachment) and shows the yellow alert.
 
 ## Validation and open native acceptance
 

@@ -165,6 +165,16 @@ shutdown, with unchanged decal capture/replay. Shutdown hook/device guards are r
 
 [Evidence and native acceptance](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
 
+## KSA 5801 → 5901 verification (2026-11-20)
+
+Native world and blueprint load now run `PartInstance.DropStaleConnectors()` before construction
+(5866), which would delete Iron Man's owned anchor connection references. `IronManStaleConnectorGuard`
+keeps exactly the decodable owned range; the v1 envelope, sidecar IDs and versions are unchanged.
+Connections already lost by a 5901 load-and-save without the guard cannot be reconstructed. Pebbles'
+`ApplyForSaveLoad` replay works again after the clutter-slot residency fix. 5862 stores native life-
+support/mission times as `UniverseTimeReference`; these remain native-owned. Native acceptance pending.
+See [KSA 5901 upgrade review](../plans/KSA_5901_UPGRADE.md).
+
 ## KSA 5707 → 5801 verification (2026-11-08)
 
 Iron Man's v1 native anchor payload moves from removed `PartInstance.Id` to

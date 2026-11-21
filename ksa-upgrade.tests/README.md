@@ -1,4 +1,10 @@
-# KSA 5438/5482/5638/5707/5801 managed upgrade checks
+# KSA 5438/5482/5638/5707/5801/5901 managed upgrade checks
+
+## KSA 5901 compatibility
+
+`Ksa5901Checks` reads CURRENT KSA.dll metadata for every 5901 seam a fix depends on: `EngineController.Rockets`/`Rocket.Core`, `PartInstance.DropStaleConnectors` and its world/blueprint load callers, the `RecomputeRocketControls` Zero reset reached through `EnsureDerived`/`FlushDirtyDerived`, clutter slot resolution and the native `HasViewportSlot` guard, and the Crew Clock draw/anchor calls. Running with `KSA_DLL_DIR` pointed at the 5801 DLL fails it. The free-fallin live shader check now finds Content through the same build-time `KSAFolder` fallback as the probes instead of skipping on a plain run.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5901_UPGRADE.md).
 
 The kitten animation hold port also checks CURRENT KSA.dll for the protected animation-clock fields
 used by phase capture/replay, and verifies the pose hook follows native locomotion/condition selection.

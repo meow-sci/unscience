@@ -246,6 +246,17 @@ and device guards are transient lifecycle state. Production-adapter default/lega
 checks and native-input stale-world cases pass. Native scene-load/exit/resource acceptance remains open:
 [follow-up evidence](DOH_DESPAWN_5801_FOLLOWUP.md).
 
+## KSA 5901 upgrade acceptance
+
+Sidecar IDs/versions and the Iron Man v1 anchor envelope are unchanged. Native world and blueprint
+load now drop saved connections at or beyond a template's connector count before construction
+(`PartInstance.DropStaleConnectors`); `IronManStaleConnectorGuard` keeps the decodable owned range so
+connected anchors reconstruct. Managed `StaleConnectorChecks` cover kept/dropped/ordered entries,
+unmarked parts, malformed records and unpatching. Pebbles replay works again after the 5875 residency
+fix. Native acceptance: load 5801 worlds/blueprints with connected anchors in 5901 (no yellow alert,
+equipment on anchors), save/reload, copy and undo/redo; Pebbles `ApplyForSaveLoad` with secondary
+viewports and portraits. See [5901 evidence](KSA_5901_UPGRADE.md).
+
 ## KSA 5801 upgrade acceptance
 
 The existing sidecar IDs/versions remain. Iron Man moves its unchanged v1 anchor payload from

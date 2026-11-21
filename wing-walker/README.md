@@ -27,7 +27,9 @@ From the repository root, run `python3 scripts/check-chair-assets.py` after rebu
 In the editor, find **External Seat** or **Standing Mount** under **Unscience External Crew** or
 **Capsules**, then assign a kitten with the native Crew controls. In flight, a kitten can board near the
 entry point and leave using the crew portrait's EVA action. Supplies are finite, the mounts have no
-radiation shielding or Control module, and their surface connections are not habitat passages. Food
+radiation shielding, and their surface connections are not habitat passages. Each mount is a command
+point (KSA 5901): an able kitten in it can fly the vessel, so a craft crewed only by riders stays
+controllable. The part menu offers "Control from here". Food
 and scrubber supplies are local and isolated by default. There are no feature
 toggles. Native crew, part and life-support state are saved by KSA without a new sidecar.
 

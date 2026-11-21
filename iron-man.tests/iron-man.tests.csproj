@@ -13,5 +13,6 @@
     <Compile Include="../iron-man.lib/IronManConnectorData.cs" Link="IronManConnectorData.cs" />
     <Compile Include="../iron-man.lib/IronManConnectorPatches.cs" Link="IronManConnectorPatches.cs" />
     <Compile Include="../iron-man.lib/IronManConnectorUnload.cs" Link="IronManConnectorUnload.cs" />
+    <Compile Include="../iron-man.lib/IronManStaleConnectorGuard.cs" Link="IronManStaleConnectorGuard.cs" />
   </ItemGroup>
 </Project>

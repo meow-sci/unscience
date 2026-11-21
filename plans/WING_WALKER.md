@@ -212,5 +212,5 @@ Graphics, physics, boarding and scene save/load still require the in-game accept
   restore through native data without duplication or a Wing Walker sidecar.
 - Exercise editor undo, copy, symmetry, focused and unattached part trees and seat reassignment.
 - Check finite oxygen, water, food and LiOH, refill/available fluid connectivity and habitat passage
-  behavior, isolated local food/scrubber supplies, passenger-only behavior without a Control module,
+  behavior, isolated local food/scrubber supplies, control from an able rider through the native Control module (5901; empty/incapacitated seats give none),
   plus radiation dose without shielding. Verify cleanup and patch removal on unload.

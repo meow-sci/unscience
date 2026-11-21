@@ -1,5 +1,11 @@
 # IronManLib
 
+## KSA 5901 compatibility
+
+KSA 5866 runs `PartInstance.DropStaleConnectors()` on world and blueprint load, which deletes saved connections at or beyond the template's connector count — exactly the owned anchor suffix. `IronManStaleConnectorGuard` keeps the validated owned range of decodable marked backpacks, never throws, and leaves stale indices, stock parts and child recursion to native code. KSA 5807 also resets the thruster cache to Zero when rocket controls are recomputed; `InvalidateCache` now runs that pending recompute first so Enable/Disable keep RCS authority. Anchor connections already lost by a 5901 load-and-save without this fix cannot be recovered. An incapacitated kitten in rocket mode keeps Auto attitude/burn (native release does not run for kittens) — recorded as a pending decision.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5901_UPGRADE.md).
+
 ## KSA 5801 compatibility
 
 The private Part constructor now has 11 arguments, including template-subpart placement. PartInstance.Id was removed: IronManAnchorModule.SaveData carries the same v1 payload in native Components; IronManAnchorSerializers extends world/blueprint getter serializers with isolated XML mappings and migrates legacy Id attributes. Restore still precedes connection-index reconstruction. Existing mode sidecars are unchanged; native connected-anchor and undo/redo acceptance remains pending.

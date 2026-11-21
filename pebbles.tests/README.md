@@ -1,5 +1,11 @@
 # Pebbles managed checks
 
+## KSA 5901 compatibility
+
+The residency fixture models KSA 5875 clutter slots: only mapped (Main/Secondary) viewports resolve, others throw like `GroundClutterRenderer.ResolveViewportSlot`. Registered thumbnail and portrait viewports must be skipped by the production release.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5901_UPGRADE.md).
+
 ## KSA 5801 compatibility
 
 Adds optional curvature and terrain-fade persistence/legacy absence, detached curve copies, domain/spacing and nonfinite-data validation. These are production recipe/sidecar JSON checks; native capture, graph construction and GPU resource retirement remain outside this managed executable.

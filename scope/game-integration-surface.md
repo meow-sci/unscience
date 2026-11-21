@@ -250,10 +250,10 @@ Single consolidated lookup of every game-side touchpoint (KSA.* types + risk-bea
 Brutal.*/RenderCore.* members) across all unscience mods, aggregated from the per-area `scope/`
 files. Use it on every KSA update to find which mods a changed game member puts at risk.
 
-**Verification baseline:** KSA **2026.11.10.5801**, compared with **2026.10.25.5707**
-(the supplied PREVIOUS tree and prior recorded baseline). Revisions 5708–5800 are logged; 5801 is not.
-Current evidence and acceptance: [KSA_5801_UPGRADE](../plans/KSA_5801_UPGRADE.md); [IVA switch follow-up](../plans/IVA_VISIBILITY_SWITCHES.md) removes the unconditional editor render hook.
-Prior span: [KSA_5707_UPGRADE](../plans/KSA_5707_UPGRADE.md).
+**Verification baseline:** KSA **2026.11.16.5901**, compared with **2026.11.10.5801**
+(the supplied PREVIOUS tree and prior recorded baseline). Revisions 5802–5899 are logged; 5900–5901 are not.
+Current evidence and acceptance: [KSA_5901_UPGRADE](../plans/KSA_5901_UPGRADE.md); [IVA switch follow-up](../plans/IVA_VISIBILITY_SWITCHES.md) removes the unconditional editor render hook.
+Prior spans: [KSA_5801_UPGRADE](../plans/KSA_5801_UPGRADE.md), [KSA_5707_UPGRADE](../plans/KSA_5707_UPGRADE.md).
 Native game acceptance remains pending. Dated historical rows retain their original line citations;
 the current summary and owning area updates below supersede their compatibility status.
 The [October 25 startup follow-up](../plans/KSA_5638_UPGRADE.md#startup-follow-up-2026-10-25)
@@ -361,6 +361,24 @@ input runs before refresh. Post-death pruning releases private War Paint slots w
 presets. Constructor rollback remains isolated; no live custom teardown remains.
 [Native kill evidence/checks/acceptance](../plans/DOH_NATIVE_KILL_5801.md).
 [Earlier shutdown fix](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
+
+## 5901 verification summary
+
+| Current surface | Consumers / owner | Status (5801 → 5901) |
+|---|---|---|
+| `EngineController.Rockets : Rocket[]` (was `Cores`); `Rocket.Core`/`Rocket.Cores` | Blinky diagnostics | Compile break fixed; feed/ignition `SubtreeModules.Get<RocketCore>()` unchanged |
+| `ClutterEcotypeRenderData.ReleaseViewport` → `GroundClutterRenderer.ResolveViewportSlot`/`HasViewportSlot` (5875, 5 Main/Secondary slots) | Pebbles `ClutterResidency` | Every Apply/replay threw on thumbnail/portrait viewports; release now guarded like native `OnViewportUnregistered` |
+| `PartInstance.DropStaleConnectors()` on world (`CelestialSystem.DeserializeSave`) and blueprint (`UncompressedVehicleSave.Load`) load (5866) | Iron Man `IronManStaleConnectorGuard` (new Harmony prefix/postfix) | Owned anchor connection indices were dropped; the validated owned range is now kept |
+| `PartTree.RecomputeRocketControls` resets `ThrusterControllerGlobalState` to `Zero`; `EnsureDerived`/`FlushDirtyDerived` (5807) | Iron Man `IronManRcsOrientationPatches.InvalidateCache` | Pending flush overwrote the invalidation; it now runs `EnsureDerived(RocketControls)` first |
+| `CrewClock` window `##crewClock` from `Program.OnDrawUiFrame`, anchored by the GameTime gauge (5863) | You Didn't See Anything | Hidden with GameTime under Hide Gauges |
+| `AnimatedRenderable`/`BoneAnimRuntime.PlayAnimation/SetAnimation(..., bool loop = true)` (5810) | Kitten Animations, Wing Walker, Free Fallin | Typed calls bind `loop: true`; native harness assertion updated |
+| `StaticObjectRenderer.PipelineLayout` 10 → 9 sets (cloud shadows removed) | Sphinx | Binds only sets 2/3; comment/scope corrected |
+| Per-zone `Vehicle` control (`ScanControls` → `HabitatZone.FindZone`, 5823); `Control` module | Wing Walker mounts | Native `<Control />` added so an able rider controls the vessel |
+| `KittenEva.IsControllable => !_incapacitated` (5804); Auto release (5823) | Iron Man Auto modes | **Decision pending** — see [5901 report](../plans/KSA_5901_UPGRADE.md#decisions-recorded-not-changed) |
+
+Real-DLL `Ksa5901Checks` pin each seam (the 5801 DLL fails them). Shader anchors, paint bits 13–30
+vs native highlight bits 0/10/11/12, MaterialData/PerInstanceData layouts and the §4 watchlist are
+unchanged. Native acceptance remains open.
 
 ## 5801 verification summary
 
@@ -496,8 +514,8 @@ are recorded separately from native visual acceptance.
 ### KSA.AnimatedRenderable
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `SetAnimation(IAnimation, float blend=0.2f)` | direct API | `KSA/AnimatedRenderable.cs:113` | kitten-animations | `kitten-animations.lib/KittenAnimationDriver.cs` | OK | forced-clip playback; no-op when the clip is already current (`BoneAnimRuntime.SetAnimation:92`) so safe per frame |
-| `PlayAnimation(IAnimation, float blend=0.2f)` | direct API | `KSA/AnimatedRenderable.cs:118` | kitten-animations | `KittenAnimationDriver.cs` | OK | restart-from-frame-0 for the forced clip |
+| `SetAnimation(IAnimation, float blend=0.2f, bool loop=true)` (loop added @5810) | direct API | `KSA/AnimatedRenderable.cs:128` | kitten-animations, wing-walker | `kitten-animations.lib/KittenAnimationDriver.cs`; `WingWalkerPatches.Appearance.cs` | OK @5901 | forced-clip playback binds `loop: true`; no-op when the clip is already current (`BoneAnimRuntime.SetAnimation:107`), which also keeps the current clip's looping flag |
+| `PlayAnimation(IAnimation, float blend=0.2f, bool loop=true)` (loop added @5810) | direct API | `KSA/AnimatedRenderable.cs:133` | kitten-animations, wing-walker | `KittenAnimationDriver.cs`; `WingWalkerPatches.Appearance.cs` | OK @5901 | restart-from-frame-0 for the forced clip; non-looping clips hold their last frame |
 | `UpdateAnimation(double dt)` | **Harmony prefix** `(AnimatedRenderable __instance, ref double dt)` | `KSA/AnimatedRenderable.cs:123` | kitten-animations | `KittenAnimationPatches.cs` | OK | ⚠️ hot path — reference-keyed driver registry covers all held kittens independently of control/selection; the only point in the frame where an animation override survives `KittenRenderable.UpdateRenderData`. Also scales `dt` for the playback-rate control |
 | `FreezeAnimation : bool` | direct API | `KSA/AnimatedRenderable.cs:53` | kitten-animations | `KittenAnimationDriver.cs` | OK | freeze/pause the forced clip; released back to the game on override off |
 | `AnimProcessors : List<IAnimProcessor>` | direct API | `KSA/AnimatedRenderable.cs:47` | kitten-animations | `KittenExpressionController.cs` | OK | mod **appends** its own `CatExpressionAnim` here (and removes it on unbind) |
@@ -668,7 +686,7 @@ are recorded separately from native visual acceptance.
 | `SetIsActive(Vehicle?, bool)` | direct API | `KSA/EngineController.cs:46` | blinky | `blinky.lib/BlinkyGridManager.cs:224,252,266` | OK | pixel on/off (called with `null` vehicle) |
 | `IsActive : bool { get; }` | direct API | `KSA/EngineController.cs:24` | blinky | `blinky.lib/NonLcdEngineCache.cs:36` | OK | |
 | `MinimumThrottle : float (settable)` | direct API | `KSA/EngineController.cs` | blinky | `LcdGridBuilder.cs:472` | OK | |
-| `Cores : RocketCore[]` | direct API (debug) | `KSA/EngineController.cs:18` | blinky | `BlinkySubmod.cs:612-618` | OK | diagnose button only |
+| `Rockets : Rocket[]` (replaced `Cores : RocketCore[]` @5889) → `Rocket.Cores : ReadOnlySpan<RocketCore>` | direct API (debug) | `KSA/EngineController.cs:36`; `KSA/Rocket.cs:11,21` | blinky | `BlinkySubmod.cs` (`ControllerCores`) | Migrated @5901 | diagnose button only |
 
 ### KSA.FlightComputer (+ nested VehicleConfigInfo)
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -946,7 +964,7 @@ are recorded separately from native visual acceptance.
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
 | `AddInstance(PerInstanceData, PerInstanceDent, IViewport, int) : private void` | Harmony pre | `KSA/PartModelDynamic.cs:474` | humble-arteest (EngineEmissive) | `EngineEmissivePatches.cs:75` | OK @5482 | Exact common sink; dynamic argument `inInstanceData`; preserves dent payload. Still called per slot per frame by `ComposeDynamic` (5482); VehiclePaint no longer patches it. |
-| `PerInstanceData` (struct: `ModelMatrix`@0 · `StateBitFlag`@64 · `Temperature`@68 · `TfiThickness`@72 · `Wetness`@76; 80 B) | direct API (struct reinterpret for EngineEmissive) | `KSA/PartModelDynamic.cs:309-320` | humble-arteest (EngineEmissive, VehiclePaint) | `EngineEmissivePatches.cs:29-36`; `VehiclePaintPatches.cs` (`AddInstanceDynamicPrefix`) | OK | mirror struct matches exactly (`Temperature`@68, `TfiThickness`@72). VehiclePaint touches only `StateBitFlag` bits 11..31, so the two features compose |
+| `PerInstanceData` (struct: `ModelMatrix`@0 · `StateBitFlag`@64 · `Temperature`@68 · `TfiThickness`@72 · `Wetness`@76; 80 B) | direct API (struct reinterpret for EngineEmissive) | `KSA/PartModelDynamic.cs:309-320` | humble-arteest (EngineEmissive, VehiclePaint) | `EngineEmissivePatches.cs:29-36`; `VehiclePaintPatches.cs` (`AddInstanceDynamicPrefix`) | OK | mirror struct matches exactly (`Temperature`@68, `TfiThickness`@72). VehiclePaint touches only `StateBitFlag` bits 13..30 (since 5801), so the two features compose |
 
 ### KSA.PartModelDynamicModule
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -1309,6 +1327,13 @@ keeps the native foil material/UV island and custom material references authorit
 
 ## 4. String-based reflection watchlist (highest silent-break risk)
 
+**5901 additions:** Iron Man patches `PartInstance.DropStaleConnectors()` (exact empty-parameter
+lookup; it must keep running before construction on both load paths and keep deleting by
+`Index >= template.Connectors.Count`). You Didn't See Anything finds the Crew Clock by the ImGui
+window name `"##crewClock"` (`CrewClock.cs:154`; its `##crewClockEvents` child and tooltips follow that owner); a rename leaves it visible during F2 with gauges
+hidden. Pebbles' residency release depends on `GroundClutterRenderer.HasViewportSlot` matching the
+slot set `ResolveViewportSlot` accepts. `Ksa5901Checks` verifies the call sites.
+
 Wing Walker adds the private exact-signature `PartCloner.Gather(Part,uint)` lookup. Native DLL
 signature checks pass; recheck that it still precedes module save-data capture on upgrades.
 
@@ -1332,6 +1357,8 @@ gates only that comparison input. Flexo's `PartTree.RecomputeStaticMass` reflect
 Sink's `Universe.ExecuteNextVehicleSolvers` patch were removed. See [current surface](#kitchen-sink-g-load-protection-2026-09-13-5402).
 
 **Iron Man additions:** recheck every exact target/signature in [its Harmony table](iron-man.md#harmony-and-reflection-watchlist),
+including the 5901 `PartInstance.DropStaleConnectors()` guard and the `RecomputeRocketControls` Zero reset that
+`InvalidateCache` pre-empts with `EnsureDerived(DerivedData.RocketControls)`,
 especially private `VehicleEditor.DuplicateHighlightedPart`, `RequestNewVehicle`, `FinalizeNewVehicle`,
 the internal three-argument Part serializer, the **private 11-argument Part constructor** (`Part.cs:1601`
 @5801; every constructor, including save load, chains to it — the former four-argument target missed
@@ -1429,6 +1456,12 @@ unconditional editor reveal hook is removed. Existing native glass and shadow-pr
 ---
 
 ## 6. Confirmed-broken / changed summary
+
+**5901 upgrade:** Blinky `EngineController.Cores` compile break; Pebbles residency release threw for
+non-clutter viewports; Iron Man anchors lost on load (`DropStaleConnectors`) and RCS invalidation
+overwritten by the new Zero reset; You Didn't See Anything retained the new Crew Clock. All fixed with
+managed/real-DLL regressions. Wing Walker mounts gained a native Control module (5823 per-zone
+control). Iron Man incapacitated Auto modes await a decision. [Evidence](../plans/KSA_5901_UPGRADE.md).
 
 **5801 Wing Walker editor crew:** occupied external seats were cloned with the same kitten name.
 Selection/move and pre-copy guards now unassign affected seats through native crew/history APIs.

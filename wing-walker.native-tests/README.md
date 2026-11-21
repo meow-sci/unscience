@@ -2,6 +2,8 @@
 
 This harness also validates the bundled [Beverage Cooler](../beverage-cooler/README.md) assets.
 
+KSA 5901: the appearance-surface check now requires `AnimatedRenderable.PlayAnimation/SetAnimation(IAnimation, float, bool)` with `loop = true` as the default (rev 5810). The harness still needs the game-shipped managed dependencies that `current/dll/` does not contain (Tomlet, MemoryPack.Core, Microsoft.Extensions.Logging.Console, System.IO.Hashing) before it can deserialize content.
+
 Run from the unscience repository root on an x64 .NET host:
 
 ```sh

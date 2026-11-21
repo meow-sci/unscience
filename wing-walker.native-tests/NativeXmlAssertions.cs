@@ -87,8 +87,9 @@ internal static class NativeXmlAssertions
         RequirePublicField(editor, "GizmoGrabbed", typeof(bool));
         RequirePublicField(editor, "ExistingVehicle", vehicle);
         RequirePublicField(part, "TreeParent", part);
-        RequirePublicMethod(typeof(void), animatedRenderable, "PlayAnimation", animation, typeof(float));
-        RequirePublicMethod(typeof(void), animatedRenderable, "SetAnimation", animation, typeof(float));
+        // KSA 5810 appended an optional loop flag (default true); the appearance patch keeps looping idles.
+        RequireLoopingDefault(RequirePublicMethod(typeof(void), animatedRenderable, "PlayAnimation", animation, typeof(float), typeof(bool)));
+        RequireLoopingDefault(RequirePublicMethod(typeof(void), animatedRenderable, "SetAnimation", animation, typeof(float), typeof(bool)));
         RequireField(renderable, "_seatedIdleAnim", RequiredType(ksa, "KSA.AnimationAssetRef"));
         RequireField(renderable, "_groundIdleAnim", RequiredType(ksa, "KSA.AnimationAssetRef"));
         RequireField(renderable, "_characterAvatar", avatar);
@@ -162,6 +163,9 @@ internal static class NativeXmlAssertions
         Require(Near(Number(GetMember(GetMember(standingSeats[0], "PositionAsmb")!, "Z")) -
             Number(GetMember(GetMember(seatedSeats[0], "PositionAsmb")!, "Z")), -0.0218168),
             "standing CrewSeat position retains the authored eye-height offset");
+
+        Require(ComponentsOf(seated, "KSA.Control+Template").Length == 1 && ComponentsOf(standing, "KSA.Control+Template").Length == 1,
+            "each final part has exactly one inherited Control, so an able rider in its own zone controls the vessel (5823)");
 
         object habitat = ComponentsOf(seated, "KSA.HabitatTemplate").Single();
         object habitableVolume = GetMember(habitat, "HabitableVolume")!;
@@ -386,6 +390,13 @@ internal static class NativeXmlAssertions
         MethodInfo method = RequireMethod(returnType, declaringType, name, parameters);
         Require(method.IsPublic, $"native typed surface remains public: {declaringType.FullName}.{name}");
         return method;
+    }
+
+    private static void RequireLoopingDefault(MethodInfo method)
+    {
+        ParameterInfo loop = method.GetParameters()[^1];
+        Require(loop.HasDefaultValue && Equals(loop.DefaultValue, true),
+            $"native {method.DeclaringType?.FullName}.{method.Name} keeps loop=true as its default");
     }
 
     private static void RequireField(Type declaringType, string name, Type expectedType)

@@ -1,5 +1,11 @@
 # Blinky library
 
+## KSA 5901 compatibility
+
+KSA 5889 replaced `EngineController.Cores` with `Rockets`; the diagnose output now lists the cores of every rocket a pixel controller drives (`Rocket.Cores`). Feed repair and ignition are unchanged. Diagnose output on liquid and solid engines still needs an in-game check.
+
+See [upgrade evidence and native acceptance](../plans/KSA_5901_UPGRADE.md).
+
 Reusable engine-pixel grid builder, scanner, manager and Unscience submod. See
 [feature usage](../blinky/README.md) for layout, fuel, ignition and pattern controls.
 

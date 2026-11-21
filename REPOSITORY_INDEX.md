@@ -9,10 +9,28 @@ This document serves as a comprehensive index of all mods and libraries in this 
 
 > **Game integration scope:** for how each feature plugs into KSA (Harmony patches, reflection, game types, shaders, assets) and how to check what a game update breaks, start at [`scope/FULL_SCOPE.md`](scope/FULL_SCOPE.md) and its master index [`scope/game-integration-surface.md`](scope/game-integration-surface.md). Keeping `scope/` current is mandatory — see [`AGENTS.md`](AGENTS.md).
 
-## KSA 5801 compatibility and discovery
+## KSA 5901 compatibility and discovery
 
-Current baseline: **2026.11.10.5801**, previous **2026.10.25.5707**. Full evidence, old/new game
-seams, managed checks and native acceptance: [upgrade review](plans/KSA_5801_UPGRADE.md).
+Current baseline: **2026.11.16.5901**, previous **2026.11.10.5801**. Full evidence, old/new game
+seams, managed checks and native acceptance: [upgrade review](plans/KSA_5901_UPGRADE.md).
+
+| Projects | Upgrade responsibility |
+|---|---|
+| blinky.lib | Diagnostics follow `EngineController.Rockets` → `Rocket.Cores` (replaced `Cores`) |
+| pebbles.lib / pebbles.tests | Residency release skips viewports without a clutter slot (5875 compaction; Apply/replay had thrown) |
+| iron-man.lib / iron-man.tests / iron-man-flight.tests | `IronManStaleConnectorGuard` keeps owned anchor connections through native `DropStaleConnectors`; RCS invalidation runs the pending recompute before the new Zero reset |
+| you-didnt-see-anything.lib / tests | Crew Clock window hidden with the GameTime gauge |
+| ksa-upgrade.tests | `Ksa5901Checks` real-DLL seam pins; free-fallin live shaders found via the build-time KSAFolder |
+| wing-walker / wing-walker.native-tests | Native `<Control />` on both mounts (5823 per-zone crew control); three-argument animation surface with `loop = true` default |
+| sphinx.lib | Comment/scope only: static pipeline now 9 sets |
+
+Sidecar IDs/versions are unchanged. All 23 managed suites and the 19-case startup harness pass;
+native game acceptance is pending. One decision is open: Iron Man Auto modes on an incapacitated
+kitten.
+
+## KSA 5801 compatibility
+
+Previous baseline: **2026.11.10.5801**, from **2026.10.25.5707**: [upgrade review](plans/KSA_5801_UPGRADE.md).
 
 | Projects | Upgrade responsibility |
 |---|---|

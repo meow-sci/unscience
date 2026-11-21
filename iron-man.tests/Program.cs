@@ -77,6 +77,7 @@ foreach (var nativeSerializer in new[] { GameSaves.UniverseSerializer, VehicleSa
     var nativePart = restored is UniverseData world ? world.Root! : ((VehicleSaveData)restored).Root!;
     Check(new Part(nativePart, null).Connectors.Length == 2, "Both patched native serializer getters round-trip anchors.");
 }
+StaleConnectorChecks.Run(shared.Id, payload, Check);
 var duplicate = new PartInstance { Components = { new IronManAnchorModule.SaveData { Payload = payload }, new IronManAnchorModule.SaveData { Payload = payload } } };
 Reject(() => new Part("", shared, duplicate), "Duplicate anchor records must fail closed.");
 Reject(() => new Part("", shared, new PartInstance { Components = { new IronManAnchorModule.SaveData() } }),
@@ -139,4 +140,5 @@ Check(copied.Connectors.Length == 0 && copied.Connections.Count == 1 && copied.T
     "Unload must keep attached equipment, remove owned anchors and refresh graphs after waiting for the solver.");
 Check(copied.Connections[0].HasCapabilities(ConnectorCapability.BulkFluid), "Unload must retain bulk propellant flow through the remaining stock tank endpoint.");
 IronManConnectorPatches.Remove(harmony);
-Console.WriteLine("PASS: runtime anchor isolation, normals, scale-safe edits, occupied guards, real Harmony constructor/serializer bridge, XML/index round-trip, malformed saves and restoration.");
+StaleConnectorChecks.RunUnpatched(shared.Id, payload, Check);
+Console.WriteLine("PASS: runtime anchor isolation, normals, scale-safe edits, occupied guards, real Harmony constructor/serializer/5866 stale-connector bridge, XML/index round-trip, malformed saves and restoration.");

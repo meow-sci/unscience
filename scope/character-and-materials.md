@@ -1,5 +1,22 @@
 # Character / Material / GPU-Customization Mods — Game Integration Scope
 
+## KSA 5801 → 5901 verification (2026-11-20)
+
+- **Kitten Animations:** 5810 adds `bool loop = true` to `AnimatedRenderable`/`BoneAnimRuntime`
+  `PlayAnimation`/`SetAnimation` (`AnimatedRenderable.cs:128,133`; `BoneAnimRuntime.cs:77,107`). Forced
+  clips bind `loop: true`, so playback is unchanged. `SetAnimation` is a no-op for the current clip and
+  keeps its looping flag: forcing the exact jump start/end clip native just set non-looping plays once
+  and holds (in-game check). `RuntimeAnim`, `TimeSinceTransition` and `CurrentAnimation` still resolve.
+- **Humble Arteest paint:** native highlight bits stay 0/10/11/12; paint bits 13–30, the
+  `sampledColor`/`inStateFlags` anchors and `MaterialData`/`PerInstanceData` layouts are unchanged. 5825
+  now tints the lit colour and adds a rim instead of a 50 % overlay, so highlights over painted parts look
+  different (in-game check). The immediate-white report remains unresolved and is not attributed to 5901.
+- **War Paint / DOH:** the visor IL target (`KittenRenderable.UpdateRenderData`, one `VisorMesh.Draw`) and
+  GPU material writes are unchanged. DOH kittens skip the stock EVA suit fill as before; with Life Support
+  on, an incapacitated DOH kitten is now frozen in place (5804, native behavior).
+
+See [KSA 5901 upgrade review](../plans/KSA_5901_UPGRADE.md).
+
 ## DOH surface spawning (5801)
 
 **Spawn at...** adds physical collider/static/terrain picking, a full-capsule clearance preview and

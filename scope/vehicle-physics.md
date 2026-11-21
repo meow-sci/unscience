@@ -1,5 +1,15 @@
 # Vehicle Manipulation / Physics Mods — Game Integration Scope
 
+## KSA 5801 → 5901 verification (2026-11-20)
+
+No code change in this area. `Universe.ExecuteNextVehicleSolvers`, `Battery.Refill`,
+`Vehicle.RefillConsumables` (Eternal Flame), ConstraintSim/`Teleport`/`ModelToBodyMatrix` (Garry's Torch,
+Dent Wizard), `PhysicsBubble.DetectStructuralFailure` (The Tick; the `DetectKittenImpact` refactor is
+equivalent), Godzilla's cull/collision seams and i-feel-seen's render targets are unchanged or renamed
+only. Battery refills now also keep 5813 probe-core power topped up. 5877 moves physics bubbles to CCF
+when any member needs it; Garry's Torch math is CCI-only. 5878's worker-pool fix is internal. Native
+behavior with the new control/power rules remains an in-game check. [5901 review](../plans/KSA_5901_UPGRADE.md).
+
 ## KSA 5707 verification (5638 → 5707, 2026-10-29)
 
 Static/managed only: NEW `2026.10.25.5707` (revs 5639–5703) diffed from the 5638 baseline; whole

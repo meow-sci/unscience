@@ -1,5 +1,17 @@
 # Pixel-Grid & Custom-Render Mods — Game Integration Scope
 
+## KSA 5801 → 5901 verification (2026-11-20)
+
+Rev 5889 moved rocket state to `Rocket` and replaced `EngineController.Cores : RocketCore[]` with
+`Rockets : Rocket[]` (`EngineController.cs:36`; `Rocket.Core`/`Rocket.Cores`, `Rocket.cs:11,21`). This
+broke the Blinky diagnose path's compile; `BlinkySubmod.ControllerCores` now flattens each rocket's
+cores. Feed repair and ignition still enumerate `SubtreeModules.Get<RocketCore>()`, and `RocketCore`
+remains a stateful module. Thug Life: `RenderMainPass` stays inside Begin/EndRendering after 5816's
+dynamic-rendering conversion, UnlitMesh shaders and `CreateShaderStages` are unchanged, and the main
+offscreen format remains B10G11R11 (5880 changed only HDR/bloom/gizmo/cloud targets). The shared
+compose filter's batch fields and `Compose*` bodies are unchanged; the new probe-core status lights reuse
+native bits 6/7. Native grid, quad and diagnose output remain in-game checks. [5901 review](../plans/KSA_5901_UPGRADE.md).
+
 ## KSA 5707 → 5801 verification (2026-11-08)
 
 Main scene color changes from RGBA16 float to R11G11B10 (`Program.ColorFormat`). Thug Life already
@@ -343,7 +355,7 @@ recovery is insufficient because KSA omits ordinary `pixel_*` ids. No StarMap sa
 | 17 | Direct | `blinky.lib/NonLcdEngineCache.cs:35` | `EngineController.IsActive` (get) | `KSA/EngineController.cs:44` | Yes | None | |
 | 18 | Direct | `blinky.lib/BlinkyGridManager.cs:258` | `Vehicle.SetEnum(Enum?)` with `VehicleEngine.MainIgnite` | `KSA/Vehicle.cs:6096`; `KSA/VehicleEngine.cs:5` | Yes | None | Ignites vehicle before lighting pixels. |
 | 19 | Direct (diagnostics) | `blinky.lib/PropellantFeedDiagnostics.cs:8`; `BlinkySubmod.cs:711-712,739-756` | `PlumbedCore.ResourceManager` / `.FeedConnectors` (`core is PlumbedCore`); `ResourceManagerBase.ConsumptionOrder : FlowOrder<Tank>`; `LevelCount` and indexed spans | `KSA/PlumbedCore.cs:19` @5638; `KSA/ResourceManagerBase.cs:81`; `KSA/FlowOrder.cs:5` | Yes | **Retyped @5438**; `ResourceManager` became a lazy property @5482; **moved to the new `PlumbedCore` base @5638** (rev 5487; `Combustor`, `ThermalCore`, `AntimatterRamCore` derive from it) — checks now test `PlumbedCore` | Counts actual tank entries across selected levels, including empty/same-stage/reversed views. No reflection. The getter builds managers only when the tree has flagged them dirty (`PartTree.EnsureResourceManagersBuilt`, `:807`); on a fresh tree it returns null until the resource groups are derived. |
-| 20 | Direct (debug) | `blinky.lib/BlinkySubmod.cs:664-666,766` | `Vehicle.GetManualThrottle()`; `Vehicle.FlightComputer`; `Vehicle.IsSet<VehicleEngine>(T, bool)`; `EngineController.Cores` (RocketCore[]); `Connection.OtherPart(Part)` | `KSA/Vehicle.cs:1245,467,6206`; `KSA/EngineController.cs:36` (`Cores`); `KSA/Part.cs:501` | Yes | None | `IsSet(VehicleEngine.MainIgnite, false)` routes to the private `Vehicle.IsEngine` and reads `_manualControlInputs.EngineOn` — the only public read of the ignition flag. |
+| 20 | Direct (debug) | `blinky.lib/BlinkySubmod.cs:664-666,766` | `Vehicle.GetManualThrottle()`; `Vehicle.FlightComputer`; `Vehicle.IsSet<VehicleEngine>(T, bool)`; `EngineController.Rockets` (Rocket[], was `Cores` before 5889) → `Rocket.Cores`; `Connection.OtherPart(Part)` | `KSA/Vehicle.cs:1245,467,6206`; `KSA/EngineController.cs:36` (`Cores`); `KSA/Part.cs:501` | Yes | None | `IsSet(VehicleEngine.MainIgnite, false)` routes to the private `Vehicle.IsEngine` and reads `_manualControlInputs.EngineOn` — the only public read of the ignition flag. |
 | 21 | Abstraction | `blinky.lib/BlinkyGridManager.cs:280`; `BlinkySubmod.cs` | `VehicleProvider.GetAllVehicles()` / `GetControlledVehicle()` (ksa-abstractions.lib) | `MeowSci.KsaAbstractions` (repo lib) | Yes | None | Game coupling lives in ksa-abstractions scope. |
 | 22 | Direct | `blinky.lib/LcdGridBuilder.cs:491-497` | `RocketCore.FeedConnectors` (`Part.Connector[]`, bound in `RocketCore.OnFullPartCreated` → `BindFeedPoints` from the template's `ConsumerFeedWiring`/`FeedsFrom`) | `KSA/RocketCore.cs:20,24,26` | Yes | None (file byte-identical @5402) | 🔴 **The load-bearing dependency of the whole ignition path.** `ResourceManager.CanFlowAcross` (`KSA/ResourceManager.cs:274-282`) rejects the first hop out of the consumer part unless the connection sits on one of these connectors (`IsDeclaredFeedConnection`, `:305`). If the template wiring resolves to nothing, `FeedConnectors` is empty and the engine reaches no propellant. |
 | 23 | Direct | `blinky.lib/LcdGridBuilder.cs:607-614`; `PropellantFeedDiagnostics.cs:8` | `PlumbedCore.{ResourceManager.ConsumptionOrder, DesiredMix}` | `KSA/PlumbedCore.cs:19,44` @5638; `KSA/ResourceManagerBase.cs:81`; `KSA/FlowOrder.cs:5` | Yes | **Retyped @5438**; **lazy @5482** (fixed); **`PlumbedCore` @5638** (was `Combustor`) | Post-build propellant reachability uses actual selected tank count; empty levels are not evidence of fuel. SolidMotor has no ResourceManager. Since 5482 `BuildGrid` must call `vehicle.Parts.EnsureDerived(DerivedData.ResourceGroups)` (`LcdGridBuilder.cs:170`) first, or every manager is still null and the check reports 0/N. |

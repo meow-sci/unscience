@@ -12,6 +12,9 @@ namespace MeowSci.PebblesLib;
 /// them once the retained originals are restored. Detaching therefore performs the renderer's own release
 /// sequence for every registered viewport. The renderer still tracks the body per viewport slot, so the
 /// arrays attached next see empty viewport grids and re-evaluate every cell on the following frame.
+/// Since KSA 5875 residency is indexed by a clutter slot that only Main/Secondary viewports own
+/// (<see cref="GroundClutterRenderer.ResolveViewportSlot"/> throws for thumbnail/portrait viewports), so
+/// the release skips unmapped viewports exactly like the renderer's own OnViewportUnregistered.
 /// </summary>
 internal static class ClutterResidency
 {
@@ -21,7 +24,8 @@ internal static class ClutterResidency
         foreach (var render in outgoing)
         {
             if (render == null) continue;
-            foreach (var viewport in viewports) render.ReleaseViewport(viewport);
+            foreach (var viewport in viewports)
+                if (GroundClutterRenderer.HasViewportSlot(viewport)) render.ReleaseViewport(viewport);
             render.ResolvePendingReleases();
             // The renderer consumes and clears this each frame; never let a detached array keep a
             // viewport that may be unregistered before the array is attached again.

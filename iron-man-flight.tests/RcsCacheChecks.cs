@@ -60,6 +60,18 @@ internal static class RcsCacheChecks
             Step(kitten, worker, jets);
             RequireMap(kitten, jets, ThrusterMapFlags.PitchUp, "invalidation recovers from a Zero cache");
 
+            // KSA 5807+: Disable marks derived data dirty (StopEngines) before invalidating, and the
+            // dirty flush before the next vehicle solve resets the cache to Zero. Real Disable order.
+            submod.Enabled.Add(kitten);
+            IronManRcsOrientationPatches.InvalidateCache(kitten);
+            Step(kitten, worker, jets);
+            submod.Enabled.Remove(kitten);
+            kitten.Parts.RecomputeAllDerivedData();
+            IronManRcsOrientationPatches.InvalidateCache(kitten);
+            kitten.Parts.FlushDirtyDerived();
+            Step(kitten, worker, jets);
+            RequireMap(kitten, jets, ThrusterMapFlags.PitchUp, "a pending derived flush cannot reset the invalidation to Zero (5807)");
+
             // An explicit control part aligned with the body: enabling changes no frame at all.
             kitten.ControlPart = new Part();
             submod.Enabled.Add(kitten);
@@ -85,7 +97,7 @@ internal static class RcsCacheChecks
             IronManRcsOrientationPatches.Remove(harmony);
             submod.Enabled.Clear();
         }
-        Console.WriteLine("PASS: 5638 RCS frame-change gate: invalidation forces recompute for rocket, Identity EVA and unchanged explicit frames; stock Zero reset regression guarded; steady-state cache retained");
+        Console.WriteLine("PASS: 5638 RCS frame-change gate: invalidation forces recompute for rocket, Identity EVA and unchanged explicit frames; stock Zero reset and 5807 derived-flush reset regressions guarded; steady-state cache retained");
     }
 
     private static void RequireMap(KittenEva kitten, ThrusterController jets, ThrusterMapFlags expected, string message)

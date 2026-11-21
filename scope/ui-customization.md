@@ -13,6 +13,18 @@ native editor/flight/save-load acceptance remains pending. Historical editor-rev
 below are superseded. [Current integration](00-architecture-and-abstractions.md#ivaforcerendercs)
 · [evidence](../plans/IVA_VISIBILITY_SWITCHES.md).
 
+## You Didn't See Anything: KSA 5901 Crew Clock
+
+Rev 5863 adds `CrewClock`, a separate ImGui window `##crewClock` (`CrewClock.cs:154`) drawn from
+`Program.OnDrawUiFrame` (`Program.cs:3419`) and anchored only when `GaugeCanvas.OnDrawUi` draws the
+GameTime gauge (`GaugeCanvas.cs:867-870`). With F2, the feature enabled and Hide Gauges on, the
+GameTime gauge is skipped, so the clock floated at the top centre and was retained while every stock
+gauge was hidden. **Fixed:** `UiGatePolicy.GaugeAttachedWindows` maps `##crewClock` → GameTime, and
+`NativeWindowFilter.RefreshStockGaugeWindows` adds it to the stock-gauge window set; its child list and
+tooltips follow the owner chain. Detached-only already excluded it. Other 5901 changes (Ctrl+F6 binding,
+menu `BeginMenu`, gauge text scaling, part picker) touch no YDSA seam; the DrawUI gate counts are unchanged.
+Native F2 acceptance with Life Support hazards remains pending. [5901 review](../plans/KSA_5901_UPGRADE.md).
+
 ## You Didn't See Anything (5801)
 
 `you-didnt-see-anything.lib` adds optional ImGui window retention while native `Program.DrawUI`

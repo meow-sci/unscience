@@ -18,7 +18,8 @@ not clear assignments. Native editor history records the change; KSA owns the sa
 
 Each part has a native `IVASeat` and an aligned, invisible `EVADoor` helper. Its small habitat,
 oxygen and water tanks, food and LiOH are finite native life-support supplies. There is no radiation
-shielding. These are passenger parts with no Control module. Their food and scrubber supplies are
+shielding. Each part has a native Control module (KSA 5901): an able seated rider can fly the vessel,
+and an empty or incapacitated seat gives no control. Their food and scrubber supplies are
 local and isolated by default at the surface mount. Refill or connect appropriate life support for
 longer missions; a surface mount is not a habitat passage, and passage and fluid connectivity are
 separate concerns.
