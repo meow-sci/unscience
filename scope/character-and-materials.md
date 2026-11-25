@@ -1,5 +1,40 @@
 # Character / Material / GPU-Customization Mods — Game Integration Scope
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+No code change for the paint, material and DOH seams. Native 5939 rewrote `PartTreeRenderData` (+1047/−297) into
+incremental updates, so the Vehicle Paint seams were checked in detail:
+- **Paint writers still funnel through the patched methods.** `WriteState(Batch,int,Part)` OLD `:1342` / NEW
+  `:2257`, `WriteDynamicState(DynamicBatch,int,PartModelDynamicModule)` OLD `:1230` / NEW `:2145` and
+  `EnsureBuilt(PartTree,ulong)` OLD `:573` / NEW `:673` keep their signatures; `InvalidateStates()` (NEW `:537`)
+  still sets `_allStatesDirty`, which forces `RewriteStates`/`RewriteDynamicStates`. The new incremental append
+  goes through `AppendPendingParts` → `WriteState` (NEW `:1359`) and `AppendDynamicSlot` → `WriteDynamicState`
+  (`:2048`), and removal compaction copies `StateBitFlags[j]` slot to slot (`:1438,1500,1545`), so paint bits
+  move with the part. The only other direct writer is glass (`:1936`), which paint deliberately skips. Native
+  `StateBit` bits 0-12 are identical, so paint bits 13-30 stay free; the batch field change
+  (`DynamicStateSlots` → `DynamicStateIndices`) is read by no mod.
+- **Shader side.** `MeshIndirect.frag`, `MeshIndirectRaytraced.frag`, `MeshIndirect.vert`, `MeshGlassIndirect.frag`,
+  `Common/SharedFrag.glsl` and `PartHighlight.glsl` are identical (`vec3 sampledColor` anchors `:110`/`:158`,
+  count 1; `inStateFlags` present). The shaders now pull `Common/CloudLighting.glsl` through `Lighting.glsl:9`
+  (5940 move); the paint prefix passes the original path so the include resolves, and the new
+  `packSignedToUnsigned`/`unpackUnsignedToSigned` in `Shared.glsl` do not collide with the `hb*` snippet names.
+- **Engine Emissive.** `PartModelDynamic.cs` is identical (`PerInstanceData` `Temperature@68`, `TfiThickness@72`);
+  `ComposeDynamic` still builds `PerInstanceData` and calls `model.AddInstance` (NEW `:2221-2236`).
+- **War Paint / DOH.** `MaterialData.cs` (stride, `AlbedoColor` offset), `GpuMaterialSystem`/`GpuObjectSystem`
+  (debug names only), `KittenRenderable`, `CharacterAvatar`, `StaticMeshRenderable`, `ModelPbr.frag` and
+  `MaterialSet.glsl` are identical, so the visor transpiler sequence holds; `CharacterRenderResources` changed
+  only the fur pre-pass to two attachments (game-owned). DOH's spawner builds its own tree
+  (`CreateOwnTree`/`CreateFromNewPartTree`), so the first frame is a full render-data build. The kitten MMU
+  thrusters became `PressureFedRocket` (`PartGameData.xml:126-216`); `KittenBackPackPart` ID and connector count
+  are unchanged.
+- **5946 seat validation.** `Universe.ClearInvalidSeats()` runs inside native `DeserializeSave` and can empty
+  the seat of a DOH kitten that was never rostered and then boarded a vessel (first 5949 load); see
+  [vehicle-physics](vehicle-physics.md#ksa-5901--5949-verification-2026-11-25) for the full account.
+
+Native acceptance: Vehicle Paint stays on a newly attached part, after symmetric detach, undo/redo and
+dock/undock, with highlight over painted parts; kitten visor and fur under the two-attachment pre-pass.
+[5949 review](../plans/KSA_5949_UPGRADE.md).
+
 ## KSA 5801 → 5901 verification (2026-11-20)
 
 - **Kitten Animations:** 5810 adds `bool loop = true` to `AnimatedRenderable`/`BoneAnimRuntime`

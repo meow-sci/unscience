@@ -34,10 +34,13 @@ public sealed class SceneSaveCoordinator
     {
         _messages.Clear();
         var document = new SaveDocument();
-        foreach (var (id, record) in _retained) document.Features.Add(id, record);
+        // A load queued behind a KSA star-system switch stays prepared across frames before its reset.
+        // The live world is still the previous scene then, so keep that scene's retained records.
+        var retained = _loadPending && !_worldReset && _previousRetained != null ? _previousRetained : _retained;
+        foreach (var (id, record) in retained) document.Features.Add(id, record);
         foreach (var participant in _participants)
         {
-            if (_retained.ContainsKey(participant.SaveId))
+            if (retained.ContainsKey(participant.SaveId))
             {
                 Report($"{participant.SaveId}: preserving unrestored saved state; current edits for this feature cannot replace it.");
                 continue;

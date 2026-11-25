@@ -83,8 +83,9 @@ automatically.
 - **Plume data** — `PlumePhysics.TryCompute` preserves the isentropic nozzle model, scales synthetic
   chamber pressure by throttle, and calls KSA's public `PlumeData.Compute` and
   `RocketNozzle.ComputeMinGasVisibilityDensity` using pascals internally.
-- **Reflection** — one string lookup remains: `VolumetricExhaustTemplate.References` (internal collection,
-  to list template IDs; falls back to the current stock IDs). Per-plume look overrides use the typed public
+- **Reflection** — one string lookup remains: `ModLibrary.AllExhaustTemplates` (internal collection,
+  to list template IDs; falls back to the current stock IDs). It replaced `VolumetricExhaustTemplate.References`
+  at KSA 5801 and is unchanged through 5949. Per-plume look overrides use the typed public
   `AddInstance(ExhaustInstance, int)` Harmony seam; no private `_shaderData` mutation remains.
 
 ## Public API (`MeowSci.PyroLib`)

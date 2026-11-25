@@ -24,9 +24,8 @@ public static class IronManConnectorPatches
     public static void Apply(Harmony harmony)
     {
         if (_applied) return;
-        _serialize = AccessTools.Method(typeof(Part), nameof(Part.GetReferenceWithChildren),
-            new[] { typeof(uint).MakeByRefType(), typeof(PartInstance), typeof(bool) })
-            ?? throw new MissingMethodException("Part.GetReferenceWithChildren(ref uint, PartInstance, bool)");
+        _serialize = FindSerialize()
+            ?? throw new MissingMethodException("Part.GetReferenceWithChildren(ref uint, PartInstance, bool, EditorSnapshot.PreviousTransforms)");
         _construct = AccessTools.Constructor(typeof(Part), ConstructorParameters)
             ?? throw new MissingMethodException("private Part(string, PartTemplate, PartInstance, TransformDataReference<SubPartTemplate>, Part, TransformReference, int, int, int, Part, bool)");
         // Copies (editor Copy Tree, symmetry and radial clones) are rebuilt from the template, so
@@ -49,6 +48,20 @@ public static class IronManConnectorPatches
             Remove(harmony);
             throw;
         }
+    }
+
+    /// <summary>
+    /// The internal recursive serializer every save, copy and editor snapshot runs once per node. KSA 5939
+    /// appended an optional internal <c>EditorSnapshot.PreviousTransforms</c> (incremental snapshots reuse
+    /// unchanged <see cref="TransformReference"/>s; a new <see cref="PartInstance"/> is still built per node),
+    /// and an exact-type lookup never matches a longer parameter list, so the nested type is resolved here.
+    /// </summary>
+    private static MethodInfo? FindSerialize()
+    {
+        Type? previousTransforms = AccessTools.Inner(typeof(EditorSnapshot), "PreviousTransforms");
+        if (previousTransforms == null) return null;
+        return AccessTools.Method(typeof(Part), nameof(Part.GetReferenceWithChildren),
+            new[] { typeof(uint).MakeByRefType(), typeof(PartInstance), typeof(bool), previousTransforms });
     }
 
     public static void Remove(Harmony harmony)

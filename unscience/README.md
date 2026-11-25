@@ -257,9 +257,23 @@ the vehicle editor is open.
 
 ## KSA compatibility
 
-The current checkout targets **KSA 2026.11.16.5901**, diffed from 5801.
+The current checkout targets **KSA 2026.11.25.5949**, diffed from 5901.
 The build, 23 managed suites, metadata/source checks and bootstrap harness pass; native acceptance
-is pending. See [5901 upgrade report](../plans/KSA_5901_UPGRADE.md).
+is pending. See [5949 upgrade report](../plans/KSA_5949_UPGRADE.md).
+
+- **Iron Man** works again on 5949: a game change had stopped all of its patches from installing,
+  which would also have let a world load drop equipment from custom anchors.
+- **Saves** survive KSA's new in-game star-system switching: loading a save from another system keeps
+  every Unscience feature's saved state, and saves from a system contained in the running one (for
+  example a Solar System save in Solar System + Interstellar) load in place instead of being refused.
+- **Pebbles** clutter types without colliders snap to the planet mesh, which KSA 5949 builds only on
+  bodies whose stock clutter does so (and only out to that clutter's range). On Luna, Mars and for
+  Earth's trees such replacements are refused with an explanation; add colliders to use them there.
+  Disabling a clutter type works everywhere.
+- **Blinky** diagnostics treat an engine's gas-generator core as required, as KSA now does.
+- **BYO Music** vessel playback starts correctly (it had always failed with an error).
+
+Earlier (5901) changes:
 
 - **Iron Man** equipment stays on its custom anchors when a world or blueprint loads (5901's new
   load-time connector cleanup would otherwise detach it and show a yellow alert), and RCS keeps

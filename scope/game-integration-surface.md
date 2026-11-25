@@ -227,7 +227,7 @@ development project. Complete signatures, direct APIs, save format and native ac
 | `SuperMeshRenderSystem.ClearBuckets(IViewport)` (per-view since 5482); `KittenEva.Renderable`; editor assembly matrix | Existing character inserted into editor render phase | Bucket-clear/prepass ordering is load-bearing; no shader or allocation changes. |
 | `VehicleEditor.OnFrame/OnMouseButton/OnKey/UpdateSelected/DeletePart/SetFocusedTree`; private `DuplicateHighlightedPart/RequestNewVehicle/FinalizeNewVehicle` | Protect EVA root while preserving accessory editing | String-method watchlist, entry/exit behavior and UI native checks. |
 | `VehicleSaveData.Create(string,PartTree)`; `Character` | Preserve authored live kitten blueprint metadata | Empty-editor spawning still creates plain Vehicle. |
-| `Part.GetReferenceWithChildren(ref uint,PartInstance,bool)`; `Part(string,PartTemplate,PartInstance,Part)` | Versioned instance-Id metadata and pre-index node reconstruction | Managed real Harmony + XML/index roundtrip; marked saves require mod. |
+| `Part.GetReferenceWithChildren(ref uint,PartInstance,bool,EditorSnapshot.PreviousTransforms)` (4-param since 5939; nested type via `AccessTools.Inner`); `Part(string,PartTemplate,PartInstance,Part)` | Versioned instance-Id metadata and pre-index node reconstruction | Managed real Harmony + XML/index roundtrip; marked saves require mod. **5949:** the old 3-type lookup returned null and rolled back all Iron Man patches; `FindSerialize` + real-DLL `Ksa5949Checks`. |
 | `Part.Connector.TemplateBase`, `TransformReference`, `Connectors`, `Connection`; `ScaleFactors`; `PartTree` dirty/recompute | Private up/down/custom nodes, bulk fuel links, transactional surface-link unload | Math/occupancy/unload/rollback checks; native snapping and resource flow pending. |
 | `KittenBackPackPart`; `Content/Core/PartGameData.xml` feet origin / -Z-up | Supported asset identity and coordinate convention | Shared stock template unchanged. |
 | `PhysicsFrameHook.Enqueue`; `VehicleProvider`; flight-computer/engine APIs; StarMap/ISubmod | Safe queued mutation, explicit session activation and restoration | Shared handoff from architecture scope; no saved activation. |
@@ -250,10 +250,10 @@ Single consolidated lookup of every game-side touchpoint (KSA.* types + risk-bea
 Brutal.*/RenderCore.* members) across all unscience mods, aggregated from the per-area `scope/`
 files. Use it on every KSA update to find which mods a changed game member puts at risk.
 
-**Verification baseline:** KSA **2026.11.16.5901**, compared with **2026.11.10.5801**
-(the supplied PREVIOUS tree and prior recorded baseline). Revisions 5802–5899 are logged; 5900–5901 are not.
-Current evidence and acceptance: [KSA_5901_UPGRADE](../plans/KSA_5901_UPGRADE.md); [IVA switch follow-up](../plans/IVA_VISIBILITY_SWITCHES.md) removes the unconditional editor render hook.
-Prior spans: [KSA_5801_UPGRADE](../plans/KSA_5801_UPGRADE.md), [KSA_5707_UPGRADE](../plans/KSA_5707_UPGRADE.md).
+**Verification baseline:** KSA **2026.11.25.5949**, compared with **2026.11.16.5901**
+(the supplied PREVIOUS tree and prior recorded baseline). Revisions 5902–5948 are logged; 5949 is not.
+Current evidence and acceptance: [KSA_5949_UPGRADE](../plans/KSA_5949_UPGRADE.md); [IVA switch follow-up](../plans/IVA_VISIBILITY_SWITCHES.md) removes the unconditional editor render hook.
+Prior spans: [KSA_5901_UPGRADE](../plans/KSA_5901_UPGRADE.md), [KSA_5801_UPGRADE](../plans/KSA_5801_UPGRADE.md), [KSA_5707_UPGRADE](../plans/KSA_5707_UPGRADE.md).
 Native game acceptance remains pending. Dated historical rows retain their original line citations;
 the current summary and owning area updates below supersede their compatibility status.
 The [October 25 startup follow-up](../plans/KSA_5638_UPGRADE.md#startup-follow-up-2026-10-25)
@@ -311,7 +311,7 @@ Compiled and managed-checked; native acceptance of the main integration remains 
 | `ClutterEcotypeRenderData.RebuildFrameResources` | prefix/finalizer | Exact owned material binding context |
 | `ClutterEcotypeRenderData.SortMaterialIds`, `CreateColorRenderer`, `CreateDepthPrePassRenderer`, `CreateDepthNormalPrePassRenderer` (5707), `CreateShadowDepthRenderer` | transpilers (`Runtime/ClutterMaterialBindings.cs`) | Exactly one `GroundClutterRenderer.MaterialBuffer` getter or `GetMaterialIndex` call per method; ksa-upgrade.tests requires this list to equal every binding method in KSA.dll |
 | `ShaderReference.CompileVariantWithCustomOptions` | prefix | Private source-color `ClutterSolidFrag` adaptation only |
-| Public constructors of `GroundClutterPlacementData`, `ClutterEcotypeRenderData`, `ClutterEcotypePhysicalData`, `ClutterCubeCellGrid`, `ClutterViewResources`, `SimpleVkMeshAtlas` | prefixes | Reachable partial-construction ownership capture |
+| Public constructors of `GroundClutterPlacementData`, `ClutterEcotypeRenderData`, `ClutterEcotypePhysicalData`, `ClutterCubeCellGrid`, `GroundClutterGpuResources` (5919), `ClutterViewResources`, `SimpleVkMeshAtlas` | prefixes | Reachable partial-construction ownership capture |
 | `CelestialTemplate.GroundClutterReference`, ecotype/object/LOD/material references; renderer `PlanetPlacementData`, `PlanetEcotypeRenderData`, `PlanetPhysicalData` | `Runtime/ClutterCapture.cs`, `ClutterGraph.cs`, `ClutterController.cs` | Private per-body graphs; original arrays retained; five LODs, 51 object slots, 256 candidates/cell, 16 physics scale buckets |
 | `PhysicsBubble`, `ConstraintSim`, `GroundClutterStatics`, Bepu shapes and primitive templates | `Runtime/ClutterController.cs`, `ClutterColliders.cs`, `ClutterRetirement.cs` | Solver completion, static invalidation, exclusion preservation and shape retirement; 5482: `ClutterRemoval`/`ClutterExclusionType`, public `GroundClutterPlacementData.SerializeSave/GetExclusionData/ExcludeCell/Add|Remove|DeserializeDisplacedObject`, `ColliderTemplate.VolumeCubicMetres` (overridden by the private hull), `ClutterObjectTemplate.AngularDamping`, `GroundClutterMaterialReference.KeepBackfaceNormals` |
 | `TextureLoader.LoadFromMemory/Unload`, `ForceRgba8`, `ITexture.Extent/Data` | `Assets/GlbMaterials.cs` | PNG/JPEG native decoding with bounded RGBA8 copy |
@@ -361,6 +361,24 @@ input runs before refresh. Post-death pruning releases private War Paint slots w
 presets. Constructor rollback remains isolated; no live custom teardown remains.
 [Native kill evidence/checks/acceptance](../plans/DOH_NATIVE_KILL_5801.md).
 [Earlier shutdown fix](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
+
+## 5949 verification summary
+
+| Current surface | Consumers / owner | Status (5901 → 5949) |
+|---|---|---|
+| `ClutterEcotypeRenderData.ReleaseViewport(int slot)` (5919, was `IViewport`); lazily allocated per-planet resources `AllocatePlanetResources`/`DisposePlanetResources`/`HasPlanetResources` | Pebbles `ClutterResidency` | Compile break fixed (slot resolved behind `HasViewportSlot`, like native); detached originals now free their per-planet VRAM (user decision) |
+| `GroundClutterGpuResources` (5919; buffers/maps/pools moved off `ClutterCubeCellGrid`); `GroundClutterTerrainData.CurvatureBuffer` freed by `DisposePlanetResources` only | Pebbles `ClutterRetirement`/`ClutterHooks` | Interrupted builds leaked them; retirement and the constructor tracker now cover the new type and the curvature buffer |
+| Planet-mesh BVH/TLAS only for stock snap-to-mesh clutter, sized to its reach (5903: `PlanetMeshLibrary.GenerateInUse`, `CubeMesh.Generate`, `GroundClutterGpuResources` throws without it) | Pebbles collider-less (snap-to-mesh) replacements; disabled ecotypes | Apply threw on Luna/Mars and Earth trees were cut to ≈80 m; **refused with a clear message** before allocation (user decision); disabled types keep stock collision |
+| internal `Part.GetReferenceWithChildren(ref uint, PartInstance, bool, EditorSnapshot.PreviousTransforms)` (5939) | Iron Man anchor serializer | Exact 3-type lookup returned null and **rolled back every Iron Man patch**; `FindSerialize` resolves the 4-param overload |
+| `UncompressedSave.Load → SaveSystemSwap.RequestLoad(Id, SystemId, ApplyLoaded)`; `SaveSystemSwap.OnFrame → Program.SwapSystem → ApplyLoaded`; `RequestJoin` (5916) | `NativeSaveHooks`, `NativeSavePreflight`, `SceneSaveCoordinator` | `LoadIntoRunning` was refused; queued switches reported "could not read", dropped the sidecar, reset after teardown and deferred deserialization past `OnGameLoaded`. Now (user decision): preflight mirrors `PlanLoad`, transaction stays open across the switch, reset in the `SwapSystem` prefix, immediate continuation, one restore, NotInstalled named; join switches reset first |
+| `GasGeneratorRocket` (5925/5936): both cores must have propellant | Blinky feed diagnostics | `RocketFeedCheck` mirrors the rule; logs/README no longer call a starved gas generator harmless |
+| `ModLibrary.Get<ChannelGroupReference>("SfxChannel")` (pre-existing `"Sfx"` miss) | BYO Music vessel playback | Fixed (user decision); not a 5949 change |
+| `Universe.ClearInvalidSeats` on load (5946) | DOH legacy boarded crew, Wing Walker | No code change; pre-5949 DOH kittens never added to the roster can be unseated on first load (recorded decision); Wing Walker riders unaffected |
+
+Real-DLL `Ksa5949Checks` pin each seam (the 5901 DLL fails them). Shader anchors, paint bits 13–30,
+`MaterialData`/`PerInstanceData` layouts and the rest of the §4 watchlist are unchanged; the pre-pass
+`MultiRenderTarget` split (5915/5923/5937), set-0 binding 2 (5948) and the `CloudLighting.glsl` move (5940)
+reach no mod. Native acceptance remains open. [Evidence](../plans/KSA_5949_UPGRADE.md).
 
 ## 5901 verification summary
 
@@ -1067,11 +1085,19 @@ keeps the native foil material/UV island and custom material references authorit
 | `MaterialSystem : GpuMaterialSystem` (field) | reflection-field | `KSA/Program.cs:94` | war-paint | `MaterialSystemAccessor.cs:64`; `war-paint.lib/Materials/MaterialSystemAccessor.cs` | OK | |
 | `SuperMeshRenderSystem` (field) → `.TextureSystem : GpuTextureSystem` | reflection-field | `KSA/Program.cs:96`; `KSA/SuperMeshRenderSystem.cs:39` | doh | `MaterialSystemAccessor.cs:88,91,94` | OK | |
 | `CharacterRenderSystem` (field) | reflection-field | `KSA/Program.cs` (`KSA/CharacterRenderSystem.cs:7`) | doh | `MaterialFactory.cs:495-528` | OK | |
+| `SwapSystem(SystemTemplate) : SystemSwapResult` (5916) | Harmony PREFIX+POSTFIX+FINALIZER | `KSA/Program.cs:1905` | scene saves (all participants) | `ksa-abstractions.lib/Persistence/NativeSaveHooks.SystemSwap.cs` (`ResetBeforeSwap`/`AfterSwap`/`FinishedSwap`) | OK @5949 | Only caller `SaveSystemSwap.OnFrame` (after `ImGui.Render`). Prefix resets at a `JobSystems.WaitAll` boundary before `DestroyAllVehicles`/`DestroyAllPhysicsBubbles`/renderer disposal; `WontFit` (restart into the save's system) drops the continuation |
+
+### KSA.SaveSystemSwap
+| Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
+|---|---|---|---|---|---|---|
+| `RequestLoad(string saveName, string savedSystemId, Action apply) : static SystemSwapRequest` (5916) | Harmony PREFIX (`ref Action apply`) + POSTFIX (`savedSystemId`, `__result`) | `KSA/SaveSystemSwap.cs:13` | scene saves | `NativeSaveHooks.SystemSwap.cs` (`WrapApply`/`RecordRequest`) | OK @5949 | **Parameter names are Harmony bindings** (§4). Only caller `UncompressedSave.Load` (`:88`); a queued switch keeps the Unscience load transaction open until the wrapped `ApplyLoaded` returns |
+| `PlanLoad(string) : static SaveLoadPlan` | direct API | `KSA/SaveSystemSwap.cs:100` | native save preflight | `ksa-abstractions.lib/Persistence/NativeSavePreflight.cs` (`ValidateGlobals`) | OK @5949 | Preflight accepts exactly `Load`/`LoadIntoRunning`, as native deserializes in place |
 
 ### KSA.RocketCore
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
 |---|---|---|---|---|---|---|
-| `PlumbedCore.{ResourceManager, DesiredMix, FeedConnectors}` (`core is PlumbedCore`) | direct API | `KSA/PlumbedCore.cs:19,44` @5638 | blinky | `BlinkySubmod.cs:711-756`; `LcdGridBuilder.cs:607-614`; `FuelAnchorFinder.cs:48` | CHANGED | rev 5487 moved tank-fed draw from `Combustor` to the new `PlumbedCore` base (also `ThermalCore`, `AntimatterRamCore`); feed check, diagnose and fuel-anchor mix |
+| `PlumbedCore.{ResourceManager, DesiredMix, FeedConnectors}` (`core is PlumbedCore`) | direct API | `KSA/PlumbedCore.cs:19,44` @5638 | blinky | `BlinkySubmod.cs`; `LcdGridBuilder.cs`; `FuelAnchorFinder.cs:48`; `RocketFeedCheck.cs` | CHANGED | rev 5487 moved tank-fed draw from `Combustor` to the new `PlumbedCore` base (also `ThermalCore`, `AntimatterRamCore`; `GasGeneratorCore` since 5925); feed check, diagnose and fuel-anchor mix |
+| `EngineController.Rockets` → abstract `Rocket.Cores : ReadOnlySpan<RocketCore>` (5936; `Rocket.Core` field removed); `GasGeneratorRocket.UpdatePropellantAvailability` | direct API / behaviour | `KSA/Rocket.cs:18`; `KSA/GasGeneratorRocket.cs:30-44,174-179` | blinky diagnostics | `blinky.lib/RocketFeedCheck.cs`; `BlinkySubmod.cs` (`ControllerCores`) | OK @5949 | A gas-generator rocket needs both cores fed; `RocketFeedCheck` counts a controller/pixel as fed only when one rocket has every tank-fed core reaching a tank |
 
 ### KSA.SerializedCollection<T>
 | Member (signature) | Kind | Decomp path | Used by | Mod code ref(s) | 4750 | Notes |
@@ -1327,12 +1353,30 @@ keeps the native foil material/UV island and custom material references authorit
 
 ## 4. String-based reflection watchlist (highest silent-break risk)
 
+**5949 additions:** Iron Man's anchor serializer is an **explicit overload array** on an internal
+method; 5939 appended an optional internal parameter, which made the lookup return null and rolled
+back every Iron Man patch while the build stayed green. It now resolves
+`Part.GetReferenceWithChildren(ref uint, PartInstance, bool, EditorSnapshot.PreviousTransforms)` with
+the nested type from `AccessTools.Inner` — recheck the full parameter list on every update (optional
+tails break exact lookups). Pebbles retirement walks seven native types by reflection, now including
+`GroundClutterGpuResources` (5919 moved the clutter buffers/maps there; its borrowed `Bvh` is not
+walked), and cleans `GroundClutterTerrainData.CurvatureBuffer` (no longer freed by `Dispose`).
+Pebbles' `SnapToMeshPolicy` mirrors native behaviour rather than a name — the 5903 planet-mesh
+structure gate (`GroundClutterGpuResources.BuildFrameResources`/`CreateRayQueriesGenerateWrites`) and
+patch formula (`PlanetMeshLibrary.GetEcotypeRangeMeters`, `CubeMesh.Generate`); recheck it whenever
+those change. `Ksa5949Checks` verifies these seams.
+
 **5901 additions:** Iron Man patches `PartInstance.DropStaleConnectors()` (exact empty-parameter
 lookup; it must keep running before construction on both load paths and keep deleting by
 `Index >= template.Connectors.Count`). You Didn't See Anything finds the Crew Clock by the ImGui
 window name `"##crewClock"` (`CrewClock.cs:154`; its `##crewClockEvents` child and tooltips follow that owner); a rename leaves it visible during F2 with gauges
 hidden. Pebbles' residency release depends on `GroundClutterRenderer.HasViewportSlot` matching the
 slot set `ResolveViewportSlot` accepts. `Ksa5901Checks` verifies the call sites.
+
+Scene saves bind `SaveSystemSwap.RequestLoad`'s parameters **by name** (`ref Action apply`,
+`string savedSystemId`); a rename makes Harmony refuse the patch and the save hooks fail to install
+loudly. `Ksa5949Checks` pins the names, the `Load → RequestLoad`/`ApplyLoaded` order and
+`SwapSystem`'s single caller.
 
 Wing Walker adds the private exact-signature `PartCloner.Gather(Part,uint)` lookup. Native DLL
 signature checks pass; recheck that it still precedes module save-data capture on upgrades.
@@ -1457,6 +1501,13 @@ unconditional editor reveal hook is removed. Existing native glass and shadow-pr
 
 ## 6. Confirmed-broken / changed summary
 
+**5949 upgrade:** Pebbles `ReleaseViewport(int)` compile break; Iron Man's whole patch set failed to
+install (5939 serializer parameter); Unscience scene saves lost on 5916 cross-system loads and
+contained-system loads refused; Pebbles collider-less replacements unsupported where the 5903 planet
+mesh has no structure (now refused with a message) and retirement missing the 5919 GPU resources;
+Blinky feed diagnostics wrong for gas-generator rockets. All fixed with managed/real-DLL regressions.
+Pre-existing BYO Music `"Sfx"` channel id fixed. [Evidence](../plans/KSA_5949_UPGRADE.md).
+
 **5901 upgrade:** Blinky `EngineController.Cores` compile break; Pebbles residency release threw for
 non-clutter viewports; Iron Man anchors lost on load (`DropStaleConnectors`) and RCS invalidation
 overwritten by the new Zero reset; You Didn't See Anything retained the new Crew Clock. All fixed with
@@ -1561,7 +1612,8 @@ XYZ collision fidelity. New StarMap/ISubmod consumers: `godzilla` development ho
 `GameAudio.System`, `FmodSystem.TryCreateStream/TryPlaySound`, `Sound.TryGetOpenState/TryRelease`,
 `Channel.TryIsPlaying/TryStop/TrySetPaused/TrySetMode/TrySetLoopCount/TrySetVolume`, 3D
 attributes/min-max distance/spread/Doppler setters, `SpatialAudio.PositionView/VelocityView`,
-`ChannelGroupReference.ChannelGroup` and stock **Sfx** asset id. Existing vessel identity/disposal
+`ChannelGroupReference.ChannelGroup` and stock **SfxChannel** asset id (fixed @5949: the mod asked for
+`"Sfx"`, the FMOD group name, which `ModLibrary` never held — pre-existing, see [audio](audio.md)). Existing vessel identity/disposal
 APIs handle source loss. No new Harmony patch or reflection. The old SabotageMusic placeholder is
 no longer referenced by the host UI; the legacy MusicPlayer library helper remains.
 
@@ -1629,7 +1681,8 @@ Native acceptance remains in [vehicle physics](vehicle-physics.md).
 
 See [saves.md](saves.md) for the authoritative lifecycle and cross-feature persistence map.
 `NativeSaveHooks` patches `GameSave.Populate`, `UncompressedSave.Write/Load`,
-`Universe.DeserializeSave(UniverseData)` and `Universe.LoadSystem(string)`, using the shared
+`Universe.DeserializeSave(UniverseData)`, `Universe.LoadSystem(string)` and (@5949)
+`SaveSystemSwap.RequestLoad(string,string,Action)` and `Program.SwapSystem(SystemTemplate)`, using the shared
 `PhysicsFrameHook` for deferred world replacement. Save-local part addresses traverse
 `Vehicle.Parts.Root`, `Part.TreeChildren`, `Part.SubParts` and verify `Part.Template.Id`.
 Reset waits `JobSystems.OrbitSolvers/VehicleSolver/ClothSolvers/NearestOrbitAndPerformanceWorker` (renamed from `ConcurrentWorkers` @5480) and clears queued old-world edits. Since 5482 `UncompressedSave.Write()` returns `bool`: the sidecar is written only on `true` (`WriteFailed` otherwise), and a file load that never reaches `Universe.DeserializeSave` (KSA now catches unreadable universe files) is reported as a load failure.

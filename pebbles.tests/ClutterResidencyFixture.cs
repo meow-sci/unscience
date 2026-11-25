@@ -6,7 +6,10 @@ using System.Collections.Generic;
 // ReleaseViewport/ResolvePendingReleases: a slot release clears that slot's mask bit on each loaded
 // cell, and a cell returns its pooled slot only once no viewport mask remains. Since KSA 5875 those
 // arrays are indexed by GroundClutterRenderer's clutter slot, which only Main/Secondary viewports own;
-// resolving any other registered viewport throws. No game source is copied.
+// resolving any other registered viewport throws. Since KSA 5919 ReleaseViewport takes that resolved
+// slot instead of the viewport. KSA 5919/5920 per-planet buffers follow AllocatePlanetResources /
+// DisposePlanetResources: both are guarded by HasPlanetResources, and disposing while residences remain
+// is what native logs as "disposed while ecotype ... still holds cells". No game source is copied.
 namespace KSA
 {
 public interface IViewport
@@ -47,6 +50,22 @@ public sealed class ClutterEcotypeRenderData
     public IViewport? GenerationViewport;
     public int FreeSlots { get; private set; }
     public int Resolves { get; private set; }
+    public bool HasPlanetResources { get; private set; }
+    /// <summary>Fixture probes: per-planet buffer frees, and frees that happened while cells were still resident.</summary>
+    public int PlanetFrees { get; private set; }
+    public int FreesWhileHoldingCells { get; private set; }
+
+    /// <summary>What native AccumulateViewportCells does for the nearby body's attached arrays.</summary>
+    public void AllocatePlanetResources() => HasPlanetResources = true;
+
+    public void DisposePlanetResources()
+    {
+        if (!HasPlanetResources) return;
+        if (_masks.Count != 0) FreesWhileHoldingCells++;
+        PlanetFrees++;
+        HasPlanetResources = false;
+        GenerationViewport = null;
+    }
 
     public ClutterEcotypeRenderData(int slots)
     {
@@ -65,9 +84,9 @@ public sealed class ClutterEcotypeRenderData
         GenerationViewport = viewport;
     }
 
-    public void ReleaseViewport(IViewport viewport)
+    // KSA 5919+: callers resolve the clutter slot first (native OnViewportUnregistered does too).
+    public void ReleaseViewport(int slot)
     {
-        int slot = GroundClutterRenderer.ResolveViewportSlot(viewport);
         var loaded = _loaded[slot];
         if (loaded.Count == 0) return;
         var bit = 1u << slot;

@@ -1,5 +1,75 @@
 # Vehicle Manipulation / Physics Mods — Game Integration Scope
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+No Harmony anchor or reflected member in this area broke. `PhysicsBubble.cs` differs by one line
+(`RecomputePositionalEnvironmentValues(in newStates.Origin)`); `DetectStructuralFailure` and `DetectKittenImpact`
+bodies are byte-identical, so The Tick and Kitchen Sink G-load transpiler anchors hold (one `GLoadFraction`
+getter, one `DetectKittenImpact` call). `Part.CrashTolerancePascals` (`Part.cs:918`), `StructuralLoad` and
+`PartStructuralLimits` are unchanged. `Program.PrepareFrame` is identical (OLD `:2389` / NEW `:2511`, all seven
+`PhysicsFrameHook` seams; `GetJobSimStep` OLD `:2465` / NEW `:2587`), `Universe.ExecuteNextVehicleSolvers`
+(NEW `:2277`) and `ConstraintSim.DetectCollisions(double)`/`Simulate(double, ref readonly SimStep)` keep their
+signatures (Eternal Flame, Kiwi's Marbles, Kitchen Sink prefixes; Garry's Torch weld suppression). No unscience
+code calls `PhysicsStates.RecomputePositionalEnvironmentValues`/`ComputeDerivatives`.
+- **Integrator and Bepu (5934, 5911).** `CollidableReference`, `TypedIndex`, `PairContinuation`,
+  `CCDContinuationIndex`, `BoundsContinuation` and `Leaf` became `readonly struct` (binary-compatible for reads;
+  Bepu 2.5.0-beta.33); `Box.ComputeAngularExpansionData` and `ConvexHullHelper.ReduceFace` were fixed (native
+  and Pebbles-owned hulls alike). Garry's Torch `SetShape(default)` and Godzilla's `Box` use are unaffected. The
+  5911 friction fix (up to 4x) is behavioural only: needs live re-verification of contact, sliding and stacking
+  with Garry's Torch welds and Godzilla-scaled colliders.
+- **5936 Rocket refactor.** Only blinky, iron-man and pyro reference rocket types, and no Harmony patch targets
+  `Rocket`, `RocketCore`, `EngineController` or `RocketNozzle`; the devirtualized/removed members are unused by
+  production code. Eternal Flame's seams (`Vehicle.RefillConsumables`, `PartTree.RefillConsumables`, `Battery`) are
+  unchanged. 5931's fuel-line tank
+  emptying fix is native; there is no unscience workaround to retire.
+- **5939 part render data and Godzilla/Garry's Torch.** Scale and position writes (`VesselScaleSnapshot`,
+  `WeldScaleSnapshot`) go through the public `Part.Scale/PositionParentAsmb` setters and
+  `ResetCachedPosMatrixValues` (NEW `Part.cs:828,838,883`), which now queue a targeted `InvalidateTransforms(this)`
+  (NEW `Part.cs:1321`; OLD `:1313` invalidated the whole tree) that rewrites the top owner and its sub-part slots,
+  falling back to a whole-tree rewrite for off-thread calls, more than 256 queued parts or at least 25% of the
+  tree. No mod writes transform fields directly. Godzilla's render seams (`IsLargeEnoughToRender`,
+  `GetWorldMatrix`, `UpdateRenderData`, `PartTree.UpdateRenderData`; transpiler anchors 1/1) and the collider
+  seams (`ColliderModule`, `UpdateCollisionGeometry`) are identical. Garry's Torch `Vehicle.Teleport`,
+  `JobSystems` and `KittenRenderable.ModelToBodyMatrix` are unchanged. Whether the incremental invalidation
+  honours Godzilla's per-frame matrix scaling needs live re-verification.
+- **5946 `Universe.ClearInvalidSeats()` (native, new).** Called from `CreateSystem` (NEW `Universe.cs:340`) and
+  `DeserializeSave` (`:2617`, right after `CurrentSystem.DeserializeSave` `:2614` and the roster assignment
+  `KittenRoster = universeData.KittenRoster` `:2615`); body `:344-394`, `CheckSeat` `:396-411`. It walks every non-`KittenEva` vehicle and
+  empties a seat (`AssignedKittenHash = Zero`; the roster entry is untouched) when the kitten is not in the roster,
+  is already seated in an earlier seat, or a `KittenEva` with the kitten's name exists. It runs before every
+  unscience sidecar restore, so no mod can pre-empt it. Effects on unscience-created data:
+  1. A DOH kitten that was never rostered (spawned before the DOH roster integration, commit `0c7da42`
+     2026-11-08, or whose `EnsureRoster` failed, `KittenSpawner.Roster.cs:23-27`) and then boarded a vessel:
+     native boarding seats unrostered kittens (`Vehicle.SetSeatCrew`, NEW `Vehicle.cs:966-970`), so on the first
+     5949 load the seat is emptied and the kitten is gone. DOH forgets boarded kittens, so there is no ownership
+     record to backfill from.
+  2. A pre-5669 DOH save whose EVA kitten shares a name with a rostered seated kitten (the "DOH (fixed, rev 5669)"
+     collision): the seated crew member is evicted. Live naming and `EnsureRoster` prevent new cases.
+  3. Wing Walker's old symmetry-duplicated riders: the first seat keeps the kitten and duplicates are emptied with a
+     warning, a beneficial cleanup (see [wing-walker](wing-walker.md)).
+
+  Verdict: no code change; a known legacy-save behaviour. Native check: load an old DOH save with a boarded DOH
+  kitten and look for `'<vehicle>' had a seat for … the seat is left empty`.
+- **5938/5942/5943 arrival service.** `ArrivalService.Update` runs at the end of `CelestialSystem.UpdatePerFrameData`
+  (NEW `CelestialSystem.cs:366`) for every non-debris vehicle (every 0.25 s off rails, on situation or parent
+  change) and records visit-log entries, kitten firsts (`KittenRosterEntryData.RecordArrival`) and Life Support
+  mission progress (`MissionProgress.Record` moved from OLD `Vehicle.UpdatePerFrameData` `Vehicle.cs:2925-2929` to
+  NEW `ArrivalService.cs:260`). DOH spawns on another body, Iron Man surface teleports, Garry's Torch per-frame
+  teleports and Dent Wizard launches therefore now produce arrival/"first kitten" records and can end mission
+  legs; Garry's Torch's extra `Vehicle.UpdatePerFrameData()` calls no longer re-record mission progress. It is
+  null-safe for unrostered kittens and `DestroyVehicle`/`Deregister` call `Arrivals.Remove` (NEW `Universe.cs:2173`,
+  `CelestialSystem.cs:116`); gameplay-record drift only. Check frame time with a large DOH batch spawn.
+- **5916 system switching.** `Program.SwapSystem` runs `DestroyAllVehicles()` and `DestroyAllPhysicsBubbles()`
+  (NEW `Program.cs:1926-1927`) with no seam any mod hooks, then `Universe.CreateSystem` (bypassing the patched
+  `Universe.LoadSystem`); mods holding vehicle references through `PhysicsFrameHook` (Iron Man, Garry's Torch,
+  Dent Wizard, Godzilla, The Tick) are exposed until their reset runs. Unscience's cross-system load handling:
+  see [saves](saves.md).
+- Checked clean: 5908/5914 thermo tables (no thermal destruction cause exists, so The Tick's coverage statement
+  stands); i-feel-seen render targets; Dent Wizard terrain picking (`DentWizardPicker.cs:102`, unchanged
+  `Celestial.GetTerrainHeightFromDirCcf`); Save Yourself drives only native `UncompressedSave.Make`.
+
+[5949 review](../plans/KSA_5949_UPGRADE.md).
+
 ## KSA 5801 → 5901 verification (2026-11-20)
 
 No code change in this area. `Universe.ExecuteNextVehicleSolvers`, `Battery.Refill`,

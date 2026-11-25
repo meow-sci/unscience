@@ -59,7 +59,8 @@ public sealed partial class ClutterController : IDisposable
     {
         RecipeValidation.Validate(recipe);
         Refresh();
-        if (!_bodies.ContainsKey(bodyId)) throw new InvalidOperationException($"Celestial '{bodyId}' is unresolved.");
+        if (!_bodies.TryGetValue(bodyId, out var body)) throw new InvalidOperationException($"Celestial '{bodyId}' is unresolved.");
+        ClutterSnapToMesh.Require(body, recipe); // Early UI feedback; Apply repeats it before allocating.
         _pending[bodyId] = RecipeCopy.Clone(recipe); Status = "Waiting for the next safe frame";
     }
     public void RestoreEcotype(string bodyId, string ecotypeName)
@@ -119,6 +120,9 @@ public sealed partial class ClutterController : IDisposable
         var record = old ?? new ClutterLiveRecord { BodyId = id, Body = body };
         var originalTemplate = record.Owner == null ? body.BodyTemplate : record.OriginalTemplate!;
         if (!ReferenceEquals(record.Body, body)) throw new InvalidOperationException("Target belongs to a different universe generation.");
+        // KSA 5903+: refuse snap-to-mesh types the planet mesh cannot serve, before anything is allocated, so
+        // the refusal is an ordinary Apply error / save-replay warning rather than a native preparation fault.
+        ClutterSnapToMesh.Require(body, recipe);
         var next = new ClutterResources(owner);
         try { next.Build(body, originalTemplate.GroundClutterReference!, recipe, _assets); }
         catch (Exception ex)
@@ -139,7 +143,7 @@ public sealed partial class ClutterController : IDisposable
             RememberGrids(record, sourceGraph, before, authoritative: record.Owner != null);
             ReplayGrids(record, next.Graph.Reference, next.Placement, next.Render, next.Physical);
             ClearStatics(body);
-            // KSA 5629+: the renderer releases viewports only on attached arrays, so detach residency here.
+            // KSA 5629+/5919: the renderer releases viewports and per-planet VRAM only on attached arrays, so detach both here.
             ClutterResidency.ReleaseDetached(owner.PlanetEcotypeRenderData[body.Hash]);
             if (record.Owner == null)
             {

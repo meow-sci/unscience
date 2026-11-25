@@ -1,5 +1,36 @@
 # Sphinx — body-fixed imported GLB statics
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+No code change. Hooks are unchanged: `StaticObjectRenderer.UpdateRenderData(IViewport,int)` OLD `:290` / NEW
+`:312`, private `WriteCommandsColor(CommandBuffer,IViewport,int,VkPipeline,DrawBucket)` OLD `:320` / NEW `:342`
+(still exactly one `VkPipeline.IsNull` call, NEW `:351`, so `Ksa5707Checks` holds) and
+`WriteCommandsPrePass(CommandBuffer,IViewport,int)` OLD `:372` / NEW `:394`. The colour layout is still nine
+sets (`InlineArray9`, `:99` in both) and the pre-pass layout four; sets 2/3 only gained debug names, and
+`StaticObjectModel.cs` (`PerDrawData`, `DrawBucket`) and `StaticObject.vert/.frag` are identical.
+- **Pre-pass MultiRenderTarget (5915/5923/5937).** `PrePassData.Target` became a `MultiRenderTarget`: normal in
+  `A2B10G10R10UNormPack32` (packed unsigned) plus roughness in `R8UNorm`, instead of one `R16G16B16A16SFloat`
+  target. The static pre-pass pipeline now has two colour attachments (OLD `StaticObjectRenderer.cs:255`
+  `BlendNone` vs NEW `:266-276` `AttachmentCount = 2`) and `StaticObjectNormalIndirect.frag` writes
+  `outNormal`@0 + `outRoughness`@1. Sphinx builds no pipeline (`StaticModelResources.cs:157-163` binds sets 2/3
+  only), so its pre-pass draws run under the native `PrePassPipeline` with identical `PerDrawData` and feed the
+  split targets exactly like stock statics.
+- **Other native changes.** 5902 moved set 8's dynamic offset to `UvOffsetsDynamicOffset(viewport, frameIndex)`;
+  Sphinx binds only set 2 and inherits it. 5905 skips the planet and clutter pre-pass in the editor (NEW
+  `PrePassRenderer.cs:283-306`); the static pre-pass still runs. 5948's sun tile is written only by native
+  transparency, ring and exhaust shaders; `StaticObject.frag` is unchanged.
+- **Physics.** `NarrowPhaseCallbacks.AllowContactGeneration` is identical (one `BepuHandles.IsGroundSurface`
+  for the contact-filter transpiler); 5911 made `CollidableReference` a `readonly struct` with the same layout
+  (`Size = 4`). `SphinxPhysicsPatches.cs:20-21` clears statics on `ConstraintSim.TryResetForPool`/`Dispose`, so
+  5916's bubble teardown already detaches them. `GroundPlacement.cs:87` terrain sampling is unchanged.
+- **5916 system switching.** Body-fixed anchors keep their old `Celestial` reference and are inert through the
+  `ReferenceEquals(..., NearbyCelestial)` filters (`SphinxSubmod.cs:91,100`) until their reset runs; whether they
+  re-resolve by id in the new system needs live re-verification. Unscience's cross-system load handling: see
+  [saves](saves.md).
+
+Native acceptance: statics with SSAO and the light pre-pass on the split targets (expected identical to stock
+statics), and a cross-system load. [5949 review](../plans/KSA_5949_UPGRADE.md).
+
 ## KSA 5801 → 5901 verification (2026-11-20)
 
 Rev 5879 removed the cloud-shadow set from `StaticObjectRenderer.PipelineLayout` (10 → 9 sets; planet

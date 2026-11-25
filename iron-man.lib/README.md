@@ -1,5 +1,17 @@
 # IronManLib
 
+## KSA 5949 compatibility
+
+KSA 5939 (incremental editor snapshots) appended an optional internal `EditorSnapshot.PreviousTransforms`
+to the internal `Part.GetReferenceWithChildren` serializer. The anchor serializer's exact three-type
+lookup stopped matching, so on an unfixed 5949 build `IronManPatches.Apply` rolled back **every** Iron
+Man patch at startup (the feature was inert, and saved anchor connections were dropped by the native
+stale-connector pass again). `IronManConnectorPatches.FindSerialize` now resolves the four-parameter
+overload through `AccessTools.Inner`; the postfix is unchanged and still runs once per node, because
+5939 builds a new `PartInstance` per node and only reuses unchanged `TransformReference`s. The test
+fixture mirrors the new shape and `ksa-upgrade.tests` pins the real overload (`Ksa5949Checks`). No save
+payload changed. See [upgrade evidence and native acceptance](../plans/KSA_5949_UPGRADE.md).
+
 ## KSA 5901 compatibility
 
 KSA 5866 runs `PartInstance.DropStaleConnectors()` on world and blueprint load, which deletes saved connections at or beyond the template's connector count — exactly the owned anchor suffix. `IronManStaleConnectorGuard` keeps the validated owned range of decodable marked backpacks, never throws, and leaves stale indices, stock parts and child recursion to native code. KSA 5807 also resets the thruster cache to Zero when rocket controls are recomputed; `InvalidateCache` now runs that pending recompute first so Enable/Disable keep RCS authority. Anchor connections already lost by a 5901 load-and-save without this fix cannot be recovered. An incapacitated kitten in rocket mode keeps Auto attitude/burn (native release does not run for kittens) — recorded as a pending decision.

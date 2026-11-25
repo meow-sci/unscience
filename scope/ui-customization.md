@@ -1,5 +1,37 @@
 # UI / Customization Mods — Game Integration Scope
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+No code change; one risk needs live re-verification. 5916 runtime system switching makes
+`Program.BuildSystemRenderers` (NEW `Program.cs:1870-1903`) call `Loading.State/Task`, and `Loading.Current` now lives for
+the whole session (NEW `Loading.cs:95`; ctor `Program.cs:958`), so each call renders a nested full ImGui frame
+(`Loading.OnFrame`, `Loading.cs:98-160`: `NewFrame` … `Render` … present). In 5901 those frames happened only
+during `Program` construction. You Didn't See Anything's `NativeWindowFilter` context hooks fire for these
+frames: whenever YDSA is filtering (`Filtering`, `:88`), `FilterDrawData` (`:260-292`) drops every list
+not owned by an allowed window, including the `BlankBackground` overlay and, with Detached Only, the
+main-viewport loading window. **Risk:** a blank screen for the whole switch (can be long during shader compile).
+`Loading.OnFrame` never calls `Program.PrepareImGui`, so the review's suggested fix is to filter only frames the
+game began (`PrepareImGuiPrefix` sets a per-frame flag, `RenderPost` clears it). Unscience's cross-system load
+handling: see [saves](saves.md).
+- **YDSA seams unchanged.** `Program.OnFrame` still has two `get_DrawUI` gates and `OnDrawUiThreadSafe` one (both
+  trees), now with `SaveSystemRestart/SaveSystemSwap.OnFrame` and profiler tags added; `PrepareImGui`,
+  `DrawMenuBar(IGameViewport,int)`, `GaugeCanvas` (identical), `Universe.OnDrawUi` and the `HiddenUiFrameHook`
+  target `OnDrawUiConsole` are unchanged. `CrewClock` is identical (`##crewClock` mapping valid) and all 15 gauge
+  IDs are present in `Gauges.xml`. 5912's `DestinationRegistryWindow` ("Destinations", NEW `Program.cs:3565`) is
+  an ordinary window under the existing policy; its "Show Destinations" item is in the Debug menu (`:4340`), so
+  the `DrawMenuBar` prefix and the `MenuBarPatch` postfix on `DrawProgramMenusHook` (`:4479`) are unaffected.
+  5924's `ResourcesPanel` is drawn inside the "Resources" gauge (`GaugeCanvas.cs:866`); `##EditorResources` is
+  unchanged. `Brutal.ImGui` is byte-identical (skittles), and `GameSettings.OnKeyAll` is unchanged (HotkeyGuard).
+- **5927 editor COM markers (needs live check).** The editor's MASS toggle and centre-of-mass markers are on by
+  default (`_showCenterOfMass = true`) and drawn from `VehicleEditor.OnDrawUi` onto the main overlay draw list
+  (`VehicleEditor.cs:6531-6570,6681-6693`); verify they obey YDSA's hide-UI gating. `ConsoleWidgets.Segmented`
+  (dummy-width change) is used by no mod.
+- **Capsule glass (kitchen-sink).** `PartRenderFilter` `Compose*` and the reflected batch fields are unchanged
+  under 5939 (`Compose`/`ComposeDynamic`/`ComposeGlass` OLD `:1381/1284/1049` → NEW `:2296/2199/1939`); the
+  capsule window model keys are still `CoreCommandAAssets.xml:76,92` (only a connector X position changed).
+
+[5949 review](../plans/KSA_5949_UPGRADE.md).
+
 ## IVA visibility switches (5801, 2026-11-11)
 
 Forced interiors require Kitchen Sink's **Always Render IVA Interiors** or **See Inside Capsule

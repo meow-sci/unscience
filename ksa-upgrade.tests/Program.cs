@@ -13,5 +13,6 @@ PaintCompilationChecks.Run();
 Ksa5707Checks.Run();
 Ksa5801Checks.Run();
 Ksa5901Checks.Run();
+Ksa5949Checks.Run();
 DataReferenceChecks.Run();
-Console.WriteLine("PASS: KSA 5438/5482/5638/5707/5801/5901 managed upgrade regressions");
+Console.WriteLine("PASS: KSA 5438/5482/5638/5707/5801/5901/5949 managed upgrade regressions");

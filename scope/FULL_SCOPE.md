@@ -44,19 +44,19 @@ including after loads; no counter or additional scene state is saved.
 
 ## Version baseline
 
-- **Cataloged against:** KSA **2026.11.16.5901**, metadata date **2026-11-17**.
-- **Diffed from:** **2026.11.10.5801**, matching PREVIOUS and the prior recorded baseline.
+- **Cataloged against:** KSA **2026.11.25.5949**, metadata date **2026-11-25**.
+- **Diffed from:** **2026.11.16.5901**, matching PREVIOUS and the prior recorded baseline.
   Supplied source/Content trees are authoritative; in-repo `decomp/ksa` remains historical.
 - **Build references:** plain `dotnet build`; `KSAFolder` defaults to the adjacent
-  `../ksa-game-assemblies/current/dll/`. No 5901 game installation was used on this macOS ARM64 host.
-- **Changelog coverage:** all 98 revisions **5802–5899** logged; **5900–5901 unlogged**.
+  `../ksa-game-assemblies/current/dll/`. No 5949 game installation was used on this macOS ARM64 host.
+- **Changelog coverage:** all 47 revisions **5902–5948** logged; **5949 unlogged**.
 - **Verification:** whole solution builds with 0 warnings/errors; all 23 managed suites, real-DLL
-  5901 seam checks (negative-controlled against 5801), 19 isolated bootstrap cases and distribution
+  5949 seam checks (negative-controlled against 5901), 19 isolated bootstrap cases and distribution
   validation. **Static/managed only; native acceptance pending.**
 - **IVA follow-up:** explicit switch ownership in flight/editor; constructor-only helper. [Checks and acceptance](../plans/IVA_VISIBILITY_SWITCHES.md).
-- **Evidence:** [5901 impact and remediation](../plans/KSA_5901_UPGRADE.md). Dated area tables retain
+- **Evidence:** [5949 impact and remediation](../plans/KSA_5949_UPGRADE.md). Dated area tables retain
   historical citations; current dated sections supersede their compatibility status. Previous reports:
-  [5801](../plans/KSA_5801_UPGRADE.md), [5707](../plans/KSA_5707_UPGRADE.md),
+  [5901](../plans/KSA_5901_UPGRADE.md), [5801](../plans/KSA_5801_UPGRADE.md), [5707](../plans/KSA_5707_UPGRADE.md),
   [5638](../plans/KSA_5638_UPGRADE.md), [5482](../plans/KSA_5482_UPGRADE.md),
   [5438](../plans/KSA_5438_UPGRADE.md).
 
@@ -110,7 +110,17 @@ rocky-mcrock-face, save-yourself, skittles, sphinx, wing-walker, the-tick, thug-
 
 ---
 
-## Current status against 5901
+## Current status against 5949
+
+KSA 5949 fixes: Iron Man installs again (5939 added a parameter to the internal serializer its exact
+lookup bound; every Iron Man patch had rolled back); scene saves carry state across 5916 star-system
+switches (reset before `Program.SwapSystem`, one restore after the swapped-in load) and accept
+contained-system loads; Pebbles compiles against slot-based `ReleaseViewport`, retires the 5919 GPU
+resources, frees detached arrays' VRAM and **refuses** collider-less replacements where the 5903
+planet mesh has no structure (Luna, Mars, Earth trees); Blinky diagnostics follow the two-core
+gas-generator rocket. Pre-existing BYO Music `Sfx` channel id fixed. [5949 evidence and acceptance](../plans/KSA_5949_UPGRADE.md).
+
+## Previous status against 5901
 
 KSA 5901 fixes: Blinky diagnostics follow `EngineController.Rockets`; Pebbles releases only clutter
 viewports (5875 slot compaction had broken every Apply); Iron Man keeps connected anchors through the

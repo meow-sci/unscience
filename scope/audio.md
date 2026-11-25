@@ -1,5 +1,16 @@
 # Audio — BYO Music integration
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+No 5949 audio change: `GameAudio`, `SpatialAudio`, `ChannelGroupReference`, `ChannelWrapper`,
+`AudioBindings` and `Content/Core/Sounds.xml` are identical; `ModLibrary`/`Vehicle` changed only outside
+the members BYO Music reads. The upgrade sweep found a **pre-existing** bug, fixed in this change (user
+decision): vessel playback asked `ModLibrary` for channel group `"Sfx"`, which is only the code-created
+FMOD group name; its `ModLibrary` reference is `SfxChannel` (`Sounds.xml:46`), so every vessel stream
+threw before playing. `VesselSound.Start` now uses `SfxChannel` (table below). Native acceptance: play
+an imported file on a vessel and confirm the SFX volume slider scales it.
+See [KSA 5949 upgrade review](../plans/KSA_5949_UPGRADE.md).
+
 ## KSA 5707 → 5801 verification (2026-11-08)
 
 The bundled FMOD player compiles unchanged. The legacy BYO Music host's `Assets.xml` now follows the
@@ -56,7 +67,7 @@ Unscience `ISubmod`; its standalone host remains a compile-only development refe
 | `GameAudio.System : FmodSystem` | `KSA/GameAudio.cs:55,104,269`; use the game's initialized Core system, not a second listener/system. KSA initializes right-handed 3D coordinates. | `byo-music.lib/VesselSound.cs` |
 | `FmodSystem.TryCreateStream`, `Mode._3d/NonBlocking/LoopOff`, `CreateSoundExInfo` | `Brutal.FmodApi/Fmod.cs:1191`; nul-terminated UTF-8 filename using the same wrapper as stock `CreateFmodSound`. Own one stream per source. | constructor |
 | `Sound.TryGetOpenState`, `OpenState.Ready/Error`, `Sound.TryRelease` | `Fmod.cs:1872,2267`; poll nonblocking readiness, fail after 15 seconds, release on completion/error/stop/unload. Never spin or sleep the game thread during decode. | stream lifecycle |
-| `ModLibrary.Get<ChannelGroupReference>("Sfx").ChannelGroup` | `GameAudio.cs:111-142`; built-in Sfx group registered at audio startup; gain respects SFX/master settings. | playback start |
+| `ModLibrary.Get<ChannelGroupReference>("SfxChannel").ChannelGroup` | `Content/Core/Sounds.xml:46` `SfxChannel`, attached by `AudioBindings.Bind` (`KSA/AudioBindings.cs:39-41`) to the code-created FMOD `Sfx` group (`GameAudio.cs:116-131`, matched by `TryGetCodeCreatedChannelGroup :156-170`); gain respects SFX/master settings. **Fixed @5949:** the mod asked for `"Sfx"`, which is only the FMOD group name and never a `ModLibrary` id, so `Get` threw (`ModLibrary.cs:1149-1153`) and every vessel stream failed to start (pre-existing since the feature landed, not a 5949 change). | playback start |
 | `FmodSystem.TryPlaySound`, channel `TrySetPaused`, `TrySetVolume`, `TryIsPlaying`, `TryStop` | `Fmod.cs:1341,2695,2704,2735,2984`; create paused, set gain/position/loop before unpausing. Invalid/stolen channel handles count as completion. | playback lifecycle |
 | `Channel.TrySetMode`, `TrySetLoopCount`, `Mode.LoopNormal/LoopOff/_3dLinearRolloff` | `Fmod.cs:2943,3774`; infinite native looping for zero gaps. Positive gaps use managed completion-based real-time scheduling; no simultaneous replay. | live settings |
 | `SpatialAudio(Vehicle).PositionView()/VelocityView()` | `KSA/SpatialAudio.cs:38-72`; computes position/velocity relative to `GameAudio.GetAudioCamera`, then rotates ego coordinates into listener view. Same path as `ChannelWrapper.SetSpatialAudio:434`. | per-frame follow |

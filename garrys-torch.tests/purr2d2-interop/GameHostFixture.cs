@@ -53,6 +53,18 @@ namespace KSA
         [MethodImpl(MethodImplOptions.NoInlining)] internal void OnKey(GlfwWindow window, GlfwKey key, int scanCode, GlfwKeyAction action, GlfwModifier modifiers) { }
         [MethodImpl(MethodImplOptions.NoInlining)] internal void OnGameLoaded() { }
         [MethodImpl(MethodImplOptions.NoInlining)] internal void Dispose() { }
+        // KSA 5916 seam patched by NativeSaveHooks.SystemSwap; this harness never switches systems.
+        [MethodImpl(MethodImplOptions.NoInlining)] internal SystemSwapResult SwapSystem(SystemTemplate system) => SystemSwapResult.Swapped;
+    }
+
+    internal sealed class SystemTemplate { }
+    internal enum SystemSwapRequest : byte { Applied, Queued, NotInstalled, WontFit }
+    internal enum SystemSwapResult : byte { Swapped, WontFit }
+    internal static class SaveSystemSwap
+    {
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        internal static SystemSwapRequest RequestLoad(string saveName, string savedSystemId, Action apply)
+        { apply(); return SystemSwapRequest.Applied; }
     }
 
     internal static class Universe

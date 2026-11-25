@@ -165,6 +165,38 @@ shutdown, with unchanged decal capture/replay. Shutdown hook/device guards are r
 
 [Evidence and native acceptance](../plans/DOH_DESPAWN_5801_FOLLOWUP.md).
 
+## KSA 5901 → 5949 verification: star-system switching (2026-11-25)
+
+Rev 5916 made `UncompressedSave.Load` (NEW `UncompressedSave.cs:52-104`) call
+`SaveSystemSwap.RequestLoad(Id, UniverseData.SystemId, ApplyLoaded)`. `ApplyLoaded` (`:106-109`) is
+the old tail: `Universe.DeserializeSave` + `Program.OnGameLoaded`. `SaveSystemSwap.PlanLoad`
+(`SaveSystemSwap.cs:100-120`) returns:
+
+| Plan | Native behavior | Unscience behavior |
+|---|---|---|
+| `Load` | `ApplyLoaded` immediately | Unchanged deferred file transaction. |
+| `LoadIntoRunning` | `ApplyLoaded` immediately into a running system that contains every saved body (`SaveSystemCheck.Contains`) | The preflight now accepts it (`NativeSavePreflight` mirrors `PlanLoad`); it used to refuse any system-id mismatch. |
+| `Swap` | Queued; `SaveSystemSwap.OnFrame` (after `ImGui.Render`) runs `Program.SwapSystem`, then `ApplyLoaded` | The file transaction and prepared sidecar stay open; every participant resets in the `SwapSystem` prefix before KSA's teardown; the swapped-in `DeserializeSave` runs immediately (before `OnGameLoaded`) without a second reset; the sidecar restores once. |
+| `NotInstalled` | Alert, no load | Reports the missing system; scene and retained records unchanged. |
+
+Before this fix a switch was reported as "KSA could not read save", the sidecar was discarded, KSA
+tore down the old world before any reset, and the swapped-in load was deferred past
+`Program.OnGameLoaded` and restored nothing. Multiplayer joins (`NetworkClient` → `RequestJoin` →
+`FinishJoin`) use the same `SwapSystem`: they also reset before teardown and deserialize immediately.
+If a join (or any newer request) replaces a queued save switch, that save's transaction ends as
+not applied and the coordinator keeps its incoming records for recovery. A capture made while a
+switch is queued (for example a Save Yourself auto save) still describes the live scene and keeps
+the previous scene's retained records (`SceneSaveCoordinator.Capture`).
+
+`Program.SwapSystem` (`Program.cs:1905-1985`) also frees the old system's renderers, streamed textures
+and planet meshes and builds a new `CelestialSystem` from the shared templates. Participants now
+reset before that, as their `ResetState` contract requires. A `WontFit` result restarts the game into
+the save (`SaveSystemRestart.RestartInto`, `Environment.Exit`) after teardown; the restarted
+`-load <save>` goes through the ordinary hooked `Load`. No participant ID, version or payload changed;
+native `BodyKnowledge`, `Visits`, `VehicleData.ArrivedAt` and kitten `FirstVisits` are KSA-owned XML.
+Managed checks: `saves.tests` (`SystemSwapChecks.cs`). Native acceptance:
+[KSA 5949 acceptance](../plans/saves-acceptance.md#ksa-5949-upgrade-acceptance).
+
 ## KSA 5801 → 5901 verification (2026-11-20)
 
 Native world and blueprint load now run `PartInstance.DropStaleConnectors()` before construction
@@ -301,6 +333,8 @@ Line numbers below are NEW (`decomp/KSA/`).
     `Camera.cs:813-850`).
   - not exactly one celestial system, or a different system. Native reads only `CelestialSystems[0]`,
     and `UncompressedSave.Load` (`UncompressedSave.cs:45-80`) never switches systems.
+    @5949 superseded: native `SaveSystemSwap` switches systems or loads a contained system in place;
+    the preflight now mirrors `SaveSystemSwap.PlanLoad` (see the KSA 5901 → 5949 section).
   - a blank or (case-insensitive) duplicate vehicle id. `LookupCollection.Register` ignores the first
     and logs the second (`LookupCollection.cs:110-136`), leaving a constructed but unregistered vehicle
     in its parent's `Children`.
@@ -452,9 +486,12 @@ Research and ordering evidence: [native lifecycle assessment](../plans/saves-gam
 |---|---|
 | Harmony postfix `GameSave.Populate()` | Capture detached feature state against the completed native UniverseData snapshot. Never mutate live physics for capture. |
 | Harmony postfix `UncompressedSave.Write()` (`bool` @5482; bound by name + `Type.EmptyTypes`) | Write sidecar only after successful native file output: `Written` fires only when the original returned `true` (`__result`) and was not skipped. A `false` return (@5482: `SaveDirectory.TryReplace` or native write failure, old folder possibly intact) invokes `WriteFailed`, which discards the capture and reports failure; a throwing write publishes nothing. |
-| Harmony prefix + finalizer `UncompressedSave.Load()` | Preflight and scope the file transaction; skip editor refusal; clear context on success or exceptions without suppressing native errors. @5482 the universe read is lazy and caught inside `Load` (logged, returns before `DeserializeSave`); the finalizer turns a load that never reached `DeserializeSave` into `LastLoadError`/`LoadFailed` (`InvalidDataException`). |
+| Harmony prefix + finalizer `UncompressedSave.Load()` | Preflight and scope the file transaction; skip editor refusal; clear context on success or exceptions without suppressing native errors. @5482 the universe read is lazy and caught inside `Load` (logged, returns before `DeserializeSave`); the finalizer turns a load that never reached `DeserializeSave` into `LastLoadError`/`LoadFailed` (`InvalidDataException`). @5949 a load whose `RequestLoad` was `Queued` stays open (no failure, sidecar still prepared); `NotInstalled` reports the missing system instead of "could not read". |
+| Harmony prefix + postfix `SaveSystemSwap.RequestLoad(string, string, Action)` (@5949) | Prefix wraps `apply` (`ApplyLoaded`) so its later `DeserializeSave` is matched to this file transaction and ends it when `ApplyLoaded` returns; postfix records `SystemSwapRequest` and the saved system id for the finalizer. Only acts while a hooked `Load` is running. |
+| Harmony prefix + postfix + finalizer `Program.SwapSystem(SystemTemplate)` (@5949) | Prefix runs the joined reset (`JobSystems.WaitAll`, `ClearPending`, `Resetting`) before KSA destroys vehicles, bubbles, renderers, streamed textures and planet meshes. Postfix drops the continuation on `WontFit` (KSA restarts the process); finalizer ends a queued file transaction on a native exception. The following `DeserializeSave` runs immediately with a join but no second reset. |
 | Harmony prefix + postfix + finalizer `Universe.DeserializeSave(UniverseData)` | Join workers, discard stale queued edits and reset old ownership before native destruction; replay after reconstructed vehicles/camera and before next solver dispatch. Direct loads also reset baseline. @5638 the prefix raises preflight `LoadWarning`s for vehicles native will skip after the reset. |
-| Harmony prefix + finalizer `Universe.LoadSystem(string)` | Validate system name via `SystemLibrary.Find` before cleanup on world replacement. No replay from previous save. |
+| Harmony prefix + finalizer `Universe.LoadSystem(string)` | Validate system name via `SystemLibrary.Find` before cleanup on world replacement. No replay from previous save. @5949 `LoadSystem` is `CreateSystem` + `OnLoaded` and only startup calls it; runtime switching uses `Program.SwapSystem` → `Universe.CreateSystem` (hooked through `SwapSystem`). |
+| `PhysicsFrameHook.BeforePhysics` subscription (@5949) | Clears an unconsumed swap-reset marker at the next handoff, so only the `DeserializeSave` directly after a swap may skip its reset. |
 | `JobSystems.WaitAll()` (@5638; was the four `JobScheduler.Wait()` calls on `OrbitSolvers`, `VehicleSolver`, `ClothSolvers`, `NearestOrbitAndPerformanceWorker`) | Explicit join before prefix cleanup: the original's own `WaitAll` (`Universe.cs:2426`) is too late for prefix mutations, and `LoadSystem` has none. Requires `Brutal.Concurrency` reference. |
 | `Program.IsEditorOpen`, `Universe.CurrentSystem` | Preserve active setup on editor-refused requests and no-world early failures. |
 | `PhysicsFrameHook.ClearPending()` | Discard queued old-world mutations both before and after cleanup callbacks. BeforePhysics subscriptions remain registered. |
@@ -486,6 +523,14 @@ Only that guarded replay invokes the preflight/reset/restore callbacks. No ImGui
 being built when resource-owning participants release old previews. Startup LoadSystem remains
 synchronous; invalid-system/editor refusal retains native behavior.
 
+@5949 exception: a queued star-system switch runs where KSA runs it, in `SaveSystemSwap.OnFrame`
+after `ImGui.Render` (`Program.cs:2658,2669`). Reset happens in the `Program.SwapSystem` prefix after
+`JobSystems.WaitAll`, and the swapped-in `DeserializeSave` and restore follow immediately. That frame's
+ImGui draw data is never submitted: `SwapSystem` → `BuildSystemRenderers` starts with
+`Loading.State` (`Program.cs:1872`), and `Loading.OnFrame` (`Loading.cs:98-160`) always runs
+`ImGui.NewFrame`…`ImGui.Render` and presents its own frame on the main thread, replacing the draw data
+that the later `RenderDrawData` (`Program.cs:5489`) submits. `WontFit` exits before rendering.
+
 `NativeSaveHooks.Apply` requires and idempotently installs `PhysicsFrameHook.Apply` before installing
 its own methods; failed frame-hook installation leaves native save/load unpatched. The existing
 Garry's Torch hook shares this installation and normal ownership/unload path. NativeSaveHooks.Remove
@@ -497,7 +542,8 @@ untouched until replay and stock startup remains immediate.
 
 ## Native dependency and identity preflight
 
-`NativeSavePreflight` checks the incoming `UniverseData` against the current celestial system,
+`NativeSavePreflight` checks the incoming `UniverseData` against the current celestial system
+(@5949: accepted exactly when `SaveSystemSwap.PlanLoad` returns `Load` or `LoadIntoRunning`),
 unique vehicle IDs and a parent-body record per vehicle, with a bounded acyclic `PartInstance.Children` /
 `SubPartInstances` traversal, before ownership reset. @5638 a missing `IParentBody`, `CharacterReference`
 or used `PartTemplate` (resolved through `ModLibrary.Get<T>`) is no longer a refusal: KSA skips that

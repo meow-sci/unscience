@@ -1,5 +1,28 @@
 # Scope: Celestial Welding & Lights (kiwis-marbles, zippo)
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+No code change. **Kiwi's Marbles:** `Celestial.SetOrbit`, `UpdatePerFrameData`, `UpdatePerFrameDataTree`,
+`GetPositionCci` and `GetVelocityCci` are identical; `Celestial`'s diff is additive (`SphereOfInfluenceRadius`
+refactor, `FindDominantBiome`, a log line) and `Universe.ExecuteNextVehicleSolvers(double, SimStep)` is unchanged
+(NEW `Universe.cs:2277`). 5938/5943's `ArrivalService.Update` runs at the end of
+`CelestialSystem.UpdatePerFrameData` (NEW `CelestialSystem.cs:366`), before the Kiwi's prefix moves bodies, and may record
+arrivals/departures in the per-system visit log, kitten firsts and Life Support leg completion for moved bodies
+and teleported vehicles (native gameplay data only; see [vehicle-physics](vehicle-physics.md)).
+**Zippo:** the reflected `KSA.LightModule+TemplateData` members (`Intensity`, `ColorRgb`), `FloatReference.Value`,
+`ColorRgbReference.R/G/B/IndexedColor/OnDataLoad` and `PartTemplate.Components` keep their names and types; the
+saved template ID (`LightController.Persistence.cs:56`) is resolved dynamically.
+- **5916 system switching.** `Program.SwapSystem` builds a new `CelestialSystem` with new `Celestial` objects from
+  the shared `AstronomicalTemplate`s via `Universe.CreateSystem` (NEW `Program.cs:1965`, not `Universe.LoadSystem`).
+  The review's spot check of Kiwi's Marbles found no crash: `ResetSavedWelds` restores orbits of the orphaned old
+  celestials only (harmless), per-frame weld work is in the `ExecuteNextVehicleSolvers` prefix, which runs after
+  the following handoff, and restore re-resolves by id. `CelestialProvider`, `VehicleProvider` and
+  `SimTimeProvider` read `Universe.CurrentSystem` live, so no stale cache survives a swap. Needs live
+  re-verification with a cross-system load and welded bodies. Unscience's cross-system load handling: see
+  [saves](saves.md).
+
+The 5801 manual-Disco-switch symmetry check remains open. [5949 review](../plans/KSA_5949_UPGRADE.md).
+
 ## KSA 5707 → 5801 verification (2026-11-08)
 
 DiscoLight copies `LightModule.TemplateData.Key` into its per-instance template, replacing Id.

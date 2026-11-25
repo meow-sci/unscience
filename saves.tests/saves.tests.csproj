@@ -6,6 +6,7 @@
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
     <Compile Include="../ksa-abstractions.lib/Persistence/NativeSaveHooks.cs" Link="NativeSaveHooks.cs" />
+    <Compile Include="../ksa-abstractions.lib/Persistence/NativeSaveHooks.SystemSwap.cs" Link="NativeSaveHooks.SystemSwap.cs" />
     <Compile Include="../ksa-abstractions.lib/Persistence/NativeSavePreflight.cs" Link="NativeSavePreflight.cs" />
     <Compile Include="../kitten-animations.lib/KittenPlaybackPhase.cs" Link="KittenPlaybackPhase.cs" />
     <Compile Include="../ksa-abstractions.lib/Persistence/ISaveParticipant.cs" Link="ISaveParticipant.cs" />

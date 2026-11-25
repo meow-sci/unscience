@@ -1,5 +1,30 @@
 # Pebbles
 
+## KSA 5949 compatibility
+
+- **Some replacements now need colliders.** A clutter type replaced without colliders snaps to the planet
+  surface mesh. Since KSA 5949 the game builds the structure for that only on bodies whose stock clutter
+  snaps to the mesh, and only as far as that clutter reaches.
+  - On **Luna** and **Mars**, **Apply to planet** refuses a collider-less replacement.
+  - On **Earth**, it refuses a collider-less replacement of a type that reaches farther than the stock grass,
+    such as the tree types.
+  - The message names the planet and type. Open **Preview and set up colliders**, add shapes, enable
+    **Use colliders**, then apply again.
+  - Saved overrides that break this rule load with a warning, and that planet keeps stock clutter.
+  - Without this check, the game would throw (Luna/Mars) or silently place nothing beyond the reach (Earth).
+- **Disabled types** keep their stock collision type and install no colliders, so they still apply on every planet.
+- **Lower VRAM while overriding.** The game now allocates clutter's large per-planet buffers only near a planet.
+  The stock arrays Pebbles keeps for Restore free theirs while detached, and the game reallocates them after
+  Restore.
+- **Compatibility fixes.** Viewport release follows the game's new slot API. Failure-path cleanup also covers
+  the GPU resources the game moved into `GroundClutterGpuResources`, and the terrain curvature buffer.
+- **Needs in-game acceptance:**
+  - refusal and collider apply on Luna, Mars and Earth;
+  - VRAM and restore;
+  - switching star systems with an override applied.
+
+See [ground-clutter scope](../scope/ground-clutter.md).
+
 ## KSA 5901 compatibility
 
 KSA 5875 indexes clutter residency by a compacted slot that only Main and Secondary viewports own; releasing a part-thumbnail or portrait viewport throws. Detached arrays now release only viewports with `GroundClutterRenderer.HasViewportSlot`, matching the renderer. This restores Apply, Restore and save-load replay, which failed on 5901 before the fix. Recipes are unchanged; native acceptance with secondary viewports, thumbnails and portraits is pending.
@@ -19,7 +44,7 @@ Pebbles is an independent bundled feature library in the Unscience supermod. It 
 1. Pick a **Mesh** or use **Import GLB…**. Import selects the complete scene automatically; choose an individual imported mesh if needed. The mesh recipe can be prepared before selecting a planet.
 2. Set the uniform **Scale**. **Preview and set up colliders** opens the textured preview with that scale intact. Add fitted box, sphere, capsule or cylinder shapes and adjust their positions, rotations and dimensions. Changing mesh scale resizes existing collider dimensions and offsets together. **Use colliders** enables/disables the authored shapes.
 3. Choose a **Planet**, then check one or more clutter target types, or **All clutter types**.
-4. Press **Apply to planet**. Every variant and all five LODs of those types receive the mesh, materials, scale and colliders. Other types keep their current settings. Restore an applied type or the entire planet under **Applied clutter** in the same panel.
+4. Press **Apply to planet**. Every variant and all five LODs of those types receive the mesh, materials, scale and colliders. Other types keep their current settings. Restore an applied type or the entire planet under **Applied clutter** in the same panel. Without colliders a type snaps to the planet mesh. On Luna, on Mars, and for Earth's tree types, the game cannot do that, so Apply asks for colliders instead (KSA 5949).
 
 The form does not expose placement, LOD, resource-budget or material-channel tuning. Native placement locations and LOD distances are retained. Selected types use a fixed instance multiplier of one, so the authored mesh/collider size matches the preview. Custom colliders automatically enable native primitive-list collision; smooth-normal orientation becomes surface-normal orientation when collision requires it. Mesh selection clears old colliders; scale is retained. Registry meshes use a neutral material; imported GLBs automatically use their own supported materials, including base-color textures as diffuse with source colors preserved, through both import and the regular mesh picker.
 
@@ -51,10 +76,10 @@ For procedural textures or unsupported mapping, save a separate export copy of t
 
 ## Implementation ownership
 
-- `Models/`: game-independent recipe schema, detached validation, bounded GLB container/geometry/scene decoding, exact file identities, material-slot ordering, primary texture mapping, testable CPU material conversion and pixel conversion; removed/displaced clutter grid state (`ClutterGridState`, sidecar validation) and its carry-over rules (`ClutterGridMemory`).
+- `Models/`: game-independent recipe schema, detached validation, the KSA 5903+ snap-to-mesh refusal rule (`SnapToMeshPolicy`), bounded GLB container/geometry/scene decoding, exact file identities, material-slot ordering, primary texture mapping, testable CPU material conversion and pixel conversion; removed/displaced clutter grid state (`ClutterGridState`, sidecar validation) and its carry-over rules (`ClutterGridMemory`).
 - `Assets/`: read-only registry discovery, private CPU geometry imports, native embedded-image decoding and lazily uploaded GLB textures.
 - `Import/`: feature-owned file browser and session-only navigation/selection state.
-- `Runtime/`: source capture, private ecotype/mesh/material graphs, resource preparation, per-body commit/restore (`ClutterController`, `ClutterLiveRecord`), exclusion/displaced-object carry-over and native-save rewriting (`ClutterController.Grids`, `ClutterGridNative`), private hull colliders and their volume math (`ClutterColliders`, `HullMath`), per-viewport residency release for detached render arrays (`ClutterResidency`), partial native retirement and its field-shape rules (`ClutterRetirement`, `FieldShapes`), physics invalidation, feature-owned Harmony demand.
+- `Runtime/`: source capture, private ecotype/mesh/material graphs, resource preparation, per-body commit/restore (`ClutterController`, `ClutterLiveRecord`), exclusion/displaced-object carry-over and native-save rewriting (`ClutterController.Grids`, `ClutterGridNative`), private hull colliders and their volume math (`ClutterColliders`, `HullMath`), per-viewport residency and per-planet VRAM release for detached render arrays (`ClutterResidency`), native planet-mesh facts for the snap-to-mesh refusal (`ClutterSnapToMesh`), partial native retirement and its field-shape rules (`ClutterRetirement`, `FieldShapes`), physics invalidation, feature-owned Harmony demand.
 - `Preview/`: independent Vulkan color/depth target, geometry, material sampling and local camera; no stock thumbnail viewport, camera switch or Bepu simulation.
 - `Workshop/`: detached state/history, local camera and gizmo math, collider editing and responsive editor UI.
 - `PebblesSubmod*`: main authoring controls, per-planet applied-state controls and the standard `ISubmod` lifecycle. The submod owns its controller, recipe, import cache and editor; runtime resources are never serialized.
@@ -65,7 +90,7 @@ See [ground-clutter integration](../scope/ground-clutter.md) for native dependen
 
 ## Verification
 
-Run `dotnet run --project pebbles.tests/pebbles.tests.csproj` from the repository root. Managed checks cover detached copying/serialization, placement and collider constraints, camera/gizmo math, undo history, GLB geometry/container validation, transform baking, exact file identities, material-slot isolation, pure pixel conversion, hull volume/recentring math, the backface-normals and custom-normals recipe defaults, grid memory carry-over rules, the `pebbles.clutter-state` record, nested mapped-memory field selection for partial retirement and the detached-array viewport-residency release (against managed stand-ins of the 5638 residency surface). Compilation verifies typed APIs against KSA 2026.10.25.5707. Native acceptance must cover private material descriptors, shadows, GPU retirement, stationary-cell collision refresh, exclusions, same-body replacement/restoration, scene changes, and Luna/Mars isolation. The preview uses conservative synchronization and may hitch while changing a large mesh or resizing; native rendering and gameplay are not established by managed checks. GLB acceptance additionally needs actual PNG/JPEG decode/upload, transformed atlases and secondary UVs, skipped detail maps, masks/blend cutouts, wrap approximations, alternate-image fallbacks, multi-material scenes, file changes, preview/live sharing and cache release.
+Run `dotnet run --project pebbles.tests/pebbles.tests.csproj` from the repository root. Managed checks cover detached copying/serialization, placement and collider constraints, camera/gizmo math, undo history, GLB geometry/container validation, transform baking, exact file identities, material-slot isolation, pure pixel conversion, hull volume/recentring math, the backface-normals and custom-normals recipe defaults, grid memory carry-over rules, the `pebbles.clutter-state` record, nested mapped-memory field selection for partial retirement (5919 `GroundClutterGpuResources` shapes), the detached-array viewport-residency and per-planet VRAM release (against managed stand-ins of the 5919 residency surface) and the snap-to-mesh refusal rule. Compilation verifies typed APIs against KSA 2026.11.25.5949. Native acceptance must cover private material descriptors, shadows, GPU retirement, stationary-cell collision refresh, exclusions, same-body replacement/restoration, scene changes, and Luna/Mars isolation. The preview uses conservative synchronization and may hitch while changing a large mesh or resizing; native rendering and gameplay are not established by managed checks. GLB acceptance additionally needs actual PNG/JPEG decode/upload, transformed atlases and secondary UVs, skipped detail maps, masks/blend cutouts, wrap approximations, alternate-image fallbacks, multi-material scenes, file changes, preview/live sharing and cache release.
 
 Bound source textures must remain loaded while their recipes are applied or previewed. Native construction failure can leave allocations hidden in game-local variables; reachable resources are retired once and failures are reported, but a renderer/game restart may be required. See the [runtime failure limits](../scope/ground-clutter.md#failure-handling-and-verification-limits).
 

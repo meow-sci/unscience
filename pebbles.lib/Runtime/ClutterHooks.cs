@@ -31,7 +31,7 @@ internal static class ClutterHooks
     {
         if (_controller != null && !ReferenceEquals(_controller, controller)) throw new InvalidOperationException("Pebbles already owns a runtime bridge.");
         _controller = controller;
-        foreach (var type in new[] { typeof(GroundClutterPlacementData), typeof(ClutterEcotypeRenderData), typeof(ClutterEcotypePhysicalData), typeof(ClutterCubeCellGrid), typeof(ClutterViewResources), typeof(SimpleVkMeshAtlas) })
+        foreach (var type in new[] { typeof(GroundClutterPlacementData), typeof(ClutterEcotypeRenderData), typeof(ClutterEcotypePhysicalData), typeof(ClutterCubeCellGrid), typeof(GroundClutterGpuResources), typeof(ClutterViewResources), typeof(SimpleVkMeshAtlas) })
             foreach (var constructor in type.GetConstructors()) harmony.Patch(constructor, prefix: Method(nameof(BeforeConstruct)));
         // Patch callers rather than tiny getters, which the JIT may inline.
         foreach (var name in ClutterMaterialBindings.Methods)

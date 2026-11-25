@@ -103,7 +103,9 @@ public sealed class VesselSound : IDisposable
 
     private void Start()
     {
-        var group = ModLibrary.Get<ChannelGroupReference>("Sfx").ChannelGroup;
+        // The code-created FMOD group is named "Sfx", but its ModLibrary reference is the XML
+        // "SfxChannel" (Sounds.xml), which AudioBindings attaches to that group. "Sfx" never resolved.
+        var group = ModLibrary.Get<ChannelGroupReference>("SfxChannel").ChannelGroup;
         Check(GameAudio.System.TryPlaySound(_sound, group, true, out _channel), "play sound");
         _hasChannel = true;
         ApplySettings(); // Configure position and gain while paused: no one-frame sound at the origin.

@@ -59,6 +59,35 @@ The later appearance pass strengthens grey/brown grime, mottled fading, dirty ed
 streaks in the same 256px maps. Geometry, square-frame UVs, native references and save ownership
 remain unchanged; active-scene-only export removes stray scene/node metadata.
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+No code change. Patch targets, injected `KittenRenderable` fields (`____characterAvatar`, `____catEarAnim`,
+`____catConditionAnim`, `____seatedIdleAnim`, `____groundIdleAnim`; `WingWalkerPatches.Appearance.cs:21-22,70`) and
+the editor targets (`VehicleEditor.OnMouseButton :4111`, `SyncHistoryBeforeEditFor :8246`, `MarkHistoryStepFor :8234`) are unchanged; `IVASeat`, `EVADoor`, `KittenRenderable`, `PartCloner.Gather(Part,uint)` and
+`Vehicle.AddCrew/SetSeatCrew/StartCrewMissions` are identical.
+- **5946 `Universe.ClearInvalidSeats()` does not evict riders.** Riders are seated by native
+  `AddCrew` → `SetSeatCrew` on the exact external `IVASeat`, and `KittenEva.BoardVehicle` destroys the EVA kitten
+  (`CrewDisposition.Boarded`, NEW `KittenEva.cs:1071-1105`); native EVA exit calls `RemoveCrew` before creating
+  the `KittenEva` (`EVADoor.cs:262-266`). A rider is therefore neither "on EVA" nor seated elsewhere. Only
+  pre-existing bad data is cleaned: saves carrying the old symmetry-duplicated riders (ISSUES.md "Wing Walker
+  editor symmetry duplicated crew names") keep the first seat and have the duplicates emptied with a warning on
+  load, since the pass runs inside native `DeserializeSave` (NEW `Universe.cs:2617`) before sidecar restore.
+  See [vehicle-physics](vehicle-physics.md) for the full 5946 account.
+- **XML and content.** All external references resolve (`CoreSurfacesB_Material` `WingWalker.xml:49`, EditorTag
+  `Capsules` `:67`, `Aluminum.2014` Solid `:110,116`) and every schema class behind the XML is byte-identical.
+  5908/5914 regenerated `Materials.xml`: `Aluminum.2014` still has a solid phase, density 2800 → 2796 and melt
+  780 → 783.1 K (about 0.1% tank wall mass). The new `Thermal` tag is appended after the tags the mod uses (5944).
+- **Render and editing.** Crew render submission goes through `SuperMeshRenderSystem.ClearBuckets(IViewport)` (OLD
+  `:540` / NEW `:543`, called at `Program.cs:4947,5189,5515`) and native techniques whose pre-pass variants now
+  carry two attachments (game-owned). 5939's batched symmetric detach and incremental render data touch no
+  Wing Walker patch (it patches neither `Disconnect` nor the render-data writers).
+- The Wing Walker native XML harness still cannot run on this host, so native deserialization of the XML remains
+  unverified for this build (schema stability is inferred from the unchanged decomp classes).
+
+Native acceptance: load an old save with seated riders (and one with duplicated riders, expecting the native
+"seat is left empty" warning) and the carried-forward crew render check.
+Unscience's cross-system load handling: see [saves](saves.md). [5949 review](../plans/KSA_5949_UPGRADE.md).
+
 ## KSA 5801 → 5901 verification (2026-11-20)
 
 Patch targets, injected `KittenRenderable` fields, seat/boarding/AddCrew and editor seams are unchanged;

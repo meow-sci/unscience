@@ -12,11 +12,14 @@ internal static class Ksa5901Checks
         using var probe = KsaAssemblyProbe.TryOpen("5901 engine, connector, RCS-cache, clutter and crew-clock checks");
         if (probe == null) return;
 
-        // Blinky diagnostics (5889): controllers hold Rockets, each Rocket owns its core.
+        // Blinky diagnostics (5889): controllers hold Rockets; Blinky enumerates each rocket's cores through
+        // Rocket.Cores. KSA 5936 made Rocket abstract and removed its single Core field, so pin the span
+        // getter Blinky actually binds rather than the removed field.
         var controller = probe.Fields("KSA.EngineController");
         Require(controller.Any(f => f.Name == "Rockets" && f.Type == "KSA.Rocket[]") && controller.All(f => f.Name != "Cores"),
             "EngineController exposes Rockets (KSA.Rocket[]) instead of Cores");
-        Require(probe.Fields("KSA.Rocket").Any(f => f.Name == "Core" && f.Type == "KSA.RocketCore"), "Rocket.Core holds the rocket's core");
+        Require(probe.ReturnTypes("KSA.Rocket", "get_Cores").SequenceEqual(["System.ReadOnlySpan`1[KSA.RocketCore]"]),
+            "Rocket.Cores exposes the rocket's cores as ReadOnlySpan<RocketCore>");
 
         // Iron Man anchors (5866): both load paths drop saved connector indices beyond the template
         // count before construction; IronManStaleConnectorGuard patches this exact method.
@@ -34,10 +37,12 @@ internal static class Ksa5901Checks
             "rocket-control recompute resets the thruster cache to Zero and runs through EnsureDerived");
 
         // Pebbles residency (5875): clutter residency is indexed by a compacted clutter slot that only
-        // Main/Secondary viewports own; release must be guarded with HasViewportSlot.
-        Require(probe.CallsOf("KSA.ClutterEcotypeRenderData", "ReleaseViewport").Single()
-                .Contains("KSA.GroundClutterRenderer::ResolveViewportSlot"),
-            "ClutterEcotypeRenderData.ReleaseViewport resolves the clutter slot (throws for unmapped viewports)");
+        // Main/Secondary viewports own; release must be guarded with HasViewportSlot. Since KSA 5919 the
+        // caller resolves the slot (ReleaseViewport takes it as an int), as the renderer itself does.
+        Require(probe.CallsOf("KSA.GroundClutterRenderer", "ResolveViewportSlot").Count == 1
+                && probe.CallsOf("KSA.GroundClutterRenderer", "OnViewportUnregistered").Single()
+                    .Contains("KSA.GroundClutterRenderer::ResolveViewportSlot"),
+            "the clutter slot is resolved by the caller of ClutterEcotypeRenderData.ReleaseViewport (throws for unmapped viewports)");
         Require(probe.CallsOf("KSA.GroundClutterRenderer", "HasViewportSlot").Count == 1
                 && probe.CallsOf("KSA.GroundClutterRenderer", "OnViewportUnregistered").Single()
                     .Contains("KSA.GroundClutterRenderer::HasViewportSlot"),

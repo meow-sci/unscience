@@ -246,6 +246,34 @@ and device guards are transient lifecycle state. Production-adapter default/lega
 checks and native-input stale-world cases pass. Native scene-load/exit/resource acceptance remains open:
 [follow-up evidence](DOH_DESPAWN_5801_FOLLOWUP.md).
 
+## KSA 5949 upgrade acceptance
+
+Rev 5916 star-system switching. Sidecar IDs, versions and payloads are unchanged. Managed
+`saves.tests` (`SystemSwapChecks.cs`) cover: a contained-system load (`LoadIntoRunning`); a queued
+switch (no false failure, reset before teardown, immediate deserialization, one restore); the sidecar
+carried through the real coordinator, including a capture while the switch is queued; an uninstalled
+system; multiplayer join switches; a join replacing a queued save switch; `WontFit`; a stale swap
+marker; and a negative control that reproduces the 5901-hook failure. Native acceptance (not run):
+
+- Load a Solar System save while running Solar System + Interstellar: it loads in place, and welds,
+  rings, clutter, statics and paints restore with no "different celestial system" refusal.
+- Load an Earth-and-Moon save from Solar System (and the reverse) with Unscience state on bodies and
+  vehicles in both. The loading screen shows; the toolbox reports a restore, not "could not read".
+  Every feature restores once on the new system. A re-save and reload keeps the sidecar.
+- During that switch, with hot-pursuit secondary cameras, Graffiti decals, Sphinx statics, Pebbles
+  clutter, Bloomin' Onion / Rocky rings, byo-music sounds and Garry's Torch welds active: no Vulkan
+  validation errors, crashes, orphaned audio or stale overlays. A mutated shared ring template is not
+  rendered in the new system.
+- A Save Yourself auto save that fires in the frame between choosing the save and the switch keeps
+  previously retained records.
+- Load a save whose system is not installed: the native alert, the toolbox names the missing system,
+  and the scene and retained records are unchanged.
+- Join a multiplayer host on another system with Unscience state active: reset before the switch, no
+  stale welds/cameras, and the host world appears without an extra transient frame.
+- Force `WontFit` (small VRAM budget in `Documents/system-vram.toml`): the game restarts with
+  `-load <save>` through StarMap, and the restarted load restores the sidecar.
+- F2 with You Didn't See Anything (Detached Only) during a switch: the loading screen visibility.
+
 ## KSA 5901 upgrade acceptance
 
 Sidecar IDs/versions and the Iron Man v1 anchor envelope are unchanged. Native world and blueprint
