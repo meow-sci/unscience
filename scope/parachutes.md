@@ -13,6 +13,35 @@ All logic is in `free-fallin.lib` (`FreeFallinSubmod : ISubmod`,
 transforms live in the game-independent `CanopyShaderSource.cs`; `CanopyProjectionShaders.cs`
 owns the game seams.
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+No code change. Every file free-fallin text-edits is byte-identical (CRLF-normalized): `Model.vert`,
+`Model_Skinned.vert` and `ModelPbr.frag`, and all seven free-fallin anchors keep their count and line.
+`Utils.SetShaderFromMod(SimpleShaderStages,Device,string,bool)` (NEW `KSA.Rendering/Utils.cs:616`) has an identical
+body; `ChuteRenderable`, `Parachute`, `ChuteClothSystem/Topology` are identical; shader IDs are unchanged
+(`DefaultAssets.xml:76,80-83`; `ParachuteAssets.xml:30,5`).
+- **Partner `ModelNormal.frag` changed (5923/5926/5937).** `out vec4 outFragColor` became `out vec3 outNormal`
+  (location 0, `packSignedToUnsigned`) plus `out float outRoughness` (location 1), and it now includes
+  `Common/Shared.glsl`. Its inputs (locations 0-2) and `SET_TEXTURE 5` (NEW `:4`) / `SET_MATERIAL 1` (`:13`)
+  are unchanged and location 3 is still free, so `RequireSameDescriptorSets` still passes and the canopy
+  patch's extra vertex output at location 3 is unconsumed by the pre-pass fragment, as before.
+  `ModelTranslucent.frag` is identical.
+- **Pre-pass pipelines.** The skinned/static SuperMesh pre-pass pipelines now declare two colour attachments
+  (NEW `SuperMeshRenderSystem.cs:693-700,733-740,841-851,1040-1054`; the pre-pass target is a
+  `MultiRenderTarget` of packed normal + roughness since 5915/5937). The pipeline `ExternalSets` are unchanged
+  and the canopy patch adds only a vertex output, so fragment outputs and attachment count are game-owned.
+- **Include chain.** `ModelPbr.frag` and `ModelNormal.frag` now reach `Common/CloudLighting.glsl` through
+  `Lighting.glsl:9` (5940 move, additive); `Model.vert` has no includes and `Model_Skinned.vert` still has the
+  four-file closure. `ShaderModuleUtils.FromFile` now sets a debug name, so the replaced modules lack a GPU
+  label (cosmetic). The 5932 default Gemini 7/Rocket vehicles now carry parachutes: more canopies to meet
+  (behaviour only).
+
+`FreeFallinShaderChecks.RunLiveShaders` reads the live `ModelNormal.frag` but parses only the unchanged
+`SET_TEXTURE`/`SET_MATERIAL` defines. Needs live re-verification: Full Canopy on skinned canopies with the
+two-attachment pre-pass (canopy projection in the colour pass; normals/roughness under SSAO and the light
+pre-pass) and a full-canopy rebuild after `RendererRebuildNeeded` with no validation errors.
+[5949 review](../plans/KSA_5949_UPGRADE.md).
+
 ## Integration model
 
 KSA creates one `ChuteRenderable` per live canopy and selects material slot zero from

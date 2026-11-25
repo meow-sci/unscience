@@ -71,13 +71,19 @@ closed lid edges address see-through surfaces; culling-aware ray tests protect t
 
 # game compatibility
 
-The current checkout targets **KSA 2026.11.16.5901**, upgraded from 2026.11.10.5801.
+The current checkout targets **KSA 2026.11.25.5949**, upgraded from 2026.11.16.5901.
 The whole solution and all 23 managed suites pass; native game acceptance remains pending.
-This upgrade fixes Blinky's diagnostics for the engine/rocket rework, Pebbles Apply and save replay
-under the new clutter viewport slots, Iron Man anchors that native load would have dropped and its
-RCS authority after mode toggles, and the new Crew Clock during F2 hidden gauges. Sidecar IDs and
-versions are unchanged. See [KSA_5901_UPGRADE](plans/KSA_5901_UPGRADE.md) and
+This upgrade makes Iron Man install again (a changed internal serializer signature had disabled it),
+carries Unscience scene saves across KSA's new in-game star-system switching, compiles Pebbles
+against the new clutter API (and makes it refuse collider-less replacements on bodies where KSA no
+longer builds the mesh structure they need), and aligns Blinky's feed diagnostics with gas-generator
+engines. A long-standing BYO Music vessel-audio bug is also fixed. Sidecar IDs and versions are
+unchanged. See [KSA_5949_UPGRADE](plans/KSA_5949_UPGRADE.md) and
 [player compatibility](unscience/README.md#ksa-compatibility).
+
+The previous (5901) upgrade fixed Blinky's engine/rocket compile, Pebbles viewport slots, Iron Man
+anchors through native stale-connector cleanup and RCS after mode toggles, and the Crew Clock under
+F2. [KSA_5901_UPGRADE](plans/KSA_5901_UPGRADE.md).
 
 The previous (5801) upgrade migrated the data-reference/key schema, preserved Iron Man anchors with
 legacy-save migration, fixed DOH material resolution and Vehicle Paint/native-highlight collisions,

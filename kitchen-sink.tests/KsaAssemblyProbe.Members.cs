@@ -55,6 +55,20 @@ internal sealed partial class KsaAssemblyProbe
     public List<List<string>> CallsOf(string typeFullName, string methodName) =>
         Methods(typeFullName, methodName).Select(m => Body(m).SelectMany(ScanCalls).ToList()).ToList();
 
+    /// <summary>Parameter types of each overload of the named method (by-ref types end in "&amp;", nested types use "+").</summary>
+    public List<string[]> ParameterTypes(string typeFullName, string methodName) =>
+        Methods(typeFullName, methodName).Select(m => m.DecodeSignature(this, null).ParameterTypes.ToArray()).ToList();
+
+    /// <summary>Parameter names of each overload (Harmony binds injected arguments by these names).</summary>
+    public List<string[]> ParameterNames(string typeFullName, string methodName) =>
+        Methods(typeFullName, methodName).Select(m => m.GetParameters()
+            .Select(h => _md.GetParameter(h)).Where(p => p.SequenceNumber > 0)
+            .OrderBy(p => p.SequenceNumber).Select(p => _md.GetString(p.Name)).ToArray()).ToList();
+
+    /// <summary>Return type of each overload of the named method (property getters are "get_Name").</summary>
+    public List<string> ReturnTypes(string typeFullName, string methodName) =>
+        Methods(typeFullName, methodName).Select(m => m.DecodeSignature(this, null).ReturnType).ToList();
+
     internal sealed record Field(string Name, string Type, int? Constant);
 
     public List<Field> Fields(string typeName)

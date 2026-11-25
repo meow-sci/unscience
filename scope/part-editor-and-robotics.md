@@ -1,5 +1,36 @@
 # Part Editor & Robotics — Game Integration Scope
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+One code change, in Iron Man: `Part.GetReferenceWithChildren` gained a fourth parameter in 5939 and the
+connector patch now resolves it with `FindSerialize()` (see [iron-man](iron-man.md)). Everything else in the
+editor surface is unchanged.
+- **VehicleEditor targets.** Each by-name target still has a single declaration and an unchanged body; lines
+  moved by +18/+78. Don't Stifle Me: `ScaleBoundsFor :4683`, `UpdateSelectedScale :4649`, `UpdateScaleGizmo :4431`,
+  `QuantizeScale :4712`, `ForEachPartWithSymmetry :4692`, `DrawParachuteSection :2274`. Iron Man: `OnFrame :2992`,
+  `OnKey :3197`, `UpdateSelected :4460`, `DeletePart :8883`, `SetFocusedTree :8730`, private
+  `DuplicateHighlightedPart :6979`, `RequestNewVehicle :2613`, `FinalizeNewVehicle :2654`, field
+  `CameraOffset :880`. Wing Walker: `OnMouseButton :4111`, `SyncHistoryBeforeEditFor :8246`,
+  `MarkHistoryStepFor :8234`. The only new members are centre-of-mass helpers, so there is no overload ambiguity.
+- **5927 editor MASS toggle and COM markers** (`VehicleEditor.cs:6531-6570,6681-6693`), the camera-chip hover now
+  using `IsItemHovered`, and `Rockets[0].Core` → `Cores[0]` (5936): no scale, drag, attach or detach logic
+  changed. The markers are on by default and drawn on the main overlay draw list (YDSA gating check is in
+  [ui-customization](ui-customization.md)). `ConsoleWidgets.Segmented` is used by no mod.
+- **5939 editing paths.** `Part.Disconnect` now wraps the symmetric detach in `Begin/EndTransferOutBatch` (NEW
+  `Part.cs:2320-2328`) and `TransferPartSubtreeTo` defers compaction of the source tree while the batch is open
+  (NEW `PartTree.cs:1945-1949,1968-2006`); incremental render data appends and removes slots instead of
+  rebuilding. No mod patches `Disconnect`, `RemoveChild`, `Split`, `Merge`, `TransferPart*` or `PartTree.Dispose`
+  (Wing Walker's `PartCloner.Gather` prefix and `OnMouseButton` postfix run outside `Disconnect`), and no mod uses
+  the new sibling-cursor tree iterators. Don't Stifle Me's per-axis scale writes (`PerAxisScaleDrag`) go through
+  the public setters, which now queue a targeted transform rewrite (large batches fall back to a whole-tree
+  rewrite). `PartCloner.cs`, `PartInstance.cs`, `GenericGizmo.cs` and `OrbitController.cs` are unchanged.
+- **5944 content.** New `Thermal` `EditorTagDef` and `CoreThermalA*` parts, extra cargo-bay decoupler connectors
+  appended at the end of four `CoreServiceModuleA` prefabs and adaptor fuel flags: no mod references those parts
+  or connector keys, and the tags mods use (`Structural`, `Life Support`, `Capsules`) are intact.
+
+Native acceptance: a weld or Godzilla/Don't Stifle Me scale change refreshes every part's draw transform;
+symmetric detach, undo/redo and Copy Tree with Iron Man anchors. [5949 review](../plans/KSA_5949_UPGRADE.md).
+
 ## KSA 5707 verification (5638 → 5707, 2026-10-29)
 
 Verified against `2026.10.25.5707` (NEW, revs 5639–5703) vs `2026.10.19.5638` (OLD) using both supplied

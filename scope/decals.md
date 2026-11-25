@@ -1,5 +1,33 @@
 # Decals (graffiti) — Game Integration Scope
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+No code change. The Graffiti seam is textually unchanged: `RenderTarget.cs` is byte-identical
+(`ResolveAttachments(CommandBuffer, bool = true)`, NEW `:320`), the flight render region from transparencies
+through early resolve, sunbloom, final resolve, `GridPass.Run` and `RadiationBeltPass` is identical (OLD
+`Program.cs:5240-5340` = NEW `:5369-5469`; `GridPass.Run` OLD `:5315` / NEW `:5444`), and `Program.ColorFormat`
+is still `B10G11R11UfloatPack32` (OLD `:229` / NEW `:230`), so 5948's "no alpha in the main colour target"
+is not new for decals (`BlendColorAlphaOver` never reads destination alpha).
+- **Set 0 binding 2 (5948).** `GlobalShaderBindings` gained binding 2, a `StorageBuffer` (Fragment|Compute) holding
+  the 4097-float sun-transmittance tile (NEW `GlobalShaderBindings.cs:17,122,148-154`; reset to 1 per viewport
+  at `Program.cs:4787`). Graffiti takes layout and set from the game (`DecalRenderer.cs:169,403`) and its GLSL
+  never declares binding 2 (`Common/SunTransmittance.glsl` is opt-in), so the layout stays compatible. The decal
+  pass records after sunbloom, so it neither feeds nor needs the tile.
+- **Shader chain.** `Camera.glsl` → `Global.glsl` → `Extensions.glsl`, `TextureSet.glsl`, the `Ubo*` structs and
+  `Grid.frag` (`GridFrag` `DefaultAssets.xml:410`, OLD `:412`) are identical; `Global.glsl` changed by a comment
+  only (`:79-81`; 5940 moved `ApplyCloudLighting` into the new `Common/CloudLighting.glsl`), so the decal
+  shaders should compile to the same SPIR-V as on 5901. Decal lighting still ignores cloud shadows and cloud
+  ambient (pre-existing).
+- **Terrain picking.** `Celestial.GetTerrainHeightFromDirCcf(dir, accurate: true)` (NEW `Celestial.cs:794-890`)
+  is unchanged for `DecalPicker.cs:268` and `DecalAnchors.cs:83`; 5907 changes only GPU vertex positions, so
+  CPU-vs-rendered agreement stays on the existing live checklist (#10).
+- **5916 system switching.** `Program.SwapSystem` destroys all vehicles and builds a new system, so vehicle and
+  terrain anchors keep orphaned references until their reset runs (needs live re-verification). Unscience's
+  cross-system load handling: see [saves](saves.md).
+
+Native acceptance: runtime shaderc compile of both decal stages against the 5949 headers, decal look under 5940
+cloud ambient, and a cross-system load with decals. [5949 review](../plans/KSA_5949_UPGRADE.md).
+
 ## KSA 5801 → 5901 verification (2026-11-20)
 
 `Program.ColorFormat` remains `B10G11R11UfloatPack32` (since 5801; `Program.cs:229`) and the offscreen

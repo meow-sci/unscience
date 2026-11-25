@@ -9,10 +9,27 @@ This document serves as a comprehensive index of all mods and libraries in this 
 
 > **Game integration scope:** for how each feature plugs into KSA (Harmony patches, reflection, game types, shaders, assets) and how to check what a game update breaks, start at [`scope/FULL_SCOPE.md`](scope/FULL_SCOPE.md) and its master index [`scope/game-integration-surface.md`](scope/game-integration-surface.md). Keeping `scope/` current is mandatory — see [`AGENTS.md`](AGENTS.md).
 
-## KSA 5901 compatibility and discovery
+## KSA 5949 compatibility and discovery
 
-Current baseline: **2026.11.16.5901**, previous **2026.11.10.5801**. Full evidence, old/new game
-seams, managed checks and native acceptance: [upgrade review](plans/KSA_5901_UPGRADE.md).
+Current baseline: **2026.11.25.5949**, previous **2026.11.16.5901**. Full evidence, old/new game
+seams, managed checks and native acceptance: [upgrade review](plans/KSA_5949_UPGRADE.md).
+
+| Projects | Upgrade responsibility |
+|---|---|
+| iron-man.lib / iron-man.tests | `FindSerialize` binds the 4-parameter internal `Part.GetReferenceWithChildren` (5939); the old exact lookup rolled back every Iron Man patch |
+| ksa-abstractions.lib (Persistence) / saves.tests | `NativeSaveHooks` carries scene state across KSA star-system switches (`SaveSystemSwap.RequestLoad` / `Program.SwapSystem`) and accepts contained-system loads (`PlanLoad`) |
+| pebbles.lib / pebbles.tests | Slot-based `ReleaseViewport`; retirement covers `GroundClutterGpuResources` + terrain curvature; detached arrays free per-planet VRAM; collider-less replacements refused where the 5903 planet mesh has no structure (Luna, Mars, Earth trees); disabled types keep stock collision |
+| blinky.lib | `RocketFeedCheck`: diagnostics require every core of a gas-generator rocket to reach a tank |
+| byo-music.lib | Vessel playback uses `SfxChannel` (pre-existing `"Sfx"` miss) |
+| ksa-upgrade.tests / kitchen-sink.tests probe | `Ksa5949Checks` real-DLL seam pins; probe `ParameterTypes`/`ParameterNames`/`ReturnTypes` |
+
+Sidecar IDs/versions are unchanged. All 23 managed suites and the 19-case startup harness pass;
+native game acceptance is pending. Decision recorded: pre-5949 DOH kittens that boarded without a
+roster entry are unseated by native 5946 seat validation on first load.
+
+## KSA 5901 compatibility
+
+Previous baseline: **2026.11.16.5901**, from **2026.11.10.5801**: [upgrade review](plans/KSA_5901_UPGRADE.md).
 
 | Projects | Upgrade responsibility |
 |---|---|
@@ -365,7 +382,7 @@ Dynamic LCD pixel grid builder. Builds NxM engine pixel grids at runtime by dyna
 - Build/Destroy individual grids at any time; vehicle combo selector with filter
 - Per-grid collapsible UI sections with info table, pattern buttons, and destroy
 - Menu bar with Debug menu for global grid scanning
-- **blinky.lib**: `BlinkyGridManager` (compound-key scroll/static/off/pattern APIs, `ScanAllVehicles`), `ScrollAnimation`, `PixelGrid` (single-grid + `ScanAllFromVehicle` auto-discovery), `PixelPatterns`, `LcdGridConfig`, `LcdGridBuilder` (`BuildGrid`, `DestroyGrid`, `ScanExistingGrid`, `RepairFuelFeeds`), `FuelAnchorFinder`, `BlinkyPixelGrid`.
+- **blinky.lib**: `BlinkyGridManager` (compound-key scroll/static/off/pattern APIs, `ScanAllVehicles`), `ScrollAnimation`, `PixelGrid` (single-grid + `ScanAllFromVehicle` auto-discovery), `PixelPatterns`, `LcdGridConfig`, `LcdGridBuilder` (`BuildGrid`, `DestroyGrid`, `ScanExistingGrid`, `RepairFuelFeeds`), `FuelAnchorFinder`, `RocketFeedCheck` (KSA 5949: a rocket counts as fed only when every tank-fed core reaches a tank), `BlinkyPixelGrid`.
 
 ### [its-so-shiny](its-so-shiny) / [its-so-shiny.lib](its-so-shiny.lib)
 Light-part pixel grid builder. Builds Blinky-style NxM grids using KSA's built-in `LightPart` instead of engine parts, avoiding engine ignition, thrust cancellation, and fuel/resource graph complexity.
@@ -713,7 +730,10 @@ Applied-state and import-release controls live in the submod panel. On KSA 5707 
 also feed the depth-normal (AO) pre-pass and keep the stock `UsesCustomNormals` foliage flag. Remembers removed/displaced
 clutter per spacing across apply/restore; KSA 5482 native saves keep stock-spacing state and a
 `pebbles.clutter-state` sidecar record keeps override spacings. Uses main's consolidated
-Harmony instance; no standalone host or workspace/contracts dependency.
+Harmony instance; no standalone host or workspace/contracts dependency. KSA 5949: collider-less
+replacements need colliders on bodies without stock snap-to-mesh clutter (Luna, Mars) or beyond its
+reach (Earth trees) — Apply and save replay explain (`SnapToMeshPolicy`); detached originals free their
+per-planet VRAM.
 See [README](pebbles.lib/README.md) and [integration scope](scope/ground-clutter.md).
 
 ### [pebbles.tests](pebbles.tests)

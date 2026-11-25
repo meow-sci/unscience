@@ -69,11 +69,12 @@ After building, the console reports how many pixel parts reached at least one ta
 
 ```
 blinky: fuel-fed 128/128 pixel parts via their declared feed connectors
-blinky: propellant feed check — 128/128 pixel parts reached at least one tank
+blinky: propellant feed check — 128/128 pixel parts have every tank-fed core reaching a tank
 ```
 
-Gas-generator cores that burn a propellant the vehicle does not carry are reported as starved; that
-is expected and does not stop the main thrust chamber from firing.
+Starved cores are listed by template id. Since KSA 5925/5936 the stock liquid pixel engines (A2/A3/A5/A6)
+are a single gas-generator rocket that fires only when **both** its thrust chamber and its gas-generator
+core reach propellant, so a starved gas-generator core keeps that pixel dark.
 
 > **The pixel engines burn Hydrolox.** Every liquid `CorePropulsionA_Prefab_EngineA2..A6` thrust
 > chamber is authored `<Reaction Id="Hydrolox">`, so the host vehicle's tanks must actually contain

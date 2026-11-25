@@ -5,6 +5,15 @@ Retained as evidence for the Pebbles backport. Proposal language below describes
 investigation; shipped behavior and current ownership are documented in
 [ground-clutter scope](../scope/ground-clutter.md) and [Pebbles README](../pebbles.lib/README.md).
 
+**Later builds:**
+- **KSA 5919** moved every per-ecotype GPU buffer, mapped memory and descriptor pool cited below as
+  `ClutterCubeCellGrid` into `GroundClutterGpuResources`. That class is reached through
+  `ClutterEcotypeRenderData.Resources`, and its large per-planet buffers are allocated lazily.
+- **KSA 5903** builds the snap-to-mesh acceleration structure only where stock clutter snaps to the mesh,
+  over that clutter's reach. The rendered-mesh snapping path below is therefore no longer available to every
+  noncollidable override.
+- See the scope's 5949 section.
+
 `D/` = [current decompilation](../../ksa-game-assemblies/current/decomp/); `C/` = [current Content](../../ksa-game-assemblies/current/Content/). In tables, filenames without a namespace directory are in `D/KSA/`. Source line numbers are this snapshot's decompiled-file lines. Paths resolve from the repository's sibling game-reference checkout; they are not distributed game assets.
 
 ## A. Reference loading and shared assets

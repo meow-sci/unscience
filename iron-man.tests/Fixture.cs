@@ -24,6 +24,11 @@ public static class JobSystems
     public static readonly Worker VehicleSolver = new();
     public sealed class Worker { public int Waits; public void Wait() => Waits++; }
 }
+public sealed class EditorSnapshot
+{
+    internal sealed class PreviousTransforms;
+}
+
 public sealed class PartTree
 {
     public int Recomputes;
@@ -127,8 +132,10 @@ public sealed class Part : Part.Connection.IConnector
     [MethodImpl(MethodImplOptions.NoInlining)]
     public PartInstance GetReferenceWithChildren(ref uint localRunningId) => GetReferenceWithChildren(ref localRunningId, null, false);
 
+    // KSA 5939 appended the optional internal EditorSnapshot.PreviousTransforms (incremental editor snapshots).
     [MethodImpl(MethodImplOptions.NoInlining)]
-    internal PartInstance GetReferenceWithChildren(ref uint localRunningId, PartInstance? parent, bool includeSymmetry = false)
+    internal PartInstance GetReferenceWithChildren(ref uint localRunningId, PartInstance? parent, bool includeSymmetry = false,
+        EditorSnapshot.PreviousTransforms? previousTransforms = null)
     {
         var result = new PartInstance { InstanceOf = Template.Id };
         for (int i = 0; i < Connectors.Length; i++)

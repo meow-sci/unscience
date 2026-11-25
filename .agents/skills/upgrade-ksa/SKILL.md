@@ -36,7 +36,7 @@ Confirm each one exists, and ask for whatever is missing.
 |---|---|---|---|
 | **CURRENT** assemblies | The **new** build being validated (upgrading *to*) | `…/meow-sci/ksa-game-assemblies` (an additional working dir) | `<NEW>` |
 | **PREVIOUS** assemblies | The **prior** build, for diffing (upgrading *from*) | `…/meow-sci/ksa-game-assemblies_prev` | `<OLD>` |
-| **Live game install** | What `dotnet build` compiles against **by default** | `C:\Program Files\Kitten Space Agency\` | `<INSTALL>` |
+| **Build DLLs** | What `dotnet build` compiles against **by default** — `Directory.Build.props` resolves `KSAFolder`: `KSA_DLL_DIR` env/`-p:` → the adjacent `../ksa-game-assemblies/current/dll/` → (Windows) the game install → `$HOME/repos/meow-sci/ksa-game-assemblies/current/dll/` | normally the adjacent checkout = `<NEW>/current/dll` | `<INSTALL>` |
 | **Recorded baseline** | The build `scope/` was last verified against | header of [`scope/FULL_SCOPE.md`](../../../scope/FULL_SCOPE.md) + [`game-integration-surface.md`](../../../scope/game-integration-surface.md) | `<BASELINE>` |
 
 Each tree is a game-assemblies checkout with an inner `current/` folder (present in every checkout
@@ -54,13 +54,14 @@ regardless of version — produced by `ksa-game-assemblies/copy-ksa.ts` copying 
 **Before anything else, report these four back to the requester:**
 
 1. `<NEW>` build id and `<OLD>` build id (from each `current/version.json` → `build`).
-2. Whether `<INSTALL>` is the same build as `<NEW>` — read `KSA.dll`'s version, or ask. **The default
-   build compiles against `<INSTALL>`, not `<NEW>`.** If they differ, either point the build at
-   `<NEW>/current/dll` (step 2) or say plainly that the compile check ran against a different build.
-3. `<BASELINE>` vs `<OLD>`. **These are frequently not the same.** At the time of writing, `scope/` is
-   verified against `2026.6.9.4750` while the trees on disk are far newer — so the honest diff span is
-   `<BASELINE>` → `<NEW>`, not `<OLD>` → `<NEW>`, and the intermediate revisions appear in **no**
-   `version.json` on disk (see step 1). Say so rather than silently reviewing one hop.
+2. Which DLL folder the build actually used: `dotnet msbuild <any>.csproj -getProperty:KSAFolder`.
+   With an adjacent `ksa-game-assemblies` checkout it is `<NEW>/current/dll` and needs no override.
+   **Never go looking for a game install or edit the csproj/props to find DLLs** — if resolution looks
+   wrong, stop and ask.
+3. `<BASELINE>` vs `<OLD>`. Recent hops (5801 → 5901 → 5949) were single clean hops (`<BASELINE>` ==
+   `<OLD>`), but check: when they differ, the honest diff span is `<BASELINE>` → `<NEW>` and the
+   intermediate revisions appear in **no** `version.json` on disk (see step 1). Say so rather than
+   silently reviewing one hop.
 4. Which of the two decomp trees you will treat as authoritative: **the provided trees are**, not the
    in-repo `decomp/ksa` copy (`AGENTS.md` says so explicitly, and that copy is older still).
 
@@ -154,34 +155,21 @@ Flag every commit line touching a subsystem unscience couples to:
 
 Build the **whole solution** — there is no game-free subset worth excluding:
 
-```powershell
-dotnet build ksa-mod-experiments.slnx
+```sh
+dotnet build ksa-mod-experiments.slnx --no-incremental
 ```
 
-That compiles against `<INSTALL>` (`Directory.Build.props` → `KSAFolder`, default
-`C:\Program Files\Kitten Space Agency\`). To compile against a specific tree instead, override
-`KSAFolder` — it is env-var/`-p:`-overridable because the props file only sets it when empty:
-
-```powershell
-$env:KSAFolder = 'C:\…\ksa-game-assemblies\current\dll\'   # NOTE the trailing \
-dotnet build ksa-mod-experiments.slnx
-```
-
-> **⚠ The trailing separator is mandatory and its absence is a trap.** Every `<Reference>` is guarded
-> by its own `Condition="Exists('$(KSAFolder)<Assembly>.dll')"` and the `HintPath` is the same raw
-> `$(KSAFolder)<Assembly>.dll` concatenation — no path joining, no separator inserted. Drop the
-> trailing `\` (or point at a wrong folder) and every game reference **silently disappears** — you get
-> a flood of `CS0246: The type or namespace name 'KSA'/'Brutal' could not be found` that reads like a
-> total game rewrite. Verified failure mode: with the separator the same project builds clean; without
-> it, `ksa-abstractions.lib` alone emits 11 CS0246s. **A wall of CS0246 on `KSA`/`Brutal` namespaces
-> means a bad `KSAFolder`, not a break — fix the path and rebuild before reporting anything.**
+With the adjacent checkout this compiles against `<NEW>/current/dll` (step 0). To compare against
+another tree use `KSA_DLL_DIR=<tree>/current/dll` (the props add the trailing separator). If
+`KSA.dll` is missing, the `ValidateKSAAssemblies` target fails with **one** actionable error; a
+wall of `CS0246` on `KSA`/`Brutal` namespaces therefore means a raw `-p:KSAFolder=` without its
+trailing separator, not a game rewrite — fix the path before reporting anything.
 
 Two more build-time facts specific to this repo:
 
-- **The game holds a lock on the deploy folder.** Every mod csproj copies its output to
-  `$(SelectedDistModDir)<mod>\` (= `%USERPROFILE%\Documents\My Games\Kitten Space Agency\mods\`) in an
-  `AfterBuild` target. If KSA is running, the *copy* fails and masks the compile result. Redirect it:
-  `$env:KSAUserDir = 'C:\…\scratchpad\dist\'` (it is `Condition`-guarded the same way), or close KSA.
+- **Deploy copy.** Every mod csproj copies its output to `$(SelectedDistModDir)` in an `AfterBuild`
+  target (Windows: the user's KSA mods folder, which a running game locks; macOS/Linux:
+  `$HOME/repos/meow-sci/mods/`). Use `UNSCIENCE_DIST_DIR=<scratch>/dist/` for CI-style output.
 - **`TreatWarningsAsErrors` is on** repo-wide (`Directory.Build.props`), so a Brutal/StarMap
   **nullability** change is a hard build break in ordinary UI code with no KSA member involved.
   Precedent: the rev-4729 Brutal bump made `ImString.AppendFormatted` non-nullable and broke
@@ -206,12 +194,13 @@ Work
 top to bottom. For each entry, confirm the exact name still exists in `<NEW>` and compare against
 `<OLD>`:
 
-```powershell
+```sh
 # member/field names (also grep <OLD> to prove whether a miss is new or pre-existing)
-rg -n '_fovRadians|_expressionPose|_renderable|_characterAvatar' `
-   '<NEW>\current\decomp\KSA'
+rg -n '_fovRadians|_expressionPose|_renderable|_characterAvatar' '<NEW>/current/decomp/KSA'
 # whole-type / nested-type names used as strings
-rg -n 'class KittenEva|KSA\.LightModule\+TemplateData|struct TemplateData' '<NEW>\current\decomp'
+rg -n 'class KittenEva|KSA\.LightModule\+TemplateData|struct TemplateData' '<NEW>/current/decomp'
+# body/signature drift of a hooked member (ignore pure renumbering)
+git diff --no-index --ignore-cr-at-eol '<OLD>/current/decomp/KSA/X.cs' '<NEW>/current/decomp/KSA/X.cs'
 ```
 
 Highest-value single checks in this suite, all of which fail **silently**:
@@ -226,6 +215,12 @@ Highest-value single checks in this suite, all of which fail **silently**:
 - `ShaderReference.{Shader,+k__BackingField,DoLoad,ModPath,LocalPath}` and
   `RenderCore.ShaderModuleUtils.FromFile` (humble-arteest paint — cross-assembly private names).
 - `ModLibrary.AllParts`/`AllCharacters` internals (doh).
+- **Explicit overload arrays** (`AccessTools.Method(type, name, new[] { … })`) match the **full**
+  parameter list: a new *optional* trailing parameter makes the lookup return null while `nameof` and
+  the build stay green. 5939 did this to the internal `Part.GetReferenceWithChildren`, and Iron Man's
+  whole patch set rolled back at startup. Diff the complete signature of every array-resolved target.
+- Harmony **argument names** (`ref Action apply`, `string savedSystemId`) bind by parameter name; a
+  rename makes the patch refuse to install. Pin them with the probe's `ParameterNames`.
 - Harmony **field injectors** (`___Name` parameters) and any patch resolved with an explicit overload
   param array: these throw at `Apply` time and are typically swallowed, so the feature is simply inert
   with no crash. `Controller.___Transform` is the standing example (§5).
@@ -310,9 +305,21 @@ requester first. Then, **in the same change** (`AGENTS.md` scope/ maintenance is
 6. Update [`REPOSITORY_INDEX.md`](../../../REPOSITORY_INDEX.md) and the mod's `README.md` **iff
    user-visible behavior changed** (e.g. a feature now self-disables on this build) — required by
    `CLAUDE.md`/`AGENTS.md` whenever a mod is modified.
-7. `dotnet build` green. **There is no test suite in this repo** — no test projects exist, so
-   `dotnet build` plus a live in-game pass is the whole verification story. Do not imply otherwise in
-   the report.
+7. Validate (see the latest `plans/KSA_*_UPGRADE.md` "Validation" table for the exact commands):
+   - clean `dotnet build ksa-mod-experiments.slnx --no-incremental`, 0 warnings/errors;
+   - run **every** managed suite: each `*.tests` (and `you-didnt-see-anything.patch-tests`) is an
+     executable — run the `bin/Debug/net10.0/<app>.dll` that has a `.runtimeconfig.json` (some bins hold
+     several DLLs; picking a library gives a `libhostpolicy` error, not a test failure);
+   - add a real-DLL `ksa-upgrade.tests/KsaNNNNChecks.cs` (metadata only, via
+     `kitchen-sink.tests/KsaAssemblyProbe*`: `Fields`, `CallsOf`, `MethodsCalling`, `Constructors`,
+     `ParameterTypes`, `ParameterNames`, `ReturnTypes`) pinning every seam a fix depends on, and prove
+     it with the negative control `KSA_DLL_DIR=<OLD>/current/dll` (old checks pass, new ones fail).
+     Older `KsaNNNNChecks` pin CURRENT shapes: update a seam the new build moved rather than deleting it;
+   - `python3 tools/check_runtime_bootstrap.py --entry-assembly unscience/bin/Debug/net10.0/MeowSci.Unscience.dll`,
+     a `UNSCIENCE_DIST_DIR` build + `python3 scripts/check-dist.py`, and `git diff --check`.
+   **Fixtures mirror the old game shape** — a green fixture suite proves nothing about the new build
+   until the fixture and a real-DLL check are updated. Managed checks never replace native in-game
+   acceptance; list what remains.
 
 ---
 
@@ -357,27 +364,15 @@ Use this so nothing is missed. Detail (with `file:line` and decomp paths) lives 
 
 ## 5. Known-broken baseline — do **not** re-report these as new regressions
 
-Recorded against `<BASELINE>` (`2026.6.9.4750`) in master index §6 and `FULL_SCOPE.md`. Re-check
-whether each has since been **fixed** (the repo has had "updates for latest ksa" commits since), then
-carry it forward or close it — but never file it as caused by the new build:
-
-- **camera-controller-override** — `Controller.___Transform` Harmony field injector targets a field
-  that does not exist on KSA controllers (the field is `Camera`); `Apply` throws and is swallowed, so
-  the animation prefix never attaches. Pre-existing. Also surfaces as an inert
-  Intended fix: inject `Camera ___Camera`.
-- **zippo** — `GetField("Color")` on `LightModule+TemplateData`; the real field is `ColorRgb`, so
-  colour get/set is a silent no-op. Pre-existing.
-- **humble-arteest Vehicle Paint** — dead by design change: rev 4693 moved part-colour compilation to
-  `ShaderReference.CompileVariantWithCustomOptions()`, which recompiles `MeshIndirect` from disk per
-  `ENABLE_*` variant and ignores `ShaderReference.Shader`, so the module swap can never take effect.
-  Feature **self-detects and disables**. Engine Emissive and Kitten Color are unaffected. Reviving it
-  is a redesign, not a patch.
-- **garrys-torch** — CS8604 from the rev-4729 Brutal nullability bump (toolchain, not KSA API).
-- **unscience supermod** — `Patcher.cs` never wires `IvaForceRender.Patch`, so kitchen-sink's IVA
-  force-render is partial inside the supermod.
-- **Behavioral watch items** — `Vehicle.IsControllable` gating (4699); editor tag/category schema
-  ("Interstage" removed, "Stages"→"Resource Groups", tags moved to XML — 4731/4732/4741);
-  face-snapping/connector rules (4687–4740); part-size XML (4721).
+The authoritative carry-forward list is the latest `plans/KSA_*_UPGRADE.md` ("Decisions recorded,
+not changed" and "Known-broken baseline reconciliation"), master index §6 and the top of
+[`ISSUES.md`](../../../ISSUES.md). Re-check whether each item has since been **fixed**, then carry it
+forward or close it — but never file it as caused by the new build. The 4750-era items this section
+used to list (`Controller.___Transform`, Zippo `Color`, the 4729 nullability break, the unwired
+`IvaForceRender`, the 4693 Vehicle Paint redesign) are **retired**; Humble Arteest's immediate-white
+report remains open and is not attributed to any single hop. Pre-existing bugs found by the sweep
+(e.g. BYO Music's `"Sfx"` channel id, fixed @5949) are reported as pre-existing, with fixes only on
+request.
 - [`ISSUES.md`](../../../ISSUES.md) additionally carries **user-reported** breakage (blinky, eternal
   flame refill during burns, garrys-torch error spam, kitten-animations repeating one
   expression). Treat these as prior art when triaging, and check whether the new build explains any.
@@ -386,7 +381,7 @@ carry it forward or close it — but never file it as caused by the new build:
 
 ## 6. When you must go beyond the sources
 
-This repo has **no automated verification of game integration**: no test projects, and no runtime
+The managed suites and real-DLL metadata checks run no game, renderer or GPU, and there is no runtime
 accessor-health surface. Two classes of finding therefore cannot be settled statically — flag them for
 a live pass rather than asserting they pass:
 
@@ -402,6 +397,22 @@ through it, so it is the fastest broad smoke test — then exercise the specific
 findings (standalone windows are mostly **F11**; doh **F8**, kiwis-marbles **F9**, thug-life **F12**).
 
 ---
+
+## 6b. Lessons from recent hops
+
+- **5939 (optional parameter):** an exact overload array silently stopped matching; only the
+  reflection sweep found it. Diff full signatures of array-resolved targets (step 3).
+- **5916 (runtime ordering):** native moved the world load behind a queue (`SaveSystemSwap`) and a new
+  teardown path (`Program.SwapSystem` → `Universe.CreateSystem`, bypassing hooked `LoadSystem`). Every
+  hook still bound; the save transaction broke. Diff **callers and order** of every lifecycle hook, not
+  just the hooked method.
+- **5903 (content-driven gating):** native now builds a resource only where *stock content* needs it,
+  so mod-authored content outside that envelope fails at runtime. Check what a new gate keys on.
+- **5919 (ownership moves):** members moved to a new class that a reflection field walk (Pebbles
+  retirement) never visits; check field-walk type lists whenever a walked type is refactored.
+- Parallel read-only review lanes (part tree, vehicle, mesh render, FX, clutter, lifecycle,
+  reflection sweep) worked well; give each a shared brief with the paths, build state and rules, and
+  keep builds and edits with one owner.
 
 ## 7. Deliverable — the impact review
 

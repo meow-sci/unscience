@@ -8,6 +8,7 @@
     <PackageReference Include="Lib.Harmony" Version="2.4.2" />
     <Compile Include="../../ksa-abstractions.lib/PhysicsFrameHook.cs" Link="Production/PhysicsFrameHook.cs" />
     <Compile Include="../../ksa-abstractions.lib/Persistence/NativeSaveHooks.cs" Link="Production/NativeSaveHooks.cs" />
+    <Compile Include="../../ksa-abstractions.lib/Persistence/NativeSaveHooks.SystemSwap.cs" Link="Production/NativeSaveHooks.SystemSwap.cs" />
     <Compile Include="$(Purr2D2SourceDir)/src/Runtime/GameHooks.cs" Link="Production/PurrGameHooks.cs" />
     <AssemblyMetadata Include="Purr2D2SourceDir" Value="$(Purr2D2SourceDir)" />
   </ItemGroup>

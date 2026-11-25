@@ -27,6 +27,18 @@ Pending grid removals are saved as intent and restarted against restored parts; 
 callbacks are cleared during scene reset. Removal delays restart rather than running against stale
 vehicle references.
 
+## KSA 5949 compatibility
+
+KSA 5925/5936 merged each liquid engine's former independent Engine and GasGenerator rockets into one
+`GasGeneratorRocket` (stock A2/A3/A5/A6) whose `Cores` are `[Combustor, GasGeneratorCore]`; its
+`UpdatePropellantAvailability` requires both, as every rocket type requires all of its cores.
+`RocketFeedCheck` mirrors that rule: a controller (or pixel part) counts as fed only when one of its
+rockets has tank-fed cores and every one reaches a tank. `VerifyPropellantFeeds` and the Diagnose
+controller tally use it; the per-core starved list is unchanged. Diagnostics only — feed repair and
+ignition still bind `RocketCore.FeedConnectors` on every core, and both cores share one connector and
+propellant in stock content. No save payload changed. See
+[pixel grids](../scope/pixel-grids-and-render.md) and [5949 review](../plans/KSA_5949_UPGRADE.md).
+
 ## KSA 5638 compatibility
 
 `FuelAnchorFinder` chooses the round-robin fuel anchors for `LcdGridBuilder.BuildGrid` and

@@ -9,9 +9,26 @@ namespace KSA
         public static readonly List<string> Events = new();
     }
 
-    public static class Program
+    public class Program
     {
         public static bool IsEditorOpen;
+        public static readonly Program Instance = new();
+        public bool SwapWontFit;
+        public bool FailSwap;
+
+        // KSA 5916 Program.SwapSystem: joins, tears the old world down, then builds the new system.
+        // WontFit is decided after teardown; the native caller then restarts the game.
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public SystemSwapResult SwapSystem(SystemTemplate system)
+        {
+            JobSystems.WaitAll();
+            Trace.Events.Add("native teardown");
+            if (FailSwap) throw new InvalidOperationException("native swap failed");
+            if (SwapWontFit) return SystemSwapResult.WontFit;
+            Universe.CurrentSystem = new CelestialSystem { Id = system.Id };
+            Trace.Events.Add("native new system " + system.Id);
+            return SystemSwapResult.Swapped;
+        }
     }
 
     public class GameSave
@@ -45,12 +62,20 @@ namespace KSA
         }
 
         // KSA 5482: an unreadable universe file is logged and Load returns without replacing the world.
+        // KSA 5916: the system decision is SaveSystemSwap.RequestLoad's; ApplyLoaded may run later.
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void Load()
         {
             if (Program.IsEditorOpen) { Trace.Events.Add("refused"); return; }
             Trace.Events.Add("native read");
             if (FailRead) return;
+            if (SaveSystemSwap.RequestLoad(Id, UniverseData.SystemId, ApplyLoaded) == SystemSwapRequest.NotInstalled)
+                Trace.Events.Add("native not installed alert");
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void ApplyLoaded()
+        {
             Universe.DeserializeSave(UniverseData);
             Trace.Events.Add("native menus closed");
         }
@@ -63,6 +88,7 @@ namespace KSA
         public CameraData? Camera = new();
         public object? KittenRoster = new();
         public List<CelestialSystemData> CelestialSystems = new() { new() };
+        public string SystemId => CelestialSystems.Count > 0 ? CelestialSystems[0].Id.Id : string.Empty;
     }
 
     public interface IParentBody { }
@@ -216,5 +242,9 @@ namespace MeowSci.KsaAbstractions
             Pending.Clear();
             KSA.Trace.Events.Add("clear pending");
         }
+        public static bool HasPendingWorldChange => _worldChange != null;
+        public static event Action<double, KSA.UniverseTime>? BeforePhysics;
+        /// <summary>The handoff runs these after any world-change replay.</summary>
+        public static void RunBeforePhysics() => BeforePhysics?.Invoke(0, default);
     }
 }

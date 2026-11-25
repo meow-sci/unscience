@@ -1,5 +1,19 @@
 # Pebbles managed checks
 
+## KSA 5949 compatibility
+
+- `SnapToMeshChecks` link `Models/SnapToMeshPolicy.cs` and use the native cell-width arithmetic.
+  - **Refused:** a collider-less type on a body without the planet-mesh structure (Luna); one that reaches past
+    the stock patch (an Earth tree type); and, as negative controls, a metre past the patch or a wider cell.
+  - **Accepted:** disabled types, custom-collider and convex-hull types, and the stock Earth grass reach, even
+    after the native patch-minus-snap-step rounding.
+- The residency fixture models KSA 5919 per-planet resources: `AllocatePlanetResources`/`DisposePlanetResources`,
+  both guarded by `HasPlanetResources`. Detaching frees them once and only after every cell is released;
+  re-attached arrays free their new allocation on the next detach, and unallocated arrays free nothing.
+  Negative controls: the fixture flags a retained allocation and a free while cells remain.
+- `RetirementShapeChecks` now models the 5919 `GroundClutterGpuResources` fields (same six maps) and the
+  CPU-only cell grid. The terrain-curvature cleanup in `ClutterRetirement` needs KSA types and is not linked.
+
 ## KSA 5901 compatibility
 
 The residency fixture models KSA 5875 clutter slots: only mapped (Main/Secondary) viewports resolve, others throw like `GroundClutterRenderer.ResolveViewportSlot`. Registered thumbnail and portrait viewports must be skipped by the production release.
@@ -27,7 +41,7 @@ record's validation and round trip through the linked production `SaveParticipan
 `PebblesChecks` covers the legacy-recipe `KeepBackfaceNormals` and (KSA 5707) `UsesCustomNormals`
 defaults: stock inheritance, explicit override, clone and sidecar round trip of an unset flag. `RetirementShapeChecks` link
 `Runtime/FieldShapes.cs` and verify that partial retirement selects every mapped-memory field before buffers,
-including the KSA 5638 jagged `MappedMemory[][]` cell-grid shapes. `ClutterResidencyChecks` link
+including the jagged `MappedMemory[][]` shapes (KSA 5638 cell grid, KSA 5919 `GroundClutterGpuResources`). `ClutterResidencyChecks` link
 `Runtime/ClutterResidency.cs` against `ClutterResidencyFixture.cs`, managed stand-ins of the 5638
 `IViewport`/`ViewportRegistry.Views`/`ClutterEcotypeRenderData.ReleaseViewport`/`ResolvePendingReleases`
 surface, and verify that detached arrays release every registered (including hidden) viewport, return all

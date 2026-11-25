@@ -226,7 +226,8 @@ of the current KSA decompilation. The existing surface is manual UI and terminal
 advertise automatic save coverage as a current native feature; core hooks should naturally cover
 future routes that use these same methods. `Universe.LoadSystem(string)` and `LoadDefaultSystem`
 construct a new celestial system and reset roster; add lifecycle cleanup there if runtime system
-switching becomes supported. On normal startup the mod can initialize empty state; no save replay
+switching becomes supported. (@5949 it did, through a different entry point: see "Runtime
+star-system switching (KSA 5916)" below.) On normal startup the mod can initialize empty state; no save replay
 should occur simply from save-list scanning.
 
 ## Implementation correction: defer the entire load before next-frame UI
@@ -251,3 +252,41 @@ installation of the frame handoff; if that seam fails, no native save hooks are 
 saving/loading remains available. Unloading removes pending world requests. Real Harmony fixture
 checks cover whole-load deferral; the linked production PhysicsFrameHook tests assert replacement
 before step computation, latest-request precedence, old mutation invalidation and failure guard cleanup.
+
+## Runtime star-system switching (KSA 5916, verified against 5949)
+
+KSA now chooses the system for a save. `UncompressedSave.Load` reads the XML, then calls
+`SaveSystemSwap.RequestLoad(Id, UniverseData.SystemId, ApplyLoaded)`. `ApplyLoaded` is
+`Universe.DeserializeSave` + `Program.OnGameLoaded`. A save from the running system, or from a system
+whose bodies are all in the running one (`LoadIntoRunning`), applies immediately. A save from another
+installed system is queued. `SaveSystemSwap.OnFrame`, called from `Program.OnFrame` after
+`ImGui.Render`, then runs `Program.SwapSystem`, followed by `ApplyLoaded`.
+
+`Program.SwapSystem` joins workers and waits for the device. It then destroys every vehicle and physics
+bubble, disposes the system and celestial renderers, and frees streamed textures and unused planet
+meshes. Next it checks video memory: `WontFit` restarts the game into the save (`-load <save>`).
+Otherwise it builds the new system with `Universe.CreateSystem` (not `LoadSystem`), rebuilds renderers
+behind nested `Loading` frames, and runs `Universe.OnLoaded`. Multiplayer joins reach the same swap
+through `SaveSystemSwap.RequestJoin` → `FinishJoin` → `DeserializeSave`.
+
+Transaction design (keep native ordering, least invasive):
+
+1. The `Load` replay prepares the sidecar as before. If `RequestLoad` returned `Queued`, the `Load`
+   finalizer keeps the transaction open instead of reporting "could not read".
+2. A `Program.SwapSystem` prefix runs the joined reset (`JobSystems.WaitAll`, clear pending, `Resetting`)
+   before KSA's teardown. This honors `ISaveParticipant.ResetState` ("before native objects are
+   destroyed"). Its workers are joined and its results committed by the job's `finally`, so idle-only
+   APIs such as `VehicleUpdateTask.SyncWindowBubbles` are usable.
+3. `RequestLoad`'s `apply` is wrapped. The `DeserializeSave` it reaches after the swap runs
+   immediately, so the new world exists before `Program.OnGameLoaded`, as in native order. That load
+   joins without a second reset, restores the prepared sidecar once, and ends the file transaction when
+   `ApplyLoaded` returns.
+4. Running this after `ImGui.Render` is safe for UI-owned resources. `BuildSystemRenderers` begins with
+   `Loading.State`, whose `Loading.OnFrame` always runs a complete ImGui frame on the main thread. That
+   replaces the draw data built earlier in the frame before `RenderDrawData` submits anything.
+
+Draining the switch inside our `PrepareFrame` replay was rejected, because it would move native
+`SwapSystem` (and its nested `Loading` presents) away from where KSA runs and tests it. A capture made
+in the frames before the switch still describes the live scene, so it keeps the previous scene's
+retained records. A join or newer request that replaces a queued switch ends that save's transaction
+as not applied; its incoming records are retained for recovery.

@@ -681,7 +681,7 @@ public sealed partial class BlinkySubmod : ISubmod
             for (int i = 0; i < controllers.Length; i++)
             {
                 totalControllers++;
-                if (ReachesPropellant(controllers[i])) fedControllers++;
+                if (RocketFeedCheck.AnyRocketFed(controllers[i])) fedControllers++;
             }
         }
         Console.WriteLine($"blinky:   controllers reaching propellant = {fedControllers}/{totalControllers}");
@@ -698,19 +698,6 @@ public sealed partial class BlinkySubmod : ISubmod
             DiagnoseController(sample[ci], ci);
 
         Console.WriteLine("blinky: ===== END DIAGNOSE =====");
-    }
-
-    /// <summary>True when any tank-fed (PlumbedCore) core of this controller resolved a tank to draw from.</summary>
-    private static bool ReachesPropellant(EngineController controller)
-    {
-        var cores = ControllerCores(controller);
-        for (int i = 0; i < cores.Count; i++)
-        {
-            if (cores[i] is not PlumbedCore plumbed) continue;
-            if (PropellantFeedDiagnostics.CountTanks(plumbed.ResourceManager) > 0)
-                return true;
-        }
-        return false;
     }
 
     /// <summary>

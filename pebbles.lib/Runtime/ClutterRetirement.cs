@@ -36,11 +36,16 @@ internal sealed class ClutterRetirement
         if (value is SimpleComputePipeline compute)
         { Try(() => compute.FreeDescriptorSet(Program.Instance.RenderGlobals.DescriptorPool)); Try(compute.Dispose); return; }
         if (value is SimpleGraphicsPipeline graphics) { Try(graphics.Dispose); return; }
-        if (value is GroundClutterTerrainData terrain) { Try(terrain.Dispose); return; }
+        // KSA 5919 moved CurvatureBuffer out of Dispose into DisposePlanetResources; physical data allocates it
+        // eagerly, render data only once attached (a never-attached array holds a null buffer).
+        if (value is GroundClutterTerrainData terrain) { Clean(terrain.CurvatureBuffer); Try(terrain.Dispose); return; }
         if (value is SimpleVkTexture texture) { Try(texture.Dispose); return; }
         if (value is IDictionary map) { foreach (var item in map.Values) Clean(item); return; }
         if (value is IEnumerable sequence) { foreach (var item in sequence) Clean(item); return; }
-        if (value is not (GroundClutterPlacementData or ClutterEcotypeRenderData or ClutterEcotypePhysicalData or ClutterCubeCellGrid or ClutterViewResources or SimpleVkMeshAtlas)) return;
+        // KSA 5919 moved the per-ecotype buffers, maps and descriptor pools from ClutterCubeCellGrid into
+        // GroundClutterGpuResources. Its Bvh is borrowed from the planet mesh and is never walked (not listed).
+        if (value is not (GroundClutterPlacementData or ClutterEcotypeRenderData or ClutterEcotypePhysicalData or ClutterCubeCellGrid
+            or GroundClutterGpuResources or ClutterViewResources or SimpleVkMeshAtlas)) return;
         if (value is ClutterEcotypePhysicalData physical) Try(() => RemoveShapes(physical));
         var fields = value.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         // Persistent maps must be unmapped before their underlying buffers are released. KSA 5638 nests

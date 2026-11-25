@@ -23,6 +23,23 @@ templates or a missing character (`native skipped <id>`), as KSA 5632/5633 does.
   and neither resets nor restores;
 - the next successful load clears that error, and callback isolation still reports it.
 
+KSA 5916 star-system switching is mirrored by `SystemSwapFixtures.cs`. `Load()` hands the save to
+`SaveSystemSwap.RequestLoad(id, system, ApplyLoaded)`. A contained system applies in place, another
+installed system is queued and applied by `SaveSystemSwap.OnFrame()` through `Program.SwapSystem`
+(`native teardown`, `native new system <id>`), and an uninstalled one only alerts. `SystemSwapChecks.cs`
+verifies:
+
+- `LoadIntoRunning` loads in place, and other systems are still refused before reset for direct loads;
+- a queued switch is no failure, resets once before teardown, deserializes immediately (no deferral
+  past `OnGameLoaded`) without a second reset, and restores once;
+- the sidecar survives the switch through the real coordinator, including a capture while the switch is
+  queued that keeps previously retained records;
+- an uninstalled system is reported by name;
+- multiplayer join switches reset first and leave no stale marker;
+- a join that replaces a queued save switch ends that save's transaction once;
+- `WontFit` and a direct `SwapSystem` leave no continuation;
+- a negative control unpatches the two 5916 seams and reproduces the 5901-hook symptoms.
+
 Whole-load requests are held until the frame dispatcher replays them; the hook fixtures verify
 there is no preflight/reset at UI dispatch and only the latest request runs. Production dispatcher
 ordering is separately exercised by `garrys-torch.tests`, including computing the next simulation
@@ -44,7 +61,8 @@ Part identity fixtures exercise changing runtime IDs, duplicate templates, neste
 whole-tree topology mismatch, missing/ambiguous vehicles and transaction-scoped capture/rebind.
 The linked production serializer rejects float/double exponent overflow as well as invalid JSON.
 Native prerequisite tests still reject, before reset, the data native reconstruction cannot
-survive: malformed time/camera/roster metadata, a missing or mismatched celestial system, blank or
+survive: malformed time/camera/roster metadata, a missing celestial system or one KSA would not load in
+place (`SaveSystemSwap.PlanLoad` other than `Load`/`LoadIntoRunning`), blank or
 duplicate (case-insensitive) vehicle IDs, a vehicle without a parent-body record, and null, cyclic or
 deeper-than-256 part trees. Vehicles that KSA skips no longer refuse the load. A missing part/subpart
 template, parent body or character produces one `LoadWarning` per vehicle, after reset and before

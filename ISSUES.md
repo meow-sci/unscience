@@ -1,4 +1,25 @@
-## Current triage — KSA 2026.11.16.5901
+## Current triage — KSA 2026.11.25.5949
+
+Code upgrade and managed validation: [5949 review](plans/KSA_5949_UPGRADE.md). No native game run
+was possible; every earlier native acceptance item remains open.
+
+Fixed new regressions: Pebbles' compile against slot-based `ReleaseViewport` (5919); Iron Man's whole
+patch set rolling back at startup because the internal serializer gained a parameter (5939); scene
+saves lost when a load switches star systems, and contained-system loads refused (5916); Pebbles
+retirement missing the moved clutter GPU resources (5919); Blinky diagnostics calling a starved
+gas-generator core harmless (5925/5936).
+
+User decisions applied: Pebbles refuses collider-less replacements where the 5903 planet mesh has no
+structure or not enough reach (Luna, Mars, Earth trees) instead of falling back; detached clutter
+arrays free their per-planet VRAM; the pre-existing BYO Music `"Sfx"` channel-group miss (vessel audio
+never started) is fixed.
+
+Recorded, no code change: native 5946 seat validation empties, on first load, seats held by pre-5949
+DOH kittens that boarded without a roster entry; You Didn't See Anything may blank the new runtime
+loading screen under F2 (needs a live check); the 5911 Bepu friction fix changes contact behaviour for
+DOH placement and Pebbles colliders (live check).
+
+## Previous triage — KSA 2026.11.16.5901
 
 Code upgrade and managed validation: [5901 review](plans/KSA_5901_UPGRADE.md). No native game run
 was possible; every earlier native acceptance item remains open.

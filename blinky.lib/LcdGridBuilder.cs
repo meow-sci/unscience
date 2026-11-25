@@ -584,10 +584,11 @@ public static class LcdGridBuilder
     }
 
     /// <summary>
-    /// Post-rebuild sanity check. A pixel can only light if its tank-fed core's
-    /// <c>ResourceManager</c> ended up with a non-empty <c>ConsumptionOrder</c> — otherwise
+    /// Post-rebuild sanity check. A pixel can only light if every tank-fed core of one of its rockets
+    /// ended up with a non-empty <c>ResourceManager.ConsumptionOrder</c> — otherwise
     /// <c>PlumbedCore.ComputePropellantAvailable</c> returns false forever and activating the
-    /// engine does nothing at all. Logging it here turns a silently dark grid into a
+    /// engine does nothing at all (KSA 5925/5936: a gas-generator rocket needs both of its cores, see
+    /// <see cref="RocketFeedCheck"/>). Logging it here turns a silently dark grid into a
     /// diagnosable console message.
     /// </summary>
     private static void VerifyPropellantFeeds(List<Part> parts)
@@ -598,32 +599,29 @@ public static class LcdGridBuilder
 
         foreach (var part in parts)
         {
-            bool anyFed = false;
             var cores = part.SubtreeModules.Get<RocketCore>();
             for (int i = 0; i < cores.Length; i++)
             {
-                // PlumbedCore (KSA 5487) is the tank-fed base of Combustor, ThermalCore and
-                // AntimatterRamCore; SolidMotor cores draw no tank propellant.
+                // PlumbedCore (KSA 5487) is the tank-fed base of Combustor, ThermalCore,
+                // GasGeneratorCore and AntimatterRamCore; SolidMotor cores draw no tank propellant.
                 if (cores[i] is not PlumbedCore plumbed) continue;
 
                 if (desiredMix == "?") desiredMix = plumbed.DesiredMix?.Name ?? "?";
 
-                if (PropellantFeedDiagnostics.CountTanks(plumbed.ResourceManager) > 0)
-                    anyFed = true;
-                else
+                if (PropellantFeedDiagnostics.CountTanks(plumbed.ResourceManager) == 0)
                     starvedCores[plumbed.TemplateId] = starvedCores.GetValueOrDefault(plumbed.TemplateId) + 1;
             }
-            if (anyFed) fedParts++;
+            if (RocketFeedCheck.AnyRocketFed(part)) fedParts++;
         }
 
-        Console.WriteLine($"blinky: propellant feed check — {fedParts}/{parts.Count} pixel parts reached at least one tank");
+        Console.WriteLine($"blinky: propellant feed check — {fedParts}/{parts.Count} pixel parts have every tank-fed core reaching a tank");
         if (fedParts == 0)
             Console.WriteLine($"blinky: WARNING — no pixel can light. The engines burn '{desiredMix}'; the vehicle's tanks must carry it, and the pixel parts must share the tanks' stage.");
         else if (fedParts < parts.Count)
             Console.WriteLine("blinky: WARNING — starved pixel parts will never light; check stage alignment and tank contents");
 
         foreach (var (coreId, count) in starvedCores)
-            Console.WriteLine($"blinky:   starved core '{coreId}' x{count} (expected for gas-generator cores burning a propellant the vehicle does not carry)");
+            Console.WriteLine($"blinky:   starved core '{coreId}' x{count} (a starved gas-generator core also keeps its engine dark since KSA 5925)");
     }
 
     /// <summary>Sets MinimumThrottle on all EngineControllers of the given parts.</summary>

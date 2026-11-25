@@ -32,6 +32,11 @@ Validation: full solution compilation and `dotnet run --project byo-music.tests`
 repeat scheduler and shared copied-file catalog. Native decoding, 3D listening, SFX volume and
 stop/unload behavior still require an in-game audio check.
 
+**Fixed during the KSA 5949 upgrade (pre-existing bug):** playback routes through KSA's SFX channel
+group, whose `ModLibrary` id is `SfxChannel`. Earlier builds asked for `"Sfx"` (only the internal FMOD
+group name), which threw, so **Play on vessel** always failed with an error. See
+[audio integration](../scope/audio.md#ksa-5901--5949-verification-2026-11-25).
+
 ## Scene saves
 
 Saves each active sound's library filename, vessel, repeat/gap, volume and range. Restored streams start paused: press Resume to play from the beginning. The exact playback cursor and wall-clock gap remainder are not saved. Missing files or vessels are reported; imported files remain in the shared sounds library.

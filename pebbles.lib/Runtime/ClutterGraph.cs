@@ -39,7 +39,7 @@ internal sealed class ClutterGraph : IDisposable
             if (r.Signature != ClutterCapture.Signature(original)) throw new InvalidOperationException($"Ecotype {r.Name} changed since capture; recapture its stock recipe.");
             if (r.Objects.Count != original.ClutterObjects.Count) throw new InvalidOperationException("Changing variant count requires a new identity migration; retain the original slots.");
             var e = new ClutterEcotypeReference { Key = original.Key, Placement = Placement(body, r, assets, original.Placement), CollisionType = new((ClutterEcotypePhysicalData.CollisionType)r.CollisionMode) };
-            if (!r.Enabled) { e.Placement.BiomeMask = 0; e.CollisionType.Type = ClutterEcotypePhysicalData.CollisionType.None; }
+            if (!r.Enabled) Disable(e, original);
             var cellWidth = CubeCellGrid.GetCellWidth(body.MeanRadius, r.Placement.Separation);
             var k = Math.Ceiling((r.Placement.Range + cellWidth / Math.Sqrt(2)) / (16 * r.Placement.Separation));
             candidates = checked(candidates + (long)(256 * Math.Pow(2 * k + 1, 2)));
@@ -74,19 +74,42 @@ internal sealed class ClutterGraph : IDisposable
                     BuildIndirection.Invoke(lod, new object[] { o.Id });
                     o.Lods.Add(lod);
                 }
-                if (item.Collision == CollisionPolicy.KeepOriginal) foreach (var c in source.Colliders) o.Colliders.Add(ClutterColliders.Build(ClutterCapture.Collider(c), assets, stockHull: true));
-                else if (item.Collision == CollisionPolicy.Custom)
-                    foreach (var c in item.Colliders.Where(c => c.Enabled)) o.Colliders.Add(ClutterColliders.Build(c, assets));
+                // A disabled type places nothing, so it installs no Bepu shapes (see Disable).
+                if (r.Enabled) InstallColliders(o, item, source, assets);
                 if (e.Collideable && o.Colliders.Count > 0 && item.MassKg <= 0) throw new InvalidOperationException("Objects with installed colliders require positive mass.");
                 foreach (var c in o.Colliders) PhysicalObjectRadii[ei][oi] = Math.Max(PhysicalObjectRadii[ei][oi], (float)ClutterColliders.Reach(c));
                 PhysicalRadii[ei] = Math.Max(PhysicalRadii[ei], PhysicalObjectRadii[ei][oi] * Math.Max(r.Placement.MaxScale.X, r.Placement.MinScale.X));
                 e.ClutterObjects.Add(o);
             }
-            if (e.Collideable && (r.Placement.MinScale.X != r.Placement.MinScale.Y || r.Placement.MinScale.Y != r.Placement.MinScale.Z || r.Placement.MaxScale.X != r.Placement.MaxScale.Y || r.Placement.MaxScale.Y != r.Placement.MaxScale.Z))
+            if (r.Enabled && e.Collideable && (r.Placement.MinScale.X != r.Placement.MinScale.Y || r.Placement.MinScale.Y != r.Placement.MinScale.Z || r.Placement.MaxScale.X != r.Placement.MaxScale.Y || r.Placement.MaxScale.Y != r.Placement.MaxScale.Z))
                 throw new InvalidOperationException("Collidable ecotypes require uniform XYZ scale.");
             _ = e.ToParameters(); // Validate texture bindings and collision orientation before allocating render resources.
             Reference.Ecotypes.Add(e);
         }
+    }
+
+    private static void InstallColliders(ClutterObjectTemplate o, ObjectRecipe item, ClutterObjectTemplate source, ClutterAssets assets)
+    {
+        if (item.Collision == CollisionPolicy.KeepOriginal)
+            foreach (var c in source.Colliders) o.Colliders.Add(ClutterColliders.Build(ClutterCapture.Collider(c), assets, stockHull: true));
+        else if (item.Collision == CollisionPolicy.Custom)
+            foreach (var c in item.Colliders.Where(c => c.Enabled)) o.Colliders.Add(ClutterColliders.Build(c, assets));
+    }
+
+    /// <summary>
+    /// A disabled type places nothing (biome mask 0). Since KSA 5903 it keeps its stock collision type. Forcing
+    /// None would make it snap to the planet mesh, and only bodies with stock snap-to-mesh clutter have the
+    /// structure for that (<c>GroundClutterGpuResources.BuildFrameResources</c> throws otherwise). A
+    /// stock-collidable type therefore takes the native collidable path with no colliders:
+    /// <c>ClutterEcotypePhysicalData.PopulateColliderPrimitives</c> only warns about collider-less objects. It also
+    /// cannot keep smooth-normal orientation, which native <c>ToParameters</c> rejects for collidable types.
+    /// </summary>
+    private static void Disable(ClutterEcotypeReference e, ClutterEcotypeReference original)
+    {
+        e.Placement.BiomeMask = 0;
+        e.CollisionType.Type = original.CollisionType.Type;
+        if (e.Collideable && e.Placement.Orientation.Mode == ClutterOrientationReference.OrientationMode.SurfaceNormalSmooth)
+            e.Placement.Orientation.Mode = ClutterOrientationReference.OrientationMode.SurfaceNormal;
     }
 
     private static GroundClutterPlacementReference Placement(Celestial body, EcotypeRecipe e, ClutterAssets assets, GroundClutterPlacementReference original)

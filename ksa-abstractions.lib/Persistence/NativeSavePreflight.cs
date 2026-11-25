@@ -76,9 +76,14 @@ public static class NativeSavePreflight
         if (data.CelestialSystems == null || data.CelestialSystems.Count != 1)
             throw new InvalidDataException("This save must contain exactly one celestial system.");
         var system = data.CelestialSystems[0];
-        if (system?.Id == null || Universe.CurrentSystem == null
-            || !string.Equals(system.Id.Id, Universe.CurrentSystem.Id, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("This save belongs to a different celestial system. Load the matching system before this save.");
+        if (system?.Id?.Id == null || Universe.CurrentSystem == null)
+            throw new InvalidDataException("This save has no celestial system record.");
+        // KSA 5916 decides the system: the same system, or a saved system whose bodies are all in the
+        // running one (LoadIntoRunning), deserializes in place; any other is switched first.
+        SaveLoadPlan plan = SaveSystemSwap.PlanLoad(system.Id.Id);
+        if (plan is not (SaveLoadPlan.Load or SaveLoadPlan.LoadIntoRunning))
+            throw new InvalidDataException($"This save belongs to star system '{system.Id.Id}', which KSA does not "
+                + $"load into the running system '{Universe.CurrentSystem.Id}' ({plan}).");
         if (system.Vehicles == null || system.Vehicles.Count > MaxVehicles)
             throw new InvalidDataException("Invalid native vehicle table.");
     }

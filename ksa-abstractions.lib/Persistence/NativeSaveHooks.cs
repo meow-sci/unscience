@@ -8,7 +8,8 @@ using KSA;
 namespace MeowSci.KsaAbstractions.Persistence;
 
 /// <summary>Bridges native save transactions to detached Unscience persistence callbacks.</summary>
-public static class NativeSaveHooks
+/// <remarks>KSA 5916 star-system switching is handled in <c>NativeSaveHooks.SystemSwap.cs</c>.</remarks>
+public static partial class NativeSaveHooks
 {
     private static readonly List<(MethodInfo Target, MethodInfo Patch)> Installed = new();
     private static int _fileLoadDepth;
@@ -45,6 +46,7 @@ public static class NativeSaveHooks
                 prefix: nameof(ResetBeforeLoad), postfix: nameof(RestoreAfterLoad), finalizer: nameof(FinishedDirectLoad));
             Patch(harmony, typeof(Universe), nameof(Universe.LoadSystem), new[] { typeof(string) },
                 prefix: nameof(ResetBeforeSystem), finalizer: nameof(FinishedDirectLoad));
+            ApplySystemSwap(harmony);
         }
         catch
         {
@@ -59,6 +61,7 @@ public static class NativeSaveHooks
             harmony.Unpatch(Installed[i].Target, Installed[i].Patch);
         Installed.Clear();
         PhysicsFrameHook.ClearPendingWorldChange();
+        RemoveSystemSwap();
     }
 
     private static void Patch(Harmony harmony, Type type, string name, Type[] arguments,
@@ -103,10 +106,13 @@ public static class NativeSaveHooks
             PhysicsFrameHook.EnqueueWorldChange(__instance.Load);
             return false;
         }
+        // One scene transaction at a time: a switch still waiting for KSA ends here unapplied.
+        SupersedeQueuedSwap("another save load started first");
         __state = true;
         _fileLoadDepth++;
         _nativeLoadReached = false;
         LastLoadError = null;
+        BeginFileLoad(__instance);
         Invoke(Loading, __instance, "preflight");
         return true;
     }
@@ -116,9 +122,13 @@ public static class NativeSaveHooks
         if (__state)
         {
             _fileLoadDepth--;
+            // KSA 5916: a save from another installed system only queues the switch. The same
+            // transaction continues when KSA applies it (see SystemSwap), so nothing is reported yet.
+            if (__exception == null && !_nativeLoadReached && KeepOpenForQueuedSwap(__instance))
+                return __exception;
             // Since KSA 5482 an unreadable save is logged and Load returns before replacing the world.
-            Exception? failure = __exception ?? (_nativeLoadReached ? null
-                : new InvalidDataException($"KSA could not read save '{__instance.Id}'; the current scene was left unchanged."));
+            Exception? failure = __exception ?? (_nativeLoadReached ? null : NotLoadedFailure(__instance));
+            EndFileLoad();
             LastLoadError = failure;
             Invoke(LoadFinished, "finish load");
             if (failure != null) Invoke(LoadFailed, failure, "load failure");
@@ -128,6 +138,7 @@ public static class NativeSaveHooks
 
     private static Exception? FinishedDirectLoad(Exception? __exception)
     {
+        // A resumed star-system switch keeps the file depth raised; RunApply reports it when ApplyLoaded returns.
         if (__exception != null && _fileLoadDepth == 0)
         {
             LastLoadError = __exception;
@@ -142,14 +153,22 @@ public static class NativeSaveHooks
         _nativeLoadReached = true;
         // Match the original's no-world early failure without touching the current session.
         if (Universe.CurrentSystem == null || universeData == null || !FrameHookAvailable()) return true;
-        if (!PhysicsFrameHook.IsReplayingWorldChange)
+        // KSA 5916: Program.SwapSystem already ran our reset before its teardown; the DeserializeSave
+        // that applies the swapped-in save must run now, before KSA's own Program.OnGameLoaded.
+        bool continuesSwap = TakeSwapReset() && !PhysicsFrameHook.IsReplayingWorldChange;
+        if (!continuesSwap && !PhysicsFrameHook.IsReplayingWorldChange)
         {
             PhysicsFrameHook.EnqueueWorldChange(() => Universe.DeserializeSave(universeData));
             return false;
         }
-        if (_fileLoadDepth == 0) LastLoadError = null;
+        if (continuesSwap) ResumeQueuedSwapLoad();
+        else
+        {
+            if (_fileLoadDepth == 0) LastLoadError = null;
+            SupersedeQueuedSwap("a different world load replaced it");
+        }
         IReadOnlyList<string> skippedVehicles = NativeSavePreflight.Validate(universeData);
-        __state = ResetAtJoinedBoundary();
+        __state = continuesSwap ? JoinWithoutReset() : ResetAtJoinedBoundary();
         // After reset: a direct load starts its diagnostics transaction there.
         foreach (string warning in skippedVehicles) Warn(warning);
         return true;
@@ -177,6 +196,7 @@ public static class NativeSaveHooks
             return false;
         }
         if (_fileLoadDepth == 0) LastLoadError = null;
+        SupersedeQueuedSwap("a new system was loaded instead");
         ResetAtJoinedBoundary();
         return true;
     }

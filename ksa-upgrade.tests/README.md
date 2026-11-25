@@ -1,4 +1,18 @@
-# KSA 5438/5482/5638/5707/5801/5901 managed upgrade checks
+# KSA 5438/5482/5638/5707/5801/5901/5949 managed upgrade checks
+
+## KSA 5949 compatibility
+
+`Ksa5949Checks` reads CURRENT KSA.dll metadata for the 5949 seams the fixes depend on: the internal
+`Part.GetReferenceWithChildren(ref uint, PartInstance, bool, EditorSnapshot.PreviousTransforms)`
+overload Iron Man's anchor serializer resolves (and that the public wrapper, child recursion and
+`PartTree.Serialize` reach it), the gas-generator rocket's two-core propellant rule Blinky's
+`RocketFeedCheck` mirrors, slot-based clutter `ReleaseViewport`, and the move of clutter GPU buffers/maps
+to `GroundClutterGpuResources` (with the curvature buffer leaving `TerrainData.Dispose`) that Pebbles
+retirement walks. Running with `KSA_DLL_DIR` pointed at the 5901 DLL fails its first check.
+`Ksa5901Checks` now pins CURRENT shapes for its two seams 5949 moved: Blinky binds `Rocket.Cores`
+(5936 removed the `Rocket.Core` field) and the clutter slot is resolved by the caller (5919). The shared
+probe gained `ParameterTypes`/`ReturnTypes` queries. See
+[upgrade evidence and native acceptance](../plans/KSA_5949_UPGRADE.md).
 
 ## KSA 5901 compatibility
 

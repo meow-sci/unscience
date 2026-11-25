@@ -1,5 +1,72 @@
 # Ground clutter: Pebbles
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+Checked statically against `2026.11.25.5949` (revs 5902–5948) from `2026.11.16.5901`. `pebbles.lib` builds
+and `pebbles.tests` passes, with negative controls. Nothing has run in game. Line numbers are 5949.
+
+- **Viewport release takes a slot (5919/5920, compile fix).**
+  - `ClutterEcotypeRenderData.ReleaseViewport(IViewport)` became `ReleaseViewport(int slot)`.
+  - `ClutterResidency` now resolves `GroundClutterRenderer.ResolveViewportSlot` behind the existing
+    `HasViewportSlot` guard, the same sequence as native `OnViewportUnregistered` (`GroundClutterRenderer.cs:478-497`).
+- **Per-planet resources are now allocated lazily (5919/5920).**
+  - `GroundClutterGpuResources` (new; `ClutterEcotypeRenderData.Resources`) now holds every per-ecotype
+    buffer, mapped memory and descriptor pool. `ClutterCubeCellGrid` is CPU-only.
+  - The large per-planet buffers are created by `AllocatePlanetResources` and freed by `DisposePlanetResources`,
+    both guarded by `HasPlanetResources` (`ClutterEcotypeRenderData.cs:378-449`). They are OutCcfPositions,
+    CellObjectCounts, LodFade, the terrain `CurvatureBuffer` and six view-selection buffers per view type.
+  - Native allocates them in `AccumulateViewportCells` (`GroundClutterRenderer.cs:1356-1365`). That is the first
+    clutter consumer of the frame, `Program.cs:5172`, after the `ExecuteNextClothSolvers` swap point at `:2588`.
+    Native frees them in `DisposeUnusedPlanetResources` (`:1474-1487`), but only for arrays in `PlanetEcotypeRenderData`.
+  - Pebbles builds the way native does and never allocates these itself.
+  - `ClutterResidency.ReleaseDetached` now also calls `DisposePlanetResources()`, after every cell is released.
+    Retained originals and replaced bundles therefore no longer hold per-planet VRAM while detached.
+  - A restored array is reallocated by the renderer before it is used. All later disposal, native or Pebbles
+    (`DestroyFrameResources` → `DisposePlanetBuffers`, `:437-449, 1497`), checks the same flag, so nothing is
+    freed twice.
+  - `ClutterEcotypePhysicalData` has no lazy path. It allocates its terrain curvature in `BuildTerrainData`
+    (`ClutterEcotypePhysicalData.cs:1004-1010`) and frees it in `Dispose`.
+- **Retirement re-audit (5919).**
+  - `ClutterRetirement` now walks `GroundClutterGpuResources`; its constructor is captured as well.
+  - `GroundClutterTerrainData.Dispose` no longer frees `CurvatureBuffer`, so retirement cleans that buffer first.
+  - The borrowed `Bvh` field (owned by the planet mesh) is not walked.
+  - `_depthNormalPrePassBlendState` is now a static `NativeList`, which the instance-only walk ignores.
+  - The `MappedMemory[][]` set is unchanged and now lives on the new type.
+- **Collider-less clutter needs the planet-mesh structure (5903).**
+  - A type with collision `None` snaps to the planet mesh (`ClutterCubeCellGrid.cs:102`).
+  - The game now builds the mesh BVH/TLAS only when some stock ecotype on that mesh collection snaps to the
+    mesh (`PlanetMeshLibrary.cs:70-76, 118-151`).
+  - It covers only a patch: billboard snap step plus the stock snapping reach, `GenerationRange` plus
+    `GetCellWidth(2πR, separation)·√2` (`CubeMesh.cs:370-385`). Rays that miss place nothing (`Generate.comp:404-440`).
+  - Without the structure, `GroundClutterGpuResources.BuildFrameResources` throws "Celestial mesh missing
+    BVH/TLAS" (`:377-379, 858-863`).
+  - Stock data: Luna (collection `Default`) and Mars (`MarsScale`) are all-collidable and have no structure.
+    Earth's patch is sized for Grass (80 m).
+  - **Pebbles refuses** an enabled type with collision `None` when the body has no structure, or when its reach
+    exceeds the patch (`Models/SnapToMeshPolicy.cs`, native facts in `Runtime/ClutterSnapToMesh.cs`).
+  - The check runs in `QueueApply`, for immediate UI feedback, and again in `Apply` before any allocation.
+    The `InvalidOperationException` names the body and type and asks for custom colliders. It reaches the
+    Apply status or the save-replay warning with no preparation fault and nothing to retire.
+  - **Disabled types** keep their stock collision type and install no colliders. Forcing `None` would throw
+    on Luna/Mars. Native `PopulateColliderPrimitives` only warns about collider-less objects (`:270-297`), and
+    a zero biome mask rejects every candidate (`GenerateCollision.comp:320-327`). Smooth-normal orientation
+    becomes surface-normal for them, because native `ToParameters` rejects it for collidable types.
+- **Unchanged:**
+  - reflection names (`_renderPassInfo :214`, `_planetClutterMaxBoundingRadius :342`, `_groundClutterRendererCreated :339`);
+  - the five material-binding methods, one call each (`:561, 683, 731, 782, 832`);
+  - the hooks and the `Solid.frag` marker (once, `:321`) and material layout;
+  - the depth-normal pipeline. It now targets a 2-attachment `MultiRenderTarget` (5915/5937), but it is built
+    natively and only the buffer getter is redirected.
+- **Star-system switching (5916).** `SwapSystem` → `PlanetRenderer.Dispose` → the existing
+  `GroundClutterRenderer.Dispose` prefix restores the originals before native disposal. The next `Update` sees
+  the new system and drops the suspended records.
+- **Native acceptance:**
+  - On Luna or Mars, a collider-less replacement is refused with a message, and one with colliders applies.
+  - On Earth, a collider-less Tree replacement is refused; Grass applies.
+  - A disabled type on Luna applies.
+  - VRAM drops after Apply while the originals are detached, and restored clutter reappears.
+  - Switch systems with an override applied, then load a save from the other system.
+
 ## KSA 5801 → 5901 verification (2026-11-20)
 
 Rev 5875 compacts per-viewport clutter state from eight `ShaderSlot` entries to five clutter slots
@@ -234,7 +301,7 @@ Current owner: `pebbles.lib`. Runtime code is in `Runtime/` and asset/geometry o
 
 ## Simple authoring behavior
 
-The main form owns one detached replacement recipe and exact planet/type selections. Apply copies mesh/materials, transform and collider geometry to every variant/LOD of checked ecotypes while preserving target signatures, slot identities, native LOD thresholds and unchecked ecotypes. Selected ecotypes use MinScale/MaxScale = one, retaining the authored preview size without an extra random placement multiplier. Enabled custom colliders select PrimitiveList automatically; SurfaceNormalSmooth falls back to SurfaceNormal for native collision compatibility. Uniform authoring scale updates collider offsets around the mesh origin, dimensions and hull scale once; runtime continues consuming already-transformed collider coordinates. No new Harmony targets, reflection lookups or binary layouts are introduced.
+The main form owns one detached replacement recipe and exact planet/type selections. Apply copies mesh/materials, transform and collider geometry to every variant/LOD of checked ecotypes while preserving target signatures, slot identities, native LOD thresholds and unchecked ecotypes. Selected ecotypes use MinScale/MaxScale = one, retaining the authored preview size without an extra random placement multiplier. Enabled custom colliders select PrimitiveList automatically; SurfaceNormalSmooth falls back to SurfaceNormal for native collision compatibility. Without colliders a type snaps to the planet mesh, which KSA 5903+ supports only within the stock snapping reach on bodies whose stock clutter snaps to the mesh; elsewhere Apply refuses it and asks for colliders (see the 5949 section). Disabled types keep their stock collision type and install no colliders. Uniform authoring scale updates collider offsets around the mesh origin, dimensions and hull scale once; runtime continues consuming already-transformed collider coordinates. No new Harmony targets, reflection lookups or binary layouts are introduced.
 
 ## Runtime behavior and ownership
 
@@ -272,7 +339,7 @@ Targets:
 - `ClutterEcotypeRenderData.RebuildFrameResources`: prefix/finalizer scopes private material/shader bindings.
 - `ClutterEcotypeRenderData.SortMaterialIds`, `CreateColorRenderer`, `CreateDepthPrePassRenderer`, `CreateDepthNormalPrePassRenderer` (5707), `CreateShadowDepthRenderer`: the list lives in `Runtime/ClutterMaterialBindings.cs`. Transpilers replace exactly one `GroundClutterRenderer.MaterialBuffer` getter or `GetMaterialIndex` call per method, and unexpected match counts fail patch activation. `ksa-upgrade.tests` (`Ksa5707Checks`) requires that the list equals every binding method in the real KSA.dll.
 - `ShaderReference.CompileVariantWithCustomOptions`: prefix substitutes only `ClutterSolidFrag` compiled inside the owned material context.
-- Public constructors of `GroundClutterPlacementData`, `ClutterEcotypeRenderData`, `ClutterEcotypePhysicalData`, `ClutterCubeCellGrid`, `ClutterViewResources`, `RenderCore.Mesh.SimpleVkMeshAtlas`: prefixes retain partial owned objects only inside construction context for failure cleanup.
+- Public constructors of `GroundClutterPlacementData`, `ClutterEcotypeRenderData`, `ClutterEcotypePhysicalData`, `ClutterCubeCellGrid`, (5919) `GroundClutterGpuResources`, `ClutterViewResources`, `RenderCore.Mesh.SimpleVkMeshAtlas`: prefixes retain partial owned objects only inside construction context for failure cleanup.
 
 ## Reflection and binary dependencies
 
@@ -286,9 +353,10 @@ Targets:
 - `ModLibrary.AllMeshes`, `AllFiles`, `AllGltfs`; `SerializedCollection<T>.GetList`; glTF model/named mesh indexes and `MeshReference.Load(..., createDeviceMesh: false)`.
 - `StagingPool._submitted`, `_commandBufferIndex`: discard the outer transaction's unsubmitted command buffers after preparation failure before pool disposal.
 - `ClutterEcotypePhysicalData._compoundShapes`, `_primitiveShapes`: reachable partial-shape retirement; `ConstraintSim.UnlockShapes`, Bepu shape ownership/removal.
-- Partial retirement inspects direct public/nonpublic instance fields only on the six captured native ownership classes. It recognizes `BufferEx`, `BufferPartitionInfo`, mapped memories, descriptor pools/layouts, samplers/image views, `SimpleVkTexture`, `SimpleComputePipeline`, `SimpleGraphicsPipeline`, and their collections. Fields holding `MappedMemory` at any nesting (`FieldShapes.Holds`; 5638 `MappedMemory[][]`) are unmapped before any other field is released. Physical `MeshAtlas`/`PlacementData` references are borrowed and skipped. Resource field layout changes require re-audit. The 5707 re-audit found only the new `_opaqueDepthNormalPrePassRenderers` pipeline list, which the collection rule covers.
-- KSA 5629+ residency surface (public, no reflection): `ViewportRegistry.Views`, `ClutterEcotypeRenderData.ReleaseViewport(IViewport)`, `ResolvePendingReleases()`, `GenerationViewport`, and (5875) `GroundClutterRenderer.HasViewportSlot`/`ResolveViewportSlot` — residency is indexed by a clutter slot only Main/Secondary viewports own, not `IViewport.ShaderSlot`. The release sequence must keep mirroring `GroundClutterRenderer.OnViewportUnregistered`, including its `HasViewportSlot` guard; if residency moves to the renderer or gains other per-viewport state, `ClutterResidency` needs review.
+- Partial retirement inspects direct public/nonpublic instance fields only on the seven captured native ownership classes (5919 added `GroundClutterGpuResources`; its borrowed `Bvh` is not walked). `GroundClutterTerrainData` is disposed after its `CurvatureBuffer` is released, because 5919 moved that buffer out of `Dispose`. It recognizes `BufferEx`, `BufferPartitionInfo`, mapped memories, descriptor pools/layouts, samplers/image views, `SimpleVkTexture`, `SimpleComputePipeline`, `SimpleGraphicsPipeline`, and their collections. Fields holding `MappedMemory` at any nesting (`FieldShapes.Holds`; 5638 `MappedMemory[][]`) are unmapped before any other field is released. Physical `MeshAtlas`/`PlacementData` references are borrowed and skipped. Resource field layout changes require re-audit. The 5707 re-audit found only the new `_opaqueDepthNormalPrePassRenderers` pipeline list, which the collection rule covers. The 5949 re-audit moved the cell-grid GPU fields (unchanged shapes) to `GroundClutterGpuResources` and made `_depthNormalPrePassBlendState` static, so the instance-only walk never disposes it.
+- KSA 5629+ residency surface (public, no reflection): `ViewportRegistry.Views`, `ClutterEcotypeRenderData.ReleaseViewport(int slot)` (5919; formerly `IViewport`), `ResolvePendingReleases()`, (5919) `DisposePlanetResources()`, `GenerationViewport`, and (5875) `GroundClutterRenderer.HasViewportSlot`/`ResolveViewportSlot` — residency is indexed by a clutter slot only Main/Secondary viewports own, not `IViewport.ShaderSlot`. The release sequence must keep mirroring `GroundClutterRenderer.OnViewportUnregistered`, including its `HasViewportSlot` guard; if residency moves to the renderer or gains other per-viewport state, `ClutterResidency` needs review.
 - `GroundClutterGpuMaterial` native layout, texture bindless IDs, flags bits 31/30 reserved by Pebbles, and the shader's `materialData.flags`, `diffuseTextureId`, `globalTextures`, `textureSampler`, `inUv`, diffuse conversion and terrain modulation statement.
+- KSA 5903+ snap-to-mesh surface (public, no reflection), read by `ClutterSnapToMesh` before any allocation: `CelestialTemplate.MeshCollection.Value.LastMesh`, `CubeMesh.TopLevelAccelerationStructure` (ray queries) / `Bvh` (fallback), `CubeMesh.ClutterPatchRadians`, `CubeMesh.GetMaxBillboardSnapStep()`, `Renderer.RayQueriesSupported`, `CubeCellGrid.GetCellWidth(2πR, separation)`. These mirror `GroundClutterGpuResources.BuildFrameResources`/`CreateRayQueriesGenerateWrites` and `PlanetMeshLibrary.GetEcotypeRangeMeters`; if the game changes how it decides or sizes the structure, `SnapToMeshPolicy` must follow.
 - Native 256 candidates/cell, 16 physical scale buckets, five LODs, uint object/material indirection and transformed position/normal/UV layout; `CubeCellGrid.GetCellWidth` call convention follows the renderer's actual MeanRadius argument.
 
 ## Independent Workshop preview

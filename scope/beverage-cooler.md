@@ -20,6 +20,26 @@ there is no new C# project, Harmony patch, ISubmod, participant or runtime refle
 | `ColliderModule.Template`, `Box`, `CustomMass`, surface connector | `KSA/ColliderModule.cs`; `KSA/BoxColliderTemplate.cs`; `KSA/Part.cs` | Root hollow body: base+four walls. Shared lid box moves with animation, same mechanics across variants. SurfaceMount rotates local +X to model +Z. Empty mass 5.5kg; loaded consumable mass native. No pressure/crew passage implied by collider geometry. |
 | `Part.GetSaveData`, native module saves | `KSA/Part.cs`; `KSA/KeyframeAnimationModule.cs:383–427`; `KSA/Habitat.cs:383–417` | KSA owns selected template ID, placement, supplies/debts and animation current/goal. No sidecar/state duplication. Blueprint contents follow native blueprint policy. |
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+No change; the asset-only mod has no code seam. Every external reference in `BeverageCooler.xml` still resolves
+(`CoreSurfacesB_Material` at `:35` and `:43` x4, whose `CoreSurfacesBAssets.xml:8` is unchanged; EditorTags
+`Structural` and `Life Support`, `CoreEditorTagsGameData.xml:13,19`), and every schema class behind the XML
+(`IVASeat`, `KeyframeAnimationModule`, `HabitatTemplate`, `Tank`/`SphericalTankTemplate`, `ColliderModule`/
+`BoxColliderTemplate`, `PartModelModule`, `MeshViewModule`, `PbrMaterialReference`, `CustomMassTemplate`,
+`EditorTagDefinition`) is byte-identical.
+- **5944 content.** The new `Thermal` `EditorTagDef` (`CoreEditorTagsGameData.xml:12`) is added; the cooler's tags
+  still append after the stock ones. Filled `BridgingAdapter*` parts gained BulkFluid connectors and cargo bays
+  gained appended connectors; the cooler references neither.
+- **Render path.** `PartModel.Get` (process-wide cache keyed by component Key/hash), and
+  `TextureReference.BindImage` are unchanged; the only addition to `TextureReference` is internal
+  `ReleaseStreamed`, which frees only streamed celestial textures on a 5916 system swap. The lid's native
+  `KeyframeAnimationModule` (`KeyframeAnimationModule.cs:338-361`) writes sub-part transforms through the public
+  setters, which 5939 now routes to a targeted transform rewrite (native; no mod code in the path). The cooler's
+  own GLB mesh and animation payloads cannot be checked statically (the trees contain no binary payloads).
+
+The native checks under "Validation and remaining native checks" below are unchanged. [5949 review](../plans/KSA_5949_UPGRADE.md).
+
 ## Validation and remaining native checks
 
 The foil-lining correction passes the full solution build with zero warnings/errors, source and

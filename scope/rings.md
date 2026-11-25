@@ -1,5 +1,54 @@
 # Planetary rings — rocky-mcrock-face
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+All reflected members, struct layouts and shaders Rocky/Bloomin depend on are present and unchanged, so there is
+no compile or reflection break; the risks come from 5916 runtime system switching. The `Ksa5801Checks` pin set
+(`ModLibrary.All{Meshes,Files,Gltfs,Materials}`, `TextureReference.<TextureAsset>k__BackingField`,
+`MeshReference.<HostPrimitives>k__BackingField`, `DistantSphereRenderer._material`,
+`PlanetTransparenciesRenderer._anyRings/_ringRendererCreated/_ringsRenderer`, `Program._planetTransparenciesRenderer`)
+passes against the 5949 `KSA.dll`. The constructor-baking keystone is intact: `PlanetaryRingsRenderData` and
+`PlanetaryRingsRenderer` changed only by debug names, `using` shader stages and a sun-transmittance barrier, and
+the same six `RingsReference` consumers exist with no new one.
+- **5916 renderer recreation.** `BuildSystemRenderers` (NEW `Program.cs:1870-1903`) rebuilds `PlanetRenderer` and
+  `PlanetTransparenciesRenderer` (whose constructor creates the rings renderer and computes `_anyRings =
+  PopulatePlanets()`, `PlanetTransparenciesRenderer.cs:133`) and `DisposeSystemRenderers` (`:1994-2002`) frees
+  them on every swap; `Program._planetTransparenciesRenderer` lost `readonly` (OLD `:183` → NEW `:184`). Both mods
+  read it fresh on every call (`RingRendererRebuilder.cs:38,50,67-77`, `RingSwapController.cs:232-249`), so nothing
+  is cached. Body templates are shared across systems (e.g. Earth in `EarthSystem.xml` and `EarthOnly.xml`,
+  Saturn in Sol and Sol+Interstellar), so a mod's `RingsReference` overlay carries into the new system and is
+  drawn natively there until the deferred reset restores it. `Program.RebuildRenderer` is identical (OLD `:5539` /
+  NEW `:5668`; `WaitIdle` still precedes `RebuildFrameResources`).
+- **F2 (Bloomin, needs live re-verification).** `Universe.CreateSystem` builds new `StaticCelestial`s whose
+  `DistantSphereRenderer` constructor bakes `UseRingShadows`, the radii and `RingTextureId =
+  RingsReference.Texture.Value.BindlessHandle` (NEW `DistantSphereRenderer.cs:118-125`; `Render` only refreshes
+  `RingNormal`). If `RingDefinitionController.ResetForSaveLoad` (`:189-197`) runs after the swap, its
+  `SyncDistantSphereShadow` hits the old, disposed celestial and `PruneUnusedAssets()` then frees a painted band
+  that the new celestial's `_material` still samples: a freed or reused bindless slot (a GPU-handle hazard for
+  painted bands; cosmetic for catalog bands, which are never freed). The review recommends resetting before
+  `SwapSystem` and, independently, re-resolving live bodies at the top of `ResetForSaveLoad`. Unscience's
+  cross-system load handling: see [saves](saves.md).
+- **F3 (Rocky, cosmetic).** The same constructor bake gives a new Saturn far sphere the Rocky band when the
+  target system also has Saturn; this is the pre-existing "Rocky does not sync the distant-sphere band" gap with
+  a new trigger. Snapshots are keyed by the template-level `PlanetaryRingsReference`, so
+  `RingSwapController.ResetForSaveLoad` (`:182-193`) still restores correctly, and the swap `WaitIdle`s before
+  disposing the old ring renderer (`Program.cs:1921,1928`), so lifetimes are safe.
+- **5941 fixes (positive).** `PlanetaryRingsRenderer` (`:829,835`) now `using`-disposes its `ShaderStages`,
+  stopping a leak on each rings-renderer reconstruction (every Rocky/Bloomin Apply via `Dispose` + `RebuildRenderer`).
+- **5948 sun transmittance.** Ring compute shaders `Rings/Volumetric/2dRings.comp` and `UpscaleVolumetricRings.comp`
+  write the set-0 binding 2 tile (barriers at `PlanetaryRingsRenderer` `:428` and
+  `PlanetTransparenciesRenderer.TransitionWriteTargets` `:450`); no mod shader includes `SunTransmittance.glsl`.
+  A painted translucent Bloomin band in front of the sun now dims bloom and flare again. `RingShadows.glsl`,
+  `DistantSphere.frag`, `Planet/Planet.frag` and `AtmosphereDataUbo.glsl` are unchanged; 5918 changed the
+  prefiltered sky LUT (`PREFILTERED_SKY_LUT_DEPTH` 7 → 6, LUT bindings 8 → 9) but not the ring read.
+- **Edge.** 5916 `CelestialTextureStreamer.ReleaseStreamed` frees only `Stream=true` planet cubemaps and does not
+  zero `BindlessHandle` (`TextureReference.cs:106-112`), so `RingAssetCatalog`'s `BindlessHandle == 0` filter
+  would still list a released planet cubemap; ring assets (`Astronomicals.xml:5463-5472`) are not streamed.
+
+Native acceptance: apply a painted Bloomin ring on Earth in SolSystem, load an EarthOnly or SolLite save, zoom out
+to the distant sphere; a Rocky swap on Saturn across a switch; a translucent band crossing the sun; repeated
+Apply with no shader-stage memory growth. [5949 review](../plans/KSA_5949_UPGRADE.md).
+
 ## KSA 5707 → 5801 verification (2026-11-08)
 
 Rocky/Bloomin now follow `DataReference<T>.Value` for ring material, band/control, mesh-file and glTF

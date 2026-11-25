@@ -1,5 +1,23 @@
 # Camera / View Mods — Game Integration Scope
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+No code change. `Camera`, `OrbitController`, `FlyController`, `FixedController`, `IvaController`, `GameViewport` and
+`ViewportRegistry` are byte-identical, so every camera seam holds: Glass (`Camera._fovRadians`,
+`ChangeFieldOfView`, `UpdateProjection`), camera-controller-override (`OnFrame` prefixes and injectors),
+Hot Pursuit (`FixedController.OnFrame`), Kitchen Sink (`GameViewport.IvaController` setter, IVA camera restore
+does not need an occupied seat) and the Iron Man `OrbitController` targets (`GetFrame2Ecl`, `EditorOnScroll`).
+`GameSettings` changed only by the shadow cascade count and borderless windowing (5909/5917), and `HotkeyGuard`'s
+`GameSettings.OnKeyAll` target is unchanged. The camera-saves/world-saves adapter targets have no native type
+changes.
+- **5916 system switching.** The swap rebuilds per-viewport atmosphere resources for already-registered
+  viewports (NEW `AtmosphereRenderer.cs:684-692`), so Hot Pursuit's leases survive on paper. 5948 resets the
+  sun-transmittance tile per viewport each frame (`Program.cs:4787`) without changing a camera API. Needs live
+  re-verification: a Hot Pursuit lease across a cross-system load. Unscience's cross-system load handling: see
+  [saves](saves.md).
+
+[5949 review](../plans/KSA_5949_UPGRADE.md).
+
 ## KSA 5707 verification (5638 → 5707, 2026-10-29)
 
 Verified against `2026.10.25.5707` (revs 5639–5703) vs `2026.10.19.5638`. Static/managed only: the

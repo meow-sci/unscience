@@ -1,5 +1,15 @@
 # Ground clutter: imported GLB materials
 
+## KSA 5949 verification (5901 → 5949, 2026-11-25)
+
+The GLB conversion is unchanged. `SimpleVkTexture` and `BindlessTextureLibrary` only gained Vulkan debug
+names (5904). The `VkImageView`, `AddTexture(VkImageView, …)` and `FreeTexture(int)` paths are unchanged.
+
+One user-visible rule applies to GLB replacements as to any other mesh. A type replaced without colliders snaps
+to the planet mesh. Since KSA 5903 the game supports that only within the stock snapping reach, and only on
+bodies whose stock clutter snaps to the mesh. On Luna, on Mars, or for Earth's tree types, Apply refuses a
+collider-less GLB replacement and asks for colliders. See [ground clutter](ground-clutter.md).
+
 ## KSA 5707 verification (5638 → 5707, 2026-10-29)
 
 Checked statically against `2026.10.25.5707`. The solution build and `pebbles.tests` pass, and nothing

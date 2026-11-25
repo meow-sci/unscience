@@ -9,11 +9,11 @@ using MeowSci.KsaAbstractions.Persistence;
 internal static partial class Program
 {
     private static int _passed;
+    private static readonly Harmony _harmony = new("MeowSci.Saves.Tests");
 
     private static void Main()
     {
-        var harmony = new Harmony("MeowSci.Saves.Tests");
-        NativeSaveHooks.Apply(harmony);
+        NativeSaveHooks.Apply(_harmony);
         try
         {
             Run("capture and write after native success", CaptureAndWrite);
@@ -33,8 +33,17 @@ internal static partial class Program
             Run("vehicles KSA skips load with warnings instead of refusal", SkippedVehiclePreflight);
             Run("skipped vehicle stays unresolved through the real coordinator", SkippedVehicleRoundTrip);
             Run("worker join failure never reaches native destruction", JoinFailure);
+            Run("contained system loads into the running system", ContainedSystemLoad);
+            Run("queued system switch resets before teardown and restores once", QueuedSwapLoad);
+            Run("system switch carries the sidecar through the real coordinator", SwapSidecarRoundTrip);
+            Run("uninstalled system leaves the scene with an accurate message", NotInstalledLoad);
+            Run("multiplayer join switch resets before teardown without stale state", JoinSwap);
+            Run("join replacing a queued save switch keeps the save's records", JoinReplacesQueuedSwap);
+            Run("restart for video memory leaves no continuation", WontFitSwap);
+            Run("swap without continuation cannot skip a later reset", StaleSwapReset);
+            Run("negative control: without the 5916 seams a switch loses the transaction", SwapWithoutSeams);
         }
-        finally { NativeSaveHooks.Remove(harmony); }
+        finally { NativeSaveHooks.Remove(_harmony); }
         Run("removal restores native methods", Removed);
         Console.WriteLine($"Native save lifecycle: {_passed} checks passed.");
         StorageTests.Run();
@@ -50,6 +59,9 @@ internal static partial class Program
         PhysicsFrameHook.ClearPendingWorldChange();
         KSA.Program.IsEditorOpen = false;
         Universe.CurrentSystem = new CelestialSystem();
+        SaveSystemSwap.Reset();
+        KSA.Program.Instance.SwapWontFit = false;
+        KSA.Program.Instance.FailSwap = false;
         NativeSaveHooks.LoadFailed = null;
         NativeSaveHooks.WriteFailed = _ => Trace.Events.Add("write failed");
         JobSystems.NearestOrbitAndPerformanceWorker.Fail = false;

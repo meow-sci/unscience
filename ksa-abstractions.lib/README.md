@@ -299,7 +299,9 @@ join stays.
 
 `NativeSavePreflight.Validate` refuses only data that native reconstruction cannot survive:
 - invalid time, camera or roster records;
-- a missing, extra or different celestial system;
+- a missing or extra celestial system, or one KSA would not deserialize in place (since KSA 5916 the
+  preflight mirrors `SaveSystemSwap.PlanLoad`: the running system and `LoadIntoRunning`, a saved
+  system whose bodies are all running, are accepted);
 - blank or duplicate vehicle IDs;
 - a vehicle without a parent-body record;
 - a null, cyclic, deeper-than-256 or larger-than-200000-part tree.
@@ -309,6 +311,21 @@ or an uninstalled character, and shows its own alert. The preflight returns one 
 vehicle instead of refusing the save. `NativeSaveHooks` raises each through `LoadWarning` after reset,
 and the host adds it to the save status. Participants then report those vehicles as unresolved
 targets, and their records are retained.
+
+Since KSA 5916 a save from another installed star system is not loaded in place.
+`SaveSystemSwap.RequestLoad` queues it, and `SaveSystemSwap.OnFrame` (after `ImGui.Render`) runs
+`Program.SwapSystem` and then the save's `ApplyLoaded`. `NativeSaveHooks.SystemSwap.cs` keeps the file
+transaction open across that queue:
+
+- a queued switch is not reported as a failure, and the prepared sidecar survives;
+- every participant resets in a `Program.SwapSystem` prefix, at a joined boundary before KSA destroys
+  the old world;
+- the swapped-in `DeserializeSave` runs immediately, before `Program.OnGameLoaded`, without a second
+  reset, and the sidecar restores once;
+- an uninstalled system is reported by name.
+
+Multiplayer join switches reset the same way. A capture made while a switch is still queued keeps the
+previous scene's retained records (`SceneSaveCoordinator.Capture`).
 
 See [save integration](../scope/saves.md), [plan](../plans/SAVES.md) and
 [managed checks](../saves.tests/README.md). GPU/native acceptance is separate from managed tests.

@@ -4,6 +4,31 @@
 tool snapshots name/model/paint, previews a green/red physical capsule and creates one kitten on
 a left world click. Esc/right-click cancels. Relative count/offset behavior remains unchanged.
 
+## KSA 5901 → 5949 verification (2026-11-25)
+
+No code change. The Bepu types the placement queries touch (`TypedIndex`, `CollidableReference`, `Leaf`,
+`PairContinuation`, `BoundsContinuation`, `CCDContinuationIndex`) became `readonly struct` in 5911 with no
+signature changes, so `CollisionBatcher.AddDirectly(..., new PairContinuation(0))`, `Simulation.RayCast` and
+`BroadPhase.GetOverlaps` bind as before. `PhysicsBubble.cs` differs by one line
+(`RecomputePositionalEnvironmentValues(in newStates.Origin)`) and nothing here calls
+`PhysicsStates.RecomputePositionalEnvironmentValues`/`ComputeDerivatives`; placement still reads the committed
+`BubbleOrigin`/`GetPhysicsStates()` on the main thread only.
+- **Terrain.** `Celestial.GetTerrainHeightFromDirCcf(dir, accurate: true)` (NEW `Celestial.cs:794-890`) and its
+  callees are unchanged for `SurfaceScene.Terrain.cs:18-36`; 5907 changes only GPU vertex positions
+  (`CubeMeshProcedural.glsl`, `FindCubeMeshVertex`) and the mesh-normal fan, so CPU-vs-rendered agreement stays
+  on the existing live checklist.
+- **Arrival service (5938/5943).** A spawn on another body can now record arrival/visit and "first kitten"
+  entries (`ArrivalService.Update`, NEW `CelestialSystem.cs:366`; per-kitten biome sampling every 0.25 s while
+  landed). `DestroyVehicle`/`Deregister` call `Arrivals.Remove` (NEW `Universe.cs:2173`, `CelestialSystem.cs:116`)
+  and `System` is set in the `Astronomical` ctor, so DOH's orphan rollback (`CelestialSystem.Deregister`) is safe;
+  no crash path was found. Check frame time with a large batch spawn.
+- **5946 / 5916.** `Universe.ClearInvalidSeats()` can empty the seat of a DOH kitten that was never rostered and
+  then boarded a vessel (first 5949 load; see [vehicle-physics](vehicle-physics.md)). The 5911 friction fix (up to
+  4x) may change how a freshly placed kitten settles or slides: needs live re-verification. `SurfaceSpawnTarget.cs:109`
+  guards its cached `CelestialSystem` across a swap. Unscience's cross-system load handling: see [saves](saves.md).
+
+[5949 review](../plans/KSA_5949_UPGRADE.md).
+
 ## Game surface
 
 | Integration | Use / contract |
